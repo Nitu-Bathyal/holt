@@ -17,6 +17,7 @@ export type FindJobStatus = S.FindJobStatus;
 export type Me = S.Me;
 export type HistoryItem = S.HistoryItem;
 export type ApiError = S.Error;
+export type FeedbackOut = S.FeedbackOut;
 
 export type Mode = Report["mode"];
 export type Verdict = Report["verdict"];

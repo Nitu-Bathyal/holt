@@ -35,6 +35,7 @@ from holt_server import repos
 from holt_server.api import Caller, caller, services
 from holt_server.db import Feedback, Report, iso, now
 from holt_server.errors import ApiError
+from holt_server.schema import Mode, Model
 from holt_server.services import Services
 
 router = APIRouter(prefix="/v1")
@@ -45,14 +46,27 @@ USER_PER_HOUR = 120
 REASON_MAX = 500
 
 
+Vote = Literal["up", "down"]
+
+
 class FeedbackIn(BaseModel):
     repo: str = Field(max_length=500)
-    mode: Literal["rules", "ai"] = "rules"
+    mode: Mode = "rules"
     days: int = Field(7, ge=1, le=90)
     # The `generated_at` of the report on screen: which version is being judged.
     generated_at: str = Field(min_length=1, max_length=40)
-    vote: Literal["up", "down"]
+    vote: Vote
     reason: str | None = Field(None, max_length=2000)
+
+
+class FeedbackOut(Model):
+    """The answer as saved, with the verdict of the report it is about."""
+
+    repo: str
+    generated_at: str
+    verdict: str
+    vote: Vote
+    reason: str | None
 
 
 def ip_hash(svc: Services, ip: str) -> str:
@@ -99,7 +113,7 @@ async def shown_report(svc: Services, repo: str, mode: str, days: int,
 
 @router.post("/feedback")
 async def post_feedback(body: FeedbackIn, request: Request,
-                        who: Caller = Depends(caller)) -> dict[str, Any]:
+                        who: Caller = Depends(caller)) -> FeedbackOut:
     svc = services(request)
     repo = repos.normalize(body.repo)
     limit(svc, who)
@@ -114,8 +128,8 @@ async def post_feedback(body: FeedbackIn, request: Request,
               "verdict": str(report.report.get("verdict") or ""), "updated_at": now()}
     row = await upsert(svc, report, voter, values,
                        {"user_id": user_id, "ip_hash": hashed})
-    return {"repo": row.repo, "generated_at": row.generated_at, "verdict": row.verdict,
-            "vote": row.vote, "reason": row.reason}
+    return FeedbackOut(repo=row.repo, generated_at=row.generated_at, verdict=row.verdict,
+                       vote=row.vote, reason=row.reason)
 
 
 async def upsert(svc: Services, report: Report, voter: str, values: dict[str, Any],

@@ -3,7 +3,7 @@
 import "server-only";
 import { cache } from "react";
 import type {
-  AnalysisStart, ApiError, ByokProvider, FindQuery, FindResult, FindStart, HistoryItem, JobStatus, Me, Mode,
+  AnalysisStart, ApiError, ByokProvider, FeedbackOut, FindQuery, FindResult, FindStart, HistoryItem, JobStatus, Me, Mode,
   Report, Result, StarterIssue,
 } from "./types";
 import type { FeedbackInput } from "./feedback";
@@ -153,7 +153,7 @@ export async function find(q: FindQuery, caller: Caller): Promise<Result<FindSta
 }
 
 /** "Was this verdict right?" (API.md, Feedback). One answer per person per report version. */
-export async function sendFeedback(input: FeedbackInput, caller: Caller): Promise<Result<FeedbackInput & { verdict: string }>> {
+export async function sendFeedback(input: FeedbackInput, caller: Caller): Promise<Result<FeedbackOut>> {
   if (!repoOk(input.repo)) return BAD_REPO;
   if (MOCK) return mock.sendFeedback(input);
   return call("/v1/feedback", { method: "POST", body: JSON.stringify(input), caller });

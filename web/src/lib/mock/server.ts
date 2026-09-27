@@ -2,7 +2,7 @@
 // reports return at once, anything else becomes a job with stages over SSE.
 import "server-only";
 import type {
-  AnalysisStart, ApiError, ByokProvider, FindJobStatus, FindQuery, FindResult, FindStart, HistoryItem,
+  AnalysisStart, ApiError, ByokProvider, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, HistoryItem,
   JobStatus, Me, Mode, Report, Result, StarterIssue,
 } from "../types";
 import type { FeedbackInput } from "../feedback";
@@ -279,10 +279,10 @@ function findResults(q: FindQuery): FindResult[] {
 }
 
 /** Accepts an answer for any cached report version, like the server. */
-export async function sendFeedback(input: FeedbackInput): Promise<Result<FeedbackInput & { verdict: string }>> {
+export async function sendFeedback(input: FeedbackInput): Promise<Result<FeedbackOut>> {
   const r = state().cache.get(key(input.repo, input.mode, input.days));
   if (!r || r.generated_at !== input.generated_at) return err(404, "not_found", "We couldn't find that report any more. Reload the page and try again.");
-  return { ok: true, data: { ...input, repo: r.repo, verdict: r.verdict } };
+  return { ok: true, data: { repo: r.repo, generated_at: r.generated_at, verdict: r.verdict, vote: input.vote, reason: input.reason } };
 }
 
 export async function me(userId: string): Promise<Result<Me>> {
