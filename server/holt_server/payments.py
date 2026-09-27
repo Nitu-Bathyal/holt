@@ -262,6 +262,9 @@ async def settle(svc: Services, payment: dict[str, Any]) -> str:
             log.error("order %s was paid twice (%s, then %s): refund the second",
                       order.id, order.provider_payment_id, pid)
         return "already_paid"
+    if payment.get("status") == "failed":
+        await set_status(svc, order.id, "failed", str(payment.get("error_description") or ""))
+        return "failed"
     amount, currency = payment.get("amount"), str(payment.get("currency") or "").upper()
     if amount != order.amount or currency != order.currency:
         note = f"payment {pid} was {amount} {currency}; the order is {order.amount} {order.currency}"
@@ -283,9 +286,6 @@ async def settle(svc: Services, payment: dict[str, Any]) -> str:
         status = captured.get("status")
     if status == "captured":
         return "paid" if await credit(svc, order.id, pid) else "already_paid"
-    if status == "failed":
-        await set_status(svc, order.id, "failed", str(payment.get("error_description") or ""))
-        return "failed"
     return "pending"
 
 
