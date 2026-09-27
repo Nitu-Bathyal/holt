@@ -12,6 +12,7 @@ import time
 
 import httpx
 import pytest
+from conftest import canned_report
 from holt_server.db import Job, Report
 from holt_server.errors import ApiError
 from holt_server.github import LOW_POINTS, JobStopped, TokenPool, job_stop
@@ -73,7 +74,7 @@ def test_a_stuck_timed_out_thread_does_not_block_the_next_job(make_harness):
         threads[repo] = threading.current_thread().name
         if repo == "octo/one":
             release.wait(10)  # stuck, and never checks in
-        return {"repo": repo, "mode": mode, "days": days, "verdict": "viable"}
+        return canned_report(repo, mode, days)
 
     h.svc.analysis_fn = engine
     assert h.svc.runner.executor_size == 2
@@ -147,7 +148,7 @@ class CountingEngine:
         self.release.wait(10)
         with self.lock:
             self.now -= 1
-        return {"repo": repo, "mode": mode, "days": days, "verdict": "viable"}
+        return canned_report(repo, mode, days)
 
 
 def test_ten_jobs_run_several_at_a_time(make_harness):
