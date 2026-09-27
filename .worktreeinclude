@@ -1,3 +1,4 @@
 .env
 web/.env.local
 server/.env
+.claude/settings.json

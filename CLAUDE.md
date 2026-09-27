@@ -81,3 +81,17 @@ is https://staging.githolt.com (auto-updates from main plus PRs labelled
 GitHub release (see `docs/RELEASING.md`).
 
 Orchestrator may deploy after a merge: no
+
+## Agent skills
+
+### Issue tracker
+
+Maintainer planning tickets are private local markdown files outside the repo; outside contributors use GitHub Issues. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`), recorded as a `Status:` line in each ticket. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root, created as terms and decisions get settled. See `docs/agents/domain.md`.
