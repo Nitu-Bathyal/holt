@@ -29,6 +29,7 @@ beginners (college students first). Every change should be judged by
 | `website/` | Legacy static landing page. Still serves the live site until `web/` launches; don't extend it. | |
 | `docs/` | All documentation; `docs/README.md` is the index. `docs/research/` holds the evaluation and reproduction guides. | |
 | `eval/`, `fixtures/`, `trajectories/`, `scripts/` | Research/benchmark material from the competition. Large. Don't touch unless the task is about evaluation. | |
+| `golden/` | The golden set: ~50 recorded repos and the engine's approved verdict on each. Engine changes must show and approve their diff (`uv run python -m golden diff`) — `golden/README.md` | |
 | `tests/` | pytest suite (runs from fixtures, no network) | |
 
 `API.md` is the contract between `server/` and `web/`. Change it only in the
