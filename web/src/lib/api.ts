@@ -3,7 +3,7 @@
 import "server-only";
 import { cache } from "react";
 import type {
-  AnalysisStart, ApiError, Contributions, Credits, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection, HistoryItem, JobStatus, Me, Mode,
+  AnalysisStart, ApiError, Contributions, Credits, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection, HistoryItem, JobStatus, Me, Mode, ProfileOut, ProfilePrefs,
   Report, Result, StarterIssue,
 } from "./types";
 import type { FeedbackInput } from "./feedback";
@@ -198,6 +198,23 @@ export function setStatsOptOut(userId: string, statsOptOut: boolean): Promise<Re
 export function disconnectGitHub(userId: string): Promise<Result<GitHubConnection>> {
   if (MOCK) return mock.disconnectGitHub(userId);
   return call("/v1/me/github", { method: "DELETE", caller: { userId } });
+}
+
+// Profile (API.md, "Profile"). `adult_confirmed` is only sent when the user
+// ticked the 18+ box on this save.
+export function getProfile(userId: string): Promise<Result<ProfileOut>> {
+  if (MOCK) return mock.getProfile(userId);
+  return call("/v1/me/profile", { caller: { userId } });
+}
+
+export function saveProfile(userId: string, body: Omit<ProfilePrefs, "updated_at"> & { adult_confirmed: boolean }): Promise<Result<ProfileOut>> {
+  if (MOCK) return mock.saveProfile(userId, body);
+  return call("/v1/me/profile", { method: "PUT", body: JSON.stringify(body), caller: { userId } });
+}
+
+export function deleteProfile(userId: string): Promise<Result<ProfileOut>> {
+  if (MOCK) return mock.deleteProfile(userId);
+  return call("/v1/me/profile", { method: "DELETE", caller: { userId } });
 }
 
 // My Contributions (API.md). The first read, and a refresh past its 15-minute

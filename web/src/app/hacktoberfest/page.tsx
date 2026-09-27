@@ -5,8 +5,11 @@ import { ErrorPanel } from "@/components/error-panel";
 import { FindResults } from "@/components/find/find-results";
 import { FindRunner } from "@/components/find/find-runner";
 import { ShareBar } from "@/components/report/share-bar";
+import { ProfileOnboarding } from "@/components/profile-onboarding";
+import { getProfile } from "@/lib/api";
 import { cachedFind } from "@/lib/find-cached";
-import { caller } from "@/lib/session";
+import { days as daysOf, describe, personalise } from "@/lib/profile";
+import { caller, currentUser } from "@/lib/session";
 import { hacktoberfest, hacktoberfestOver, SITE_URL } from "@/lib/site";
 import { PageTransition } from "@/components/motion/page-transition";
 
@@ -51,12 +54,19 @@ const TIPS = [
 ] as const;
 
 export default async function HacktoberfestPage({ searchParams }: PageProps<"/hacktoberfest">) {
-  const sp = await searchParams;
-  const tab = LANGS.find((l) => l.id === sp.lang) ?? LANGS[0];
+  const [sp, user] = await Promise.all([searchParams, currentUser()]);
+  const profileR = user ? await getProfile(user.id) : null;
+  const profile = profileR?.ok ? profileR.data.profile : null;
+  // With no tab picked, a profile picks the first tab that has one of its languages.
+  const tab = LANGS.find((l) => l.id === sp.lang)
+    ?? (profile && LANGS.find((l) => l.langs.some((x: string) => profile.languages.includes(x))))
+    ?? LANGS[0];
+  const days = profile ? daysOf(profile.days) : 7;
   const hf = hacktoberfest();
   const ended = hacktoberfestOver(YEAR);
-  const result = await cachedFind({ languages: [...tab.langs], topics: [], days: 7, hacktoberfest: true, limit: 12 }, await caller());
+  const result = await cachedFind({ languages: [...tab.langs], topics: [], days, hacktoberfest: true, limit: 12 }, await caller(user));
   const here = `/hacktoberfest${tab.id === "all" ? "" : `?lang=${tab.id}`}`;
+  const fit = profile ? { level: profile.level, contributions: profile.contributions } : null;
 
   return (
     <PageTransition>
@@ -101,12 +111,21 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
         </section>
 
         <div className="wrap py-10 sm:py-12">
+          <ProfileOnboarding back="/hacktoberfest" className="mb-8" />
+          {sp.profile === "saved" && (
+            <p role="status" className="mb-6 border border-green/50 bg-green/10 px-4 py-3 font-sans text-[0.9rem] text-green">Profile saved. The projects below use it.</p>
+          )}
+          {profile && (
+            <p className="mb-6 font-sans text-[0.88rem] text-muted">
+              Using your profile: {describe(profile)}. <Link href="/settings#profile" className="text-link">edit</Link>
+            </p>
+          )}
           <nav aria-label="Language">
             <ul className="flex flex-wrap gap-2">
               {LANGS.map((l) => (
                 <li key={l.id}>
                   <Link
-                    href={l.id === "all" ? "/hacktoberfest" : `/hacktoberfest?lang=${l.id}`}
+                    href={l.id === "all" ? (profile ? "/hacktoberfest?lang=all" : "/hacktoberfest") : `/hacktoberfest?lang=${l.id}`}
                     scroll={false}
                     aria-current={l.id === tab.id ? "page" : undefined}
                     className={`chip min-h-11 whitespace-nowrap px-4 text-[0.85rem] transition-colors ${l.id === tab.id ? "border-hf bg-hf text-bg" : "hover:border-hf hover:text-ink"}`}
@@ -123,9 +142,9 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
             {!result.ok ? (
               <ErrorPanel error={result.error} retryHref={here} />
             ) : result.data.status === "queued" ? (
-              <FindRunner key={tab.id} jobId={result.data.job_id} days={7} retryHref={here} />
+              <FindRunner key={tab.id} jobId={result.data.job_id} days={days} retryHref={here} fit={fit} />
             ) : (
-              <FindResults results={result.data.results} days={7} />
+              <FindResults results={personalise(result.data.results, fit)} days={days} />
             )}
           </section>
         </div>
