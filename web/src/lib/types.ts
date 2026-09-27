@@ -16,6 +16,7 @@ export type JobStatus = S.JobStatus;
 export type FindJobStatus = S.FindJobStatus;
 export type Me = S.Me;
 export type HistoryItem = S.HistoryItem;
+export type GitHubConnection = S.GitHubConnection;
 export type ApiError = S.Error;
 
 export type Mode = Report["mode"];

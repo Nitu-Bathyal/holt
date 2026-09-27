@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 
 from sqlalchemy import (
     JSON,
+    BigInteger,
     Boolean,
     DateTime,
     Float,
@@ -208,3 +209,35 @@ class Usage(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
     __table_args__ = (Index("ix_usage_day_kind", "day", "kind"),)
+
+
+class GitHubConnection(Base):
+    """A Holt user's connected GitHub account (connections.py). Only public
+    data about it is ever read, with the server's tokens, never the user's.
+    Deleting the row (disconnect) also deletes the user's `repo_views`."""
+
+    __tablename__ = "github_connections"
+
+    user_id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    github_id: Mapped[int] = mapped_column(BigInteger, unique=True)
+    login: Mapped[str] = mapped_column(String(100))
+    connected_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    # When they ticked "I'm 18 or older". Required to connect.
+    adult_confirmed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    # "Don't include me in statistics": leave them out of cross-user repo stats.
+    stats_opt_out: Mapped[bool] = mapped_column(Boolean, default=False,
+                                                server_default=text("false"))
+
+
+class RepoView(Base):
+    """Which report pages a connected user opened on Holt, one row per repo,
+    so My Contributions can tell a PR opened soon after checking the repo here."""
+
+    __tablename__ = "repo_views"
+
+    user_id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    repo_key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    repo: Mapped[str] = mapped_column(String(200))
+    first_viewed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    last_viewed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    views: Mapped[int] = mapped_column(Integer, default=1)

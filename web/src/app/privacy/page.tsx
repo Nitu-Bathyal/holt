@@ -24,6 +24,7 @@ export default function PrivacyPage() {
           <li>If you add your own AI key, it is encrypted and never shown back.</li>
           <li>Payments are handled by Razorpay (INR) and Dodo Payments (USD). Card details never reach us.</li>
           <li>One cookie to keep you signed in, one setting for your theme. Visits are counted by our own analytics, which sets no cookie and runs on our server. No ads, no third-party trackers, no selling data.</li>
+          <li>Connecting your GitHub account is optional and for adults only. If you do, we note which repos you view here and may count your public contributions, anonymously, in repo statistics unless you <a href="#connect-github" className="text-link">opt out</a>.</li>
           <li>Email us and we&rsquo;ll delete your account and everything tied to it.</li>
         </ul>
       </div>
@@ -143,6 +144,21 @@ export default function PrivacyPage() {
         described for Google above. You can revoke Holt&rsquo;s access at any time under{" "}
         <a href="https://github.com/settings/applications" className="text-link" rel="noopener noreferrer">GitHub settings &rarr; Applications</a>, and email us to delete your account.
       </p>
+
+      <h3 id="connect-github">Connecting your GitHub account</h3>
+      <p>
+        Connecting GitHub is optional, free, and only for people 18 or older. You do it on the Connect GitHub screen, which says in one line:
+        &ldquo;Connecting lets Holt track your public contributions and include them anonymously in repo statistics (shown only when 5+ people
+        contribute).&rdquo; Connecting is how you agree to that; the switch below is how you say no to the statistics part.
+      </p>
+      <ul>
+        <li><strong>Why:</strong> to show you your own public pull requests with Holt&rsquo;s verdict on each repo, to tell whether you opened a pull request soon after checking a repo on Holt, and to count your public contributions, without your name, in statistics about a repo. A repo&rsquo;s statistics are shown only when 5 or more people&rsquo;s contributions are in them.</li>
+        <li><strong>What we store:</strong> your GitHub account ID and username, when you connected, when you confirmed you&rsquo;re 18 or older, whether you chose &ldquo;Don&rsquo;t include me in statistics&rdquo;, and, while you&rsquo;re connected, which repos&rsquo; report pages you opened on Holt (the repo, the first and last time, and how many times).</li>
+        <li><strong>How we read GitHub:</strong> only public data, with Holt&rsquo;s own access, never yours. Connecting asks GitHub for nothing beyond your public profile, and Holt can&rsquo;t post, comment or open anything as you.</li>
+        <li><strong>Leaving statistics out:</strong> turn on &ldquo;Don&rsquo;t include me in statistics&rdquo; on the Connect screen or in your <Link href="/settings#github" className="text-link">settings</Link>, at any time. Your contributions are left out of every repo&rsquo;s numbers from then on.</li>
+        <li><strong>Disconnecting:</strong> the disconnect button in settings deletes the connection and the list of repos you viewed, straight away. If you also sign in with Google, the link between your GitHub account and your Holt account is removed too.</li>
+        <li><strong>Deleting everything:</strong> email <ContactEmail /> and we&rsquo;ll delete your account and everything above with it.</li>
+      </ul>
 
       <h2>5. Cookies and browser storage</h2>
       <ul>

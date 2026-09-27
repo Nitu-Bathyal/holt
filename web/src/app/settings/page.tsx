@@ -6,6 +6,7 @@ import { deleteByok, me, putByok } from "@/lib/api";
 import { shortDate } from "@/lib/format";
 import { currentUser } from "@/lib/session";
 import type { ByokProvider } from "@/lib/types";
+import { ConnectGitHubCard } from "@/components/connect-github-card";
 import { PageHead } from "@/components/page-head";
 import { PageTransition } from "@/components/motion/page-transition";
 
@@ -162,6 +163,8 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
             <button type="submit" className="btn-primary">{byok ? "replace key" : "save key"}</button>
           </form>
         </section>
+
+        <ConnectGitHubCard userId={user.id} notice={sp.github} />
       </div>
       </>
     </PageTransition>

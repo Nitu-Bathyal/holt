@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ViewTransition } from "react";
 import { notFound, redirect } from "next/navigation";
+import { after } from "next/server";
 import { ErrorPanel } from "@/components/error-panel";
 import { AiStart } from "@/components/report/ai-start";
 import { AnalysisRunner } from "@/components/report/analysis-runner";
@@ -9,7 +10,7 @@ import { ReportView } from "@/components/report/report-view";
 import { StarterIssues, StarterIssuesSkeleton } from "@/components/report/starter-issues";
 import { LinkHint } from "@/components/motion/link-hint";
 import { SkeletonReveal } from "@/components/motion/reveal";
-import { getReport, me, starterIssues } from "@/lib/api";
+import { getReport, me, recordView, starterIssues } from "@/lib/api";
 import type { ModelAccess, ModelProvider } from "@/lib/models";
 import { isValidRepo } from "@/lib/repo";
 import { caller, currentUser, type SessionUser } from "@/lib/session";
@@ -96,6 +97,8 @@ export default async function RepoPage({ params, searchParams }: Props) {
   }
 
   const display = report.ok ? report.data.repo : name;
+  // For Connect GitHub users' "opened a PR after checking it on Holt" (the server ignores the rest).
+  if (user && report.ok) after(() => recordView(user.id, report.data.repo));
   const [dOwner, dRepo] = display.split("/");
 
   return (

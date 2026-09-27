@@ -2,7 +2,7 @@
 // reports return at once, anything else becomes a job with stages over SSE.
 import "server-only";
 import type {
-  AnalysisStart, ApiError, ByokProvider, FindJobStatus, FindQuery, FindResult, FindStart, HistoryItem,
+  AnalysisStart, ApiError, ByokProvider, FindJobStatus, FindQuery, FindResult, FindStart, GitHubConnection, HistoryItem,
   JobStatus, Me, Mode, Report, Result, StarterIssue,
 } from "../types";
 import { MODELS } from "../models";
@@ -326,4 +326,37 @@ export function badgeSvg(label: string, message: string, color: string): string 
 <g fill="#83a9ff" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11"><text x="5" y="13.5" font-size="8.5">=^.^=</text></g>
 <g fill="#fff" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11"><text x="36" y="14">${esc(label)}</text><text x="${lw + 6}" y="14">${esc(message)}</text></g>
 </svg>`;
+}
+
+// Connect GitHub. The mock names the account after its id; the real server asks GitHub.
+const g2 = globalThis as unknown as { holtMockGitHub?: Map<string, GitHubConnection> };
+const connections = () => (g2.holtMockGitHub ??= new Map());
+const NOT_CONNECTED: GitHubConnection = { connected: false, account: null };
+
+export async function githubConnection(userId: string): Promise<Result<GitHubConnection>> {
+  return { ok: true, data: connections().get(userId) ?? NOT_CONNECTED };
+}
+
+export async function connectGitHub(userId: string, githubId: string, statsOptOut: boolean): Promise<Result<GitHubConnection>> {
+  const at = new Date().toISOString();
+  const prev = connections().get(userId)?.account;
+  const data: GitHubConnection = {
+    connected: true,
+    account: { id: Number(githubId), login: `github-user-${githubId}`, connected_at: prev?.connected_at ?? at, adult_confirmed_at: at, stats_opt_out: statsOptOut },
+  };
+  connections().set(userId, data);
+  return { ok: true, data };
+}
+
+export async function setStatsOptOut(userId: string, statsOptOut: boolean): Promise<Result<GitHubConnection>> {
+  const c = connections().get(userId);
+  if (!c?.account) return err(404, "not_found", "Your GitHub account isn't connected.");
+  const data = { connected: true, account: { ...c.account, stats_opt_out: statsOptOut } };
+  connections().set(userId, data);
+  return { ok: true, data };
+}
+
+export async function disconnectGitHub(userId: string): Promise<Result<GitHubConnection>> {
+  connections().delete(userId);
+  return { ok: true, data: NOT_CONNECTED };
 }

@@ -3,7 +3,7 @@
 import "server-only";
 import { cache } from "react";
 import type {
-  AnalysisStart, ApiError, ByokProvider, FindQuery, FindResult, FindStart, HistoryItem, JobStatus, Me, Mode,
+  AnalysisStart, ApiError, ByokProvider, FindQuery, FindResult, FindStart, GitHubConnection, HistoryItem, JobStatus, Me, Mode,
   Report, Result, StarterIssue,
 } from "./types";
 import { isJobId } from "./ids";
@@ -169,6 +169,39 @@ export function deleteByok(userId: string): Promise<Result<Me>> {
 export function history(userId: string, limit = 50): Promise<Result<{ items: HistoryItem[] }>> {
   if (MOCK) return mock.history(userId);
   return call(`/v1/me/history?limit=${limit}`, { caller: { userId } });
+}
+
+// Connect GitHub (API.md, "Connect GitHub"). `githubId` always comes from the
+// user's own GitHub sign-in record (lib/github-account.ts), never from a form.
+export function githubConnection(userId: string): Promise<Result<GitHubConnection>> {
+  if (MOCK) return mock.githubConnection(userId);
+  return call("/v1/me/github", { caller: { userId } });
+}
+
+export function connectGitHub(userId: string, githubId: string, statsOptOut: boolean): Promise<Result<GitHubConnection>> {
+  if (MOCK) return mock.connectGitHub(userId, githubId, statsOptOut);
+  return call("/v1/me/github", {
+    method: "POST",
+    body: JSON.stringify({ github_id: Number(githubId), adult_confirmed: true, stats_opt_out: statsOptOut }),
+    caller: { userId },
+  });
+}
+
+export function setStatsOptOut(userId: string, statsOptOut: boolean): Promise<Result<GitHubConnection>> {
+  if (MOCK) return mock.setStatsOptOut(userId, statsOptOut);
+  return call("/v1/me/github", { method: "PATCH", body: JSON.stringify({ stats_opt_out: statsOptOut }), caller: { userId } });
+}
+
+export function disconnectGitHub(userId: string): Promise<Result<GitHubConnection>> {
+  if (MOCK) return mock.disconnectGitHub(userId);
+  return call("/v1/me/github", { method: "DELETE", caller: { userId } });
+}
+
+/** A signed-in user opened a report page. The server keeps it only while GitHub is connected. */
+export async function recordView(userId: string, repo: string): Promise<void> {
+  if (!repoOk(repo) || MOCK) return;
+  const r = await call("/v1/me/activity", { method: "POST", body: JSON.stringify({ repo }), caller: { userId } });
+  if (!r.ok) console.error("[holt] recording a report view failed:", r.error.code);
 }
 
 export async function badge(owner: string, repo: string): Promise<Response> {
