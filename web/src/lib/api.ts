@@ -3,8 +3,8 @@
 import "server-only";
 import { cache } from "react";
 import type {
-  AnalysisStart, ApiError, Checkout, Credits, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection, HistoryItem, JobStatus, Me, Mode,
-  Order, OrderConfirmed, Packs, RazorpaySuccess, Report, Result, StarterIssue,
+  AnalysisStart, ApiError, Checkout, Contributions, Credits, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection, HistoryItem, JobStatus, Me,
+  Mode, Order, OrderConfirmed, Packs, RazorpaySuccess, Report, Result, StarterIssue,
 } from "./types";
 import type { FeedbackInput } from "./feedback";
 import { isJobId } from "./ids";
@@ -198,6 +198,18 @@ export function setStatsOptOut(userId: string, statsOptOut: boolean): Promise<Re
 export function disconnectGitHub(userId: string): Promise<Result<GitHubConnection>> {
   if (MOCK) return mock.disconnectGitHub(userId);
   return call("/v1/me/github", { method: "DELETE", caller: { userId } });
+}
+
+// My Contributions (API.md). The first read, and a refresh past its 15-minute
+// cooldown, make the server search GitHub, so they get more time.
+export function contributions(userId: string): Promise<Result<Contributions>> {
+  if (MOCK) return mock.contributions(userId);
+  return call("/v1/me/contributions", { caller: { userId }, signal: AbortSignal.timeout(60_000) });
+}
+
+export function refreshContributions(userId: string): Promise<Result<Contributions>> {
+  if (MOCK) return mock.refreshContributions(userId);
+  return call("/v1/me/contributions/refresh", { method: "POST", caller: { userId }, signal: AbortSignal.timeout(60_000) });
 }
 
 /** A signed-in user opened a report page. The server keeps it only while GitHub is connected. */

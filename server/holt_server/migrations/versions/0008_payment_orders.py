@@ -2,8 +2,8 @@
 
 A new table only; the release before this one never reads it.
 
-Revision ID: 0007
-Revises: 0006
+Revision ID: 0008
+Revises: 0007
 Create Date: 2026-09-27
 """
 
@@ -14,8 +14,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = '0007'
-down_revision: str | Sequence[str] | None = '0006'
+revision: str = '0008'
+down_revision: str | Sequence[str] | None = '0007'
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

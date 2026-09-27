@@ -253,6 +253,47 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/contributions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Contributions
+         * @description The stored list. The first time (or after a rename) it reads GitHub.
+         */
+        get: operations["get_contributions_v1_me_contributions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/contributions/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Refresh Contributions
+         * @description Read GitHub again, unless the last read is under 15 minutes old: then
+         *     the stored list comes back unchanged, with `next_refresh_at`.
+         */
+        post: operations["refresh_contributions_v1_me_contributions_refresh_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/credits": {
         parameters: {
             query?: never;
@@ -376,6 +417,26 @@ export interface paths {
         put?: never;
         /** Confirm Order */
         post: operations["confirm_order_v1_me_orders_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/metrics/contributions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Metric
+         * @description Internal (the internal key, like every /v1 route): no user needed.
+         */
+        get: operations["get_metric_v1_metrics_contributions_get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -737,6 +798,85 @@ export interface components {
              * @default false
              */
             stats_opt_out: boolean;
+        };
+        /**
+         * ContributionMetric
+         * @description The product metric: pull requests opened after checking a repo on Holt.
+         *     Counts only, no people.
+         */
+        ContributionMetric: {
+            /** Connected Users */
+            connected_users: number;
+            /** Prs After Holt */
+            prs_after_holt: number;
+            /** Prs After Holt Merged */
+            prs_after_holt_merged: number;
+            /** Since */
+            since: string;
+            /** Users With Pr After Holt */
+            users_with_pr_after_holt: number;
+            /** Users With Pull Requests */
+            users_with_pull_requests: number;
+            /** Window Days */
+            window_days: number;
+        };
+        /** ContributionPullRequest */
+        ContributionPullRequest: {
+            /** Closed At */
+            closed_at: string | null;
+            /** Created At */
+            created_at: string;
+            /** Draft */
+            draft: boolean;
+            /** Found Via Holt */
+            found_via_holt: boolean;
+            /** Merged At */
+            merged_at: string | null;
+            /** Number */
+            number: number;
+            /** Repo */
+            repo: string;
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "open" | "merged" | "closed";
+            /** Title */
+            title: string;
+            /** Url */
+            url: string;
+            verdict: components["schemas"]["RepoVerdict"] | null;
+        };
+        /** ContributionSummary */
+        ContributionSummary: {
+            /** Closed */
+            closed: number;
+            /** Found Via Holt */
+            found_via_holt: number;
+            /** Landed Share */
+            landed_share: number | null;
+            /** Merged */
+            merged: number;
+            /** Opened */
+            opened: number;
+            /** Waiting */
+            waiting: number;
+        };
+        /** Contributions */
+        Contributions: {
+            /** Fetched At */
+            fetched_at: string;
+            /** Login */
+            login: string;
+            /** Next Refresh At */
+            next_refresh_at: string | null;
+            /** Pull Requests */
+            pull_requests: components["schemas"]["ContributionPullRequest"][];
+            summary: components["schemas"]["ContributionSummary"];
+            /** Truncated */
+            truncated: boolean;
+            /** Window Days */
+            window_days: number;
         };
         /** Cost */
         Cost: {
@@ -1222,6 +1362,26 @@ export interface components {
              */
             status: "queued";
         };
+        /**
+         * RepoVerdict
+         * @description Holt's latest rules verdict for a repository, from the report cache.
+         */
+        RepoVerdict: {
+            /** Checked At */
+            checked_at: string;
+            /** Headline */
+            readonly headline: string;
+            /**
+             * Tone
+             * @enum {string}
+             */
+            readonly tone: "good" | "bad" | "warn";
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "viable" | "not_viable" | "insufficient_evidence";
+        };
         /** Report */
         Report: {
             cost: components["schemas"]["Cost"] | null;
@@ -1367,6 +1527,10 @@ export type Catalogue = components['schemas']['Catalogue'];
 export type Checkout = components['schemas']['Checkout'];
 export type ConfirmIn = components['schemas']['ConfirmIn'];
 export type ConnectIn = components['schemas']['ConnectIn'];
+export type ContributionMetric = components['schemas']['ContributionMetric'];
+export type ContributionPullRequest = components['schemas']['ContributionPullRequest'];
+export type ContributionSummary = components['schemas']['ContributionSummary'];
+export type Contributions = components['schemas']['Contributions'];
 export type Cost = components['schemas']['Cost'];
 export type Credits = components['schemas']['Credits'];
 export type Entitlements = components['schemas']['Entitlements'];
@@ -1404,6 +1568,7 @@ export type Plan = components['schemas']['Plan'];
 export type PlanFeature = components['schemas']['PlanFeature'];
 export type Price = components['schemas']['Price'];
 export type Queued = components['schemas']['Queued'];
+export type RepoVerdict = components['schemas']['RepoVerdict'];
 export type Report = components['schemas']['Report'];
 export type ReportList = components['schemas']['ReportList'];
 export type ReportListItem = components['schemas']['ReportListItem'];
@@ -1909,6 +2074,72 @@ export interface operations {
             };
         };
     };
+    get_contributions_v1_me_contributions_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Contributions"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    refresh_contributions_v1_me_contributions_refresh_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Contributions"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     get_credits_v1_me_credits_get: {
         parameters: {
             query?: never;
@@ -2279,6 +2510,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["OrderConfirmed"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_metric_v1_metrics_contributions_get: {
+        parameters: {
+            query?: {
+                since?: string | null;
+            };
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ContributionMetric"];
                 };
             };
             /** @description Default Response */

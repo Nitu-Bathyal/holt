@@ -13,6 +13,7 @@ from holt_server import (
     __version__,
     admin,
     connections,
+    contributions,
     credits,
     entitlements,
     errors,
@@ -42,14 +43,19 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
             from holt_server import warm
 
             warming = asyncio.create_task(warm.schedule(svc), name="holt-warm")
+        refreshing = None
+        if run_jobs and svc.settings.contributions_refresh_hours > 0:
+            refreshing = asyncio.create_task(contributions.schedule(svc),
+                                             name="holt-contributions")
         try:
             yield
         finally:
             pro_check.cancel()
             await asyncio.gather(pro_check, return_exceptions=True)
-            if warming is not None:
-                warming.cancel()
-                await asyncio.gather(warming, return_exceptions=True)
+            for task in (warming, refreshing):
+                if task is not None:
+                    task.cancel()
+                    await asyncio.gather(task, return_exceptions=True)
             if run_jobs:
                 await svc.runner.stop()
             await svc.db.dispose()
@@ -71,6 +77,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(admin.router)
     app.include_router(feedback.router)
     app.include_router(connections.router)
+    app.include_router(contributions.router)
     app.include_router(payments.router)
     return app
 
