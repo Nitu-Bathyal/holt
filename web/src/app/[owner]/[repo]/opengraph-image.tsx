@@ -22,8 +22,8 @@ export default async function Image({ params }: { params: Promise<{ owner: strin
   const r = valid ? await getReport(`${owner}/${repo}`) : null;
   const report = r?.ok ? r.data : null;
   const name = report?.repo ?? `${owner}/${repo}`;
-  const tone = !report ? C.blue : report.verdict === "viable" ? C.green : report.verdict === "not_viable" ? C.orange : C.amber;
-  const cat = !report ? "(=^•ω•^=)" : report.verdict === "viable" ? "(=^•ω•^=)" : report.verdict === "not_viable" ? "(=;ω;=)" : "(=•_•=)?";
+  const tone = !report ? C.blue : { good: C.green, bad: C.orange, warn: C.amber }[report.tone];
+  const cat = !report ? "(=^•ω•^=)" : { good: "(=^•ω•^=)", bad: "(=;ω;=)", warn: "(=•_•=)?" }[report.tone];
   const s = report?.stats;
   const stats = s
     ? [
@@ -69,6 +69,9 @@ export default async function Image({ params }: { params: Promise<{ owner: strin
     ),
     {
       ...size,
+      // Public and the same for everyone: let the edge keep it briefly. A card
+      // drawn before the first report exists is kept for a minute only.
+      headers: { "Cache-Control": report ? "public, max-age=300, s-maxage=600, stale-while-revalidate=3600" : "public, max-age=60, s-maxage=60" },
       fonts: [
         { name: "JetBrains Mono", data: await regular, weight: 400, style: "normal" },
         { name: "JetBrains Mono", data: await bold, weight: 700, style: "normal" },

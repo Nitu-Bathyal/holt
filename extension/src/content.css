@@ -45,13 +45,13 @@ a.holt-chip:focus-visible {
   border-radius: 50%;
   background: var(--fgColor-muted, var(--color-fg-muted, #59636e));
 }
-a.holt-chip[data-holt-tone="viable"] .holt-chip__dot {
+a.holt-chip[data-holt-tone="good"] .holt-chip__dot {
   background: var(--fgColor-success, var(--color-success-fg, #1a7f37));
 }
-a.holt-chip[data-holt-tone="not_viable"] .holt-chip__dot {
+a.holt-chip[data-holt-tone="bad"] .holt-chip__dot {
   background: var(--fgColor-danger, var(--color-danger-fg, #d1242f));
 }
-a.holt-chip[data-holt-tone="insufficient_evidence"] .holt-chip__dot {
+a.holt-chip[data-holt-tone="warn"] .holt-chip__dot {
   background: var(--fgColor-attention, var(--color-attention-fg, #9a6700));
 }
 a.holt-chip[data-holt-tone="unknown"] .holt-chip__dot {

@@ -1,4 +1,4 @@
-import type { Report, StarterIssue, Stats, Verdict } from "./types";
+import type { StarterIssue, Stats, Tone } from "./types";
 
 export function pct(n: number, d: number): number {
   return d > 0 ? Math.round((n / d) * 100) : 0;
@@ -51,78 +51,14 @@ export function daysLabel(days: number): string {
   return "a month";
 }
 
-export type Tone = "good" | "bad" | "warn";
-
-export const VERDICT_TONE: Record<Verdict, Tone> = {
-  viable: "good",
-  not_viable: "bad",
-  insufficient_evidence: "warn",
-};
-
-export const VERDICT_HEADLINE: Record<Verdict, string> = {
-  viable: "Worth your time",
-  not_viable: "Not worth your time",
-  insufficient_evidence: "Not enough evidence",
-};
-
-// Thresholds shared by the stat tiles and the "Your odds" hint, so they agree.
+// Tile colours. The server's "Your odds" (server/holt_server/schema.py,
+// MERGE_* and NO_REPLY_*) uses the same thresholds, so a tile and the odds
+// never pull different ways.
 export function mergeTone(mergedPct: number): Tone {
   return mergedPct >= 12 ? "good" : mergedPct >= 5 ? "warn" : "bad";
 }
 export function noReplyTone(noReplyPct: number): Tone {
   return noReplyPct <= 25 ? "good" : noReplyPct <= 50 ? "warn" : "bad";
-}
-
-export type Odds = "good" | "fair" | "long";
-
-/** A newcomer's chances here: the worse of merge rate and reply rate. */
-export function odds(s: Pick<Stats, "outsider_attempts" | "outsider_merged" | "no_reply">): Odds | null {
-  if (!s.outsider_attempts) return null;
-  const tones = [mergeTone(pct(s.outsider_merged, s.outsider_attempts)), noReplyTone(pct(s.no_reply, s.outsider_attempts))];
-  return tones.includes("bad") ? "long" : tones.includes("warn") ? "fair" : "good";
-}
-
-export const ODDS_TONE: Record<Odds, Tone> = { good: "good", fair: "warn", long: "bad" };
-
-/**
- * One sentence under the headline, for beginners. The verdict comes from the
- * rules; this sentence must not oversell it. "Worth your time" with a low
- * merge rate or many ignored PRs says so plainly.
- */
-export function verdictLine(r: Pick<Report, "verdict" | "stats">): string {
-  const s = r.stats;
-  const merged = `${s.outsider_merged} of ${s.outsider_attempts}`;
-  switch (r.verdict) {
-    case "viable": {
-      const rate = s.outsider_attempts ? s.outsider_merged / s.outsider_attempts : 0;
-      const silent = s.outsider_attempts ? s.no_reply / s.outsider_attempts : 0;
-      const lowMerge = rate < 0.1;
-      const manySilent = silent > 0.4;
-      if (lowMerge || manySilent) {
-        const buts = [
-          lowMerge ? "most pull requests don't land" : "",
-          manySilent ? `${silentPhrase(silent)} get no reply` : "",
-        ].filter(Boolean);
-        return `Newcomers do get merged here (${merged} recently), but ${buts.join(" and ")}, so start with one of the starter issues below.`;
-      }
-      return silent < 0.3
-        ? `Outside contributors get real replies here, and ${merged} of their recent pull requests were merged.`
-        : `Outside contributors get merged here: ${merged} of their recent pull requests landed.`;
-    }
-    case "not_viable":
-      return s.outsider_merged === 0
-        ? `None of the last ${s.outsider_attempts} pull requests from outside contributors were merged.`
-        : `Only ${merged} pull requests from outside contributors were merged, and most never got a useful reply.`;
-    default:
-      return `Too few outside contributors have tried recently for Holt to say either way.`;
-  }
-}
-
-function silentPhrase(share: number): string {
-  if (share >= 0.45 && share <= 0.6) return "about half";
-  if (share > 0.6 && share < 0.72) return "about two in three";
-  if (share >= 0.72) return "most";
-  return `about ${Math.round(share * 100)}%`;
 }
 
 export interface StatLine {
@@ -201,12 +137,13 @@ const NEGATIVE = /no_reply|ignored|closed|reject|stale|declin|abandon|negative|h
  * kind "outsider_pr" (value "merged" | "no_reply"); AI mode uses "outcome"
  * (value like "merged_after_review") or the engine field a claim is about.
  */
-export function evidenceLabel(e: { kind: string; value: string }): { label: string; bad: boolean } {
-  const bad = NEGATIVE.test(e.value);
+export function evidenceLabel(e: { kind: string; value: string | null }): { label: string; bad: boolean } {
+  const value = e.value ?? "";
+  const bad = NEGATIVE.test(value);
   if (e.kind === "outsider_pr") {
-    return { label: e.value === "merged" ? "Newcomer PR merged" : e.value === "no_reply" ? "Newcomer PR, no reply" : `Newcomer PR: ${humanize(e.value).toLowerCase()}`, bad };
+    return { label: e.value === "merged" ? "Newcomer PR merged" : e.value === "no_reply" ? "Newcomer PR, no reply" : `Newcomer PR: ${humanize(value).toLowerCase()}`, bad };
   }
-  if (e.kind === "outcome") return { label: humanize(e.value), bad };
+  if (e.kind === "outcome") return { label: humanize(value), bad };
   return { label: humanize(e.kind), bad };
 }
 

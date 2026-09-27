@@ -18,6 +18,12 @@ Users, sessions and OAuth (GitHub + Google) live in `web/` (Auth.js). The
 server keeps its own `users` table keyed by the same id, created on first
 sight, holding plan, quota usage and the encrypted BYOK key.
 
+Response shapes are pydantic models in
+`server/holt_server/schema.py`; the web's TypeScript types are generated from
+them (`server/scripts/api_types.sh` writes `web/src/lib/api-schema.ts`, and CI
+fails when it is stale). This file describes the fields; the models are exact.
+Change a model, this file and the generated types in the same PR.
+
 All bodies are JSON. Errors: `{"error": {"code": "<code>", "message": "<plain English for a beginner>"}}`
 with codes: `unauthorized`, `not_found` (repo missing or private),
 `invalid_repo`, `rate_limited` (ours or GitHub's; include `retry_after` seconds),
@@ -59,6 +65,10 @@ responses. The server also accepts and normalises full URLs
   "days": 7,                          // contributor time budget used
   "verdict": "viable" | "not_viable" | "insufficient_evidence",
   "headline": "Worth your time" | "Not worth your time" | "Not enough evidence",
+  "tone": "good" | "bad" | "warn",    // the verdict's colour
+  "verdict_line": "string",           // one plain sentence under the headline
+  "odds": { "level": "good" | "fair" | "long", "tone": "good" | "warn" | "bad",
+            "text": "most outside pull requests get a reply, and plenty get merged" } | null,
   "summary": "string | null",         // ai mode: short plain-English paragraph
   "stats": {
     "outsider_attempts": 100, "outsider_merged": 15, "distinct_outsiders": 72,
@@ -66,6 +76,7 @@ responses. The server also accepts and normalises full URLs
     "median_first_response_hours": 0.8, "bot_share": 0.085
   },
   "decided_by": ["plain-English rule sentence", "..."],
+  "rule_codes": ["merges", "rubber_stamp"], // stable code per decided_by line, same order
   "unknowns": ["plain-English sentence", "..."],
   "landing": [ { "path": "pkgs/by-name", "merged": 13, "attempted": 62 } ],
   "never_landed": [ { "path": "pkgs/applications", "attempted": 6 } ],
@@ -73,13 +84,35 @@ responses. The server also accepts and normalises full URLs
     { "id": "pr:NixOS/nixpkgs#526518:opened", "url": "https://github.com/NixOS/nixpkgs/pull/526518",
       "kind": "onboarding", "value": "substantive", "text": "…", "quote": "string | null" }
   ],
-  "evidence_until": "2026-06-01T00:00:00Z",
+  "evidence_until": "2026-06-01T00:00:00Z", // or null
   "generated_at": "2026-09-25T12:00:00Z",
   "cost": { "model": "…", "input_tokens": 9000, "output_tokens": 6000 } // ai only, else null
 }
 ```
 
 Every evidence item MUST have a clickable `url`.
+
+`headline`, `tone`, `verdict_line` and `odds` are derived by the server from
+`verdict`, `stats` and `decided_by`/`rule_codes`, every time a report is
+served (so cached reports pick up wording changes). Every surface (web, OG
+images, the extension) shows these fields and never works them out itself, so
+they cannot disagree with each other or with the verdict:
+
+- `tone` follows the verdict: `viable` → `good`, `not_viable` → `bad`,
+  `insufficient_evidence` → `warn`.
+- `verdict_line` never oversells: "Worth your time" with a low merge rate or
+  many unanswered pull requests says so. Under "Not worth your time" it states
+  the rule that decided it.
+- `odds` is non-null only when the verdict is `viable` (and anyone tried): the
+  worse of the merge rate (good ≥ 12%, fair ≥ 5%) and the no-reply rate (good
+  ≤ 25%, fair ≤ 50%); its `text` names the weak part. The other verdicts are
+  the answer on their own.
+- `rule_codes` is `[]` on reports cached before it existed. Codes include
+  `archived`, `closed_kind`, `non_software_kind`, `awaiting_reply`,
+  `no_attempts`, `ignored`, `merges`, `rubber_stamp`, `slow`,
+  `too_few_attempts`; new ones may appear.
+
+New fields are added with a default, so older cached reports stay valid.
 
 `kind` is a machine key: in AI mode the engine field the claim is about
 (`onboarding`, `outsider_posture`, `repo_kind`, …) or `outcome` for what
@@ -132,10 +165,11 @@ a cache hit costs no GitHub call and no rate limit. A miss counts against the
 
 ### `POST /v1/find`
 Body: `{"languages": ["python"], "topics": [], "days": 7, "hacktoberfest": true, "limit": 20}`
-Returns `{"results": [ { "repo": "owner/repo", "headline": "…", "verdict": "…",
+Returns `{"results": [ { "repo": "owner/repo", "headline": "…", "tone": "good", "verdict": "…",
 "description": "string | null", "language": "string | null", "stars": 123 | null,
 "stats": {…subset}, "issues": [StarterIssue] } ]}` (`description`, `language`
-and `stars` are null when the finder did not supply them), only repos whose rules
+and `stars` are null when the finder did not supply them; `stats` leaves out
+counts it doesn't have rather than sending null), only repos whose rules
 verdict is `viable`, ordered by starter-issue quality.
 
 - **Cached** (same search, finished within 6 hours): `200
@@ -173,8 +207,8 @@ one at a time, and wait behind every user request.
   Returns the same body as `GET /v1/me`.
 - `DELETE /v1/me/byok` → the `GET /v1/me` body.
 - `GET /v1/me/history?limit=50` → recent analyses by this user:
-  `{"items": [{"job_id", "repo", "mode", "days", "status", "verdict", "headline", "created_at"}]}`
-  (`verdict`/`headline` are null until the job is done).
+  `{"items": [{"job_id", "repo", "mode", "days", "status", "verdict", "headline", "tone", "created_at"}]}`
+  (`verdict`/`headline`/`tone` are null until the job is done).
 
 `/v1/me*` without `X-Holt-User` → 401 `unauthorized`. AI reports use the
 user's BYOK key when one is saved (not counted against quota); otherwise the
@@ -193,8 +227,8 @@ analysis or call GitHub.
 ### `GET /api/public/report/{owner}/{repo}`
 Proxies `GET /v1/reports/{owner}/{repo}?mode=rules&days=7`.
 - `200` → the Report object (above), `mode: "rules"`. The extension reads only
-  `verdict` and `stats.outsider_attempts` / `stats.outsider_merged`, so the
-  proxy may strip `evidence` to keep responses small.
+  `headline`, `tone` and `stats.outsider_attempts` / `stats.outsider_merged`,
+  so the proxy may strip `evidence` to keep responses small.
 - `404` → `{"error": {"code": "not_found", ...}}` when nothing is cached yet
   (or the repo is missing/private). The extension then shows "Check with Holt"
   and links to `/{owner}/{repo}`, whose page starts the analysis.

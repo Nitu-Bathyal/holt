@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 
-from holt_server import __version__, badge, crypto, llm, repos, starter
+from holt_server import __version__, badge, crypto, llm, repos, schema, starter
 from holt_server.db import (
     ACTIVE,
     BADGE_PRIORITY,
@@ -36,7 +36,8 @@ from holt_server.services import Services
 SSE_KEEPALIVE_SECONDS = 15.0
 
 public = APIRouter()
-router = APIRouter(prefix="/v1")
+# Every /v1 error is the envelope in API.md.
+router = APIRouter(prefix="/v1", responses={"default": {"model": schema.ErrorBody}})
 
 
 # --- dependencies -------------------------------------------------------------
@@ -141,15 +142,15 @@ def ai_used(user: User) -> int:
     return user.ai_used if user.ai_period == period() else 0
 
 
-def me_body(svc: Services, user: User) -> dict[str, Any]:
-    return {
+def me_body(svc: Services, user: User) -> schema.Me:
+    return schema.Me.model_validate({
         "plan": user.plan or "free",
         "quota": {"ai_used": ai_used(user), "ai_limit": ai_limit(svc, user),
                   "resets_at": iso(resets_at())},
         "byok": {"provider": user.byok_provider, "model": user.byok_model or
                  llm.DEFAULT_MODELS.get(user.byok_provider or "", ""), "set": True}
         if user.byok_cipher else None,
-    }
+    })
 
 
 # --- bodies -------------------------------------------------------------------
@@ -179,8 +180,8 @@ class ByokIn(BaseModel):
 # --- health and badge (no internal key) ---------------------------------------
 
 
-@public.get("/health")
-async def health(request: Request) -> dict[str, Any]:
+@public.get("/health", response_model=schema.Health, responses={503: {"model": schema.Health}})
+async def health(request: Request) -> Any:
     svc = services(request)
     body: dict[str, Any] = {"ok": True, "version": __version__}
     if not await svc.db.ping():
@@ -306,7 +307,7 @@ def job_copy(job: Job) -> Job:
 
 @router.get("/reports", dependencies=[Depends(internal)])
 async def list_reports(request: Request,
-                       limit: int = Query(500, ge=1, le=5000)) -> dict[str, Any]:
+                       limit: int = Query(500, ge=1, le=5000)) -> schema.ReportList:
     """The latest 7-day rules report per repository, newest first (sitemaps)."""
     svc = services(request)
     latest = (select(func.max(Report.id).label("id"))
@@ -321,29 +322,30 @@ async def list_reports(request: Request,
             .join(latest, Report.id == latest.c.id)
             .order_by(Report.created_at.desc(), Report.id.desc()).limit(limit)
         )).all()
-    return {"reports": [
+    return schema.ReportList.model_validate({"reports": [
         {"repo": repo, "mode": mode, "generated_at": generated or iso(created),
          "verdict": verdict}
         for repo, mode, created, generated, verdict in rows
-    ]}
+    ]})
 
 
 @router.get("/reports/{owner}/{repo}", dependencies=[Depends(internal)])
 async def get_report(owner: str, repo: str, request: Request,
                      mode: Literal["rules", "ai"] = "rules",
-                     days: int = Query(7, ge=1, le=90)) -> dict[str, Any]:
+                     days: int = Query(7, ge=1, le=90)) -> schema.Report:
     svc = services(request)
     name = repos.normalize(f"{owner}/{repo}")
     latest = await latest_report(svc, name, mode, days)
     if latest is None:
         raise ApiError("not_found", f"There's no report for {name} yet.")
-    return latest.report
+    return schema.Report.model_validate(latest.report)
 
 
 # --- analyses -------------------------------------------------------------------
 
 
-@router.post("/analyses")
+@router.post("/analyses", response_model=schema.AnalysisDone,
+             responses={202: {"model": schema.Queued}})
 async def create_analysis(body: AnalysisIn, request: Request,
                           who: Caller = Depends(caller)) -> JSONResponse:
     svc = services(request)
@@ -357,7 +359,8 @@ async def create_analysis(body: AnalysisIn, request: Request,
     if not body.refresh:
         cached = await latest_report(svc, repo, body.mode, body.days)
         if cached is not None and is_fresh(svc, cached):
-            return JSONResponse({"status": "done", "report": cached.report})
+            return JSONResponse(schema.AnalysisDone(
+                report=schema.Report.model_validate(cached.report)).model_dump(mode="json"))
 
     rate_limit(svc, who)
 
@@ -425,6 +428,8 @@ async def load_job(svc: Services, job_id: str, kind: str) -> Job:
 
 
 def job_body(job: Job) -> dict[str, Any]:
+    """The poll body; the endpoints validate it as `schema.JobStatus` or
+    `schema.FindJobStatus`, which also fills in reports' derived fields."""
     body: dict[str, Any] = {
         "status": job.status,
         "stage": job.stage,
@@ -439,8 +444,9 @@ def job_body(job: Job) -> dict[str, Any]:
 
 
 @router.get("/analyses/{job_id}", dependencies=[Depends(internal)])
-async def get_analysis(job_id: str, request: Request) -> dict[str, Any]:
-    return job_body(await load_job(services(request), job_id, "analysis"))
+async def get_analysis(job_id: str, request: Request) -> schema.JobStatus:
+    return schema.JobStatus.model_validate(
+        job_body(await load_job(services(request), job_id, "analysis")))
 
 
 @router.get("/analyses/{job_id}/events", dependencies=[Depends(internal)])
@@ -556,16 +562,16 @@ async def _fetch_and_store(svc: Services, repo: str) -> tuple[str, list[dict]]:
 @router.get("/repos/{owner}/{repo}/starter-issues")
 async def starter_issues(owner: str, repo: str, request: Request,
                          limit: int = Query(20, ge=1, le=50),
-                         who: Caller = Depends(caller)) -> dict[str, Any]:
+                         who: Caller = Depends(caller)) -> schema.StarterIssues:
     svc = services(request)
     name = repos.normalize(f"{owner}/{repo}")
     # A cache hit costs nothing: no rate limit, no GitHub.
     if (hit := await cached_starter_issues(svc, name)) is not None:
-        return {"repo": hit.repo, "issues": hit.issues[:limit]}
+        return schema.StarterIssues(repo=hit.repo, issues=hit.issues[:limit])
     starter.function("starter_issues")  # 501 before spending a rate-limit hit
     rate_limit(svc, who, "read")
     canonical, issues = await fetch_starter_issues(svc, name)
-    return {"repo": canonical, "issues": issues[:limit]}
+    return schema.StarterIssues(repo=canonical, issues=issues[:limit])
 
 
 # A search is computed for at least this many results, so the default page
@@ -603,7 +609,8 @@ async def active_find(svc: Services, key: str) -> Job | None:
         )).scalar_one_or_none()
 
 
-@router.post("/find")
+@router.post("/find", response_model=schema.FindDone,
+             responses={202: {"model": schema.Queued}})
 async def find(body: FindIn, request: Request, who: Caller = Depends(caller)) -> JSONResponse:
     svc = services(request)
     starter.function("find")
@@ -611,7 +618,8 @@ async def find(body: FindIn, request: Request, who: Caller = Depends(caller)) ->
     key = find_key(params["languages"], params["topics"], params["hacktoberfest"], body.days)
     # Cached, or already being searched for someone else: free, no rate limit.
     if (results := await cached_find(svc, key, body.limit)) is not None:
-        return JSONResponse({"status": "done", "results": results})
+        return JSONResponse(schema.FindDone.model_validate(
+            {"results": results}).model_dump(mode="json"))
     if (running := await active_find(svc, key)) is not None:
         return queued(running.id)
     rate_limit(svc, who)
@@ -631,8 +639,9 @@ async def find(body: FindIn, request: Request, who: Caller = Depends(caller)) ->
 
 
 @router.get("/find/{job_id}", dependencies=[Depends(internal)])
-async def get_find(job_id: str, request: Request) -> dict[str, Any]:
-    return job_body(await load_job(services(request), job_id, "find"))
+async def get_find(job_id: str, request: Request) -> schema.FindJobStatus:
+    return schema.FindJobStatus.model_validate(
+        job_body(await load_job(services(request), job_id, "find")))
 
 
 @router.get("/find/{job_id}/events", dependencies=[Depends(internal)])
@@ -646,14 +655,14 @@ async def find_events(job_id: str, request: Request) -> StreamingResponse:
 
 
 @router.get("/me")
-async def me(request: Request, who: Caller = Depends(caller)) -> dict[str, Any]:
+async def me(request: Request, who: Caller = Depends(caller)) -> schema.Me:
     svc = services(request)
     return me_body(svc, await get_user(svc, signed_in(who)))
 
 
 @router.put("/me/byok")
 async def put_byok(body: ByokIn, request: Request,
-                   who: Caller = Depends(caller)) -> dict[str, Any]:
+                   who: Caller = Depends(caller)) -> schema.Me:
     svc = services(request)
     user_id = signed_in(who)
     await get_user(svc, user_id)
@@ -671,7 +680,7 @@ async def put_byok(body: ByokIn, request: Request,
 
 
 @router.delete("/me/byok")
-async def delete_byok(request: Request, who: Caller = Depends(caller)) -> dict[str, Any]:
+async def delete_byok(request: Request, who: Caller = Depends(caller)) -> schema.Me:
     svc = services(request)
     user_id = signed_in(who)
     await get_user(svc, user_id)
@@ -684,7 +693,7 @@ async def delete_byok(request: Request, who: Caller = Depends(caller)) -> dict[s
 
 @router.get("/me/history")
 async def history(request: Request, who: Caller = Depends(caller),
-                  limit: int = Query(50, ge=1, le=200)) -> dict[str, Any]:
+                  limit: int = Query(50, ge=1, le=200)) -> schema.History:
     svc = services(request)
     user_id = signed_in(who)
     async with svc.db.session() as s:
@@ -692,7 +701,7 @@ async def history(request: Request, who: Caller = Depends(caller),
             select(Job).where(Job.user_id == user_id, Job.kind == "analysis")
             .order_by(Job.created_at.desc()).limit(limit)
         )).scalars().all()
-    return {"items": [
+    return schema.History.model_validate({"items": [
         {
             "job_id": j.id,
             "repo": j.repo,
@@ -700,8 +709,7 @@ async def history(request: Request, who: Caller = Depends(caller),
             "days": j.days,
             "status": j.status,
             "verdict": (j.result or {}).get("verdict"),
-            "headline": (j.result or {}).get("headline"),
             "created_at": iso(j.created_at),
         }
         for j in jobs
-    ]}
+    ]})
