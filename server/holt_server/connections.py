@@ -25,7 +25,7 @@ from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.exc import IntegrityError
 
 from holt_server import repos, schema
-from holt_server.api import Caller, caller, services, signed_in
+from holt_server.deps import Caller, caller, services, signed_in
 from holt_server.db import GitHubConnection, RepoView, iso, now
 from holt_server.errors import ApiError, github_rate_limited, upstream
 from holt_server.services import Services

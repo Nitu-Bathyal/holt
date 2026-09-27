@@ -59,7 +59,7 @@ export async function Header() {
               <div id="account-menu" popover="auto" className="menu w-56 text-[0.82rem]">
                 <p className="truncate px-3 py-2 text-faint">{user.name || user.email}</p>
                 <Link href="/me/history" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">your history</Link>
-                <Link href="/settings" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">settings &amp; API key</Link>
+                <Link href="/settings" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">settings</Link>
                 <Link href="/privacy" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">privacy</Link>
                 <form action={doSignOut}>
                   <button type="submit" className="block w-full px-3 py-2.5 text-left text-muted transition-colors hover:bg-panel-2">sign out</button>

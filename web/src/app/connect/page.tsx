@@ -46,7 +46,7 @@ export default async function ConnectPage({ searchParams }: PageProps<"/connect"
         <form action={connect} className="mt-8 border border-line-strong bg-panel p-5 shadow-soft sm:p-8">
           <ul className="prose-sans list-disc space-y-1.5 pl-5 text-[0.95rem]">
             <li>Holt only reads <strong>public</strong> information about your GitHub account, using its own access. It never posts, comments or opens anything as you, and gets no access to your repositories.</li>
-            {viaGitHub && <li>You&apos;ll go to GitHub once to confirm which account is yours. Holt asks only for your public profile.</li>}
+            {viaGitHub && <li>You&apos;ll go to GitHub once to confirm which account is yours. Holt asks for the same as signing in with GitHub: your public profile and email address.</li>}
             <li>You can disconnect any time in settings. That deletes the connection and the list of repos you viewed here.</li>
           </ul>
 

@@ -24,7 +24,7 @@ export type Verdict = Report["verdict"];
 /** The colour of a verdict or of the odds, chosen by the server. */
 export type Tone = Report["tone"];
 export type ApiErrorCode = ApiError["code"];
-export type ByokProvider = S.Byok["provider"];
+export type Credits = S.Credits;
 
 export type AnalysisStart = S.AnalysisDone | S.Queued;
 export type FindStart = S.FindDone | S.Queued;
