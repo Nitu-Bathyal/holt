@@ -31,22 +31,22 @@ export default function Home() {
     <PageTransition>
       <>
         {/* 01 — start here */}
-        <section data-hero data-cat-section="ready" className="relative overflow-hidden border-b border-line pb-12 pt-5 md:pb-16 md:pt-7">
+        <section data-hero data-cat-section="ready" className="relative overflow-hidden border-b border-line pb-12 pt-5 md:pb-16 md:pt-7 short:pt-3">
           <div aria-hidden="true" className="hero-backdrop" />
           <CatCompanion />
           <Grid>
             <Rail n="01" label="start here" className="relative hidden pt-2 md:block" />
             <div className="relative z-10 max-w-[860px]">
-              <div className="fade-up mb-4 flex flex-wrap items-center gap-x-4 gap-y-2" style={{ ["--d" as string]: ".1s" }}>
+              <div className="fade-up mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 short:mb-2" style={{ ["--d" as string]: ".1s" }}>
                 {hf && <HacktoberfestPill year={hf.year} short={hf.short} />}
                 <p className="text-[0.78rem] text-muted">holt / free / for first-time contributors</p>
               </div>
-              <h1 className="display mb-5 text-[clamp(2rem,8.9vw,3.15rem)]">
+              <h1 className="display mb-5 text-[clamp(2rem,8.9vw,3.15rem)] short:mb-3 short:text-[2rem]">
                 <span className="headline-line"><span>Find an open-source</span></span>
                 <span className="headline-line"><span>project that will</span></span>
                 <span className="headline-line"><span className="text-orange"><span className="marker">actually merge</span> your first PR.</span></span>
               </h1>
-              <p className="prose-sans fade-up mb-6 max-w-[680px] text-[clamp(1rem,1.45vw,1.12rem)]" style={{ ["--d" as string]: ".3s" }}>
+              <p className="prose-sans fade-up mb-6 max-w-[680px] text-[clamp(1rem,1.45vw,1.12rem)] short:mb-4" style={{ ["--d" as string]: ".3s" }}>
                 Paste any GitHub repo. Holt reads its recent pull requests and tells you, in plain English, whether
                 newcomers get replies, get merged, and where your work has a real chance of landing.
               </p>
@@ -59,8 +59,8 @@ export default function Home() {
               </p>
               <div className="fade-up mt-5 flex flex-wrap items-center gap-x-5 gap-y-3" style={{ ["--d" as string]: ".45s" }}>
                 <span className="font-sans text-[0.95rem] text-muted">No repo in mind yet?</span>
-                <Link href="/find" className="bracket-link bracket-link--orange min-h-12 px-5 text-[0.9rem]">
-                  [ find my first contribution → ]
+                <Link href="/find" className="bracket-link bracket-link--orange min-h-12 w-full px-4 text-center text-balance text-[0.82rem] sm:w-auto sm:px-5 sm:text-[0.9rem]">
+                  [ find my first contribution&nbsp;→&nbsp;]
                 </Link>
               </div>
               <div className="fade-up mt-8 flex flex-wrap items-center gap-x-3 gap-y-2" style={{ ["--d" as string]: ".5s" }}>
@@ -181,8 +181,8 @@ export default function Home() {
                 </p>
                 <div className="grid max-w-[760px] grid-cols-[auto_1fr_auto] items-center border border-line-strong bg-bg" data-reveal>
                   <span aria-hidden="true" className="pl-4 text-amber">$</span>
-                  <code className="min-w-0 overflow-x-auto whitespace-nowrap px-3 py-4 text-[0.9rem]">uv tool install holt-cli</code>
-                  <CopyButton text="uv tool install holt-cli" className="self-stretch border-l border-line-strong px-4 text-[0.85rem] text-muted transition-colors hover:bg-green hover:text-on-accent" />
+                  <code className="min-w-0 overflow-x-auto whitespace-nowrap px-2 py-4 text-[0.8rem] sm:px-3 sm:text-[0.9rem]">uv tool install holt-cli</code>
+                  <CopyButton text="uv tool install holt-cli" className="self-stretch border-l border-line-strong px-3 text-[0.85rem] text-muted sm:px-4 transition-colors hover:bg-green hover:text-on-accent" />
                 </div>
                 <div className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-4" data-reveal>
                   <a className="bracket-link" href={`${GITHUB_REPO_URL}/blob/main/CONTRIBUTING.md`}>[ start contributing → ]</a>
