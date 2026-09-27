@@ -91,13 +91,21 @@ services:
       HOLT_WEB_URL: https://githolt.com
       GITHUB_TOKENS: ${GITHUB_TOKENS}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      HOLT_JOB_CONCURRENCY: ${HOLT_JOB_CONCURRENCY:-1}
+      # Six people's jobs at once, plus one background worker for badges
+      # and warm passes (it takes a waiting person's job first). Each job is
+      # a thread holding one crawl; mem_limit below is sized for seven.
+      HOLT_JOB_CONCURRENCY: ${HOLT_JOB_CONCURRENCY:-6}
+      HOLT_BADGE_CONCURRENCY: ${HOLT_BADGE_CONCURRENCY:-1}
+      # Per-job time limits, in seconds (rules, AI, find).
+      HOLT_JOB_TIMEOUT_RULES: ${HOLT_JOB_TIMEOUT_RULES:-180}
+      HOLT_JOB_TIMEOUT_AI: ${HOLT_JOB_TIMEOUT_AI:-480}
+      HOLT_JOB_TIMEOUT_FIND: ${HOLT_JOB_TIMEOUT_FIND:-300}
       # The warm pass (warm.sh) fills this cache for a day.
       HOLT_STARTER_CACHE_HOURS: ${HOLT_STARTER_CACHE_HOURS:-24}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     depends_on:
       db: { condition: service_healthy }
-    mem_limit: 512m
+    mem_limit: 1536m
     restart: unless-stopped
 
   web:

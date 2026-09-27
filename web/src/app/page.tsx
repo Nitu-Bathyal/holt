@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { CatFace } from "@/components/cat-face";
 import { CopyButton } from "@/components/copy-button";
@@ -11,6 +12,10 @@ import { SampleReportSkeleton } from "@/components/sample-report-skeleton";
 import { SkeletonReveal } from "@/components/motion/reveal";
 import { GITHUB_REPO_URL, SITE_HOST, hacktoberfest } from "@/lib/site";
 import { PageTransition } from "@/components/motion/page-transition";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 function Rail({ n, label, className = "" }: { n: string; label: string; className?: string }) {
   return (

@@ -6,6 +6,7 @@ import { CONTACT_CITY, FREE_AI_QUOTA, PAYMENT_BRAND } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description: "What Holt stores about you (very little), what it sends to AI providers and payment processors, and how to have it deleted.",
+  alternates: { canonical: "/privacy" },
 };
 
 export default function PrivacyPage() {
