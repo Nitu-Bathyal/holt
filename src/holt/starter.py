@@ -309,6 +309,44 @@ def label_kinds(labels: Iterable[str]) -> set[str]:
     return kinds
 
 
+# The kinds of contribution a profile can ask for, and how to spot each on an
+# issue from its labels and title. "code" is everything that isn't one of the
+# others, plus issues labelled as a bug, feature or refactor.
+CONTRIBUTION_TYPES = ("code", "docs", "tests", "design", "translations")
+_AREA_LABELS = {
+    "docs": re.compile(r"\b(docs?|documentation|readme|docstrings?|tutorials?|examples?)\b"),
+    "tests": re.compile(r"\b(tests?|testing|coverage|unit tests?|e2e)\b"),
+    "design": re.compile(r"\b(design|ui|ux|ui ux|css|styling|a11y|accessibility|icons?|logo)\b"),
+    "translations": re.compile(r"\b(translations?|i18n|l10n|locali[sz]ation)\b"),
+}
+_AREA_TITLES = {
+    "docs": re.compile(r"\b(docs?|documentation|readme|docstrings?|typos?|tutorial)\b", re.I),
+    "tests": re.compile(r"\b(tests?|testing|test coverage|unit tests?)\b", re.I),
+    "design": re.compile(r"\b(ui|ux|css|styling|dark mode|layout|icons?|logo)\b", re.I),
+    "translations": re.compile(r"\b(translat\w*|i18n|l10n|locali[sz]\w*)\b", re.I),
+}
+_CODE_LABELS = re.compile(r"\b(bug|feature|enhancement|refactor\w*|performance|type bug|"
+                          r"kind bug|kind feature)\b")
+
+
+def is_beginner_issue(labels: Iterable[str]) -> bool:
+    """True when the maintainers labelled the issue for first-timers ("good
+    first issue" and its spellings). What a newcomer's profile keeps."""
+    return "beginner" in label_kinds(labels)
+
+
+def issue_areas(labels: Iterable[str], title: str = "") -> list[str]:
+    """Which of `CONTRIBUTION_TYPES` an issue looks like, from its labels and
+    title. Ordering only: it never decides whether an issue is shown."""
+    normed = [_norm(label) for label in labels]
+    found = [area for area, pattern in _AREA_LABELS.items()
+             if any(pattern.search(label) for label in normed)
+             or _AREA_TITLES[area].search(title or "")]
+    if not found or any(_CODE_LABELS.search(label) for label in normed):
+        found.insert(0, "code")
+    return found
+
+
 def _ts(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
@@ -493,7 +531,7 @@ def score_issue(node: dict[str, Any], as_of: datetime, *,
     if landing and (area := _mentioned_area(f"{title}\n{body}", landing, repo)):
         score += 2
         why.append(f"Mentions {area.path}/, where {area.landed} of {area.attempted} "
-                   "pull requests from first-time contributors were merged")
+                   "pull requests from outside contributors were merged")
 
     if idle <= 14:
         score += 1.5
@@ -602,7 +640,7 @@ def _stats_subset(signals) -> dict[str, Any]:
         "outsider_attempts": signals.outsider_threads,
         "outsider_merged": signals.outsider_merged,
         "distinct_outsiders": signals.distinct_outsider_authors,
-        "first_time_merged_authors": signals.distinct_merged_authors,
+        "first_time_merged_authors": signals.distinct_first_timer_merged_authors,
         "no_reply": signals.outsider_ignored,
         "median_first_response_hours": signals.median_first_response_hours,
     }
@@ -837,7 +875,7 @@ def _stats_line(stats: dict[str, Any]) -> str:
     parts = []
     tried, merged = stats.get("outsider_attempts"), stats.get("outsider_merged")
     if tried:
-        parts.append(f"{merged} of {tried} recent pull requests from first-time "
+        parts.append(f"{merged} of {tried} recent pull requests from outside "
                      "contributors were merged")
     hours = stats.get("median_first_response_hours")
     if hours is not None:
@@ -864,7 +902,7 @@ def render_find(results: Sequence[FindResult], describe: str) -> str:
                   "open starter issue right now. Try another language or topic, or "
                   "drop --hacktoberfest.", ""]
         return "\n".join(lines)
-    lines += ["Each repository below merges pull requests from first-time contributors "
+    lines += ["Each repository below merges pull requests from outside contributors "
               "(checked from its recent history). Issues are listed best first.", ""]
     for i, result in enumerate(results, 1):
         lines.append(f"{i}. {result.repo}: {result.headline}")

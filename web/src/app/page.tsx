@@ -12,6 +12,8 @@ import { SampleReportSkeleton } from "@/components/sample-report-skeleton";
 import { SkeletonReveal } from "@/components/motion/reveal";
 import { GITHUB_REPO_URL, SITE_HOST, hacktoberfest } from "@/lib/site";
 import { PageTransition } from "@/components/motion/page-transition";
+import { ProfileOnboarding } from "@/components/profile-onboarding";
+import { Suspense } from "react";
 
 export const metadata: Metadata = {
   alternates: { canonical: "/" },
@@ -78,6 +80,11 @@ export default function Home() {
             </div>
           </Grid>
         </section>
+
+        {/* After sign-in: the profile card, for people who haven't saved or skipped it. */}
+        <Suspense fallback={null}>
+          <ProfileOnboarding back="/" className="wrap py-8" />
+        </Suspense>
 
         {/* 02 — see the answer */}
         <section data-cat-section="startled" className="py-14 md:py-28">

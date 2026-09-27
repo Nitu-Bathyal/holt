@@ -385,6 +385,25 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Profile */
+        get: operations["get_profile_v1_me_profile_get"];
+        /** Put Profile */
+        put: operations["put_profile_v1_me_profile_put"];
+        post?: never;
+        /** Delete Profile */
+        delete: operations["delete_profile_v1_me_profile_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/metrics/contributions": {
         parameters: {
             query?: never;
@@ -1185,6 +1204,59 @@ export interface components {
             /** Usd Cents */
             usd_cents?: number | null;
         };
+        /** ProfileIn */
+        ProfileIn: {
+            /**
+             * Adult Confirmed
+             * @default false
+             */
+            adult_confirmed: boolean;
+            /** Contributions */
+            contributions?: ("code" | "docs" | "tests" | "design" | "translations")[];
+            /**
+             * Days
+             * @default 7
+             */
+            days: number;
+            /** Languages */
+            languages?: string[];
+            /**
+             * Level
+             * @default newcomer
+             * @enum {string}
+             */
+            level: "newcomer" | "experienced";
+            /** Topics */
+            topics?: string[];
+        };
+        /** ProfileOut */
+        ProfileOut: {
+            /** Adult Confirmed */
+            adult_confirmed: boolean;
+            profile: components["schemas"]["ProfilePrefs"] | null;
+        };
+        /** ProfilePrefs */
+        ProfilePrefs: {
+            /** Contributions */
+            contributions: ("code" | "docs" | "tests" | "design" | "translations")[];
+            /**
+             * Days
+             * @default 7
+             */
+            days: number;
+            /** Languages */
+            languages: string[];
+            /**
+             * Level
+             * @default newcomer
+             * @enum {string}
+             */
+            level: "newcomer" | "experienced";
+            /** Topics */
+            topics: string[];
+            /** Updated At */
+            updated_at: string | null;
+        };
         /** Queued */
         Queued: {
             /** Job Id */
@@ -1285,6 +1357,10 @@ export interface components {
         };
         /** StarterIssue */
         StarterIssue: {
+            /** Areas */
+            readonly areas: ("code" | "docs" | "tests" | "design" | "translations")[];
+            /** Beginner */
+            readonly beginner: boolean;
             /**
              * Comments
              * @default 0
@@ -1395,6 +1471,9 @@ export type PartialStats = components['schemas']['PartialStats'];
 export type Plan = components['schemas']['Plan'];
 export type PlanFeature = components['schemas']['PlanFeature'];
 export type Price = components['schemas']['Price'];
+export type ProfileIn = components['schemas']['ProfileIn'];
+export type ProfileOut = components['schemas']['ProfileOut'];
+export type ProfilePrefs = components['schemas']['ProfilePrefs'];
 export type Queued = components['schemas']['Queued'];
 export type RepoVerdict = components['schemas']['RepoVerdict'];
 export type Report = components['schemas']['Report'];
@@ -2229,6 +2308,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["History"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_profile_v1_me_profile_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileOut"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    put_profile_v1_me_profile_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileOut"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    delete_profile_v1_me_profile_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileOut"];
                 };
             };
             /** @description Default Response */

@@ -6,6 +6,7 @@ import { SITE_URL } from "@/lib/site";
 import type { Odds, Report } from "@/lib/types";
 import { CatFace } from "../cat-face";
 import { Track } from "../track";
+import { badgeOffered } from "@/lib/badge";
 import { BadgeSnippet } from "./badge-snippet";
 import { EvidenceList } from "./evidence-list";
 import { HoltUsersLine } from "./holt-users-line";
@@ -167,7 +168,7 @@ export function ReportView({
 
         <div className="lg:hidden space-y-4">
           {report.mode === "rules" && <UpgradeCard repo={repo} signedIn={signedIn} />}
-          <BadgeSnippet repo={repo} />
+          <BadgeSnippet repo={repo} offered={badgeOffered(report)} />
         </div>
       </div>
 
@@ -178,7 +179,7 @@ export function ReportView({
             <ShareBar url={url} text={shareText} />
           </div>
           {report.mode === "rules" && <UpgradeCard repo={repo} signedIn={signedIn} />}
-          <BadgeSnippet repo={repo} />
+          <BadgeSnippet repo={repo} offered={badgeOffered(report)} />
           <Link href={`/compare?repos=${repo}`} className="block text-[0.8rem] text-muted hover:text-ink">
             [ compare with another repo → ]
           </Link>
