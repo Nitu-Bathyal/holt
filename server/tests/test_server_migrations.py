@@ -131,3 +131,37 @@ def test_partial_schema_without_history_is_refused(db):
 def test_baseline_tables_are_the_models_tables():
     # A new model needs a new migration, not a bigger baseline.
     assert migrate.BASELINE_TABLES <= set(Base.metadata.tables)
+
+
+def test_entitlements_migration_keeps_the_ledger_as_free_credits(db):
+    from alembic import command
+
+    run(db, lambda c: command.upgrade(migrate.config(c), "0005"))
+    run(db, lambda c: c.execute(text(
+        "INSERT INTO users (id, plan, ai_used, ai_period, ai_credits, created_at) "
+        "VALUES ('u1', 'free', 0, '', 2, CURRENT_TIMESTAMP)")))
+    run(db, lambda c: c.execute(text(
+        "INSERT INTO credit_events (user_id, kind, amount, job_id, created_at) VALUES "
+        "('u1', 'grant', 3, NULL, CURRENT_TIMESTAMP), "
+        "('u1', 'spend', -1, 'j1', CURRENT_TIMESTAMP)")))
+    run(db, lambda c: command.upgrade(migrate.config(c), "0006"))
+
+    got = run(db, lambda c: c.execute(text(
+        "SELECT kind, amount, source, feature, lot_id FROM credit_events ORDER BY id")).all())
+    assert [tuple(r) for r in got] == [("grant", 3, "free", None, None),
+                                       ("spend", -1, "free", "ai_report", None)]
+    assert run(db, lambda c: c.execute(text(
+        "SELECT plan, plan_expires_at, ai_credits FROM users")).one()) == ("free", None, 2)
+    # The release before this one still writes ledger rows without a source.
+    run(db, lambda c: c.execute(text(
+        "INSERT INTO credit_events (user_id, kind, amount, job_id, created_at) "
+        "VALUES ('u1', 'claim', 1, NULL, CURRENT_TIMESTAMP)")))
+    assert run(db, lambda c: c.execute(text(
+        "SELECT source FROM credit_events WHERE kind = 'claim'")).scalar()) == "free"
+    run(db, lambda c: command.upgrade(migrate.config(c), "head"))
+    assert run(db, migrate.differences) == []
+
+    run(db, lambda c: command.downgrade(migrate.config(c), "0005"))
+    tables = run(db, lambda c: inspect(c).get_table_names())
+    assert not {"credit_lots", "plan_events", "plan_usage"} & set(tables)
+    assert run(db, lambda c: c.execute(text("SELECT count(*) FROM credit_events")).scalar()) == 3
