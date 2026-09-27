@@ -235,9 +235,9 @@ fail() {   # record a failed attempt; don't retry the same inputs until somethin
 # The policy pages' contact details come from ~/.config/holt/secrets.env
 # (CONTACT_EMAIL, CONTACT_CITY), the same file production reads, so staging
 # shows what production will. Only these two keys and the STAGING_* ones
-# below are taken from it: the rest of that file is production's. A missing
-# contact value fails the build here instead of shipping the literal
-# placeholders.
+# below (and STAGING_CF_ACCESS_* for the smoke run) are taken from it: the
+# rest of that file is production's. A missing contact value fails the build
+# here instead of shipping the literal placeholders.
 SECRETS="${HOLT_SECRETS_FILE:-$HOME/.config/holt/secrets.env}"
 secret() {   # secret KEY: the value of KEY=value in $SECRETS, else empty
     [[ -f "$SECRETS" ]] || return 0
@@ -276,6 +276,36 @@ staging_oauth() {   # staging_oauth GITHUB|GOOGLE display-name
 }
 staging_oauth GITHUB GitHub
 staging_oauth GOOGLE Google
+
+# The server's GitHub token, fresh on every run, as production does
+# (deploy/prod/env.sh): GITHUB_TOKENS from $SECRETS, else the current
+# `gh auth token`. Exported, so it wins over the copy make-env.sh wrote into
+# .env once (a token rotated since then would be revoked). Each token is
+# checked against GitHub first, sent on curl's stdin so it never shows in
+# `ps`; one that GitHub refuses stops the run here, not at the first
+# uncached report. That failure doesn't record the fingerprint, so the next
+# tick tries again once the token is fixed.
+GITHUB_TOKENS="$(secret GITHUB_TOKENS)"
+if [[ -n "$GITHUB_TOKENS" ]]; then
+    log "GITHUB_TOKENS: from $SECRETS"
+else
+    GITHUB_TOKENS="$(gh auth token 2>/dev/null || true)"
+    [[ -n "$GITHUB_TOKENS" ]] || fail "no GitHub token: put GITHUB_TOKENS in $SECRETS or run gh auth login"
+    log "GITHUB_TOKENS: using gh auth token (no $SECRETS entry)"
+fi
+export GITHUB_TOKENS
+n=0
+for t in ${GITHUB_TOKENS//,/ }; do
+    n=$((n + 1))
+    code="$(printf 'Authorization: Bearer %s\n' "$t" \
+        | curl -s -o /dev/null -w '%{http_code}' --max-time 15 -H @- https://api.github.com/rate_limit || true)"
+    if [[ "$code" == 401 ]]; then
+        msg="GitHub refused token $n in GITHUB_TOKENS (401: revoked or expired); update GITHUB_TOKENS in $SECRETS or run gh auth login"
+        log "FAILED: $msg"
+        write_build_json failed "$msg" "$preview_sha" || true
+        exit 1
+    fi
+done
 
 # --- build and restart this stack only ------------------------------------------
 write_build_json building "building ${preview_sha:0:7}" "$preview_sha"
@@ -344,15 +374,28 @@ PY
     write_build_json live "live" "$preview_sha" || true
 }
 
+# Behind Cloudflare Access, the smoke run gets through with a service token:
+# STAGING_CF_ACCESS_CLIENT_ID/SECRET from $SECRETS, passed to that one command
+# only and never logged. e2e/ trades it for Access's cookie on $STAGING_HOST
+# alone (e2e/README.md). Without both keys the run is the same as before.
 E2E="$SRC/e2e"
 if [[ -f "$E2E/package.json" && "${HOLT_STAGE_SMOKE:-1}" == 1 ]]; then
     slog="$STATE/logs/smoke-$(date -u +%Y%m%dT%H%M%SZ).log"
+    cf_id="$(secret STAGING_CF_ACCESS_CLIENT_ID)"
+    cf_secret="$(secret STAGING_CF_ACCESS_CLIENT_SECRET)"
+    if [[ -n "$cf_id" && -n "$cf_secret" ]]; then
+        log "smoke: through Cloudflare Access with the service token"
+    else
+        [[ -n "$cf_id$cf_secret" ]] && log "smoke: no Cloudflare Access token (STAGING_CF_ACCESS_CLIENT_ID and STAGING_CF_ACCESS_CLIENT_SECRET are needed together)"
+        cf_id="" cf_secret=""
+    fi
     write_smoke running "running the smoke tests"
     if ! (cd "$E2E" && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci --no-audit --no-fund) >"$slog" 2>&1; then
         write_smoke failed "couldn't install the smoke tests (npm ci); see $slog"
     else
         report="$RUN/smoke.json"
         if (cd "$E2E" && PLAYWRIGHT_JSON_OUTPUT_NAME="$report" BASE_URL="$SITE" \
+                STAGING_CF_ACCESS_CLIENT_ID="$cf_id" STAGING_CF_ACCESS_CLIENT_SECRET="$cf_secret" \
                 timeout 900 npx playwright test --workers=1 --reporter=json) >>"$slog" 2>&1; then
             write_smoke passed "all smoke tests passed" "$report"
         elif [[ -s "$report" ]]; then

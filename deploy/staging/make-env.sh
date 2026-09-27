@@ -28,7 +28,8 @@ GITHUB_TOKENS=$token
 OPENROUTER_API_KEY=
 # The policy pages' contact details and the sign-in keys are not here:
 # preview.sh reads CONTACT_EMAIL / CONTACT_CITY and the optional
-# STAGING_*_OAUTH_* from ~/.config/holt/secrets.env on every run.
+# STAGING_*_OAUTH_* from ~/.config/holt/secrets.env on every run. It also
+# overrides GITHUB_TOKENS above with a fresh one (secrets.env, else gh).
 HOLT_JOB_CONCURRENCY=1
 ENV
 echo "wrote $(pwd)/.env"

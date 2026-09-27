@@ -10,7 +10,7 @@ app and API server.
 | `staging/compose.yml` | The staging stack, compose project `stage-holt-new`: Postgres, one-shot web and server migrations, server, web, and a small nginx `edge` that serves `/__build` and proxies everything else to web. Only `edge` publishes a port, on `127.0.0.1:9110`. Every URL in it comes from `STAGING_HOST`. |
 | `staging/preview.sh` | One update: build `origin/main` + every open PR labelled `staging` + `staging/extra-branches`, restart the stack. |
 | `staging/install.sh` | One-time setup: the timer's copy of `preview.sh` and the systemd `--user` timer (every 3 minutes). It does not touch the public route. |
-| `staging/make-env.sh` | Writes `staging/.env` (gitignored): random keys, `gh auth token`, `STAGING_HOST`. |
+| `staging/make-env.sh` | Writes `staging/.env` (gitignored): random keys, `gh auth token` (overridden on each run, see "The GitHub token"), `STAGING_HOST`. |
 | `prod/` | Production, https://githolt.com: compose project `holt-prod` on `127.0.0.1:8310` behind a Cloudflare tunnel, built only from `origin/main` by `prod/deploy.sh` (never on a timer), nightly backups. See [`prod/README.md`](prod/README.md) and [`prod/TUNNEL.md`](prod/TUNNEL.md). |
 
 ## Staging: https://staging.githolt.com
@@ -101,6 +101,61 @@ Then `FORCE=1 ~/.local/share/holt-staging/bin/preview.sh`; its log says
 - `secrets.env` is the only source. `AUTH_*` lines in `staging/.env` or in
   the environment of whoever runs the script are overridden.
 - Accounts made on staging live in staging's database only.
+
+### The GitHub token
+
+Every run reads the server's GitHub token fresh, as production does:
+`GITHUB_TOKENS` from `~/.config/holt/secrets.env`, else the current
+`gh auth token`. It overrides the `GITHUB_TOKENS` line `make-env.sh` wrote
+into `staging/.env` once, so rotating a token needs no new `.env` (and
+re-running `make-env.sh --force` would regenerate the database password and
+auth secrets). The log says which source it used, never the value.
+
+Before building, each token is checked against GitHub's API. One GitHub
+refuses (401: revoked or expired) stops the run with `GitHub refused token
+<n> in GITHUB_TOKENS`, also shown on `/__build` under `last_attempt`, and
+the next tick tries again, so fixing `secrets.env` or `gh auth login` is
+enough. Any other answer, or no answer, doesn't block the build.
+
+### Behind Cloudflare Access
+
+When staging sits behind Cloudflare Access (email one-time PIN for people),
+the smoke run after each build still needs to get in. Give it a **service
+token**:
+
+1. Zero Trust → Access → Service credentials → Service Tokens → create one
+   (for example `holt-staging-smoke`).
+2. In the staging application, add a policy with the action **Service
+   Auth** that includes that token.
+3. Put the token in `~/.config/holt/secrets.env`:
+
+   ```sh
+   STAGING_CF_ACCESS_CLIENT_ID=<client id>.access
+   STAGING_CF_ACCESS_CLIENT_SECRET=<client secret>
+   ```
+
+`preview.sh` reads the two keys on every run and hands them to the smoke
+run's command only (never to the stack, never to a log). Its log says
+`smoke: through Cloudflare Access with the service token`, or, with just
+one of the two keys, that both are needed. Without them the smoke run is
+the same as before (and, once Access is on, fails on the login page).
+
+`e2e/` doesn't send the token on page loads: it trades it once for Access's
+session cookie and gives the browser only that cookie, set for the staging
+host alone, so neither the token nor the cookie reaches github.com or any
+other site. See [`e2e/README.md`](../e2e/README.md).
+
+The `curl` checks above then need the token too:
+
+```sh
+export $(grep '^STAGING_CF_ACCESS_' ~/.config/holt/secrets.env | xargs)   # just these two keys
+curl -s -H "CF-Access-Client-Id: $STAGING_CF_ACCESS_CLIENT_ID" \
+        -H "CF-Access-Client-Secret: $STAGING_CF_ACCESS_CLIENT_SECRET" \
+        https://staging.githolt.com/__build | jq -r .site
+```
+
+`preview.sh` runs from the copy `install.sh` made, so after changing it
+re-run `deploy/staging/install.sh`.
 
 ### How it runs
 
