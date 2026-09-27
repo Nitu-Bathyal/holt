@@ -5,34 +5,39 @@
 @custom-variant short (@media (orientation: landscape) and (max-height: 500px));
 
 /*
- * Holt design tokens. Dark is the original brand (website/); light is a warm
- * "paper" adaptation with the same hues darkened to pass WCAG AA on it.
- * Every text colour below is >= 4.5:1 on --bg and --panel in its theme.
+ * Holt design tokens. Dark is the original brand (website/). Light is warm
+ * paper with cool navy ink: near-white panels that lift off the page with
+ * soft shadows, navy-tinted hairlines instead of brown ones, and the brand
+ * hues deepened to rich inks. Warm paper under cool ink keeps it crisp;
+ * warm greys on warm paper read as sepia.
+ * Every text colour below is >= 4.5:1 on --bg, --panel, --panel-2 and
+ * --section-alt in its theme.
  */
 :root {
-  --bg: #f2ecdf;
-  --header: #eae2d0;
-  --panel: #fbf7ee;
-  --panel-2: #e9e0cd;
-  --ink: #1b1c1a;
-  --muted: #4c4a44;
-  --faint: #5f5d56;
-  --line: #ddd3bf;
-  --line-strong: #c6baa2;
-  --blue: #2f5bd0;
-  --blue-soft: #3d6be0;
-  --green: #136d53;
-  --orange: #b1470f;
-  --amber: #875600;
+  --bg: #f5f2ec;
+  --header: #f8f6f1;
+  --panel: #fffdf8;
+  --panel-2: #ebe7df;
+  --ink: #111723;
+  --muted: #586071;
+  --faint: #5f6676;
+  --line: rgb(17 23 35 / 0.11);
+  --line-strong: rgb(17 23 35 / 0.22);
+  --blue: #1f48cf;
+  --blue-soft: #3561e6;
+  --green: #0b6a4d;
+  --orange: #b23c0b;
+  --amber: #80600f;
   --on-accent: #ffffff;
-  --noise-opacity: 0.07;
-  --shadow: 0 1px 2px rgb(70 50 20 / 0.08), 0 16px 36px -16px rgb(90 60 20 / 0.32);
-  --card-shadow: 0 1px 2px rgb(70 50 20 / 0.06), 0 10px 26px -18px rgb(90 60 20 / 0.28);
-  --section-alt: #ebe3d1;
-  --marker: rgb(238 146 93 / 0.3);
-  --dot: rgb(90 65 25 / 0.16);
-  --glow: rgb(238 146 93 / 0.2);
-  --glow-2: rgb(47 91 208 / 0.08);
+  --noise-opacity: 0.035;
+  --shadow: 0 1px 2px rgb(12 16 24 / 0.05), 0 18px 50px -14px rgb(12 16 24 / 0.16);
+  --card-shadow: 0 1px 2px rgb(12 16 24 / 0.04), 0 8px 26px -10px rgb(12 16 24 / 0.1);
+  --section-alt: #eeeae2;
+  --marker: rgb(240 140 80 / 0.28);
+  --dot: rgb(17 23 35 / 0.13);
+  --glow: rgb(238 146 93 / 0.16);
+  /* Gold, not blue: faint blue over warm paper reads as a grey smudge. */
+  --glow-2: rgb(185 150 88 / 0.14);
   /* Hacktoberfest: a seasonal violet, used only for the event. */
   --hf: #6a3dd1;
   --hf-bg: #ece3fb;

@@ -10,9 +10,6 @@ export function Footer() {
           <p className="flex items-center gap-2 text-muted">
             <CatFace /> procedure over persuasion.
           </p>
-          <p className="max-w-md font-sans text-[0.8rem]">
-            Holt only reads public GitHub data. It never posts, comments, or opens pull requests for you.
-          </p>
         </div>
         <nav aria-label="Footer" className="grid grid-cols-2 gap-x-8 gap-y-1 sm:text-right">
           <Link href="/find" className="inline-flex min-h-11 items-center hover:text-ink sm:min-h-0 sm:py-1 sm:justify-end">find a project</Link>
