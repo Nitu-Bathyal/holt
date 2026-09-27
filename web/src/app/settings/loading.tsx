@@ -19,18 +19,7 @@ export default function Loading() {
           </div>
           <div className="mt-10 border border-line-strong bg-panel p-5 shadow-soft sm:p-8">
             <Skeleton className="h-6 w-56" />
-            <SkeletonText lines={3} lineHeight="1.6rem" bar="0.85rem" className="mt-2" />
-            <Skeleton className="mb-2 mt-6 h-3 w-20" />
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {[0, 1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-12" />
-              ))}
-            </div>
-            <Skeleton className="mb-2 mt-5 h-3 w-16" />
-            <Skeleton className="h-12" />
-            <Skeleton className="mb-2 mt-5 h-3 w-24" />
-            <Skeleton className="h-12" />
-            <Skeleton className="mt-5 h-12 w-32" />
+            <SkeletonText lines={4} lineHeight="1.6rem" bar="0.85rem" className="mt-3" />
           </div>
         </div>
       </SkeletonRegion>

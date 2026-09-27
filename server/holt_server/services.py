@@ -9,8 +9,8 @@ from typing import Any
 
 import httpx
 
-from holt_server import crypto, engine, llm
-from holt_server.db import Database, Job, User
+from holt_server import engine, llm
+from holt_server.db import Database, Job
 from holt_server.errors import ApiError
 from holt_server.github import GitHubLookup, TokenPool
 from holt_server.jobs import JobRunner
@@ -66,26 +66,9 @@ class Services:
 
     async def model_spec_for(self, job: Job) -> llm.ModelSpec:
         s = self.settings
-        if job.key_source == "byok" and job.user_id:
-            async with self.db.session() as session:
-                user = await session.get(User, job.user_id)
-            if user is None or not user.byok_cipher:
-                raise ApiError("needs_key", "Your saved API key was removed before "
-                               "this report could run. Add a key or use a free report.")
-            try:
-                key = crypto.decrypt(s.secret_key, user.byok_cipher, user.id)
-            except Exception as exc:
-                raise ApiError("needs_key", "We couldn't read your saved API key. "
-                               "Please save it again in your settings.") from exc
-            provider = user.byok_provider or "openrouter"
-            return llm.ModelSpec(
-                provider=provider,
-                model=user.byok_model or llm.DEFAULT_MODELS.get(provider, ""),
-                api_key=key,
-                byok=True,
-            )
         if not s.openrouter_api_key:
-            raise ApiError("needs_key", "AI reports aren't available on this server "
-                           "right now. Add your own API key in settings to run one.")
+            # Refused before queueing too; this covers a key removed since.
+            raise ApiError("ai_unavailable", "AI reports aren't switched on yet. "
+                           "Your free AI report was not used up.")
         return llm.ModelSpec(provider="openrouter", model=s.openrouter_model,
                              api_key=s.openrouter_api_key, base_url=s.openrouter_base_url)

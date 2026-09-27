@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { WELCOME_AI_CREDITS } from "@/lib/site";
 
 export function UpgradeCard({ repo, signedIn }: { repo: string; signedIn: boolean }) {
   const aiHref = `/${repo}?mode=ai`;
@@ -16,7 +17,7 @@ export function UpgradeCard({ repo, signedIn }: { repo: string; signedIn: boolea
           upgrade to AI report <span aria-hidden="true">→</span>
         </Link>
         <span className="text-[0.75rem] text-faint">
-          {signedIn ? "free monthly quota, or bring your own key" : "sign in, then use the free quota or your own key"}
+          {signedIn ? "uses 1 of your free AI reports" : `sign in for ${WELCOME_AI_CREDITS} free AI reports`}
         </span>
       </div>
     </div>

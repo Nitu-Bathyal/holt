@@ -30,8 +30,8 @@ export default function RefundsPage() {
       <p>
         This policy applies to anything you pay Holt for. Payments appear as <strong>{PAYMENT_BRAND}</strong> on your statement.
         Rupee payments are processed by Razorpay; dollar payments are processed by Dodo Payments, which is the merchant of record
-        for those purchases. Rules reports, finding and comparing projects, the free monthly AI reports, and bringing your own
-        key are free and are not covered here.
+        for those purchases. Rules reports, finding and comparing projects, and the free AI reports
+        are free and are not covered here.
       </p>
 
       <h2>2. Subscriptions</h2>
