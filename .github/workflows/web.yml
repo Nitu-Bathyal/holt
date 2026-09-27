@@ -1,0 +1,132 @@
+# Checks for the TypeScript side (web/ and extension/) and Python lint.
+# Python tests live in ci.yml. Each job runs only when its files change on a
+# pull request, and always on main.
+name: web
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: web-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  changes:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: read
+    outputs:
+      web: ${{ steps.filter.outputs.web }}
+      extension: ${{ steps.filter.outputs.extension }}
+      python: ${{ steps.filter.outputs.python }}
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - uses: dorny/paths-filter@v4.0.3
+        id: filter
+        with:
+          filters: |
+            web:
+              - 'web/**'
+              - 'API.md'
+              - '.github/workflows/web.yml'
+            extension:
+              - 'extension/**'
+              - '.github/workflows/web.yml'
+            python:
+              - '**/*.py'
+              - 'pyproject.toml'
+              - '.github/workflows/web.yml'
+
+  web:
+    needs: changes
+    if: github.event_name == 'push' || needs.changes.outputs.web == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    env:
+      # No secrets: the build uses the mock API and placeholder contact details.
+      MOCK_API: "1"
+      HOLT_ALLOW_PLACEHOLDER_CONTACT: "1"
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Unit tests
+        run: npm test
+
+      - name: Restore Next.js build cache
+        uses: actions/cache@v6.1.0
+        with:
+          path: web/.next/cache
+          key: next-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}-${{ hashFiles('web/src/**') }}
+          restore-keys: next-${{ runner.os }}-${{ hashFiles('web/package-lock.json') }}-
+
+      - name: Build
+        run: npm run build
+
+  extension:
+    needs: changes
+    if: github.event_name == 'push' || needs.changes.outputs.extension == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: extension
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - uses: actions/setup-node@v7.0.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+
+      - name: Install
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Tests
+        run: npm test
+
+      - name: Build
+        run: npm run build
+
+  ruff:
+    needs: changes
+    if: github.event_name == 'push' || needs.changes.outputs.python == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.1.0
+        with:
+          enable-cache: true
+          cache-dependency-glob: pyproject.toml
+
+      # Rules and baseline live in pyproject.toml ([tool.ruff]).
+      - name: Ruff
+        run: uvx ruff@0.16.9 check --output-format=github .
