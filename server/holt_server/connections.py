@@ -25,7 +25,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.exc import IntegrityError
 
-from holt_server import contributions, repos, schema
+from holt_server import contributions, repo_stats, repos, schema
 from holt_server.deps import Caller, caller, services, signed_in
 from holt_server.db import GitHubConnection, RepoView, iso, now
 from holt_server.errors import ApiError, github_rate_limited, upstream
@@ -142,7 +142,9 @@ async def connect_github(data: ConnectIn, request: Request,
             conn.github_id, conn.connected_at = data.github_id, at
         conn.login = login
         conn.adult_confirmed_at = at
-        conn.stats_opt_out = data.stats_opt_out
+        if conn.stats_opt_out != data.stats_opt_out:
+            conn.stats_opt_out = data.stats_opt_out
+            await repo_stats.rebuild(s, await repo_stats.user_repos(s, user_id))
         try:
             await s.commit()
         except IntegrityError as exc:
@@ -163,7 +165,10 @@ async def github_settings(data: GitHubSettingsIn, request: Request,
         conn = await s.get(GitHubConnection, user_id)
         if conn is None:
             raise ApiError("not_found", "Your GitHub account isn't connected.")
+        changed = conn.stats_opt_out != data.stats_opt_out
         conn.stats_opt_out = data.stats_opt_out
+        if changed:  # in or out of every repository's numbers, now
+            await repo_stats.rebuild(s, await repo_stats.user_repos(s, user_id))
         await s.commit()
         return body(conn)
 
@@ -178,7 +183,9 @@ async def disconnect_github(request: Request,
         # before this goes on, so the deletes below also catch what it stored.
         await s.execute(delete(GitHubConnection).where(GitHubConnection.user_id == user_id))
         await s.execute(delete(RepoView).where(RepoView.user_id == user_id))
+        counted = await repo_stats.user_repos(s, user_id)
         await contributions.forget(s, user_id)
+        await repo_stats.rebuild(s, counted)
         await s.commit()
     return body(None)
 

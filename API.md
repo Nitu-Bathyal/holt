@@ -90,9 +90,22 @@ responses. The server also accepts and normalises full URLs
   ],
   "evidence_until": "2026-06-01T00:00:00Z", // or null
   "generated_at": "2026-09-25T12:00:00Z",
-  "cost": { "model": "…", "input_tokens": 9000, "output_tokens": 6000 } // ai only, else null
+  "cost": { "model": "…", "input_tokens": 9000, "output_tokens": 6000 }, // ai only, else null
+  "holt_users": { "people": 9, "pull_requests": 12, "merged": 7, "closed": 2,
+                  "waiting": 3, "window_days": 365, "computed_at": "…" } | null
 }
 ```
+
+`holt_users` is what connected Holt users' public pull requests to this
+repository came to (from My Contributions, the last `window_days`): counts only,
+never who. It is filled only by `GET /v1/reports/{owner}/{repo}` (null on the
+analysis endpoints and never stored with the report), and only when at least 5
+different people make up the numbers: one person with many pull requests
+counts once. Users who turned on `stats_opt_out` are never counted. The numbers
+are recounted by the daily contributions refresh (and
+`python -m holt_server.contributions stats`); opting out or disconnecting
+recounts that user's repositories at once. Surfaces show them as they come and
+never rank or name anyone.
 
 Every evidence item MUST have a clickable `url`.
 
@@ -308,8 +321,10 @@ the user's GitHub token. Stored in `github_connections` and `repo_views`.
   `invalid_repo`.
 
 A connected user's public contributions may be counted, anonymously, in
-cross-user repo statistics (shown only when 5+ people contribute) unless
-`stats_opt_out` is true.
+cross-user repo statistics (the report's `holt_users`, shown only when 5+
+people contribute) unless `stats_opt_out` is true. Turning it on (PATCH, or a
+POST that changes it) or disconnecting takes them out of every repository's
+numbers in the same request.
 
 ### My Contributions
 
