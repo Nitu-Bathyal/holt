@@ -55,8 +55,14 @@ class User(Base):
     __tablename__ = "users"
 
     id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    # A plan name from the pricing catalogue (pricing.py). It lapses back to
+    # free at `plan_expires_at` (NULL: until changed). Every change also
+    # writes a `PlanEvent`.
     plan: Mapped[str] = mapped_column(String(40), default="free")
-    # AI reports this user can still run. Every change also writes a
+    plan_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                             nullable=True)
+    # Free credits (welcome grant, weekly claim, admin gifts) this user can
+    # still spend; purchased ones are `CreditLot`s. Every change also writes a
     # `CreditEvent`; the balance lives here so a spend is one guarded UPDATE.
     ai_credits: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
     # When the one-off welcome credits were given; NULL until the first visit.
@@ -77,10 +83,16 @@ class User(Base):
 
 
 class CreditEvent(Base):
-    """The AI-credit ledger: one row per change to `User.ai_credits`.
+    """The credit ledger: one row per change to a balance. `amount` is signed.
 
-    kind: `grant` (welcome), `claim` (weekly), `spend` (an AI report queued),
-    `refund` (that report failed). `amount` is signed. Purchases can be new kinds.
+    source: `free` (a change to `User.ai_credits`) or `purchased` (a change to
+    the `CreditLot` in `lot_id`). Per user, the `free` rows sum to
+    `ai_credits` and the `purchased` rows to the lots' `remaining`.
+
+    kind: `grant` (welcome), `claim` (weekly), `purchase` (a pack), `adjust`
+    (an admin, with `reason`), `spend` (a feature used, `feature` and usually
+    `job_id` say which), `refund` (that use failed), `expire` (a lot's
+    leftover at its expiry).
     """
 
     __tablename__ = "credit_events"
@@ -90,9 +102,70 @@ class CreditEvent(Base):
     kind: Mapped[str] = mapped_column(String(20))
     amount: Mapped[int] = mapped_column(Integer)
     job_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    # The server default covers rows the release before sources inserts.
+    source: Mapped[str] = mapped_column(String(20), default="free",
+                                        server_default=text("'free'"))
+    lot_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    feature: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Who made an `adjust`, e.g. `cli`.
+    actor: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
     __table_args__ = (Index("ix_credit_events_user", "user_id", "created_at"),)
+
+
+class CreditLot(Base):
+    """Purchased credits: one row per pack bought (or admin grant to the
+    purchased pool). Spent soonest-expiring first, after free credits; an
+    expired lot can't be spent and its leftover is written off as `expire`."""
+
+    __tablename__ = "credit_lots"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(200))
+    # `pack` (bought) or `admin`.
+    origin: Mapped[str] = mapped_column(String(20))
+    pack_id: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    # The payment's id: the same payment can never add a second lot.
+    reference: Mapped[str | None] = mapped_column(String(200), nullable=True, unique=True)
+    granted: Mapped[int] = mapped_column(Integer)
+    remaining: Mapped[int] = mapped_column(Integer)
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                        nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+    __table_args__ = (Index("ix_credit_lots_user", "user_id", "remaining"),)
+
+
+class PlanEvent(Base):
+    """Every change to `User.plan` / `plan_expires_at`, and why."""
+
+    __tablename__ = "plan_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(200))
+    plan: Mapped[str] = mapped_column(String(40))
+    expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                        nullable=True)
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    actor: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    reference: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+    __table_args__ = (Index("ix_plan_events_user", "user_id", "created_at"),)
+
+
+class PlanUsage(Base):
+    """Uses of a plan's monthly allowance: one counter per user, feature and
+    UTC month ("YYYY-MM"), raised by a guarded UPDATE."""
+
+    __tablename__ = "plan_usage"
+
+    user_id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    feature: Mapped[str] = mapped_column(String(40), primary_key=True)
+    period: Mapped[str] = mapped_column(String(7), primary_key=True)
+    used: Mapped[int] = mapped_column(Integer, default=0)
 
 
 class Job(Base):

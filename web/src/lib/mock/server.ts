@@ -71,8 +71,11 @@ function user(id: string) {
     u = {
       me: {
         plan: "free",
+        plan_expires_at: null,
         credits: {
           balance: WELCOME_CREDITS,
+          free: WELCOME_CREDITS,
+          purchased: 0,
           can_claim: false,
           next_claim_at: new Date(Date.now() + CLAIM_EVERY_DAYS * DAY_MS).toISOString(),
           claim_every_days: CLAIM_EVERY_DAYS,
@@ -122,7 +125,11 @@ export async function startAnalysis(
   }
   const id = `job_${crypto.randomUUID().slice(0, 12)}`;
   s.jobs.set(id, { id, repo, mode, days, userId, model, started: Date.now() });
-  if (mode === "ai" && userId) user(userId).me.credits.balance--;
+  if (mode === "ai" && userId) {
+    const c = user(userId).me.credits;
+    c.balance--;
+    c.free--;
+  }
   return { ok: true, data: { status: "queued", job_id: id } };
 }
 
@@ -301,6 +308,7 @@ export async function claimCredit(userId: string): Promise<Result<Credits>> {
     return err(409, "claim_not_ready", `Your next free AI report can be claimed on ${when}.`);
   }
   c.balance++;
+  c.free++;
   c.can_claim = false;
   c.next_claim_at = new Date(Date.now() + CLAIM_EVERY_DAYS * DAY_MS).toISOString();
   return { ok: true, data: c };

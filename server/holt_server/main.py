@@ -9,7 +9,17 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from holt_server import __version__, connections, contributions, credits, errors, feedback, pro
+from holt_server import (
+    __version__,
+    admin,
+    connections,
+    contributions,
+    credits,
+    entitlements,
+    errors,
+    feedback,
+    pro,
+)
 from holt_server.api import public, router
 from holt_server.services import Services
 from holt_server.settings import Settings, get_settings
@@ -21,6 +31,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        entitlements.catalogue(svc)  # a broken pricing file stops startup here
         await svc.db.migrate()
         if run_jobs:
             await svc.runner.start()
@@ -60,6 +71,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(public)
     app.include_router(router)
     app.include_router(credits.router)
+    app.include_router(admin.router)
     app.include_router(feedback.router)
     app.include_router(connections.router)
     app.include_router(contributions.router)

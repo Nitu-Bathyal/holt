@@ -40,6 +40,63 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/pricing": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Pricing
+         * @description The features, plans and packs this server loaded (prices in minor units).
+         */
+        get: operations["get_pricing_v1_admin_pricing_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Users
+         * @description Newest users first, with balances. `plan` filters on the stored plan.
+         */
+        get: operations["list_users_v1_admin_users_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/admin/users/{user_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get User */
+        get: operations["get_user_v1_admin_users__user_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/analyses": {
         parameters: {
             query?: never;
@@ -271,6 +328,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/entitlements": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Me Entitlements
+         * @description Each paid feature: can this user use it now, and what would it cost.
+         */
+        get: operations["me_entitlements_v1_me_entitlements_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/github": {
         parameters: {
             query?: never;
@@ -386,10 +463,152 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * Access
+         * @description Whether this user can use one feature now, and what it would cost.
+         */
+        Access: {
+            /** Allowed */
+            allowed: boolean;
+            /** Code */
+            code: string | null;
+            /** Cost */
+            cost: number;
+            /** Feature */
+            feature: string;
+            /** Left This Month */
+            left_this_month: number | null;
+            /** Message */
+            message: string | null;
+            /** Name */
+            name: string;
+            /** Via */
+            via: ("plan" | "credits") | null;
+        };
         /** ActivityIn */
         ActivityIn: {
             /** Repo */
             repo: string;
+        };
+        /** AdminCreditEvent */
+        AdminCreditEvent: {
+            /** Actor */
+            actor: string | null;
+            /** Amount */
+            amount: number;
+            /** Created At */
+            created_at: string;
+            /** Feature */
+            feature: string | null;
+            /** Id */
+            id: number;
+            /** Job Id */
+            job_id: string | null;
+            /** Kind */
+            kind: string;
+            /** Lot Id */
+            lot_id: number | null;
+            /** Reason */
+            reason: string | null;
+            /** Source */
+            source: string;
+        };
+        /** AdminLot */
+        AdminLot: {
+            /** Created At */
+            created_at: string;
+            /** Expires At */
+            expires_at: string | null;
+            /** Granted */
+            granted: number;
+            /** Id */
+            id: number;
+            /** Origin */
+            origin: string;
+            /** Pack Id */
+            pack_id: string | null;
+            /** Reference */
+            reference: string | null;
+            /** Remaining */
+            remaining: number;
+        };
+        /** AdminPlanEvent */
+        AdminPlanEvent: {
+            /** Actor */
+            actor: string | null;
+            /** Created At */
+            created_at: string;
+            /** Expires At */
+            expires_at: string | null;
+            /** Id */
+            id: number;
+            /** Plan */
+            plan: string;
+            /** Reason */
+            reason: string | null;
+            /** Reference */
+            reference: string | null;
+        };
+        /** AdminPlanUsage */
+        AdminPlanUsage: {
+            /** Feature */
+            feature: string;
+            /** Period */
+            period: string;
+            /** Used */
+            used: number;
+        };
+        /**
+         * AdminUser
+         * @description GET /v1/admin/users/{user_id}: everything about one user's money.
+         */
+        AdminUser: {
+            /** Access */
+            access: components["schemas"]["Access"][];
+            /** Created At */
+            created_at: string;
+            /** Effective Plan */
+            effective_plan: string;
+            /** Free */
+            free: number;
+            /** Id */
+            id: string;
+            /** Ledger */
+            ledger: components["schemas"]["AdminCreditEvent"][];
+            /** Lots */
+            lots: components["schemas"]["AdminLot"][];
+            /** Plan */
+            plan: string;
+            /** Plan Expires At */
+            plan_expires_at: string | null;
+            /** Plan History */
+            plan_history: components["schemas"]["AdminPlanEvent"][];
+            /** Plan Usage */
+            plan_usage: components["schemas"]["AdminPlanUsage"][];
+            /** Purchased */
+            purchased: number;
+        };
+        /** AdminUserSummary */
+        AdminUserSummary: {
+            /** Created At */
+            created_at: string;
+            /** Effective Plan */
+            effective_plan: string;
+            /** Free */
+            free: number;
+            /** Id */
+            id: string;
+            /** Plan */
+            plan: string;
+            /** Plan Expires At */
+            plan_expires_at: string | null;
+            /** Purchased */
+            purchased: number;
+        };
+        /** AdminUsers */
+        AdminUsers: {
+            /** Users */
+            users: components["schemas"]["AdminUserSummary"][];
         };
         /** AnalysisDone */
         AnalysisDone: {
@@ -421,6 +640,34 @@ export interface components {
             refresh: boolean;
             /** Repo */
             repo: string;
+        };
+        /** Catalogue */
+        Catalogue: {
+            /**
+             * About
+             * @default
+             */
+            _about: string;
+            /** Features */
+            features: {
+                [key: string]: components["schemas"]["Feature"];
+            };
+            /**
+             * Packs
+             * @default {}
+             */
+            packs: {
+                [key: string]: components["schemas"]["Pack"];
+            };
+            /** Plans */
+            plans: {
+                [key: string]: components["schemas"]["Plan"];
+            };
+            /**
+             * Tbd
+             * @default true
+             */
+            tbd: boolean;
         };
         /** ConnectIn */
         ConnectIn: {
@@ -524,7 +771,7 @@ export interface components {
         };
         /**
          * Credits
-         * @description Free AI reports: GET /v1/me/credits, and `credits` in GET /v1/me.
+         * @description Credits: GET /v1/me/credits, and `credits` in GET /v1/me.
          */
         Credits: {
             /** Ai Available */
@@ -535,8 +782,24 @@ export interface components {
             can_claim: boolean;
             /** Claim Every Days */
             claim_every_days: number;
+            /** Free */
+            free: number;
             /** Next Claim At */
             next_claim_at: string | null;
+            /** Purchased */
+            purchased: number;
+        };
+        /**
+         * Entitlements
+         * @description GET /v1/me/entitlements.
+         */
+        Entitlements: {
+            /** Features */
+            features: components["schemas"]["Access"][];
+            /** Plan */
+            plan: string;
+            /** Plan Expires At */
+            plan_expires_at: string | null;
         };
         /** Error */
         Error: {
@@ -568,6 +831,18 @@ export interface components {
             url: string;
             /** Value */
             value: string | null;
+        };
+        /** Feature */
+        Feature: {
+            /** Credits */
+            credits?: number | null;
+            /**
+             * Free Credits
+             * @default false
+             */
+            free_credits: boolean;
+            /** Name */
+            name: string;
         };
         /** FeedbackIn */
         FeedbackIn: {
@@ -785,6 +1060,8 @@ export interface components {
             credits: components["schemas"]["Credits"];
             /** Plan */
             plan: string;
+            /** Plan Expires At */
+            plan_expires_at: string | null;
         };
         /** NeverLanded */
         NeverLanded: {
@@ -811,6 +1088,22 @@ export interface components {
              */
             tone: "good" | "bad" | "warn";
         };
+        /** Pack */
+        Pack: {
+            /** Credits */
+            credits: number;
+            /** Expires Days */
+            expires_days?: number | null;
+            /** Name */
+            name: string;
+            /**
+             * On Sale
+             * @default false
+             */
+            on_sale: boolean;
+            /** @default {} */
+            price: components["schemas"]["Price"];
+        };
         /**
          * PartialStats
          * @description The counts a find result carries: whichever the finder had. Counts it
@@ -831,6 +1124,44 @@ export interface components {
             outsider_attempts?: number | null;
             /** Outsider Merged */
             outsider_merged?: number | null;
+        };
+        /** Plan */
+        Plan: {
+            /**
+             * Features
+             * @default {}
+             */
+            features: {
+                [key: string]: components["schemas"]["PlanFeature"];
+            };
+            /** Name */
+            name: string;
+            /**
+             * On Sale
+             * @default false
+             */
+            on_sale: boolean;
+            /** Period Days */
+            period_days?: number | null;
+            /** @default {} */
+            price: components["schemas"]["Price"];
+        };
+        /** PlanFeature */
+        PlanFeature: {
+            /** Per Month */
+            per_month?: number | null;
+            /**
+             * Unlimited
+             * @default false
+             */
+            unlimited: boolean;
+        };
+        /** Price */
+        Price: {
+            /** Inr Paise */
+            inr_paise?: number | null;
+            /** Usd Cents */
+            usd_cents?: number | null;
         };
         /** Queued */
         Queued: {
@@ -993,9 +1324,18 @@ export interface components {
     headers: never;
     pathItems: never;
 }
+export type Access = components['schemas']['Access'];
 export type ActivityIn = components['schemas']['ActivityIn'];
+export type AdminCreditEvent = components['schemas']['AdminCreditEvent'];
+export type AdminLot = components['schemas']['AdminLot'];
+export type AdminPlanEvent = components['schemas']['AdminPlanEvent'];
+export type AdminPlanUsage = components['schemas']['AdminPlanUsage'];
+export type AdminUser = components['schemas']['AdminUser'];
+export type AdminUserSummary = components['schemas']['AdminUserSummary'];
+export type AdminUsers = components['schemas']['AdminUsers'];
 export type AnalysisDone = components['schemas']['AnalysisDone'];
 export type AnalysisIn = components['schemas']['AnalysisIn'];
+export type Catalogue = components['schemas']['Catalogue'];
 export type ConnectIn = components['schemas']['ConnectIn'];
 export type ContributionMetric = components['schemas']['ContributionMetric'];
 export type ContributionPullRequest = components['schemas']['ContributionPullRequest'];
@@ -1003,9 +1343,11 @@ export type ContributionSummary = components['schemas']['ContributionSummary'];
 export type Contributions = components['schemas']['Contributions'];
 export type Cost = components['schemas']['Cost'];
 export type Credits = components['schemas']['Credits'];
+export type Entitlements = components['schemas']['Entitlements'];
 export type Error = components['schemas']['Error'];
 export type ErrorBody = components['schemas']['ErrorBody'];
 export type EvidenceItem = components['schemas']['EvidenceItem'];
+export type Feature = components['schemas']['Feature'];
 export type FeedbackIn = components['schemas']['FeedbackIn'];
 export type FeedbackOut = components['schemas']['FeedbackOut'];
 export type FindDone = components['schemas']['FindDone'];
@@ -1024,7 +1366,11 @@ export type LandingPath = components['schemas']['LandingPath'];
 export type Me = components['schemas']['Me'];
 export type NeverLanded = components['schemas']['NeverLanded'];
 export type Odds = components['schemas']['Odds'];
+export type Pack = components['schemas']['Pack'];
 export type PartialStats = components['schemas']['PartialStats'];
+export type Plan = components['schemas']['Plan'];
+export type PlanFeature = components['schemas']['PlanFeature'];
+export type Price = components['schemas']['Price'];
 export type Queued = components['schemas']['Queued'];
 export type RepoVerdict = components['schemas']['RepoVerdict'];
 export type Report = components['schemas']['Report'];
@@ -1093,6 +1439,112 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    get_pricing_v1_admin_pricing_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Catalogue"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    list_users_v1_admin_users_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                plan?: string | null;
+            };
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUsers"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_user_v1_admin_users__user_id__get: {
+        parameters: {
+            query?: {
+                ledger_limit?: number;
+            };
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path: {
+                user_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminUser"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
@@ -1545,6 +1997,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Credits"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    me_entitlements_v1_me_entitlements_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Entitlements"];
                 };
             };
             /** @description Default Response */

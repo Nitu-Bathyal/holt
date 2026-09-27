@@ -28,14 +28,15 @@ Change a model, this file and the generated types in the same PR.
 All bodies are JSON. Errors: `{"error": {"code": "<code>", "message": "<plain English for a beginner>"}}`
 with codes: `unauthorized`, `not_found` (repo missing or private),
 `invalid_repo`, `rate_limited` (ours or GitHub's; include `retry_after` seconds),
-`quota_exceeded` (no AI credits left), `needs_key` (AI report requested without
+`quota_exceeded` (not enough credits, or a plan's monthly allowance is used up),
+`needs_plan` (the feature comes only with a paid plan), `needs_key` (AI report requested without
 signing in), `ai_unavailable` (AI reports are switched off: the server has no
 model key), `claim_not_ready` (a weekly claim before it is due),
 `upstream` (GitHub/model failure), `internal`.
 
 HTTP statuses: `unauthorized` 401, `not_found` 404, `invalid_repo` and
 `invalid_request` (malformed body or query) 400, `rate_limited` 429 (also sent
-as a `Retry-After` header), `quota_exceeded` 402, `needs_key` 403,
+as a `Retry-After` header), `quota_exceeded` 402, `needs_plan` 402, `needs_key` 403,
 `claim_not_ready` 409, `ai_unavailable` 503, `upstream` 502, `internal` 500, `not_implemented` 501 (starter issues and find,
 until the engine side ships).
 
@@ -136,8 +137,9 @@ Body: `{"repo": "owner/repo", "mode": "rules"|"ai", "days": 7, "refresh": false}
 - `mode:"rules"` is free and allowed anonymously (rate-limited per IP).
 - `mode:"ai"` requires `X-Holt-User` (else `needs_key`) and a server model key
   (else `ai_unavailable`, checked first, so nothing is spent or queued). A new
-  job spends one AI credit (else `quota_exceeded`); a cached report or joining a
-  running job spends none. A job that fails gives its credit back.
+  job is charged for the `ai_report` feature (see Credits and plans below; else
+  `quota_exceeded`); a cached report or joining a running job costs nothing. A
+  job that fails gives back what it was charged, to the pool it came from.
 
 ### `GET /v1/analyses/{job_id}` → `{"status":"queued"|"running"|"done"|"error", "stage": "Reading pull requests", "progress": 0.4, "report": Report|null, "error": Error|null}`
 
@@ -205,12 +207,24 @@ limits (per client IP and in total, separate from user limits), run at most
 one at a time, and wait behind every user request.
 
 ### Account
-- `GET /v1/me` → `{"plan": "free"|"…", "credits": Credits}`
+- `GET /v1/me` → `{"plan": "free"|"…", "plan_expires_at": "…"|null, "credits": Credits}`.
+  `plan` is the plan in force: `free` once a paid plan has lapsed.
 - `GET /v1/me/credits` → `Credits`:
-  `{"balance": 3, "can_claim": false, "next_claim_at": "…", "claim_every_days": 7, "ai_available": true}`.
-  `balance` is the free AI reports left. `next_claim_at` is when the weekly claim
+  `{"balance": 3, "free": 3, "purchased": 0, "can_claim": false, "next_claim_at": "…", "claim_every_days": 7, "ai_available": true}`.
+  `balance` is every credit the user can spend (`free` + `purchased`); `free` is
+  welcome, weekly and gifted credits, `purchased` credits from packs (0 until
+  payments are switched on). `next_claim_at` is when the weekly claim
   opens (`can_claim` is true once it has passed). `ai_available` is false while
   the server has no model key.
+- `GET /v1/me/entitlements` → `{"plan": "free", "plan_expires_at": null, "features": [Access]}`,
+  one `Access` per paid feature in the pricing catalogue:
+  `{"feature": "playbook", "name": "Contribution playbook", "allowed": false, "via": null, "cost": 1, "left_this_month": null, "code": "quota_exceeded", "message": "…"}`.
+  `via` is how a use would be paid for now (`plan` or `credits`), `cost` the
+  credits one use takes (0 when the plan covers it), `left_this_month` the
+  plan's monthly allowance left (null when unlimited or none). When
+  `allowed` is false, `code`/`message` are the error the paid request would get
+  (`quota_exceeded` or `needs_plan`). Informational: the paid route decides
+  again, atomically, when it charges.
 - `POST /v1/me/credits/claim` → `Credits` with one more credit, or 409
   `claim_not_ready` (the message says the date).
 - `GET /v1/me/history?limit=50` → recent analyses by this user:
@@ -224,8 +238,41 @@ claim one more whenever `HOLT_CLAIM_EVERY_DAYS` (7) have passed since the last
 claim; the welcome grant starts that clock. Claims don't accumulate: at most one
 is ever due. Spending, claiming and refunds are atomic on the server.
 
-Plans and payments are not implemented yet; `plan` is set manually in the DB
-for now.
+#### Credits and plans
+
+Payments are off: nothing is on sale and every price is still to be decided.
+What exists is the model they plug into, all on the server, never taken from
+the client:
+
+- **Features** (`ai_report`, `playbook`, `preflight`, `guidance`,
+  `recommendations`) and what one use costs in credits, **plans** (`free`,
+  `pro`: what each covers, unlimited or N uses per UTC month, and for how long)
+  and **credit packs** are defined in a JSON catalogue
+  (`server/holt_server/pricing.json`, or `HOLT_PRICING_FILE`), with prices in
+  INR and USD.
+- A use is paid for by the plan when it covers the feature (free), else with
+  the feature's credits: free credits first when the feature accepts them,
+  then purchased credits, soonest-expiring first. A feature with no credit
+  price needs a plan (`needs_plan`).
+- Two credit pools, one ledger: free credits (welcome, weekly claim, gifts)
+  and purchased credits (packs; they never expire, or expire when the pack
+  says). Every change is a ledger row saying which pool.
+- Admins change credits and plans with a CLI (`python -m holt_server.credits`,
+  server/README.md), not over HTTP.
+
+### Admin (read-only)
+
+Internal key plus an `X-Holt-User` listed in `HOLT_ADMIN_USERS`; anyone else
+gets 404 `not_found`. There is no admin UI.
+
+- `GET /v1/admin/users?limit=100&plan=pro` → `{"users": [AdminUserSummary]}`,
+  newest first: `{"id", "plan", "effective_plan", "plan_expires_at", "free", "purchased", "created_at"}`.
+- `GET /v1/admin/users/{user_id}?ledger_limit=200` → `AdminUser`: the summary
+  plus `lots` (purchased credits), `ledger` (newest first: kind, source,
+  amount, lot, feature, job, reason, actor), `plan_history`, `plan_usage`
+  (uses per feature and month) and `access` (an `Access` per feature). 404
+  for an unknown user.
+- `GET /v1/admin/pricing` → the catalogue this server loaded.
 
 ### Connect GitHub
 

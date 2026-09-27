@@ -61,6 +61,8 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `HOLT_CACHE_HOURS` | `24` | How long a finished report is served instead of re-running. |
 | `HOLT_SIGNUP_AI_CREDITS` | `3` | Free AI reports every signed-in user gets once, on their first visit. |
 | `HOLT_CLAIM_EVERY_DAYS` | `7` | After that, one more can be claimed each time this many days have passed since the last claim (or the welcome grant). |
+| `HOLT_PRICING_FILE` | the catalogue shipped in the package (`holt_server/pricing.json`) | Features, plans and credit packs, with prices (TBD) in INR and USD. See [Credits and plans](#credits-and-plans). A file that doesn't parse stops startup. |
+| `HOLT_ADMIN_USERS` | *(empty)* | Comma-separated user ids that may read `/v1/admin/*`. Empty means nobody. |
 | `HOLT_ANON_RATE_PER_HOUR` | `10` | Work bucket: new analyses and find per hour per IP for anonymous callers (`X-Holt-Client-Ip`). Cached answers are free. |
 | `HOLT_USER_RATE_PER_HOUR` | `60` | The same, per signed-in user. |
 | `HOLT_ANON_READ_RATE_PER_HOUR` | `120` | Read bucket, per IP: starter-issue lookups that miss the cache. Separate from the work bucket above, so page views never block analyses. |
@@ -84,7 +86,10 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | File | What |
 |---|---|
 | `holt_server/api.py` | The endpoints. Cache lookups, rate limits and the AI credit spend happen here, before a job is queued. |
-| `holt_server/credits.py` | Free AI credits: the welcome grant, the weekly claim, spend and refund, and the `/v1/me/credits` routes. |
+| `holt_server/credits.py` | Credit balances in two pools: free (the welcome grant, the weekly claim, gifts) and purchased (lots from packs). Taking and giving back credits, pack purchases, the `/v1/me/credits` routes and the admin CLI. |
+| `holt_server/entitlements.py` | Can user U use feature F now, and what does it cost: `check` (read-only) and `charge`/`refund` (inside the caller's transaction). Plans, their expiry and monthly allowances. |
+| `holt_server/pricing.py` | Loads and checks the catalogue (`pricing.json`). |
+| `holt_server/admin.py` | The read-only `/v1/admin/*` view (balances, ledger, plans). |
 | `holt_server/jobs.py` | The runner: claims queued jobs from Postgres (user jobs before badge refreshes), runs them in threads, publishes progress for SSE. Each runner heartbeats the jobs it holds every 15s; a `running` job with no heartbeat for 90s belonged to a dead process and is queued again. Several processes can share one database. |
 | `holt_server/engine.py` | Calls `holt.agent.pipeline.analyze` / `analyze_without_model`. Wraps the provider and model to report stages; uses the engine's own progress callback when it has one. Maps failures to API error codes. |
 | `holt_server/report.py` | `Assessment` + `Trace` → the Report JSON. Landing areas and evidence URLs come from the records the run read. |
@@ -97,15 +102,60 @@ Identical requests share one job. That is enforced by a partial unique index
 on `jobs.dedupe_key` (only over queued/running jobs), so two requests racing
 each other still get one job and spend one credit.
 
-AI reports run on the server's OpenRouter key and cost the user one free AI
-credit (`users.ai_credits`). Signed-in users get `HOLT_SIGNUP_AI_CREDITS` once,
-on their first visit, and can claim one more every `HOLT_CLAIM_EVERY_DAYS`;
-claims don't pile up. Spending is a guarded `UPDATE` in the same transaction as
-the job insert, claiming is a guarded `UPDATE` on the claim clock, and a report
-that fails gives its credit back in the transaction that marks it failed. Every
-change also writes a `credit_events` row (grant, claim, spend, refund), the
-ledger later billing builds on. The website doesn't take users' own API keys
-(the CLI does).
+AI reports run on the server's OpenRouter key and cost the user one credit.
+Signed-in users get `HOLT_SIGNUP_AI_CREDITS` free credits once, on their first
+visit, and can claim one more every `HOLT_CLAIM_EVERY_DAYS`; claims don't pile
+up. The website doesn't take users' own API keys (the CLI does).
+
+## Credits and plans
+
+Payments are off; nothing here takes money. This is the model the payment
+code (Razorpay, later) plugs into.
+
+**Catalogue.** `holt_server/pricing.json` (or `HOLT_PRICING_FILE`) lists the
+paid features and what one use costs in credits (`free_credits`: whether free
+credits may pay for it), the plans (which features each covers, unlimited or
+`per_month` uses per UTC month, `period_days`) and the credit packs (`credits`,
+`expires_days`, null = never). Prices are `inr_paise` / `usd_cents`, null
+while TBD, and `on_sale` is false everywhere. `python -m holt_server.pricing`
+checks a file.
+
+**Balances.** Free credits are `users.ai_credits`. Purchased credits are
+`credit_lots` rows, one per pack (`credits.purchase_pack`, idempotent on the
+payment's reference) or admin grant, each with an optional expiry; what is
+left in an expired lot is written off the next time the user is seen. Every
+change writes a `credit_events` row with its pool (`source`: free or
+purchased) and kind (grant, claim, purchase, adjust, spend, refund, expire).
+Per user, the free rows sum to `ai_credits` and the purchased rows to what the
+lots have left.
+
+**Entitlements.** `entitlements.charge(session, svc, user, feature)` pays for
+one use inside the caller's transaction: the plan (lapsed to free at
+`plan_expires_at`) if it covers the feature and has uses left this month,
+else the feature's credits, free first (when allowed), then the
+soonest-expiring lot. Every step is a guarded `UPDATE`, so racing requests
+can't overdraw or exceed an allowance; if it can't be paid for, it rolls back
+and raises `quota_exceeded` or `needs_plan`. A job keeps what it was charged
+in `params["charge"]`, and a failed job gives it back to the same pool in the
+transaction that marks it failed. `entitlements.check` answers the same
+question without charging (`GET /v1/me/entitlements`, the admin view).
+Plans change only through `entitlements.set_plan`, which writes `plan_events`.
+
+**Admin.** Changes go through the CLI, which runs against `$DATABASE_URL` and
+prints the user's state afterwards (in production, run it inside the API
+container):
+
+```sh
+python -m holt_server.credits show  --user <id>
+python -m holt_server.credits grant --user <id> --credits 5 --reason "tester" [--pool purchased] [--expires-days 90]
+python -m holt_server.credits take  --user <id> --credits 2 --reason "mistake" [--pool purchased]
+python -m holt_server.credits plan set --user <id> --plan pro --days 30 --reason "early tester"
+python -m holt_server.credits plan set --user <id> --plan free --reason "ended"
+```
+
+`--pool free` (the default) gifts free credits; `--pool purchased` adds a lot
+that pays for purchased-only features too. `take` never goes below zero.
+Reading is `/v1/admin/*` (API.md), for users in `HOLT_ADMIN_USERS`.
 
 Per process (fine for one server; revisit with more): rate-limit counters,
 the badge lane's concurrency count and the repo-name cache are in memory. SSE

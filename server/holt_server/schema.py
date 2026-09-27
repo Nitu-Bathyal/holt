@@ -345,9 +345,14 @@ class ReportList(Model):
 # --- account ------------------------------------------------------------------------
 
 class Credits(Model):
-    """Free AI reports: GET /v1/me/credits, and `credits` in GET /v1/me."""
+    """Credits: GET /v1/me/credits, and `credits` in GET /v1/me."""
 
+    # Every credit this user can spend: free + purchased.
     balance: int
+    # Welcome, weekly and gifted credits.
+    free: int
+    # Credits from packs (none until payments are switched on).
+    purchased: int
     can_claim: bool
     # When the weekly claim opens; null only before the welcome grant.
     next_claim_at: str | None
@@ -357,8 +362,102 @@ class Credits(Model):
 
 
 class Me(Model):
+    # The plan in force: "free" once a paid plan has lapsed.
     plan: str
+    # When that plan lapses; null for free or until changed.
+    plan_expires_at: str | None
     credits: Credits
+
+
+class Access(Model):
+    """Whether this user can use one feature now, and what it would cost."""
+
+    feature: str
+    # The feature's name, for people.
+    name: str
+    allowed: bool
+    # How a use is paid for now: "plan" (covered) or "credits". Null when not allowed.
+    via: Literal["plan", "credits"] | None
+    # Credits one use takes (0 when the plan covers it or credits can't pay for it).
+    cost: int
+    # The plan's monthly allowance left; null when unlimited or the plan has none.
+    left_this_month: int | None
+    # When not allowed: the error the request would get.
+    code: str | None
+    message: str | None
+
+
+class Entitlements(Model):
+    """GET /v1/me/entitlements."""
+
+    plan: str
+    plan_expires_at: str | None
+    features: list[Access]
+
+
+class AdminLot(Model):
+    id: int
+    origin: str
+    pack_id: str | None
+    reference: str | None
+    granted: int
+    remaining: int
+    expires_at: str | None
+    created_at: str
+
+
+class AdminCreditEvent(Model):
+    id: int
+    kind: str
+    source: str
+    amount: int
+    lot_id: int | None
+    feature: str | None
+    job_id: str | None
+    reason: str | None
+    actor: str | None
+    created_at: str
+
+
+class AdminPlanEvent(Model):
+    id: int
+    plan: str
+    expires_at: str | None
+    reason: str | None
+    actor: str | None
+    reference: str | None
+    created_at: str
+
+
+class AdminPlanUsage(Model):
+    feature: str
+    period: str
+    used: int
+
+
+class AdminUserSummary(Model):
+    id: str
+    # As stored, and the one in force (free once lapsed).
+    plan: str
+    effective_plan: str
+    plan_expires_at: str | None
+    free: int
+    purchased: int
+    created_at: str
+
+
+class AdminUser(AdminUserSummary):
+    """GET /v1/admin/users/{user_id}: everything about one user's money."""
+
+    lots: list[AdminLot]
+    ledger: list[AdminCreditEvent]
+    plan_history: list[AdminPlanEvent]
+    plan_usage: list[AdminPlanUsage]
+    access: list[Access]
+
+
+class AdminUsers(Model):
+    users: list[AdminUserSummary]
 
 
 class HistoryItem(Model):
