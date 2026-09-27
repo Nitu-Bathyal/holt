@@ -59,8 +59,14 @@ IGNORED = "ignored"
 STILL_OPEN = "still_open"
 
 # Rule codes this module's lines carry. They inform; they never decide, so
-# anything looking for the deciding rule skips them.
+# anything looking for the deciding rule skips them (`first_deciding`).
 INFO_CODES = frozenset({"sample_period", "dormant", "excluded", "still_open", "closed_silently"})
+
+
+def first_deciding(rules: list[str]) -> str | None:
+    """The first rule line that isn't one of these notes, else the first line."""
+    return next((r for r in rules if getattr(r, "code", "") not in INFO_CODES),
+                rules[0] if rules else None)
 
 # Labels a project uses to say "this was not a real attempt". Matched on the
 # label with case and separators flattened ("bot:ai-policy-close" reads as
@@ -234,7 +240,8 @@ def dormant_sentence(records: Iterable[EvidenceRecord], threads: Mapping[str, Th
 
 
 def _pr(n: int) -> str:
-    return "1 pull request from a newcomer" if n == 1 else f"{n} pull requests from newcomers"
+    return ("1 pull request from an outside contributor" if n == 1
+            else f"{n} pull requests from outside contributors")
 
 
 def count_sentences(still_open: int, closed_silently: int, excluded_: int,

@@ -13,7 +13,14 @@ from datetime import UTC, datetime
 
 from holt.agent import landing, landing_detection, rates, stages
 from holt.agent.findings import Finding, Findings
-from holt.agent.signals import MIN_AGE_HOURS, Signals, Thread, build_threads, compute, newcomer_threads
+from holt.agent.signals import (
+    MIN_AGE_HOURS,
+    Signals,
+    Thread,
+    build_threads,
+    compute,
+    outsider_threads,
+)
 from holt.agent.verdict import classify as decide
 from holt.agent.verdict import Rule, contested_kind, hours_phrase, headline, legacy_trace
 from holt.agent.verify import check_quotes, verify
@@ -160,6 +167,7 @@ def analyze(
         k: v for k, v in narrated_signals.items()
         if k not in ("outsider_answered", "outsider_still_open",
                      "outsider_closed_silently", "outsider_excluded")
+        and not k.startswith(("first_timer_", "distinct_first_timer_"))
     }
     report("Writing the report", 0.85)
     narrated = stages.narrate(
@@ -279,7 +287,7 @@ def analyze_without_model(
         findings.add("is_archived", True, (meta.evidence_id,),
                      "GitHub reports this repository as archived")
     # A mirror or a fork: GitHub's own fields, plus whether anything from a
-    # newcomer landed here (a fork that merges outsiders is its own project).
+    # outsider landed here (a fork that merges outsiders is its own project).
     if meta is not None and (
         elsewhere := landing_detection.elsewhere(meta.payload, signals.outsider_merged)
     ):
@@ -295,9 +303,10 @@ def analyze_without_model(
     if signals.outsider_threads:
         summary = (
             f"{s['outsider_merged']} of {signals.outsider_judgeable} pull requests from "
-            f"newcomers were merged, by {s['distinct_merged_authors']} of the "
+            f"outside contributors were merged, by {s['distinct_merged_authors']} of the "
             f"{s['distinct_outsider_authors']} people who tried."
         )
+        summary += " " + first_timer_sentence(signals)
         if s["median_first_response_hours"] is not None:
             summary += (
                 f" Of the {s['outsider_answered']} that got a reply, half heard "
@@ -319,8 +328,7 @@ def analyze_without_model(
             "Nobody from outside the project opened a pull request in the period "
             "we looked at, so there was nothing to count."
         )
-    deciding = next((r for r in rules if getattr(r, "code", "") not in rates.INFO_CODES),
-                    rules[0] if rules else "")
+    deciding = rates.first_deciding(rules) or ""
 
     return Assessment(
         repo=repo,
@@ -352,6 +360,24 @@ def analyze_without_model(
     ), _done(report, Trace(signals=signals, rules=rules))
 
 
+def first_timer_sentence(signals: Signals) -> str:
+    """The first-timers among the outsiders, in one sentence.
+
+    Their own numbers because they answer a different question: whether this
+    project lands a stranger's *first* pull request, not only a regular's.
+    """
+    tried = signals.first_timer_threads
+    if not tried:
+        return "None of them came from someone new to this repo."
+    merged = signals.first_timer_merged
+    people = signals.distinct_first_timer_authors
+    return (
+        f"{tried} of them came from {people} "
+        f"{'person' if people == 1 else 'people'} new to this repo, "
+        f"and {merged} of those {'was' if merged == 1 else 'were'} merged."
+    )
+
+
 # Rules after which how the merges happened is beside the point.
 _NOT_ABOUT_MERGES = {"archived", "elsewhere", "closed_kind", "non_software_kind"}
 
@@ -364,7 +390,7 @@ def _say_how_merges_landed(rules: list[str], threads: dict[str, Thread]) -> None
     """
     if any(getattr(r, "code", "") in _NOT_ABOUT_MERGES for r in rules):
         return
-    if line := landing_detection.landed_sentence(newcomer_threads(threads)):
+    if line := landing_detection.landed_sentence(outsider_threads(threads)):
         rules.append(Rule(line, code="landed_off_button"))
 
 

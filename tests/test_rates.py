@@ -157,9 +157,9 @@ def test_a_busy_repo_is_not_judged_on_hours_old_pull_requests():
 
 
 @pytest.mark.parametrize(("n", "want"), [
-    (1, "1 pull request from a newcomer is less than 14 days old and still open, "
+    (1, "1 pull request from an outside contributor is less than 14 days old and still open, "
         "so it isn't counted yet."),
-    (3, "3 pull requests from newcomers are less than 14 days old and still open, "
+    (3, "3 pull requests from outside contributors are less than 14 days old and still open, "
         "so they aren't counted yet."),
 ])
 def test_the_still_open_line_agrees_with_its_number(n, want):
@@ -169,12 +169,12 @@ def test_the_still_open_line_agrees_with_its_number(n, want):
 
 def test_the_silent_close_and_excluded_lines_agree_with_their_numbers():
     one = dict((c, t) for t, c in rates.count_sentences(0, 1, 1))
-    assert one["closed_silently"].startswith("1 pull request from a newcomer was closed")
+    assert one["closed_silently"].startswith("1 pull request from an outside contributor was closed")
     assert "it isn't counted as ignored" in one["closed_silently"]
-    assert one["excluded"].startswith("1 pull request from a newcomer was a draft or was")
+    assert one["excluded"].startswith("1 pull request from an outside contributor was a draft or was")
     many = dict((c, t) for t, c in rates.count_sentences(0, 5, 2))
-    assert many["closed_silently"].startswith("5 pull requests from newcomers were closed")
-    assert many["excluded"].startswith("2 pull requests from newcomers were drafts")
+    assert many["closed_silently"].startswith("5 pull requests from outside contributors were closed")
+    assert many["excluded"].startswith("2 pull requests from outside contributors were drafts")
 
 
 def test_no_merges_is_not_only_zero():
@@ -184,7 +184,7 @@ def test_no_merges_is_not_only_zero():
     assert "Only 0" not in line and line.startswith("No pull request")
     one = signals_of(pr(1, outcome="merged"), pr(2, replied=True))
     line = next(r for r in classify(Findings(), one)[1] if r.code == "few_merges")
-    assert line.startswith("Only 1 pull request from a first-time contributor got merged")
+    assert line.startswith("Only 1 pull request from an outside contributor got merged")
 
 
 # --- the dates, and dormancy ---------------------------------------------------------
