@@ -415,7 +415,7 @@ def test_starter_issues(h, fake_starter):
     assert body["issues"] == [{
         "number": 7, "title": "Fix typo", "url": "https://github.com/pallets/flask/issues/7",
         "labels": ["good first issue"], "created_at": "2026-09-01T00:00:00Z", "comments": 1,
-        "why": ["Labelled good first issue"],
+        "why": ["Labelled good first issue"], "beginner": True, "areas": ["docs"],
     }]
     assert fake_starter["issues"][0] == "pallets/flask"
     assert fake_starter["issues"][2] == 50  # ranked once at the cache size, sliced here
