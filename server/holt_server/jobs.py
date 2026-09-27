@@ -263,6 +263,10 @@ class JobRunner:
         if not watched:
             return
         for job_id, position in (await self.queue_positions(watched)).items():
+            # Positions are a snapshot: a job this runner claimed since then
+            # has already told its subscribers it started.
+            if job_id in self._running:
+                continue
             self.hub.publish(job_id, "stage", {"stage": waiting_stage(position),
                                                "progress": 0.0, "queue_position": position})
 
@@ -283,21 +287,33 @@ class JobRunner:
         log.info("job %s started: %s %s, %s lane, waited %.0fs", job.id, what,
                  job.repo or "", lane, waited)
         stop = threading.Event()
+        # One writer applies the job's progress steps in the order they were
+        # emitted. A coroutine per step let a slow write land after a later
+        # one, so the table and SSE subscribers saw progress go backwards.
+        steps: asyncio.Queue[tuple[str, float] | None] = asyncio.Queue()
+        writer = asyncio.create_task(self._write_progress(job.id, steps))
 
         def emit(stage: str, progress: float) -> None:
             if stop.is_set():
                 raise JobStopped
-            asyncio.run_coroutine_threadsafe(self._progress(job.id, stage, progress), loop)
+            loop.call_soon_threadsafe(steps.put_nowait, (stage, progress))
 
         limit = self.timeout_for(job)
         try:
-            if job.kind == "find":
-                result = await self._in_thread(stop, limit, self._find_sync, job, emit, loop)
-            else:
-                # The key is only ever held in memory: the jobs table records
-                # where it came from, not what it is.
-                spec = await self.services.model_spec_for(job) if job.mode == "ai" else None
-                result = await self._in_thread(stop, limit, self._analysis_sync, job, spec, emit)
+            try:
+                if job.kind == "find":
+                    result = await self._in_thread(stop, limit, self._find_sync, job, emit, loop)
+                else:
+                    # The key is only ever held in memory: the jobs table records
+                    # where it came from, not what it is.
+                    spec = await self.services.model_spec_for(job) if job.mode == "ai" else None
+                    result = await self._in_thread(stop, limit, self._analysis_sync, job,
+                                                   spec, emit)
+            finally:
+                # Steps emitted so far are written before the job ends, so
+                # `done` or `error` is the last event a subscriber hears.
+                steps.put_nowait(None)
+                await writer
         except JobTimedOut:
             log.warning("job %s timed out after %.0fs (%s %s)", job.id, limit, what,
                         job.repo or "")
@@ -371,6 +387,15 @@ class JobRunner:
         requeued as stale and picked up elsewhere, this runner's result is dropped."""
         return update(Job).where(Job.id == job_id, Job.status == "running",
                                  Job.worker_id == self.worker_id)
+
+    async def _write_progress(self, job_id: str,
+                              steps: asyncio.Queue[tuple[str, float] | None]) -> None:
+        """Record a job's progress steps one at a time until `None`."""
+        while (step := await steps.get()) is not None:
+            try:
+                await self._progress(job_id, *step)
+            except Exception:  # noqa: BLE001 -- a missed step shouldn't fail the job
+                log.exception("recording progress for job %s failed", job_id)
 
     async def _progress(self, job_id: str, stage: str, progress: float) -> None:
         async with self.services.db.session() as s:

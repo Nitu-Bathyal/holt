@@ -25,7 +25,7 @@ is either one catalogue entry or not:
 
 A repository is a catalogue when at least `CATALOGUE_SHARE` of its outside
 pull requests are entries. Across the golden set (`golden/`) the catalogues sit
-at 0.73 to 1.0 and every software project at 0.12 or below (ollama, whose
+at 0.73 to 1.0 and every software project at 0.13 or below (ollama, whose
 README lists community integrations); the threshold sits in that gap. The
 reason printed to the reader states the count it came from.
 
@@ -57,23 +57,19 @@ from collections.abc import Iterable
 from dataclasses import dataclass
 from pathlib import PurePosixPath
 
+from holt.agent import people
 from holt.agent.findings import Findings
 from holt.agent.signals import looks_like_bot, pr_key
 from holt.agent.verdict import Rule
 from holt.report import Verdict
 from holt.types import EvidenceRecord
 
-# Insiders are left out: what a catalogue *is* to a newcomer is what newcomers
-# send it. A pull request without an association (recorded before evidence v2)
-# counts as outside.
-INSIDER_ASSOCIATIONS = {"OWNER", "MEMBER", "COLLABORATOR"}
-
 # Below this many outside pull requests with a file list, a share is anecdote.
 # homebrew-cask, whose traffic is almost all automation and staff, has 11.
 MIN_ATTEMPTS = 10
 
 # See the module docstring for where this sits: catalogues 0.73-1.0, software
-# at most 0.12 across the golden set.
+# at most 0.13 across the golden set.
 CATALOGUE_SHARE = 0.4
 
 # An entry is small. winget's is three manifests; a package with its patches a
@@ -160,7 +156,13 @@ class Attempt:
 
 
 def outside_attempts(records: Iterable[EvidenceRecord]) -> list[Attempt]:
-    """Outside, human pull requests with a file list, newest first."""
+    """Outside, human pull requests with a file list, newest first.
+
+    The team is `people.maintainers`, the same answer the counts use: what a
+    catalogue *is* to a newcomer is what newcomers send it.
+    """
+    records = list(records)
+    team = people.maintainers(records)
     out: list[tuple[object, Attempt]] = []
     for r in records:
         if not r.evidence_id.endswith(":opened"):
@@ -168,7 +170,7 @@ def outside_attempts(records: Iterable[EvidenceRecord]) -> list[Attempt]:
         p = r.payload
         if looks_like_bot(p.get("author", ""), bool(p.get("author_is_bot"))):
             continue
-        if p.get("author_association") in INSIDER_ASSOCIATIONS:
+        if p.get("author") in team:
             continue
         files = tuple(p.get("files") or ())
         if not files:

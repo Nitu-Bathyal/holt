@@ -7,6 +7,7 @@ import { shortDate } from "@/lib/format";
 import { currentUser } from "@/lib/session";
 import { WELCOME_AI_CREDITS } from "@/lib/site";
 import { ConnectGitHubCard } from "@/components/connect-github-card";
+import { ProfileCard } from "@/components/profile-card";
 import { PageHead } from "@/components/page-head";
 import { PageTransition } from "@/components/motion/page-transition";
 
@@ -92,6 +93,8 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
             <li>The quick report is always free and has the same verdict. AI only adds a written explanation.</li>
           </ul>
         </section>
+
+        <ProfileCard userId={user.id} notice={sp.profile} />
 
         <ConnectGitHubCard userId={user.id} notice={sp.github} />
       </div>

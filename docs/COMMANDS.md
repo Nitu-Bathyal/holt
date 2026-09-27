@@ -85,7 +85,8 @@ does not. GitHub does not show it, `CONTRIBUTING` does not say it, and no amount
 of star-counting implies it. **It ranks nothing and predicts nothing** — after five
 capabilities cut for losing to a cheap comparator, a section that makes no claim
 is a deliberate choice. An attempt counts once per pull request rather than once
-per file; only outsiders count, decided per thread in time order; and a directory
+per file; only outsiders count (people who aren't the project's owners, members,
+collaborators or anyone seen merging or reviewing others' work); and a directory
 is named as "never landed" only when at least two people tried.
 
 ## A shortlist, not one repository
