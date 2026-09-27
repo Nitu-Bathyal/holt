@@ -12,7 +12,10 @@ engine is synchronous, in one of two lanes:
 
 Every job has a time limit (`HOLT_JOB_TIMEOUT_*`). Past it the job fails with
 a plain "took too long" error, and its thread is told to stop at its next
-GitHub call or progress step (a thread can't be killed from outside).
+GitHub call or progress step (a thread can't be killed from outside). Job
+threads come from the runner's own executor, sized with room for such
+leftovers, so they never starve the loop's default executor (repo lookups,
+starter issues) or the jobs that follow.
 
 Progress goes to the table (for polling) and to an in-memory hub (for SSE
 subscribers in this process); SSE also re-reads the table, so it keeps working
@@ -23,11 +26,14 @@ place in the queue each time it moves.
 from __future__ import annotations
 
 import asyncio
+import contextvars
+import functools
 import logging
 import threading
 import time
 import uuid
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
@@ -107,6 +113,10 @@ class JobRunner:
         # lowest priority number first, so a waiting person's job always goes
         # before badge work. 0 turns badge work off entirely.
         self.badge_concurrency = max(0, badge_concurrency)
+        # Job threads: one per worker, and as many again for threads of timed-out
+        # jobs that haven't reached their next stop check yet.
+        self.executor_size = 2 * (self.concurrency + self.badge_concurrency)
+        self._executor: ThreadPoolExecutor | None = None
         self.hub = Hub()
         self.worker_id = uuid.uuid4().hex
         self._wake = asyncio.Event()
@@ -118,6 +128,8 @@ class JobRunner:
 
     async def start(self) -> None:
         self._stopping = False
+        self._executor = ThreadPoolExecutor(self.executor_size,
+                                            thread_name_prefix="holt-job-thread")
         await self.requeue_stale()
         self._tasks = [asyncio.create_task(self._worker(i, USER_LANE), name=f"holt-job-{i}")
                        for i in range(self.concurrency)]
@@ -169,6 +181,10 @@ class JobRunner:
             task.cancel()
         await asyncio.gather(*self._tasks, return_exceptions=True)
         self._tasks = []
+        if self._executor is not None:
+            # Don't wait: a leftover thread notices its stop flag on its own.
+            self._executor.shutdown(wait=False, cancel_futures=True)
+            self._executor = None
 
     def wake(self) -> None:
         self._wake.set()
@@ -298,19 +314,21 @@ class JobRunner:
             log.info("job %s done in %.1fs", job.id, time.monotonic() - started)
             await self._finish(job, result)
 
-    @staticmethod
-    async def _in_thread(stop: threading.Event, limit: float, fn, *args) -> Any:
-        """`fn(*args)` in a worker thread, for at most `limit` seconds.
+    async def _in_thread(self, stop: threading.Event, limit: float, fn, *args) -> Any:
+        """`fn(*args)` on the runner's executor, for at most `limit` seconds.
 
         On timeout `stop` is set, which the thread notices at its next GitHub
         call (`github.job_stop`) or progress step; whatever it returns after
         that is dropped.
         """
-        previous = job_stop.set(stop)
-        try:
-            work = asyncio.ensure_future(asyncio.to_thread(fn, *args))
-        finally:
-            job_stop.reset(previous)
+        if self._executor is None:  # not started (tests driving _run directly)
+            self._executor = ThreadPoolExecutor(self.executor_size,
+                                                thread_name_prefix="holt-job-thread")
+        # run_in_executor doesn't copy contextvars the way to_thread does.
+        ctx = contextvars.copy_context()
+        ctx.run(job_stop.set, stop)
+        work = asyncio.get_running_loop().run_in_executor(
+            self._executor, functools.partial(ctx.run, fn, *args))
         done, _ = await asyncio.wait({work}, timeout=limit)
         if not done:
             stop.set()

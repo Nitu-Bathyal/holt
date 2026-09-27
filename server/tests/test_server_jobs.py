@@ -60,6 +60,34 @@ def test_a_job_past_its_time_limit_fails_plainly(make_harness):
     assert [r.repo for r in db_rows(h, Report)] == ["octo/one"]
 
 
+def test_a_stuck_timed_out_thread_does_not_block_the_next_job(make_harness):
+    """One worker, no background lane: the timed-out run's thread is still
+    blocked (no GitHub call to notice its stop flag), yet the next job runs,
+    on the runner's own executor, not the loop's default one."""
+    h = make_harness(HOLT_JOB_CONCURRENCY=1, HOLT_BADGE_CONCURRENCY=0,
+                     HOLT_JOB_TIMEOUT_RULES=0.3)
+    release = threading.Event()
+    threads: dict[str, str] = {}
+
+    def engine(*, repo, mode, days, provider, model, emit, as_of):
+        threads[repo] = threading.current_thread().name
+        if repo == "octo/one":
+            release.wait(10)  # stuck, and never checks in
+        return {"repo": repo, "mode": mode, "days": days, "verdict": "viable"}
+
+    h.svc.analysis_fn = engine
+    assert h.svc.runner.executor_size == 2
+    try:
+        stuck = h.post("/v1/analyses", {"repo": "octo/one"}).json()["job_id"]
+        assert h.wait(stuck, timeout=10)["status"] == "error"
+        nxt = h.post("/v1/analyses", {"repo": "octo/two"}).json()["job_id"]
+        assert h.wait(nxt, timeout=5)["status"] == "done"
+        assert not release.is_set()  # the stuck thread was still stuck throughout
+        assert all(name.startswith("holt-job-thread") for name in threads.values())
+    finally:
+        release.set()
+
+
 def test_timed_out_ai_report_is_refunded(make_harness):
     h = make_harness(OPENROUTER_API_KEY="sk-or-server", HOLT_JOB_TIMEOUT_AI=0.3)
     h.engine.gate.clear()
@@ -103,10 +131,10 @@ def test_a_stopped_job_makes_no_more_github_calls():
 
 
 class CountingEngine:
-    """Like FakeEngine, but records how many runs overlap."""
+    """Records how many runs overlap; each run holds until `release` is set."""
 
-    def __init__(self, hold: float) -> None:
-        self.hold = hold
+    def __init__(self) -> None:
+        self.release = threading.Event()
         self.lock = threading.Lock()
         self.now = 0
         self.peak = 0
@@ -116,31 +144,35 @@ class CountingEngine:
             self.now += 1
             self.peak = max(self.peak, self.now)
         emit("Fetching pull requests", 0.1)
-        time.sleep(self.hold)
+        self.release.wait(10)
         with self.lock:
             self.now -= 1
         return {"repo": repo, "mode": mode, "days": days, "verdict": "viable"}
 
 
 def test_ten_jobs_run_several_at_a_time(make_harness):
-    """Smoke: ten different analyses at once, four user workers."""
+    """Smoke: ten different analyses at once, four user workers + one background."""
     h = make_harness(HOLT_JOB_CONCURRENCY=4, HOLT_BADGE_CONCURRENCY=1)
-    engine = CountingEngine(hold=0.3)
+    engine = CountingEngine()
     h.svc.analysis_fn = engine
-
 
     async def canonical(repo: str) -> str:
         return repo
 
     h.svc.canonical = canonical
-    started = time.monotonic()
-    jobs = [h.post("/v1/analyses", {"repo": f"octo/repo-{i}"}).json()["job_id"]
-            for i in range(10)]
+    try:
+        jobs = [h.post("/v1/analyses", {"repo": f"octo/repo-{i}"}).json()["job_id"]
+                for i in range(10)]
+        # The background lane helps while people wait: five at once, no more.
+        deadline = time.monotonic() + 10
+        while engine.now < 5 and time.monotonic() < deadline:
+            time.sleep(0.02)
+        time.sleep(0.2)
+        assert engine.peak == 5
+    finally:
+        engine.release.set()
     assert all(h.wait(j)["status"] == "done" for j in jobs)
-    elapsed = time.monotonic() - started
-    # The background lane helps while people wait, so up to 5 at once.
-    assert 4 <= engine.peak <= 5
-    assert elapsed < 10 * 0.3
+    assert engine.peak == 5
 
 
 def test_background_lane_yields_to_waiting_people(make_harness):
