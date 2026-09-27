@@ -318,16 +318,28 @@ export async function history(userId: string): Promise<Result<{ items: HistoryIt
   return { ok: true, data: { items: user(userId).history } };
 }
 
+// Mirrors server/holt_server/badge.py: a positive, factual line for a passing
+// repo, neutral grey for anything else, never a red verdict.
+function shortHours(h: number): string {
+  if (h < 1) return `~${Math.max(1, Math.round(h * 60))}m`;
+  if (h < 24) return `~${Math.round(h)}h`;
+  return `~${Math.round(h / 24)}d`;
+}
+
+export function badgeMessage(report: Pick<Report, "verdict" | "stats"> | undefined): [string, string] {
+  if (!report) return ["not checked yet", "#57606a"];
+  if (report.verdict !== "viable") return ["see report", "#57606a"];
+  const parts: string[] = [];
+  if (report.stats.outsider_merged > 0) parts.push("merges outsiders");
+  const h = report.stats.median_first_response_hours;
+  if (h != null && h >= 0 && h <= 72) parts.push(`replies in ${shortHours(h)}`);
+  return [parts.join(" · ") || "worth your time", "#1a7f37"];
+}
+
 export function badge(repoIn: string): Response {
   const v = validate(repoIn);
   const report = v.ok ? state().cache.get(key(v.data, "rules", 7)) : undefined;
-  const [text, color] = !report
-    ? ["not checked yet", "#6b6b64"]
-    : report.verdict === "viable"
-      ? ["newcomer-friendly", "#17775a"]
-      : report.verdict === "not_viable"
-        ? ["hard for newcomers", "#b34a12"]
-        : ["not enough evidence", "#8a5a00"];
+  const [text, color] = badgeMessage(report);
   return new Response(badgeSvg("holt", text, color), {
     headers: { "Content-Type": "image/svg+xml; charset=utf-8", "Cache-Control": "public, max-age=3600" },
   });
