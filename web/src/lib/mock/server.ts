@@ -6,7 +6,6 @@ import type {
   JobStatus, Me, Mode, Report, Result, StarterIssue,
 } from "../types";
 import type { FeedbackInput } from "../feedback";
-import { MODELS } from "../models";
 import { verdictView } from "./derived";
 import { canonicalName, isMockNotFound, mockFindPool, mockIssues, mockReport, PRECACHED } from "./fixtures";
 
@@ -28,7 +27,6 @@ interface Job {
   mode: Mode;
   days: number;
   userId?: string;
-  model?: string;
   started: number;
 }
 
@@ -106,7 +104,7 @@ function validate(repo: string): Result<string> {
 }
 
 export async function startAnalysis(
-  repoIn: string, mode: Mode, days: number, refresh: boolean, userId?: string, model?: string,
+  repoIn: string, mode: Mode, days: number, refresh: boolean, userId?: string,
 ): Promise<Result<AnalysisStart>> {
   const v = validate(repoIn);
   if (!v.ok) return v;
@@ -124,7 +122,7 @@ export async function startAnalysis(
     return { ok: true, data: { status: "done", report: cached } };
   }
   const id = `job_${crypto.randomUUID().slice(0, 12)}`;
-  s.jobs.set(id, { id, repo, mode, days, userId, model, started: Date.now() });
+  s.jobs.set(id, { id, repo, mode, days, userId, started: Date.now() });
   if (mode === "ai" && userId) {
     const c = user(userId).me.credits;
     c.balance--;
@@ -146,8 +144,6 @@ function finish(job: Job): Report {
   let r = s.cache.get(k);
   if (!r) {
     r = { ...mockReport(job.repo, job.mode, job.days), generated_at: new Date().toISOString() };
-    // Show the chosen model the way a real AI report would.
-    if (r.cost && job.model) r = { ...r, cost: { ...r.cost, model: MODELS.find((m) => m.id === job.model)?.openrouter ?? job.model } };
     s.cache.set(k, r);
     remember(job.userId, r);
   }

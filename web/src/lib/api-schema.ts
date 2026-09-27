@@ -628,6 +628,10 @@ export interface components {
             model: string;
             /** Output Tokens */
             output_tokens: number;
+            /** Seconds */
+            seconds: number | null;
+            /** Usd */
+            usd: number | null;
         };
         /**
          * Credits
@@ -1036,6 +1040,8 @@ export interface components {
         };
         /** Report */
         Report: {
+            /** Bottom Line */
+            bottom_line: string | null;
             cost: components["schemas"]["Cost"] | null;
             /** Days */
             days: number;

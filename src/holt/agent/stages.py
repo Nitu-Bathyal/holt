@@ -11,7 +11,8 @@ import random
 from collections.abc import Iterable
 
 from holt.agent.findings import Findings
-from holt.agent.signals import Thread
+from holt.agent.signals import Thread, looks_like_bot, pr_key
+from holt.agent.verify import automated_body
 from holt.model import ModelClient, guarded, untrusted
 from holt.types import EvidenceRecord
 
@@ -245,25 +246,136 @@ def normalise_citation(repo: str, cited: str) -> str:
     return cited
 
 
-def _render_thread(t: Thread) -> str:
+# GitHub's CommentAuthorAssociation values for people with write access. The
+# rest -- CONTRIBUTOR, FIRST_TIME_CONTRIBUTOR, FIRST_TIMER, NONE, MANNEQUIN --
+# are outside the team as far as a would-be contributor is concerned.
+INSIDER_ASSOCIATIONS = frozenset({"OWNER", "MEMBER", "COLLABORATOR"})
+
+# Appended to the Outcomes system prompt when the evidence says who is who.
+OUTSIDER_NOTE = """
+
+Every thread below was opened by someone outside the project's team. Replies are
+labelled with who wrote them, and "maintainer" marks someone with write access
+to the repository. The author's own replies and automated posts have been
+removed, so what is left is how other people reacted."""
+
+
+def _render_thread(
+    t: Thread, replies: list[tuple[object, str, str]] | None = None
+) -> str:
+    """One thread as the model reads it.
+
+    `replies` is the already-filtered conversation (speaker label, body) used
+    for evidence that records who is who; without it the thread's own responses
+    are shown with the author tagged, exactly as the committed recordings saw
+    them.
+    """
     state = "merged" if t.merged else "closed unmerged" if t.closed_unmerged else "open"
     lines = [
         f"--- evidence id: {cite_id(t.key)}  ({state})",
         f"    opened by {t.author}; {t.changed_files} files, +{t.additions}/-{t.deletions}",
         untrusted(f"    files: {t.files[:4]}", "file paths"),
     ]
-    if not t.responses:
+    if replies is None:
+        replies = [
+            (when, "AUTHOR" if who == t.author else who, body)
+            for when, who, body in sorted(t.responses)
+        ]
+    if not replies:
         # Deliberately not a quotable sentence. The previous wording read like
         # thread content and the model quoted it back as evidence, which the
         # evidence-integrity check caught: 80 of 528 quotes were this scaffold.
         lines.append("    NO_REPLIES")
-    replies = []
-    for when, who, body in sorted(t.responses)[:6]:
-        speaker = "AUTHOR" if who == t.author else who
-        replies.append(f"    [{speaker}] {' '.join((body or '').split())[:600]}")
-    if replies:
-        lines.append(untrusted("\n".join(replies), "pull request comments"))
+    shown = [
+        f"    [{speaker}] {' '.join((body or '').split())[:600]}"
+        for when, speaker, body in sorted(replies, key=lambda r: r[0])[:6]
+    ]
+    if shown:
+        lines.append(untrusted("\n".join(shown), "pull request comments"))
     return "\n".join(lines)
+
+
+def knows_association(records: Iterable[EvidenceRecord]) -> bool:
+    """Whether this capture says who has write access.
+
+    Captures before the v2 evidence (every committed benchmark fixture) do not;
+    live reads always do.
+    """
+    return any(
+        "author_association" in r.payload
+        for r in records if r.evidence_id.endswith(":opened")
+    )
+
+
+def outsider_conversations(
+    records: Iterable[EvidenceRecord], threads: dict[str, Thread]
+) -> dict[str, list[tuple[object, str, str]]]:
+    """Each outsider thread's replies from other people, labelled by role.
+
+    Outsider means the pull request's author is neither a bot nor someone with
+    write access (OWNER, MEMBER, COLLABORATOR). A reply is kept when a person
+    other than the author wrote it and no program did: the author's own replies,
+    bot accounts and automated bodies ("Automated comment by QA Swarm", "Approved
+    automatically ...") say nothing about how the project treats newcomers.
+    """
+    records = list(records)
+    insiders = {
+        pr_key(r.evidence_id)
+        for r in records
+        if r.evidence_id.endswith(":opened")
+        and r.payload.get("author_association") in INSIDER_ASSOCIATIONS
+    }
+    out: dict[str, list[tuple[object, str, str]]] = {
+        t.key: [] for t in threads.values()
+        if not t.author_is_bot and t.key not in insiders
+    }
+    for r in records:
+        if ":review:" not in r.evidence_id and ":comment:" not in r.evidence_id:
+            continue
+        key = pr_key(r.evidence_id)
+        if key not in out:
+            continue
+        p = r.payload
+        who = p.get("author") or ""
+        body = p.get("body") or ""
+        if (who == threads[key].author or looks_like_bot(who, bool(p.get("author_is_bot")))
+                or not body.strip() or automated_body(body)):
+            continue
+        role = ", maintainer" if p.get("author_association") in INSIDER_ASSOCIATIONS else ""
+        out[key].append((r.timestamp, f"{who}{role}", body))
+    return out
+
+
+def stratified_sample(
+    threads: list[Thread], conversations: dict[str, list], n: int
+) -> list[Thread]:
+    """Up to `n` threads spread across what happened to them.
+
+    The old choice -- the threads with the most conversation -- is the most
+    welcoming slice of any repository by construction: a rejected or ignored
+    pull request rarely has a long thread. Here each outcome gets its turn:
+    merged, closed without merging, still open with a reply, and ignored.
+    Within a group the pick is a seeded shuffle, so it is fair and repeatable.
+    """
+    groups: list[list[Thread]] = [[], [], [], []]
+    for t in sorted(threads, key=lambda t: t.number):
+        if t.merged:
+            groups[0].append(t)
+        elif t.closed_unmerged:
+            groups[1].append(t)
+        elif conversations.get(t.key):
+            groups[2].append(t)
+        else:
+            groups[3].append(t)
+    rng = random.Random(0)
+    for g in groups:
+        rng.shuffle(g)
+    picked: list[Thread] = []
+    while len(picked) < n and any(groups):
+        for g in groups:
+            if g and len(picked) < n:
+                picked.append(g.pop(0))
+    return sorted(picked, key=lambda t: t.number)
 
 
 def read_outcomes(
@@ -272,29 +384,53 @@ def read_outcomes(
     model: ModelClient,
     findings: Findings,
     sample: int = 12,
+    records: list[EvidenceRecord] | None = None,
 ) -> None:
-    """Read the threads with the most conversation -- silence is already counted."""
-    talkative = sorted(
-        (t for t in threads.values() if not t.author_is_bot),
-        key=lambda t: (len(t.responses), t.additions + t.deletions),
-        reverse=True,
-    )[:sample]
-    if not talkative:
+    """Read a spread of outsider threads and judge what each reveals.
+
+    Given `records` that say who has write access, only outsider threads are
+    read, spread across outcomes, with the author's replies and automated posts
+    removed. Evidence without that (captures older than the v2 evidence, which
+    is every committed benchmark fixture) keeps the original selection, the
+    threads with the most conversation, so its recorded runs still replay; the
+    quote check in Stage D still removes any quote the author or a program wrote.
+    """
+    if records is not None and knows_association(records):
+        conversations = outsider_conversations(records, threads)
+        chosen = stratified_sample(
+            [threads[k] for k in conversations], conversations, sample
+        )
+        rendered = [_render_thread(t, conversations[t.key]) for t in chosen]
+        system = OUTCOMES_SYSTEM + OUTSIDER_NOTE
+    else:
+        chosen = sorted(
+            (t for t in threads.values() if not t.author_is_bot),
+            key=lambda t: (len(t.responses), t.additions + t.deletions),
+            reverse=True,
+        )[:sample]
+        rendered = [_render_thread(t) for t in chosen]
+        system = OUTCOMES_SYSTEM
+    if not chosen:
         findings.add("outsider_posture", "absent", note="no threads available to read")
         return
 
     prompt = "\n".join(
-        [f"Repository: {repo}", "", "Pull request threads:", ""]
-        + [_render_thread(t) for t in talkative]
+        [f"Repository: {repo}", "", "Pull request threads:", ""] + rendered
     )
     result = model.complete(
         label="outcomes",
-        system=guarded(OUTCOMES_SYSTEM),
+        system=guarded(system),
         prompt=prompt,
         schema=OUTCOMES_SCHEMA,
     )
 
-    per_thread = result.get("threads", [])
+    # A citation must name a thread that was shown. Any other id may resolve
+    # -- the provider holds every pull request -- but the model never read it.
+    shown = {cite_id(t.key) for t in chosen}
+    per_thread = [
+        t for t in result.get("threads", [])
+        if normalise_citation(repo, t["pr_id"]) in shown
+    ]
     findings.add(
         "outsider_posture",
         result["posture"],

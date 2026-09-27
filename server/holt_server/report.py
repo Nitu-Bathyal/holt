@@ -188,6 +188,9 @@ def build(
         "mode": mode,
         "days": assessment.contributor_days,
         "verdict": assessment.verdict.value,
+        # Rules mode computes a bottom line too ("headline. deciding rule"), but
+        # the verdict block already says exactly that, so only AI mode sends it.
+        "bottom_line": (assessment.bottom_line or None) if mode == "ai" else None,
         "summary": (assessment.summary or None) if mode == "ai" else None,
         "stats": stats(signals),
         "decided_by": [str(r) for r in assessment.rules],

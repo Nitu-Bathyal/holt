@@ -77,10 +77,10 @@ function repoOk(repo: string) {
   return rest.length === 0 && Boolean(o && r) && isValidRepo(o, r);
 }
 
-/** `model` is a web model id (lib/models.ts); the server ignores it until it supports model choice. */
-export function startAnalysis(repo: string, mode: Mode, days: number, refresh: boolean, caller: Caller, model?: string): Promise<Result<AnalysisStart>> {
-  if (MOCK) return mock.startAnalysis(repo, mode, days, refresh, caller.userId ?? undefined, model);
-  return call("/v1/analyses", { method: "POST", body: JSON.stringify({ repo, mode, days, refresh, ...(model ? { model } : {}) }), caller });
+/** The model for AI reports is server configuration; the web never picks one. */
+export function startAnalysis(repo: string, mode: Mode, days: number, refresh: boolean, caller: Caller): Promise<Result<AnalysisStart>> {
+  if (MOCK) return mock.startAnalysis(repo, mode, days, refresh, caller.userId ?? undefined);
+  return call("/v1/analyses", { method: "POST", body: JSON.stringify({ repo, mode, days, refresh }), caller });
 }
 
 export async function jobStatus(jobId: string): Promise<Result<JobStatus>> {

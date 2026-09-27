@@ -57,6 +57,27 @@ that the mechanism works; the mechanism is covered by tests
 (`tests/test_verify.py`) rather than by the pool. It also checks only that an id
 *exists*, not that the evidence supports the claim.
 
+**What the AI report reads and may say (Sep 2026).** An audit of replayed AI
+reports found staff threads read as outsider feedback, a pull request author's
+own words quoted as a maintainer's review, automated posts quoted as people, and
+narration stating figures nobody measured or leaking field names. Four checks
+now apply, none of them a model:
+
+- Stage C reads only outsider threads (author not a bot and not `OWNER`,
+  `MEMBER` or `COLLABORATOR`), spread across merged, closed, open-with-a-reply
+  and ignored, with the author's replies and automated posts removed. Captures
+  that predate `author_association` (the committed benchmark fixtures) keep the
+  old selection so their recordings replay.
+- A thread quote must be words someone other than the pull request's author
+  said, and not a bot or an automated body. The title and description are not
+  quotable. A posture reading whose cited threads mostly failed this goes too.
+- Every narrated sentence is checked: a figure must be a measured count (or a
+  percentage, minutes or difference of one), a quotation must pass the same
+  speaker check, and a `snake_case` field name is never shown. Failing sentences
+  are removed; an emptied field falls back to the computed wording.
+- Stages A, B and C run at once, every provider call has an output cap, and each
+  AI report logs its time per stage, tokens and cost (`holt.report` logger).
+
 **The holdout is structural for timestamps, procedural for payloads.** Every fact
 passes through one `EvidenceProvider` whose base class asserts the cutoff on
 every record, and a subclass cannot return a record with a post-cutoff
