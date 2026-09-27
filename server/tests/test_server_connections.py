@@ -11,11 +11,14 @@ from sqlalchemy import select
 
 @pytest.fixture
 def gh(h):
-    """GitHub's `/user/{id}`: ids in `users` exist, anything else is a 404."""
+    """GitHub's `/user/{id}`: ids in `users` exist, anything else is a 404.
+    The pull-request search that follows a connect finds nothing."""
     users = {583231: "octocat", 42: "someone"}
     seen: list[httpx.Request] = []
 
     def handle(req: httpx.Request) -> httpx.Response:
+        if req.url.path == "/graphql":
+            return httpx.Response(200, json={"data": {"search": {"nodes": []}}})
         seen.append(req)
         uid = int(req.url.path.rsplit("/", 1)[1])
         if uid in users:

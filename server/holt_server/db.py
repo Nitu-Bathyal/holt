@@ -379,3 +379,36 @@ class RepoView(Base):
     first_viewed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     last_viewed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     views: Mapped[int] = mapped_column(Integer, default=1)
+
+
+class ContributionSync(Base):
+    """When a connected user's public pull requests were last fetched
+    (contributions.py). The refresh cooldown reads `fetched_at`."""
+
+    __tablename__ = "contribution_syncs"
+
+    user_id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    # The login the pull requests were searched for.
+    login: Mapped[str] = mapped_column(String(100))
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    # GitHub had more than we keep (the fetch stops at a fixed number).
+    truncated: Mapped[bool] = mapped_column(Boolean, default=False)
+
+
+class Contribution(Base):
+    """One public pull request a connected user opened, as GitHub last showed
+    it. Replaced wholesale on every fetch; deleted on disconnect."""
+
+    __tablename__ = "contributions"
+
+    user_id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    repo_key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    number: Mapped[int] = mapped_column(Integer, primary_key=True)
+    repo: Mapped[str] = mapped_column(String(200))
+    title: Mapped[str] = mapped_column(Text)
+    url: Mapped[str] = mapped_column(String(500))
+    state: Mapped[str] = mapped_column(String(10))  # open | merged | closed
+    draft: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    merged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
