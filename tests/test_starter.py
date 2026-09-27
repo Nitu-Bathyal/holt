@@ -95,7 +95,8 @@ query($q:String!, $cursor:String) {
 def as_recorded(document: str) -> str:
     from holt.evidence import github_graphql as gql
 
-    v1 = {gql.REPO_META: V1_REPO_META, gql.PR_SEARCH: V1_PR_SEARCH}
+    v1 = {gql.REPO_META: V1_REPO_META, gql.PR_SEARCH: V1_PR_SEARCH,
+          gql.PR_SEARCH_SCREEN: V1_PR_SEARCH}
     return v1.get(document) or document.replace(
         "rateLimit { cost remaining resetAt }", "rateLimit { remaining resetAt }"
     )

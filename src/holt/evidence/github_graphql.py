@@ -138,6 +138,27 @@ def docs_query(oid: str) -> tuple[str, dict[str, tuple[str, str]]]:
 # references share one timeline window instead of having one each; the price is
 # that ten or more commit references after a close can crowd the close event
 # out, and then how the PR was closed is recorded as unknown.
+#
+# The timeline is also the slow part: it added seven to twelve seconds to a
+# report's fetch when measured. The one-page screen that `discover` and `find`
+# run over many repositories at once is only a pre-filter, so it uses
+# PR_SEARCH_SCREEN, which leaves the timeline out; its closes then carry no
+# `closed_by` keys at all, as in a capture that never asked.
+_PR_TIMELINE = """\
+        timelineItems(last:10, itemTypes:[CLOSED_EVENT, REFERENCED_EVENT]) {
+          nodes {
+            __typename
+            ... on ClosedEvent {
+              createdAt actor { login __typename }
+              closer { __typename ... on Commit { oid } ... on PullRequest { number } }
+            }
+            ... on ReferencedEvent {
+              createdAt actor { login __typename }
+              commit { oid } commitRepository { nameWithOwner }
+            }
+          }
+        }
+"""
 PR_SEARCH = """
 query($q:String!, $cursor:String) {
   rateLimit { cost remaining resetAt }
@@ -158,24 +179,13 @@ query($q:String!, $cursor:String) {
         comments(first:30) {
           nodes { createdAt body authorAssociation author { login __typename } }
         }
-        timelineItems(last:10, itemTypes:[CLOSED_EVENT, REFERENCED_EVENT]) {
-          nodes {
-            __typename
-            ... on ClosedEvent {
-              createdAt actor { login __typename }
-              closer { __typename ... on Commit { oid } ... on PullRequest { number } }
-            }
-            ... on ReferencedEvent {
-              createdAt actor { login __typename }
-              commit { oid } commitRepository { nameWithOwner }
-            }
-          }
-        }
+""" + _PR_TIMELINE + """\
       }
     }
   }
 }
 """
+PR_SEARCH_SCREEN = PR_SEARCH.replace(_PR_TIMELINE, "")
 
 
 # Issues, for Path Finder. Decomposed the same way pull requests are: an issue
@@ -436,11 +446,15 @@ class GitHubGraphQL:
                 return
             cursor = page["endCursor"]
 
-    def search_pull_requests(self, q: str, max_pages: int = 8) -> Iterator[dict[str, Any]]:
+    def search_pull_requests(
+        self, q: str, max_pages: int = 8, timeline: bool = True
+    ) -> Iterator[dict[str, Any]]:
+        """Pull request pages; `timeline=False` is the faster screening query."""
+        document = PR_SEARCH if timeline else PR_SEARCH_SCREEN
         cursor: str | None = None
         for _ in range(max_pages):
             search = self.query(
-                PR_SEARCH, timeout=HEAVY_TIMEOUT_S, q=q, cursor=cursor
+                document, timeout=HEAVY_TIMEOUT_S, q=q, cursor=cursor
             )["search"]
             yield from (n for n in search["nodes"] if n)
             page = search["pageInfo"]
@@ -834,10 +848,14 @@ class LiveGitHubProvider(EvidenceProvider):
         cutoff: datetime | None = None,
         transport: GitHubGraphQL | None = None,
         max_pages: int = 8,
+        timeline: bool = True,
     ) -> None:
         super().__init__(window, cutoff or datetime.now(UTC))
         self.transport = transport or GitHubGraphQL()
         self.max_pages = max_pages
+        # False for a quick screen: no close events or commit references (see
+        # PR_SEARCH_SCREEN). A full report always reads them.
+        self.timeline = timeline
         self._seen: dict[str, EvidenceRecord] = {}
 
     def _fetch_raw(self, request: str, /, **params: object) -> Iterable[EvidenceRecord]:
@@ -851,8 +869,13 @@ class LiveGitHubProvider(EvidenceProvider):
         if history:
             docs = self.transport.docs_at(owner, name, history[0]["oid"])
             records.extend(project_docs(request, docs, history[0]))
-        nodes = self.transport.search_pull_requests(
-            search_query(request, self.window, self.cutoff), self.max_pages
+        query = search_query(request, self.window, self.cutoff)
+        # The keyword only when screening, so a transport written before it
+        # existed (the tests have several) still serves full fetches.
+        nodes = (
+            self.transport.search_pull_requests(query, self.max_pages)
+            if self.timeline
+            else self.transport.search_pull_requests(query, self.max_pages, timeline=False)
         )
         records.extend(project(request, nodes))
 

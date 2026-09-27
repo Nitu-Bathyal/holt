@@ -350,7 +350,8 @@ def test_the_transport_adds_up_rate_limit_points():
 
 
 def test_every_query_asks_what_it_cost():
-    documents = [gql.REPO_META, gql.PR_SEARCH, gql.ISSUE_SEARCH, gql.REPO_SEARCH,
+    documents = [gql.REPO_META, gql.PR_SEARCH, gql.PR_SEARCH_SCREEN,
+                 gql.ISSUE_SEARCH, gql.REPO_SEARCH,
                  gql.docs_query("0" * 40)[0]]
     assert all("rateLimit { cost " in d for d in documents)
 
@@ -363,6 +364,45 @@ def test_pr_page_stays_at_five_connections_per_pull_request():
                  ("files", "reviews", "comments", "labels", "timelineItems"))
     assert per_pr == 5
     assert body.count("(first:") + body.count("(last:") == 5
+
+
+# --- the screening query ----------------------------------------------------
+
+
+def test_the_screen_query_is_the_full_one_without_the_timeline():
+    assert "timelineItems" in gql.PR_SEARCH
+    assert "timelineItems" not in gql.PR_SEARCH_SCREEN
+    assert gql.PR_SEARCH_SCREEN == gql.PR_SEARCH.replace(gql._PR_TIMELINE, "")
+    for field in ("authorAssociation", "isDraft", "labels(", "mergedBy"):
+        assert field in gql.PR_SEARCH_SCREEN
+
+
+def test_discover_screens_without_the_timeline_and_reports_read_it(monkeypatch):
+    from holt import discover
+
+    asked: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        document = json.loads(request.content)["query"]
+        asked.append(document)
+        if "repository(" in document and "search(" not in document:
+            return httpx.Response(200, json={"data": {"repository": _meta()}})
+        return httpx.Response(200, json={"data": {"search": {
+            "issueCount": 1, "pageInfo": {"hasNextPage": False, "endCursor": None},
+            "nodes": [{k: v for k, v in _node([]).items() if k != "timelineItems"}],
+        }}})
+
+    transport = gql.GitHubGraphQL(
+        token="t", client=httpx.Client(transport=httpx.MockTransport(handler))
+    )
+    _, recs = discover.screen_slug("a/b", transport, RECORDED_AT, 7)
+    assert gql.PR_SEARCH_SCREEN in asked and gql.PR_SEARCH not in asked
+    closed = next(r for r in recs if r.evidence_id == "pr:a/b#1:closed").payload
+    assert "closed_by" not in closed and "closer" not in closed  # not asked, not unknown
+
+    asked.clear()
+    gql.LiveGitHubProvider(Window.PRE_T, cutoff=RECORDED_AT, transport=transport).fetch("a/b")
+    assert gql.PR_SEARCH in asked and gql.PR_SEARCH_SCREEN not in asked
 
 
 # --- helpers ------------------------------------------------------------------
