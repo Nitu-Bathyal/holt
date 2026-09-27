@@ -1,8 +1,8 @@
 """Configuration, all of it from the environment (or `server/.env`).
 
 Names are the ones in `server/README.md`. Nothing here has a default that is
-unsafe in production except `HOLT_INTERNAL_KEY`, which is empty by default and
-makes the server refuse every `/v1` request.
+unsafe in production except `HOLT_INTERNAL_KEY` and `HOLT_SECRET_KEY`, which
+are empty by default and make the server refuse the requests that need them.
 """
 
 from __future__ import annotations
@@ -22,6 +22,8 @@ class Settings(BaseSettings):
         "postgresql+asyncpg://holt:holt@127.0.0.1:20131/holt", alias="DATABASE_URL"
     )
     internal_key: str = Field("", alias="HOLT_INTERNAL_KEY")
+    # Server secret for keyed hashes (usage counting).
+    secret_key: str = Field("", alias="HOLT_SECRET_KEY")
     # Where the badge links to: `{web_url}/{owner}/{repo}`.
     web_url: str = Field("https://githolt.com", alias="HOLT_WEB_URL")
 
