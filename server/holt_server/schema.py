@@ -177,10 +177,12 @@ RUBBER_STAMP_LINE = ("Outside pull requests here get merged without anyone revie
                      "them, so you wouldn't get feedback on yours.")
 
 
-def verdict_line(verdict: str, s: Stats, decided_by: list[str], rule_codes: list[str]) -> str:
+def verdict_line(verdict: str, s: Stats, decided_by: list[str], rule_codes: list[str],
+                 starter_issues_below: bool = True) -> str:
     """One sentence under the headline. It explains the verdict and never
     oversells it: "Worth your time" with a low merge rate or many ignored pull
-    requests says so plainly."""
+    requests says so plainly. `starter_issues_below=False` where no starter
+    issues follow (Discover cards)."""
     n = s.outsider_attempts
     merged = f"{s.outsider_merged} of {n}"
     if verdict == "viable":
@@ -192,8 +194,10 @@ def verdict_line(verdict: str, s: Stats, decided_by: list[str], rule_codes: list
                 "most pull requests don't land" if low_merge else "",
                 f"{_silent_phrase(silent)} get no reply" if many_silent else "",
             ) if b]
+            advice = (", so start with one of the starter issues below" if starter_issues_below
+                      else ", so pick your first issue carefully")
             return (f"Newcomers do get merged here ({merged} recently), but "
-                    f"{' and '.join(buts)}, so start with one of the starter issues below.")
+                    f"{' and '.join(buts)}{advice}.")
         if silent < 0.3:
             return ("Outside contributors get real replies here, and "
                     f"{merged} of their recent pull requests were merged.")

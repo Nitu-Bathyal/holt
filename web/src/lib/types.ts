@@ -21,6 +21,9 @@ export type Contributions = S.Contributions;
 export type ContributionPR = S.ContributionPullRequest;
 export type ApiError = S.Error;
 export type FeedbackOut = S.FeedbackOut;
+export type DiscoverOut = S.DiscoverOut;
+export type DiscoverRepo = S.DiscoverRepo;
+export type DiscoverSort = S.DiscoverOut["sort"];
 
 export type Mode = Report["mode"];
 export type Verdict = Report["verdict"];

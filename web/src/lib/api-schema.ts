@@ -148,6 +148,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/discover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Discover
+         * @description Checked repositories, filtered and sorted (see the module docstring).
+         *     Reads only the database: no GitHub call and no rate limit.
+         */
+        get: operations["discover_v1_discover_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/feedback": {
         parameters: {
             query?: never;
@@ -789,6 +810,58 @@ export interface components {
             /** Purchased */
             purchased: number;
         };
+        /** DiscoverOut */
+        DiscoverOut: {
+            /** Language */
+            language: string | null;
+            /** Languages */
+            languages: components["schemas"]["LanguageCount"][];
+            /** Repos */
+            repos: components["schemas"]["DiscoverRepo"][];
+            /**
+             * Sort
+             * @enum {string}
+             */
+            sort: "welcoming" | "stars" | "trending";
+            /** Topic */
+            topic: string | null;
+            /** Trending Min */
+            trending_min: number;
+        };
+        /** DiscoverRepo */
+        DiscoverRepo: {
+            /** Checked This Week */
+            checked_this_week: number | null;
+            /** Description */
+            description: string | null;
+            /** Generated At */
+            generated_at: string | null;
+            /** Headline */
+            readonly headline: string;
+            /** Language */
+            language: string | null;
+            /** Pushed At */
+            pushed_at: string | null;
+            /** Reason */
+            reason: string;
+            /** Repo */
+            repo: string;
+            /** Stars */
+            stars: number | null;
+            stats: components["schemas"]["Stats"];
+            /**
+             * Tone
+             * @enum {string}
+             */
+            readonly tone: "good" | "bad" | "warn";
+            /** Topics */
+            topics: string[];
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "viable" | "not_viable" | "insufficient_evidence";
+        };
         /**
          * Entitlements
          * @description GET /v1/me/entitlements.
@@ -1054,6 +1127,13 @@ export interface components {
             merged: number;
             /** Path */
             path: string;
+        };
+        /** LanguageCount */
+        LanguageCount: {
+            /** Name */
+            name: string;
+            /** Repos */
+            repos: number;
         };
         /** Me */
         Me: {
@@ -1343,6 +1423,8 @@ export type ContributionSummary = components['schemas']['ContributionSummary'];
 export type Contributions = components['schemas']['Contributions'];
 export type Cost = components['schemas']['Cost'];
 export type Credits = components['schemas']['Credits'];
+export type DiscoverOut = components['schemas']['DiscoverOut'];
+export type DiscoverRepo = components['schemas']['DiscoverRepo'];
 export type Entitlements = components['schemas']['Entitlements'];
 export type Error = components['schemas']['Error'];
 export type ErrorBody = components['schemas']['ErrorBody'];
@@ -1363,6 +1445,7 @@ export type History = components['schemas']['History'];
 export type HistoryItem = components['schemas']['HistoryItem'];
 export type JobStatus = components['schemas']['JobStatus'];
 export type LandingPath = components['schemas']['LandingPath'];
+export type LanguageCount = components['schemas']['LanguageCount'];
 export type Me = components['schemas']['Me'];
 export type NeverLanded = components['schemas']['NeverLanded'];
 export type Odds = components['schemas']['Odds'];
@@ -1648,6 +1731,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    discover_v1_discover_get: {
+        parameters: {
+            query?: {
+                sort?: "welcoming" | "stars" | "trending";
+                language?: string | null;
+                topic?: string | null;
+                limit?: number;
+            };
+            header?: {
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoverOut"];
                 };
             };
             /** @description Default Response */
