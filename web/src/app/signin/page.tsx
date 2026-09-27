@@ -40,7 +40,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           <CatFace mood="adoring" blink className="text-[2rem]" />
           <h1 className="display mt-6 text-[2.2rem] sm:text-[2.6rem]">Sign in to Holt</h1>
           <p className="prose-sans mt-3">
-            Free reports don&apos;t need an account. Sign in for AI reports, your history, and to use your own API key.
+            Free reports don&apos;t need an account. Sign in for free AI reports and your history.
           </p>
 
           <div className="mt-8 space-y-3">

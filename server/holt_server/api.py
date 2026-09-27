@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 import asyncio
-import hmac
 import json
-from datetime import UTC, datetime, timedelta
+import uuid
+from datetime import timedelta
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, Header, Query, Request, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 
-from holt_server import __version__, badge, crypto, llm, repos, schema, starter, usage
+from holt_server import __version__, badge, credits, repos, schema, starter, usage
 from holt_server.db import (
     ACTIVE,
     BADGE_PRIORITY,
@@ -29,6 +29,8 @@ from holt_server.db import (
     now,
     utc,
 )
+from holt_server.credits import get_user
+from holt_server.deps import Caller, caller, internal, services, signed_in
 from holt_server.errors import ApiError
 from holt_server.jobs import done_payload
 from holt_server.services import Services
@@ -41,48 +43,6 @@ router = APIRouter(prefix="/v1", responses={"default": {"model": schema.ErrorBod
 
 
 # --- dependencies -------------------------------------------------------------
-
-
-def services(request: Request) -> Services:
-    return request.app.state.services
-
-
-async def internal(
-    request: Request,
-    x_holt_internal_key: str | None = Header(default=None),
-) -> None:
-    expected = services(request).settings.internal_key
-    if not expected or not x_holt_internal_key or not hmac.compare_digest(
-        x_holt_internal_key.encode(), expected.encode()
-    ):
-        raise ApiError("unauthorized", "This API is only for the Holt website.")
-
-
-class Caller:
-    def __init__(self, user_id: str | None, ip: str | None) -> None:
-        self.user_id = user_id
-        self.ip = ip
-
-    @property
-    def rate_key(self) -> str:
-        return f"user:{self.user_id}" if self.user_id else f"ip:{self.ip}"
-
-    def limit(self, svc: Services) -> int:
-        s = svc.settings
-        return s.user_rate_per_hour if self.user_id else s.anon_rate_per_hour
-
-
-async def caller(
-    request: Request,
-    _: None = Depends(internal),
-    x_holt_user: str | None = Header(default=None),
-    x_holt_client_ip: str | None = Header(default=None),
-) -> Caller:
-    user_id = (x_holt_user or "").strip()[:200] or None
-    # No fallback to the socket address: that is the BFF's, and every anonymous
-    # visitor would share one bucket.
-    ip = (x_holt_client_ip or "").strip()[:64] or None
-    return Caller(user_id, ip)
 
 
 def rate_limit(svc: Services, who: Caller, bucket: str = "work") -> None:
@@ -99,58 +59,11 @@ def rate_limit(svc: Services, who: Caller, bucket: str = "work") -> None:
         svc.limiter.hit(who.rate_key, who.limit(svc))
 
 
-async def get_user(svc: Services, user_id: str) -> User:
-    """The user row, created the first time `web/` sends this id."""
-    async with svc.db.session() as s:
-        user = await s.get(User, user_id)
-        if user is None:
-            user = User(id=user_id, plan="free", ai_used=0, ai_period=period())
-            s.add(user)
-            try:
-                await s.commit()
-            except Exception:  # created concurrently by another request
-                await s.rollback()
-                user = await s.get(User, user_id)
-        return user
-
-
-def signed_in(who: Caller) -> str:
-    if not who.user_id:
-        raise ApiError("unauthorized", "Please sign in first.")
-    return who.user_id
-
-
-# --- quota --------------------------------------------------------------------
-
-
-def period(when: datetime | None = None) -> str:
-    return (when or now()).strftime("%Y-%m")
-
-
-def resets_at(when: datetime | None = None) -> datetime:
-    when = when or now()
-    year, month = (when.year + 1, 1) if when.month == 12 else (when.year, when.month + 1)
-    return datetime(year, month, 1, tzinfo=UTC)
-
-
-def ai_limit(svc: Services, user: User) -> int:
-    s = svc.settings
-    return s.free_ai_limit if user.plan in ("", "free") else s.plan_ai_limit
-
-
-def ai_used(user: User) -> int:
-    return user.ai_used if user.ai_period == period() else 0
+# --- account ------------------------------------------------------------------
 
 
 def me_body(svc: Services, user: User) -> schema.Me:
-    return schema.Me.model_validate({
-        "plan": user.plan or "free",
-        "quota": {"ai_used": ai_used(user), "ai_limit": ai_limit(svc, user),
-                  "resets_at": iso(resets_at())},
-        "byok": {"provider": user.byok_provider, "model": user.byok_model or
-                 llm.DEFAULT_MODELS.get(user.byok_provider or "", ""), "set": True}
-        if user.byok_cipher else None,
-    })
+    return schema.Me(plan=user.plan or "free", credits=credits.credits_body(svc, user))
 
 
 # --- bodies -------------------------------------------------------------------
@@ -169,12 +82,6 @@ class FindIn(BaseModel):
     days: int = Field(7, ge=1, le=90)
     hacktoberfest: bool = False
     limit: int = Field(20, ge=1, le=50)
-
-
-class ByokIn(BaseModel):
-    provider: Literal["openrouter", "openai", "anthropic", "gemini"]
-    api_key: str = Field(min_length=8, max_length=500)
-    model: str | None = Field(None, max_length=200)
 
 
 # --- health and badge (no internal key) ---------------------------------------
@@ -278,12 +185,13 @@ async def insert_or_join(svc: Services, job: Job, before_insert=None) -> tuple[J
 
     Atomic: the partial unique index on `dedupe_key` decides, so two requests
     racing past the `active_job` check still end up with one job. Whatever
-    `before_insert` does in the session (the quota charge) commits with the
+    `before_insert(session, job)` does (spending a credit) commits with the
     insert or rolls back with it. Returns (job, created).
     """
     async with svc.db.session() as s:
         if before_insert is not None:
-            await before_insert(s)
+            job.id = job.id or uuid.uuid4().hex
+            await before_insert(s, job)
         s.add(job)
         try:
             await s.commit()
@@ -365,6 +273,11 @@ async def create_analysis(body: AnalysisIn, request: Request,
             return JSONResponse(schema.AnalysisDone(
                 report=schema.Report.model_validate(cached.report)).model_dump(mode="json"))
 
+    if body.mode == "ai" and not svc.server_model_available():
+        # Before the rate limit and the credit: nothing is spent or queued.
+        raise ApiError("ai_unavailable", "AI reports aren't switched on yet. "
+                       "The free quick report has the full verdict and evidence.")
+
     rate_limit(svc, who)
 
     if existing := await join_active(svc, key, body.mode, body.days):
@@ -376,46 +289,16 @@ async def create_analysis(body: AnalysisIn, request: Request,
               dedupe_key=dedupe_key(key, body.mode, body.days))
     charge = None
     if body.mode == "ai":
-        user = await get_user(svc, who.user_id)
-        if user.byok_cipher:
-            # A saved key is used when there is one: the person chose to set
-            # it, and it leaves their free reports for later.
-            job.key_source = "byok"
-        else:
-            job.key_source, job.charged = "server", True
-            job.params["ai_period"] = period()
-            charge = charge_ai(svc, user)
+        await get_user(svc, who.user_id)  # the welcome credits, on a first visit
+        job.key_source, job.charged = "server", True
+        job.params["paid_with"] = "credit"
+        user_id = who.user_id
+
+        async def charge(s, job: Job) -> None:
+            await credits.spend(s, user_id, job)
+
     job, _created = await insert_or_join(svc, job, charge)
     return queued(job.id)
-
-
-def charge_ai(svc: Services, user: User):
-    """One AI report against the server's key, counted atomically in the same
-    transaction as the job insert: a lost dedupe race refunds itself."""
-    limit = ai_limit(svc, user)
-    if limit <= 0 or not svc.server_model_available():
-        raise ApiError("needs_key", "AI reports need an API key. Add your own key "
-                       "in settings to run one.")
-    month = period()
-
-    async def charge(s) -> None:
-        # New month: start the count again. Guarded so it happens once.
-        await s.execute(update(User).where(User.id == user.id, User.ai_period != month)
-                        .values(ai_period=month, ai_used=0))
-        took = await s.execute(
-            update(User).where(User.id == user.id, User.ai_period == month,
-                               User.ai_used < limit)
-            .values(ai_used=User.ai_used + 1))
-        if took.rowcount != 1:
-            await s.rollback()
-            raise ApiError(
-                "quota_exceeded",
-                f"You've used all {limit} free AI reports this month. They reset on "
-                f"{resets_at().strftime('%-d %B')}. You can add your own API key in "
-                "settings to keep going.",
-            )
-
-    return charge
 
 
 def queued(job_id: str) -> JSONResponse:
@@ -662,37 +545,6 @@ async def find_events(job_id: str, request: Request) -> StreamingResponse:
 async def me(request: Request, who: Caller = Depends(caller)) -> schema.Me:
     svc = services(request)
     return me_body(svc, await get_user(svc, signed_in(who)))
-
-
-@router.put("/me/byok")
-async def put_byok(body: ByokIn, request: Request,
-                   who: Caller = Depends(caller)) -> schema.Me:
-    svc = services(request)
-    user_id = signed_in(who)
-    await get_user(svc, user_id)
-    try:
-        cipher = crypto.encrypt(svc.settings.secret_key, body.api_key.strip(), user_id)
-    except crypto.SecretKeyMissing as exc:
-        raise ApiError("internal", "Saving keys isn't set up on this server yet.") from exc
-    async with svc.db.session() as s:
-        user = await s.get(User, user_id)
-        user.byok_provider = body.provider
-        user.byok_model = (body.model or "").strip() or None
-        user.byok_cipher = cipher
-        await s.commit()
-        return me_body(svc, user)
-
-
-@router.delete("/me/byok")
-async def delete_byok(request: Request, who: Caller = Depends(caller)) -> schema.Me:
-    svc = services(request)
-    user_id = signed_in(who)
-    await get_user(svc, user_id)
-    async with svc.db.session() as s:
-        user = await s.get(User, user_id)
-        user.byok_provider = user.byok_model = user.byok_cipher = None
-        await s.commit()
-        return me_body(svc, user)
 
 
 @router.get("/me/history")

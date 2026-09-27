@@ -55,13 +55,43 @@ class User(Base):
 
     id: Mapped[str] = mapped_column(String(200), primary_key=True)
     plan: Mapped[str] = mapped_column(String(40), default="free")
-    # AI reports run on the server's key in `ai_period` (a "YYYY-MM" month).
+    # AI reports this user can still run. Every change also writes a
+    # `CreditEvent`; the balance lives here so a spend is one guarded UPDATE.
+    ai_credits: Mapped[int] = mapped_column(Integer, default=0, server_default=text("0"))
+    # When the one-off welcome credits were given; NULL until the first visit.
+    credits_granted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                                nullable=True)
+    # Starts the weekly claim clock (the welcome grant starts it too).
+    last_claim_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                           nullable=True)
+    # Retired: the monthly quota and the website's bring-your-own-key. Nothing
+    # reads them; migration 0003 emptied the BYOK columns. They are dropped in a
+    # later release, once no deployed release selects them.
     ai_used: Mapped[int] = mapped_column(Integer, default=0)
     ai_period: Mapped[str] = mapped_column(String(7), default="")
     byok_provider: Mapped[str | None] = mapped_column(String(40), nullable=True)
     byok_model: Mapped[str | None] = mapped_column(String(200), nullable=True)
     byok_cipher: Mapped[str | None] = mapped_column(Text, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class CreditEvent(Base):
+    """The AI-credit ledger: one row per change to `User.ai_credits`.
+
+    kind: `grant` (welcome), `claim` (weekly), `spend` (an AI report queued),
+    `refund` (that report failed). `amount` is signed. Purchases can be new kinds.
+    """
+
+    __tablename__ = "credit_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(200))
+    kind: Mapped[str] = mapped_column(String(20))
+    amount: Mapped[int] = mapped_column(Integer)
+    job_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+    __table_args__ = (Index("ix_credit_events_user", "user_id", "created_at"),)
 
 
 class Job(Base):
@@ -76,8 +106,9 @@ class Job(Base):
     days: Mapped[int] = mapped_column(Integer, default=7)
     params: Mapped[dict] = mapped_column(JSON, default=dict)
     user_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
-    # Where the model key came from: "server" (counts against quota) or "byok".
+    # Where the model key came from: "server" (retired: "byok").
     key_source: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    # An AI credit was spent on this job (refunded if it fails).
     charged: Mapped[bool] = mapped_column(Boolean, default=False)
     # Identical questions share a job: at most one queued/running job per key,
     # enforced by the partial unique index below, not by a read-then-insert.

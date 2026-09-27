@@ -2,7 +2,7 @@
 // reports return at once, anything else becomes a job with stages over SSE.
 import "server-only";
 import type {
-  AnalysisStart, ApiError, ByokProvider, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, HistoryItem,
+  AnalysisStart, ApiError, Credits, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, HistoryItem,
   JobStatus, Me, Mode, Report, Result, StarterIssue,
 } from "../types";
 import type { FeedbackInput } from "../feedback";
@@ -11,7 +11,9 @@ import { verdictView } from "./derived";
 import { canonicalName, isMockNotFound, mockFindPool, mockIssues, mockReport, PRECACHED } from "./fixtures";
 
 const JOB_MS = Number(process.env.MOCK_JOB_MS || 6500);
-const FREE_AI = Number(process.env.NEXT_PUBLIC_FREE_AI_QUOTA || 3);
+const WELCOME_CREDITS = Number(process.env.NEXT_PUBLIC_FREE_AI_QUOTA || 3);
+const CLAIM_EVERY_DAYS = 7;
+const DAY_MS = 86_400_000;
 
 const STAGES: [at: number, stage: string][] = [
   [0, "Fetching pull requests"],
@@ -69,8 +71,13 @@ function user(id: string) {
     u = {
       me: {
         plan: "free",
-        quota: { ai_used: 0, ai_limit: FREE_AI, resets_at: new Date(Date.UTC(new Date().getUTCFullYear(), new Date().getUTCMonth() + 1, 1)).toISOString() },
-        byok: null,
+        credits: {
+          balance: WELCOME_CREDITS,
+          can_claim: false,
+          next_claim_at: new Date(Date.now() + CLAIM_EVERY_DAYS * DAY_MS).toISOString(),
+          claim_every_days: CLAIM_EVERY_DAYS,
+          ai_available: true,
+        },
       },
       history: [
         { job_id: "job_seed_requests", status: "done", repo: "psf/requests", mode: "rules", days: 7, ...verdictView("viable"), verdict: "viable", created_at: new Date(Date.now() - 26 * 3_600_000).toISOString() },
@@ -103,11 +110,9 @@ export async function startAnalysis(
   const repo = v.data;
   if (mode === "ai") {
     if (!userId) return err(401, "unauthorized", "Sign in to get an AI report.");
-    const u = user(userId);
-    if (!u.me.byok) {
-      if (u.me.quota.ai_limit <= 0) return err(403, "needs_key", "AI reports need a plan or your own API key.");
-      if (u.me.quota.ai_used >= u.me.quota.ai_limit) return err(402, "quota_exceeded", "You've used this month's free AI reports. Add your own API key to keep going, free.");
-    }
+    const c = user(userId).me.credits;
+    if (!c.ai_available) return err(503, "ai_unavailable", "AI reports aren't switched on yet. The free quick report has the full verdict and evidence.");
+    if (c.balance <= 0) return err(402, "quota_exceeded", "You've used your free AI reports. You can claim another one in your settings once a week. The quick report is always free.");
   }
   const s = state();
   const cached = s.cache.get(key(repo, mode, days));
@@ -117,7 +122,7 @@ export async function startAnalysis(
   }
   const id = `job_${crypto.randomUUID().slice(0, 12)}`;
   s.jobs.set(id, { id, repo, mode, days, userId, model, started: Date.now() });
-  if (mode === "ai" && userId && !user(userId).me.byok) user(userId).me.quota.ai_used++;
+  if (mode === "ai" && userId) user(userId).me.credits.balance--;
   return { ok: true, data: { status: "queued", job_id: id } };
 }
 
@@ -135,7 +140,7 @@ function finish(job: Job): Report {
   if (!r) {
     r = { ...mockReport(job.repo, job.mode, job.days), generated_at: new Date().toISOString() };
     // Show the chosen model the way a real AI report would.
-    if (r.cost && job.model) r = { ...r, cost: { ...r.cost, model: MODELS.find((m) => m.id === job.model)?.providers.openrouter ?? job.model } };
+    if (r.cost && job.model) r = { ...r, cost: { ...r.cost, model: MODELS.find((m) => m.id === job.model)?.openrouter ?? job.model } };
     s.cache.set(k, r);
     remember(job.userId, r);
   }
@@ -289,16 +294,16 @@ export async function me(userId: string): Promise<Result<Me>> {
   return { ok: true, data: user(userId).me };
 }
 
-export async function putByok(userId: string, provider: ByokProvider, _apiKey: string, model: string): Promise<Result<Me>> {
-  const u = user(userId);
-  u.me.byok = { provider, model, set: true };
-  return { ok: true, data: u.me };
-}
-
-export async function deleteByok(userId: string): Promise<Result<Me>> {
-  const u = user(userId);
-  u.me.byok = null;
-  return { ok: true, data: u.me };
+export async function claimCredit(userId: string): Promise<Result<Credits>> {
+  const c = user(userId).me.credits;
+  if (!c.can_claim) {
+    const when = c.next_claim_at ? new Date(c.next_claim_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" }) : "later";
+    return err(409, "claim_not_ready", `Your next free AI report can be claimed on ${when}.`);
+  }
+  c.balance++;
+  c.can_claim = false;
+  c.next_claim_at = new Date(Date.now() + CLAIM_EVERY_DAYS * DAY_MS).toISOString();
+  return { ok: true, data: c };
 }
 
 export async function history(userId: string): Promise<Result<{ items: HistoryItem[] }>> {

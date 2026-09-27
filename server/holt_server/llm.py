@@ -2,8 +2,8 @@
 
 `holt.model` reads keys from the process environment and records a trajectory
 file per call, which is right for the CLI and wrong for a shared server: here
-the key belongs to the request (the server's OpenRouter key or a user's BYOK
-key) and nothing is written to disk. These implement the same `ModelClient`
+the key is the server's OpenRouter key, passed in per job, and nothing is
+written to disk. These implement the same `ModelClient`
 protocol (`complete`, `usage`, `replayed`), so the pipeline cannot tell.
 """
 
@@ -40,8 +40,6 @@ class ModelSpec:
     model: str
     api_key: str = field(repr=False)
     base_url: str | None = None
-    # A user's own key: a rejected key is their problem to fix, not an outage.
-    byok: bool = False
 
     @property
     def label(self) -> str:
@@ -131,6 +129,4 @@ def _strip_fence(text: str) -> str:
 
 
 def build(spec: ModelSpec):
-    client = Anthropic(spec) if spec.provider == "anthropic" else OpenAICompatible(spec)
-    client.byok = spec.byok
-    return client
+    return Anthropic(spec) if spec.provider == "anthropic" else OpenAICompatible(spec)
