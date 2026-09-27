@@ -12,7 +12,7 @@ export const STATS_NOTICE =
 const NOTICES: Record<string, { tone: string; text: string }> = {
   connected: { tone: "text-green border-green/50 bg-green/10", text: "GitHub connected." },
   saved: { tone: "text-green border-green/50 bg-green/10", text: "Saved." },
-  disconnected: { tone: "text-muted border-line-strong", text: "GitHub disconnected. We deleted the connection and the list of repos you viewed." },
+  disconnected: { tone: "text-muted border-line-strong", text: "GitHub disconnected. We deleted the connection, the list of repos you viewed and your saved pull requests." },
   error: { tone: "text-orange border-orange/50 bg-orange/10", text: "That didn't work. Try again in a minute." },
 };
 
@@ -48,6 +48,7 @@ export async function ConnectGitHubCard({ userId, notice }: { userId: string; no
                 </a>
               </p>
               <p className="mt-1 text-muted">since {shortDate(acct.connected_at)}</p>
+              <Link href="/me/contributions" className="mt-2 inline-block text-link">see your contributions →</Link>
             </div>
             <form action={disconnect}>
               <button type="submit" className="btn-ghost text-orange">disconnect</button>
@@ -76,7 +77,7 @@ export async function ConnectGitHubCard({ userId, notice }: { userId: string; no
           </form>
 
           <p className="mt-5 font-sans text-[0.8rem] text-faint">
-            Disconnecting deletes the connection and the list of repos you viewed on Holt. See{" "}
+            Disconnecting deletes the connection, the list of repos you viewed on Holt and your saved pull requests. See{" "}
             <Link href="/privacy#connect-github" className="text-link">what we keep</Link>.
           </p>
         </>

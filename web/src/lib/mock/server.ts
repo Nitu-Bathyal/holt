@@ -2,7 +2,7 @@
 // reports return at once, anything else becomes a job with stages over SSE.
 import "server-only";
 import type {
-  AnalysisStart, ApiError, Credits, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, GitHubConnection, HistoryItem,
+  AnalysisStart, ApiError, Credits, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, HistoryItem,
   JobStatus, Me, Mode, Report, Result, StarterIssue,
 } from "../types";
 import type { FeedbackInput } from "../feedback";
@@ -379,5 +379,55 @@ export async function setStatsOptOut(userId: string, statsOptOut: boolean): Prom
 
 export async function disconnectGitHub(userId: string): Promise<Result<GitHubConnection>> {
   connections().delete(userId);
+  refreshed().delete(userId);
   return { ok: true, data: NOT_CONNECTED };
+}
+
+// My Contributions: a fixed handful of pull requests for any connected user.
+const g3 = globalThis as unknown as { holtMockRefreshed?: Map<string, number> };
+const refreshed = () => (g3.holtMockRefreshed ??= new Map());
+
+function mockContributions(userId: string, login: string): Contributions {
+  const day = 86_400_000;
+  const at = (daysAgo: number) => new Date(Date.now() - daysAgo * day).toISOString();
+  const fetched = refreshed().get(userId) ?? Date.now() - 20 * 60_000;
+  const next = fetched + 15 * 60_000;
+  const verdict = (v: "viable" | "not_viable" | "insufficient_evidence") => ({
+    verdict: v,
+    headline: { viable: "Worth your time", not_viable: "Not worth your time", insufficient_evidence: "Not enough evidence" }[v],
+    tone: ({ viable: "good", not_viable: "bad", insufficient_evidence: "warn" } as const)[v],
+    checked_at: at(1),
+  });
+  const pr = (repo: string, number: number, title: string, state: "open" | "merged" | "closed", daysAgo: number,
+    v: ReturnType<typeof verdict> | null, found = false) => ({
+    repo, number, title, url: `https://github.com/${repo}/pull/${number}`, state, draft: false,
+    created_at: at(daysAgo), closed_at: state === "open" ? null : at(daysAgo - 2), merged_at: state === "merged" ? at(daysAgo - 2) : null,
+    verdict: v, found_via_holt: found,
+  });
+  const prs = [
+    pr("pallets/flask", 5601, "Docs: explain how to run the test suite on Windows", "open", 2, verdict("viable"), true),
+    pr("NixOS/nixpkgs", 339210, "python3Packages.rich: 13.7.1 -> 13.9.4", "merged", 12, verdict("viable"), true),
+    pr("octo/one", 88, "Fix a typo in the contributing guide", "merged", 40, null),
+    pr("octo/two", 14, "Add a --quiet flag", "closed", 95, verdict("not_viable")),
+  ];
+  return {
+    login, fetched_at: new Date(fetched).toISOString(), next_refresh_at: next > Date.now() ? new Date(next).toISOString() : null,
+    window_days: 365, truncated: false,
+    summary: { opened: 4, merged: 2, waiting: 1, closed: 1, landed_share: 0.6667, found_via_holt: 2 },
+    pull_requests: prs,
+  };
+}
+
+export async function contributions(userId: string): Promise<Result<Contributions>> {
+  const acct = connections().get(userId)?.account;
+  if (!acct) return err(404, "not_found", "Connect your GitHub account to see your contributions.");
+  return { ok: true, data: mockContributions(userId, acct.login) };
+}
+
+export async function refreshContributions(userId: string): Promise<Result<Contributions>> {
+  const acct = connections().get(userId)?.account;
+  if (!acct) return err(404, "not_found", "Connect your GitHub account to see your contributions.");
+  const last = refreshed().get(userId);
+  if (!last || last + 15 * 60_000 <= Date.now()) refreshed().set(userId, Date.now());
+  return { ok: true, data: mockContributions(userId, acct.login) };
 }
