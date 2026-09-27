@@ -344,6 +344,83 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Orders
+         * @description The user's purchases, newest first. Checkouts never finished are left out.
+         */
+        get: operations["list_orders_v1_me_orders_get"];
+        put?: never;
+        /** Create Order */
+        post: operations["create_order_v1_me_orders_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/orders/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Confirm Order */
+        post: operations["confirm_order_v1_me_orders_confirm_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/packs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Packs */
+        get: operations["get_packs_v1_packs_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/payments/razorpay/webhook": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Razorpay Webhook
+         * @description Razorpay's webhook, forwarded by `web/` with the body byte for byte.
+         *     Answers 200 for anything signed, even events it ignores, so Razorpay
+         *     doesn't retry them; 400 for anything not signed.
+         */
+        post: operations["razorpay_webhook_v1_payments_razorpay_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/reports": {
         parameters: {
             query?: never;
@@ -596,7 +673,7 @@ export interface components {
              * @default {}
              */
             packs: {
-                [key: string]: components["schemas"]["Pack"];
+                [key: string]: components["schemas"]["holt_server__pricing__Pack"];
             };
             /** Plans */
             plans: {
@@ -607,6 +684,47 @@ export interface components {
              * @default true
              */
             tbd: boolean;
+        };
+        /**
+         * Checkout
+         * @description POST /v1/me/orders: what Razorpay Checkout needs to take the payment.
+         */
+        Checkout: {
+            /** Amount */
+            amount: number;
+            /** Credits */
+            credits: number;
+            /** Currency */
+            currency: string;
+            /** Description */
+            description: string;
+            /** Key Id */
+            key_id: string;
+            /** Name */
+            name: string;
+            /** Order Id */
+            order_id: string;
+            /** Pack */
+            pack: string;
+            /**
+             * Provider
+             * @constant
+             */
+            provider: "razorpay";
+            /** Provider Order Id */
+            provider_order_id: string;
+        };
+        /**
+         * ConfirmIn
+         * @description What Razorpay Checkout hands the page on success, passed on unchanged.
+         */
+        ConfirmIn: {
+            /** Razorpay Order Id */
+            razorpay_order_id: string;
+            /** Razorpay Payment Id */
+            razorpay_payment_id: string;
+            /** Razorpay Signature */
+            razorpay_signature: string;
         };
         /** ConnectIn */
         ConnectIn: {
@@ -667,7 +785,7 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "unauthorized" | "not_found" | "invalid_repo" | "invalid_request" | "rate_limited" | "quota_exceeded" | "needs_key" | "claim_not_ready" | "ai_unavailable" | "upstream" | "internal" | "not_implemented";
+            code: "unauthorized" | "not_found" | "invalid_repo" | "invalid_request" | "rate_limited" | "quota_exceeded" | "needs_key" | "claim_not_ready" | "ai_unavailable" | "upstream" | "internal" | "not_implemented" | "payments_off" | "payment_unconfirmed";
             /** Message */
             message: string;
             /** Retry After */
@@ -948,21 +1066,60 @@ export interface components {
              */
             tone: "good" | "bad" | "warn";
         };
-        /** Pack */
-        Pack: {
+        /**
+         * Order
+         * @description One credit-pack purchase, for the buyer's purchase history.
+         */
+        Order: {
+            /** Amount */
+            amount: number;
+            /** Created At */
+            created_at: string;
             /** Credits */
             credits: number;
-            /** Expires Days */
-            expires_days?: number | null;
+            /** Currency */
+            currency: string;
+            /** Id */
+            id: string;
             /** Name */
             name: string;
+            /** Pack */
+            pack: string;
+            /** Paid At */
+            paid_at: string | null;
             /**
-             * On Sale
-             * @default false
+             * Status
+             * @enum {string}
              */
+            status: "created" | "paid" | "failed" | "held";
+        };
+        /**
+         * OrderConfirmed
+         * @description POST /v1/me/orders/confirm: the order (paid, or still being confirmed) and balances.
+         */
+        OrderConfirmed: {
+            credits: components["schemas"]["Credits"];
+            order: components["schemas"]["Order"];
+        };
+        /** OrderIn */
+        OrderIn: {
+            /** Pack */
+            pack: string;
+        };
+        /** Orders */
+        Orders: {
+            /** Orders */
+            orders: components["schemas"]["Order"][];
+        };
+        /**
+         * Packs
+         * @description GET /v1/packs. `on_sale` is false, and `packs` empty, while payments are off.
+         */
+        Packs: {
+            /** On Sale */
             on_sale: boolean;
-            /** @default {} */
-            price: components["schemas"]["Price"];
+            /** Packs */
+            packs: components["schemas"]["holt_server__schema__Pack"][];
         };
         /**
          * PartialStats
@@ -1157,6 +1314,37 @@ export interface components {
             /** Error Type */
             type: string;
         };
+        /** Pack */
+        holt_server__pricing__Pack: {
+            /** Credits */
+            credits: number;
+            /** Expires Days */
+            expires_days?: number | null;
+            /** Name */
+            name: string;
+            /**
+             * On Sale
+             * @default false
+             */
+            on_sale: boolean;
+            /** @default {} */
+            price: components["schemas"]["Price"];
+        };
+        /** Pack */
+        holt_server__schema__Pack: {
+            /** Amount */
+            amount: number;
+            /** Credits */
+            credits: number;
+            /** Currency */
+            currency: string;
+            /** Expires Days */
+            expires_days: number | null;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+        };
     };
     responses: never;
     parameters: never;
@@ -1176,6 +1364,8 @@ export type AdminUsers = components['schemas']['AdminUsers'];
 export type AnalysisDone = components['schemas']['AnalysisDone'];
 export type AnalysisIn = components['schemas']['AnalysisIn'];
 export type Catalogue = components['schemas']['Catalogue'];
+export type Checkout = components['schemas']['Checkout'];
+export type ConfirmIn = components['schemas']['ConfirmIn'];
 export type ConnectIn = components['schemas']['ConnectIn'];
 export type Cost = components['schemas']['Cost'];
 export type Credits = components['schemas']['Credits'];
@@ -1202,7 +1392,11 @@ export type LandingPath = components['schemas']['LandingPath'];
 export type Me = components['schemas']['Me'];
 export type NeverLanded = components['schemas']['NeverLanded'];
 export type Odds = components['schemas']['Odds'];
-export type Pack = components['schemas']['Pack'];
+export type Order = components['schemas']['Order'];
+export type OrderConfirmed = components['schemas']['OrderConfirmed'];
+export type OrderIn = components['schemas']['OrderIn'];
+export type Orders = components['schemas']['Orders'];
+export type Packs = components['schemas']['Packs'];
 export type PartialStats = components['schemas']['PartialStats'];
 export type Plan = components['schemas']['Plan'];
 export type PlanFeature = components['schemas']['PlanFeature'];
@@ -1215,6 +1409,8 @@ export type StarterIssue = components['schemas']['StarterIssue'];
 export type StarterIssues = components['schemas']['StarterIssues'];
 export type Stats = components['schemas']['Stats'];
 export type ValidationError = components['schemas']['ValidationError'];
+export type HoltServerPricingPack = components['schemas']['holt_server__pricing__Pack'];
+export type HoltServerSchemaPack = components['schemas']['holt_server__schema__Pack'];
 export type $defs = Record<string, never>;
 export interface operations {
     badge_svg_badge__owner___repo__svg_get: {
@@ -1974,6 +2170,180 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["History"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    list_orders_v1_me_orders_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Orders"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    create_order_v1_me_orders_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["OrderIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Checkout"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    confirm_order_v1_me_orders_confirm_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConfirmIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["OrderConfirmed"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_packs_v1_packs_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Packs"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    razorpay_webhook_v1_payments_razorpay_webhook_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-razorpay-signature"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description Default Response */

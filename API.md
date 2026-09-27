@@ -32,12 +32,14 @@ with codes: `unauthorized`, `not_found` (repo missing or private),
 `needs_plan` (the feature comes only with a paid plan), `needs_key` (AI report requested without
 signing in), `ai_unavailable` (AI reports are switched off: the server has no
 model key), `claim_not_ready` (a weekly claim before it is due),
+`payments_off` (credit packs aren't on sale), `payment_unconfirmed` (a
+payment's signature didn't check out; nothing was credited),
 `upstream` (GitHub/model failure), `internal`.
 
 HTTP statuses: `unauthorized` 401, `not_found` 404, `invalid_repo` and
 `invalid_request` (malformed body or query) 400, `rate_limited` 429 (also sent
 as a `Retry-After` header), `quota_exceeded` 402, `needs_plan` 402, `needs_key` 403,
-`claim_not_ready` 409, `ai_unavailable` 503, `upstream` 502, `internal` 500, `not_implemented` 501 (starter issues and find,
+`claim_not_ready` 409, `payments_off` 403, `payment_unconfirmed` 400, `ai_unavailable` 503, `upstream` 502, `internal` 500, `not_implemented` 501 (starter issues and find,
 until the engine side ships).
 
 ## Rate limits
@@ -242,7 +244,7 @@ is ever due. Spending, claiming and refunds are atomic on the server.
 
 Payments are off: nothing is on sale and every price is still to be decided.
 What exists is the model they plug into, all on the server, never taken from
-the client:
+the client, and a checkout for credit packs that stays switched off (below):
 
 - **Features** (`ai_report`, `playbook`, `preflight`, `guidance`,
   `recommendations`) and what one use costs in credits, **plans** (`free`,
@@ -259,6 +261,51 @@ the client:
   says). Every change is a ledger row saying which pool.
 - Admins change credits and plans with a CLI (`python -m holt_server.credits`,
   server/README.md), not over HTTP.
+
+#### Credit packs (checkout)
+
+Razorpay, INR, one-time payments. **Switched off** unless the server has
+`HOLT_PAYMENTS_ENABLED=1` and its Razorpay keys, and a pack in the catalogue
+has `on_sale: true` and an INR price. While off, `GET /v1/packs` offers
+nothing and `POST /v1/me/orders` answers 403 `payments_off`. The price,
+the credits and the expiry always come from the server's catalogue.
+
+- `GET /v1/packs` (internal key; no user needed) → `{"on_sale": false, "packs": [Pack]}`,
+  `Pack`: `{"id": "credits_10", "name": "10 credits", "credits": 10, "expires_days": null, "amount": 49900, "currency": "INR"}`
+  (`amount` in paise). `on_sale` is false and `packs` empty while payments are off.
+- `POST /v1/me/orders {"pack": "credits_10"}` → `Checkout`:
+  `{"order_id", "provider": "razorpay", "key_id", "provider_order_id", "amount", "currency", "name", "description", "pack", "credits"}`,
+  everything Razorpay Checkout needs (`key_id` is the public key id). Any other
+  field in the body is ignored. 400 `invalid_request` for a pack not on sale,
+  403 `payments_off`, 502 `upstream` when Razorpay fails. Counts against the
+  user's hourly work limit.
+- `POST /v1/me/orders/confirm {"razorpay_order_id", "razorpay_payment_id", "razorpay_signature"}`
+  (exactly what Checkout's success handler receives) → `{"order": Order, "credits": Credits}`.
+  The server checks the signature, then asks Razorpay for the payment, and
+  credits the pack only when the payment is captured (it captures an
+  authorized one) for the order's exact amount and currency. `order.status`
+  is `paid`, or still `created` while Razorpay is processing (the webhook
+  finishes it; poll `GET /v1/me/orders`), or `held` when the amount didn't
+  match (nothing credited; a person checks it). 400 `payment_unconfirmed` for
+  a bad signature, 404 for an order that isn't this user's. Safe to repeat.
+- `GET /v1/me/orders?limit=50` → `{"orders": [Order]}`, newest first, the
+  purchase history. `Order`: `{"id", "pack", "name", "credits", "amount", "currency", "status", "created_at", "paid_at"}`,
+  `status` one of `paid`, `failed` (the payment was declined), `held`.
+  Checkouts that were opened and never paid are left out.
+- `POST /v1/payments/razorpay/webhook` (internal key; no user). `web/` serves
+  Razorpay's webhook URL (`/api/payments/razorpay/webhook`) and forwards the
+  request body byte for byte with its `X-Razorpay-Signature` header. The
+  server verifies that signature (`RAZORPAY_WEBHOOK_SECRET`) before reading the
+  body: 400 `payment_unconfirmed` if it doesn't match. Signed events answer 200
+  `{"ok": true, "result": "paid"|"already_paid"|"held"|"failed"|"pending"|"unknown_order"|"ignored"}`
+  (the result is for logs). Handled: `payment.authorized` (captured),
+  `payment.captured` and `order.paid` (credited), `payment.failed`.
+
+A pack is credited once per order, whichever of the confirm call and the
+webhooks arrives first, however often they repeat: marking the order paid and
+adding its credits happen in one transaction, and a payment id can pay only
+one order. With payments switched off, orders that already exist are still
+confirmed, so someone who paid just before the switch gets their credits.
 
 ### Admin (read-only)
 
