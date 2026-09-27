@@ -72,7 +72,7 @@ def test_long_odds_name_the_weak_part():
 
 def test_viable_line_is_honest_about_long_odds():
     line = report("viable", stats(189, 5, 100)).verdict_line
-    assert line.startswith("Newcomers do get merged here (5 of 189 recently)")
+    assert line.startswith("Outside contributors do get merged here (5 of 189 recently)")
     assert "most pull requests don't land" in line and "about half get no reply" in line
     assert report("viable", stats(100, 40, 10)).verdict_line == (
         "Outside contributors get real replies here, and 40 of 100 of their recent "

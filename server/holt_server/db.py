@@ -451,3 +451,25 @@ class Contribution(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     merged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class Profile(Base):
+    """What a signed-in user told us about themselves (profiles.py), so /find
+    and /hacktoberfest start from it. Stated, never inferred."""
+
+    __tablename__ = "profiles"
+
+    user_id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    languages: Mapped[list] = mapped_column(JSON, default=list)
+    topics: Mapped[list] = mapped_column(JSON, default=list)
+    days: Mapped[int] = mapped_column(Integer, default=7)
+    # code | docs | tests | design | translations
+    contributions: Mapped[list] = mapped_column(JSON, default=list)
+    # newcomer | experienced
+    level: Mapped[str] = mapped_column(String(20), default="newcomer")
+    # When they ticked "I'm 18 or older" here. Null when they had already
+    # confirmed it by connecting GitHub.
+    adult_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                                nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

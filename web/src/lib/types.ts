@@ -21,6 +21,10 @@ export type Contributions = S.Contributions;
 export type ContributionPR = S.ContributionPullRequest;
 export type ApiError = S.Error;
 export type FeedbackOut = S.FeedbackOut;
+export type ProfileOut = S.ProfileOut;
+export type ProfilePrefs = S.ProfilePrefs;
+export type ContributionType = ProfilePrefs["contributions"][number];
+export type Level = ProfilePrefs["level"];
 
 export type Mode = Report["mode"];
 export type Verdict = Report["verdict"];

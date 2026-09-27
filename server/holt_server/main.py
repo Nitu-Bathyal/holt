@@ -20,6 +20,7 @@ from holt_server import (
     feedback,
     payments,
     pro,
+    profiles,
 )
 from holt_server.api import public, router
 from holt_server.services import Services
@@ -78,6 +79,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(feedback.router)
     app.include_router(connections.router)
     app.include_router(contributions.router)
+    app.include_router(profiles.router)
     app.include_router(payments.router)
     return app
 

@@ -5,9 +5,11 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
+import time
 import types
 
 import pytest
+from holt_server import api
 from holt_server.db import Job
 from holt_server.errors import ApiError
 from sqlalchemy import select
@@ -168,6 +170,82 @@ def test_events_stream_stages_then_done(h):
     assert progress == sorted(progress)
 
 
+def test_progress_is_recorded_in_the_order_it_was_emitted(h, monkeypatch):
+    # The engine emits two steps back to back (the gate is open). When the
+    # first one's write is slow, the second must still wait for it; before,
+    # it overtook it and subscribers saw progress go backwards.
+    runner = h.svc.runner
+    write, publish = runner._progress, runner.hub.publish
+    published: list[tuple[str, dict]] = []
+
+    async def slow_first_step(job_id, stage, progress):
+        if progress == 0.1:
+            await asyncio.sleep(0.2)
+        await write(job_id, stage, progress)
+
+    def record(job_id, event, data):
+        published.append((event, data))
+        publish(job_id, event, data)
+
+    monkeypatch.setattr(runner, "_progress", slow_first_step)
+    monkeypatch.setattr(runner.hub, "publish", record)
+    assert h.wait(h.post("/v1/analyses", {"repo": "pallets/flask"}).json()["job_id"]
+                  )["status"] == "done"
+    assert [e for e, _ in published] == ["stage", "stage", "stage", "done"]
+    assert [d["progress"] for _, d in published[:-1]] == [0.01, 0.1, 0.5]
+
+
+def test_events_skip_steps_the_table_already_covers(h, monkeypatch):
+    # The stream subscribes, then reads the table. A step published in between
+    # is already in the table's answer; sending it afterwards stepped backwards.
+    h.engine.gate.clear()
+    job = h.post("/v1/analyses", {"repo": "pallets/flask"}).json()["job_id"]
+    deadline = time.monotonic() + 10
+    while h.get(f"/v1/analyses/{job}").json()["progress"] < 0.1:
+        assert time.monotonic() < deadline
+        time.sleep(0.02)
+    read = api.load_job
+
+    async def step_arrives_during_read(svc, job_id, kind):
+        found = await read(svc, job_id, kind)
+        if job_id in svc.runner.hub.watched():  # the stream's own read
+            svc.runner.hub.publish(job_id, "stage", {"stage": "Starting", "progress": 0.01})
+            h.engine.gate.set()
+        return found
+
+    monkeypatch.setattr(api, "load_job", step_arrives_during_read)
+    with h.client.stream("GET", f"/v1/analyses/{job}/events", headers=h.headers()) as r:
+        events = parse_sse(r.read().decode())
+    assert [(e, d.get("progress")) for e, d in events] == [
+        ("stage", 0.1), ("stage", 0.5), ("done", None)]
+
+
+def test_a_started_job_hears_no_stale_queue_position(h, monkeypatch):
+    # Queue positions are read before they are sent; a job claimed in between
+    # has already said "Starting" and must not be told it is waiting again.
+    runner = h.svc.runner
+
+    async def stale_positions(job_ids=None):
+        return {"j1": 1, "j2": 2}
+
+    async def announce() -> list[tuple[str, dict]]:
+        started, waiting = runner.hub.subscribe("j1"), runner.hub.subscribe("j2")
+        runner._running["j1"] = 0
+        try:
+            await runner.announce_queue()
+        finally:
+            runner._running.pop("j1")
+            runner.hub.unsubscribe("j1", started)
+            runner.hub.unsubscribe("j2", waiting)
+        assert started.empty()
+        return [waiting.get_nowait()]
+
+    monkeypatch.setattr(runner, "queue_positions", stale_positions)
+    assert h.client.portal.call(announce) == [
+        ("stage", {"stage": "In the queue: 1 check ahead of yours", "progress": 0.0,
+                   "queue_position": 2})]
+
+
 def test_events_after_finish_replay_the_result(h):
     job = h.post("/v1/analyses", {"repo": "pallets/flask"}).json()["job_id"]
     h.wait(job)
@@ -270,8 +348,22 @@ def test_badge(h):
     assert len(jobs) == 1 and jobs[0].mode == "rules"
     h.wait(jobs[0].id)
     r = h.client.get("/badge/Pallets/Flask.svg")
-    assert "newcomer-friendly" in r.text and "not newcomer" not in r.text
+    assert "merges outsiders · replies in ~3h" in r.text
     assert "https://githolt.com/pallets/flask\"" in r.text
+
+
+@pytest.mark.parametrize("verdict", ["not_viable", "insufficient_evidence"])
+def test_badge_turns_neutral_when_a_repo_stops_passing(make_harness, verdict):
+    h = make_harness()
+    h.client.get("/badge/octo/one.svg")
+    h.wait(db_rows(h, Job)[0].id)
+    assert "merges outsiders" in h.client.get("/badge/octo/one.svg").text
+    h.engine.verdict = verdict
+    h.wait(h.post("/v1/analyses", {"repo": "octo/one", "refresh": True}).json()["job_id"])
+    r = h.client.get("/badge/octo/one.svg")
+    assert "Holt: see report" in r.text and "merges" not in r.text
+    assert "#1a7f37" not in r.text  # never green, and never a red verdict either
+    assert "not worth" not in r.text.lower() and "enough evidence" not in r.text
 
 
 # --- starter issues and find ---------------------------------------------------------
@@ -323,7 +415,7 @@ def test_starter_issues(h, fake_starter):
     assert body["issues"] == [{
         "number": 7, "title": "Fix typo", "url": "https://github.com/pallets/flask/issues/7",
         "labels": ["good first issue"], "created_at": "2026-09-01T00:00:00Z", "comments": 1,
-        "why": ["Labelled good first issue"],
+        "why": ["Labelled good first issue"], "beginner": True, "areas": ["docs"],
     }]
     assert fake_starter["issues"][0] == "pallets/flask"
     assert fake_starter["issues"][2] == 50  # ranked once at the cache size, sliced here

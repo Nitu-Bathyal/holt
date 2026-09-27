@@ -4,7 +4,7 @@ import "server-only";
 import { cache } from "react";
 import type {
   AnalysisStart, ApiError, Checkout, Contributions, Credits, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection, HistoryItem, JobStatus, Me,
-  Mode, Order, OrderConfirmed, Packs, RazorpaySuccess, Report, Result, StarterIssue,
+  Mode, Order, OrderConfirmed, Packs, ProfileOut, ProfilePrefs, RazorpaySuccess, Report, Result, StarterIssue,
 } from "./types";
 import type { FeedbackInput } from "./feedback";
 import { isJobId } from "./ids";
@@ -200,6 +200,23 @@ export function disconnectGitHub(userId: string): Promise<Result<GitHubConnectio
   return call("/v1/me/github", { method: "DELETE", caller: { userId } });
 }
 
+// Profile (API.md, "Profile"). `adult_confirmed` is only sent when the user
+// ticked the 18+ box on this save.
+export function getProfile(userId: string): Promise<Result<ProfileOut>> {
+  if (MOCK) return mock.getProfile(userId);
+  return call("/v1/me/profile", { caller: { userId } });
+}
+
+export function saveProfile(userId: string, body: Omit<ProfilePrefs, "updated_at"> & { adult_confirmed: boolean }): Promise<Result<ProfileOut>> {
+  if (MOCK) return mock.saveProfile(userId, body);
+  return call("/v1/me/profile", { method: "PUT", body: JSON.stringify(body), caller: { userId } });
+}
+
+export function deleteProfile(userId: string): Promise<Result<ProfileOut>> {
+  if (MOCK) return mock.deleteProfile(userId);
+  return call("/v1/me/profile", { method: "DELETE", caller: { userId } });
+}
+
 // My Contributions (API.md). The first read, and a refresh past its 15-minute
 // cooldown, make the server search GitHub, so they get more time.
 export function contributions(userId: string): Promise<Result<Contributions>> {
@@ -226,7 +243,8 @@ export async function badge(owner: string, repo: string): Promise<Response> {
     const res = await fetch(`${BASE}/badge/${enc(owner)}/${enc(repo)}.svg`, { next: { revalidate: 3600 } });
     return new Response(res.body, {
       status: res.status,
-      headers: { "Content-Type": "image/svg+xml; charset=utf-8", "Cache-Control": "public, max-age=86400" },
+      // The server's cache policy, so a badge that turns neutral isn't held for a day.
+      headers: { "Content-Type": "image/svg+xml; charset=utf-8", "Cache-Control": res.headers.get("Cache-Control") ?? "public, max-age=3600" },
     });
   } catch {
     return mock.badge("");
