@@ -277,6 +277,36 @@ staging_oauth() {   # staging_oauth GITHUB|GOOGLE display-name
 staging_oauth GITHUB GitHub
 staging_oauth GOOGLE Google
 
+# The server's GitHub token, fresh on every run, as production does
+# (deploy/prod/env.sh): GITHUB_TOKENS from $SECRETS, else the current
+# `gh auth token`. Exported, so it wins over the copy make-env.sh wrote into
+# .env once (a token rotated since then would be revoked). Each token is
+# checked against GitHub first, sent on curl's stdin so it never shows in
+# `ps`; one that GitHub refuses stops the run here, not at the first
+# uncached report. That failure doesn't record the fingerprint, so the next
+# tick tries again once the token is fixed.
+GITHUB_TOKENS="$(secret GITHUB_TOKENS)"
+if [[ -n "$GITHUB_TOKENS" ]]; then
+    log "GITHUB_TOKENS: from $SECRETS"
+else
+    GITHUB_TOKENS="$(gh auth token 2>/dev/null || true)"
+    [[ -n "$GITHUB_TOKENS" ]] || fail "no GitHub token: put GITHUB_TOKENS in $SECRETS or run gh auth login"
+    log "GITHUB_TOKENS: using gh auth token (no $SECRETS entry)"
+fi
+export GITHUB_TOKENS
+n=0
+for t in ${GITHUB_TOKENS//,/ }; do
+    n=$((n + 1))
+    code="$(printf 'Authorization: Bearer %s\n' "$t" \
+        | curl -s -o /dev/null -w '%{http_code}' --max-time 15 -H @- https://api.github.com/rate_limit || true)"
+    if [[ "$code" == 401 ]]; then
+        msg="GitHub refused token $n in GITHUB_TOKENS (401: revoked or expired); update GITHUB_TOKENS in $SECRETS or run gh auth login"
+        log "FAILED: $msg"
+        write_build_json failed "$msg" "$preview_sha" || true
+        exit 1
+    fi
+done
+
 # --- build and restart this stack only ------------------------------------------
 write_build_json building "building ${preview_sha:0:7}" "$preview_sha"
 if ! docker buildx inspect "$BUILDER" >/dev/null 2>&1; then

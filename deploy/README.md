@@ -10,7 +10,7 @@ app and API server.
 | `staging/compose.yml` | The staging stack, compose project `stage-holt-new`: Postgres, one-shot web and server migrations, server, web, and a small nginx `edge` that serves `/__build` and proxies everything else to web. Only `edge` publishes a port, on `127.0.0.1:9110`. Every URL in it comes from `STAGING_HOST`. |
 | `staging/preview.sh` | One update: build `origin/main` + every open PR labelled `staging` + `staging/extra-branches`, restart the stack. |
 | `staging/install.sh` | One-time setup: the timer's copy of `preview.sh` and the systemd `--user` timer (every 3 minutes). It does not touch the public route. |
-| `staging/make-env.sh` | Writes `staging/.env` (gitignored): random keys, `gh auth token`, `STAGING_HOST`. |
+| `staging/make-env.sh` | Writes `staging/.env` (gitignored): random keys, `gh auth token` (overridden on each run, see "The GitHub token"), `STAGING_HOST`. |
 | `prod/` | Production, https://githolt.com: compose project `holt-prod` on `127.0.0.1:8310` behind a Cloudflare tunnel, built only from `origin/main` by `prod/deploy.sh` (never on a timer), nightly backups. See [`prod/README.md`](prod/README.md) and [`prod/TUNNEL.md`](prod/TUNNEL.md). |
 
 ## Staging: https://staging.githolt.com
@@ -101,6 +101,21 @@ Then `FORCE=1 ~/.local/share/holt-staging/bin/preview.sh`; its log says
 - `secrets.env` is the only source. `AUTH_*` lines in `staging/.env` or in
   the environment of whoever runs the script are overridden.
 - Accounts made on staging live in staging's database only.
+
+### The GitHub token
+
+Every run reads the server's GitHub token fresh, as production does:
+`GITHUB_TOKENS` from `~/.config/holt/secrets.env`, else the current
+`gh auth token`. It overrides the `GITHUB_TOKENS` line `make-env.sh` wrote
+into `staging/.env` once, so rotating a token needs no new `.env` (and
+re-running `make-env.sh --force` would regenerate the database password and
+auth secrets). The log says which source it used, never the value.
+
+Before building, each token is checked against GitHub's API. One GitHub
+refuses (401: revoked or expired) stops the run with `GitHub refused token
+<n> in GITHUB_TOKENS`, also shown on `/__build` under `last_attempt`, and
+the next tick tries again, so fixing `secrets.env` or `gh auth login` is
+enough. Any other answer, or no answer, doesn't block the build.
 
 ### Behind Cloudflare Access
 
