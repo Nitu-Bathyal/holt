@@ -401,7 +401,7 @@ class Entitlements(Model):
 OrderStatus = Literal["created", "paid", "failed", "held"]
 
 
-class Pack(Model):
+class PackOffer(Model):
     id: str
     name: str
     credits: int
@@ -416,7 +416,7 @@ class Packs(Model):
     """GET /v1/packs. `on_sale` is false, and `packs` empty, while payments are off."""
 
     on_sale: bool
-    packs: list[Pack]
+    packs: list[PackOffer]
 
 
 class Checkout(Model):

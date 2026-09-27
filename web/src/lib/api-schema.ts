@@ -673,7 +673,7 @@ export interface components {
              * @default {}
              */
             packs: {
-                [key: string]: components["schemas"]["holt_server__pricing__Pack"];
+                [key: string]: components["schemas"]["Pack"];
             };
             /** Plans */
             plans: {
@@ -1111,6 +1111,37 @@ export interface components {
             /** Orders */
             orders: components["schemas"]["Order"][];
         };
+        /** Pack */
+        Pack: {
+            /** Credits */
+            credits: number;
+            /** Expires Days */
+            expires_days?: number | null;
+            /** Name */
+            name: string;
+            /**
+             * On Sale
+             * @default false
+             */
+            on_sale: boolean;
+            /** @default {} */
+            price: components["schemas"]["Price"];
+        };
+        /** PackOffer */
+        PackOffer: {
+            /** Amount */
+            amount: number;
+            /** Credits */
+            credits: number;
+            /** Currency */
+            currency: string;
+            /** Expires Days */
+            expires_days: number | null;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+        };
         /**
          * Packs
          * @description GET /v1/packs. `on_sale` is false, and `packs` empty, while payments are off.
@@ -1119,7 +1150,7 @@ export interface components {
             /** On Sale */
             on_sale: boolean;
             /** Packs */
-            packs: components["schemas"]["holt_server__schema__Pack"][];
+            packs: components["schemas"]["PackOffer"][];
         };
         /**
          * PartialStats
@@ -1314,37 +1345,6 @@ export interface components {
             /** Error Type */
             type: string;
         };
-        /** Pack */
-        holt_server__pricing__Pack: {
-            /** Credits */
-            credits: number;
-            /** Expires Days */
-            expires_days?: number | null;
-            /** Name */
-            name: string;
-            /**
-             * On Sale
-             * @default false
-             */
-            on_sale: boolean;
-            /** @default {} */
-            price: components["schemas"]["Price"];
-        };
-        /** Pack */
-        holt_server__schema__Pack: {
-            /** Amount */
-            amount: number;
-            /** Credits */
-            credits: number;
-            /** Currency */
-            currency: string;
-            /** Expires Days */
-            expires_days: number | null;
-            /** Id */
-            id: string;
-            /** Name */
-            name: string;
-        };
     };
     responses: never;
     parameters: never;
@@ -1396,6 +1396,8 @@ export type Order = components['schemas']['Order'];
 export type OrderConfirmed = components['schemas']['OrderConfirmed'];
 export type OrderIn = components['schemas']['OrderIn'];
 export type Orders = components['schemas']['Orders'];
+export type Pack = components['schemas']['Pack'];
+export type PackOffer = components['schemas']['PackOffer'];
 export type Packs = components['schemas']['Packs'];
 export type PartialStats = components['schemas']['PartialStats'];
 export type Plan = components['schemas']['Plan'];
@@ -1409,8 +1411,6 @@ export type StarterIssue = components['schemas']['StarterIssue'];
 export type StarterIssues = components['schemas']['StarterIssues'];
 export type Stats = components['schemas']['Stats'];
 export type ValidationError = components['schemas']['ValidationError'];
-export type HoltServerPricingPack = components['schemas']['holt_server__pricing__Pack'];
-export type HoltServerSchemaPack = components['schemas']['holt_server__schema__Pack'];
 export type $defs = Record<string, never>;
 export interface operations {
     badge_svg_badge__owner___repo__svg_get: {

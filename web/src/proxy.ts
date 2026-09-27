@@ -11,7 +11,7 @@ const repoExists = repoExistsChecker({
 });
 
 // Two-segment app routes that /[owner]/[repo] must not claim.
-const APP_ROUTES = new Set(["me"]);
+const APP_ROUTES = new Set(["me", "pricing"]);
 
 export async function proxy(req: NextRequest) {
   const target = redirectTargetForPath(req.nextUrl.pathname, req.nextUrl.search);

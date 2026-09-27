@@ -1,6 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { packs } from "@/lib/api";
+import { creditsLabel, expiryLine, formatPrice, packToBuy } from "@/lib/payments";
+import { currentUser } from "@/lib/session";
 import { CLAIM_EVERY_DAYS, WELCOME_AI_CREDITS } from "@/lib/site";
+import { BuyPack } from "@/components/buy-pack";
 import { PageHead } from "@/components/page-head";
 import { PageTransition } from "@/components/motion/page-transition";
 
@@ -42,7 +46,11 @@ const SOON = [
   { name: "Clubs & classrooms", body: "Shared quota for a college club or a course." },
 ];
 
-export default function PricingPage() {
+export default async function PricingPage({ searchParams }: PageProps<"/pricing">) {
+  // Credit packs appear only while the server has them on sale (payments on).
+  const [sale, user, sp] = await Promise.all([packs(), currentUser(), searchParams]);
+  const onSale = sale.ok && sale.data.on_sale ? sale.data.packs : [];
+  const buy = packToBuy(sp.buy, onSale);
   return (
     <PageTransition>
       <>
@@ -75,6 +83,41 @@ export default function PricingPage() {
             </li>
           ))}
         </ul>
+
+        {onSale.length > 0 && (
+          <section id="packs" aria-labelledby="packs-h" className="mt-14 scroll-mt-24">
+            <h2 id="packs-h" className="text-[1.2rem] font-semibold tracking-tight">Credit packs</h2>
+            <p className="mt-2 max-w-2xl font-sans text-[0.95rem] text-muted">
+              One payment, no subscription. Credits pay for AI reports and paid features once your free ones are used up.
+            </p>
+            <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {onSale.map((p, i) => (
+                <li key={p.id} className="flex flex-col border border-line-strong bg-panel p-6 shadow-soft">
+                  <p className="text-[0.78rem] uppercase tracking-[0.08em] text-faint">{p.name}</p>
+                  <p className="mt-3 text-[2.4rem] font-semibold leading-none tracking-tight">
+                    {formatPrice(p.amount, p.currency)} <span className="text-[0.85rem] font-normal tracking-normal text-muted">once</span>
+                  </p>
+                  <ul className="mt-5 flex-1 space-y-2 font-sans text-[0.92rem]">
+                    <li className="flex gap-2"><span aria-hidden="true" className="text-green">✓</span>{creditsLabel(p.credits)}</li>
+                    <li className="flex gap-2"><span aria-hidden="true" className="text-green">✓</span>{expiryLine(p)}</li>
+                  </ul>
+                  <BuyPack
+                    pack={p.id}
+                    label={`buy ${creditsLabel(p.credits)} →`}
+                    signedIn={Boolean(user)}
+                    prefill={{ name: user?.name, email: user?.email }}
+                    autoStart={buy === p.id}
+                    primary={i === 0}
+                  />
+                </li>
+              ))}
+            </ul>
+            <p className="mt-4 max-w-2xl font-sans text-[0.85rem] text-muted">
+              Paid in INR through Razorpay (UPI, cards, netbanking), billed as <span className="text-ink">Githolt</span>. See the{" "}
+              <Link href="/refunds" className="text-link">refund policy</Link>.
+            </p>
+          </section>
+        )}
 
         <div className="band-alt mt-14 py-10">
         <h2 className="text-[1.2rem] font-semibold tracking-tight">Paid plans</h2>

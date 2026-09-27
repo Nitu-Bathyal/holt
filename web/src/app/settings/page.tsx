@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { claimCredit, me } from "@/lib/api";
+import { claimCredit, me, orders, packs } from "@/lib/api";
 import { shortDate } from "@/lib/format";
+import { creditsLabel, formatPrice, STATUS_LABEL } from "@/lib/payments";
 import { currentUser } from "@/lib/session";
 import { WELCOME_AI_CREDITS } from "@/lib/site";
 import { ConnectGitHubCard } from "@/components/connect-github-card";
@@ -26,8 +27,10 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
   const user = await currentUser();
   if (!user) redirect("/signin?callbackUrl=/settings");
   const sp = await searchParams;
-  const account = await me(user.id);
+  const [account, bought, sale] = await Promise.all([me(user.id), orders(user.id), packs()]);
   const m = account.ok ? account.data : null;
+  const purchases = bought.ok ? bought.data.orders : [];
+  const onSale = sale.ok && sale.data.on_sale;
   const c = m?.credits;
   const nextClaim = c?.next_claim_at ? shortDate(c.next_claim_at) : "";
 
@@ -52,8 +55,9 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
         {m && c && (
           <section aria-labelledby="credits" className="mt-8 grid gap-px border border-line bg-line shadow-soft sm:grid-cols-2">
             <div className="bg-panel p-5">
-              <p id="credits" className="text-[0.72rem] uppercase tracking-[0.08em] text-faint">Free AI reports left</p>
+              <p id="credits" className="text-[0.72rem] uppercase tracking-[0.08em] text-faint">{c.purchased > 0 ? "Credits left" : "Free AI reports left"}</p>
               <p className="mt-1 text-[1.3rem] font-semibold">{c.balance}</p>
+              {c.purchased > 0 && <p className="mt-1 text-[0.8rem] text-muted">{c.free} free · {c.purchased} bought</p>}
               <p className="mt-2 text-[0.75rem] text-faint">
                 Plan: <span className="capitalize">{m.plan}</span> · <Link href="/pricing" className="text-green hover:underline">see plans →</Link>
               </p>
@@ -92,6 +96,34 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
             <li>The quick report is always free and has the same verdict. AI only adds a written explanation.</li>
           </ul>
         </section>
+
+        {(purchases.length > 0 || onSale) && (
+          <section id="purchases" aria-labelledby="purchases-h" className="mt-10 scroll-mt-24 border border-line-strong bg-panel p-5 shadow-soft sm:p-8">
+            <h2 id="purchases-h" className="text-[1.3rem] font-semibold tracking-tight">Purchases</h2>
+            {purchases.length === 0 ? (
+              <p className="prose-sans mt-2 text-[0.95rem]">
+                Nothing bought yet. <Link href="/pricing#packs" className="text-link">See credit packs</Link>.
+              </p>
+            ) : (
+              <ul className="mt-4 divide-y divide-line border-y border-line">
+                {purchases.map((o) => (
+                  <li key={o.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-[0.9rem]">
+                    <span className="min-w-0">
+                      <span className="font-semibold">{o.name}</span>
+                      <span className="text-muted"> · {formatPrice(o.amount, o.currency)} · {shortDate(o.paid_at ?? o.created_at)}</span>
+                    </span>
+                    <span className={o.status === "paid" ? "text-green" : o.status === "held" ? "text-amber" : "text-muted"}>
+                      {o.status === "paid" ? `${creditsLabel(o.credits)} added` : STATUS_LABEL[o.status]}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {onSale && purchases.length > 0 && (
+              <p className="mt-4 text-[0.85rem]"><Link href="/pricing#packs" className="text-link">Buy more credits →</Link></p>
+            )}
+          </section>
+        )}
 
         <ConnectGitHubCard userId={user.id} notice={sp.github} />
       </div>

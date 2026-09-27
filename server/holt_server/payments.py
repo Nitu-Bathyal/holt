@@ -181,7 +181,7 @@ def price(pack: pricing.Pack) -> int | None:
 def packs_body(svc: Services) -> schema.Packs:
     if not payments_on(svc):
         return schema.Packs(on_sale=False, packs=[])
-    out = [schema.Pack(id=pid, name=p.name, credits=p.credits, expires_days=p.expires_days,
+    out = [schema.PackOffer(id=pid, name=p.name, credits=p.credits, expires_days=p.expires_days,
                        amount=amount, currency=CURRENCY)
            for pid, p in entitlements.catalogue(svc).packs.items()
            if (amount := price(p)) is not None]
