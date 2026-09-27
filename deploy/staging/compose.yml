@@ -59,6 +59,19 @@ services:
     mem_limit: 64m
     restart: "no"
 
+  # Brings the API's schema up to date (holt_server/migrations), then exits.
+  # The server starts only after it succeeds.
+  migrate-server:
+    image: stage-holt-new-server:latest
+    labels: *stage-label
+    environment:
+      DATABASE_URL: postgresql+asyncpg://holt:${HOLT_DB_PASSWORD}@db:5432/holt
+    command: ["python", "-m", "holt_server.migrate"]
+    depends_on:
+      db: { condition: service_healthy }
+    mem_limit: 256m
+    restart: "no"
+
   server:
     build:
       context: ../..
@@ -80,6 +93,7 @@ services:
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     depends_on:
       db: { condition: service_healthy }
+      migrate-server: { condition: service_completed_successfully }
     mem_limit: 512m
     restart: unless-stopped
 
