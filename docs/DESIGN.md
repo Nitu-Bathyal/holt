@@ -63,8 +63,8 @@ own words quoted as a maintainer's review, automated posts quoted as people, and
 narration stating figures nobody measured or leaking field names. Four checks
 now apply, none of them a model:
 
-- Stage C reads only outsider threads (author not a bot and not `OWNER`,
-  `MEMBER` or `COLLABORATOR`), spread across merged, closed, open-with-a-reply
+- Stage C reads only outsider threads (author not a bot and not on the team as
+  `people.maintainers` reads it), spread across merged, closed, open-with-a-reply
   and ignored, with the author's replies and automated posts removed. Captures
   that predate `author_association` (the committed benchmark fixtures) keep the
   old selection so their recordings replay.

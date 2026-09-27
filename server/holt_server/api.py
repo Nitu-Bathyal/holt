@@ -119,6 +119,7 @@ async def badge_svg(owner: str, repo: str, request: Request) -> Response:
     name = repos.normalize(f"{owner}/{repo}")
     latest = await latest_report(svc, name, "rules", 7)
     verdict = latest.report.get("verdict") if latest else None
+    stats = latest.report.get("stats") if latest else None
     shown = latest.repo if latest else name
     stale = latest is None or not is_fresh(svc, latest)
     if stale:
@@ -132,7 +133,7 @@ async def badge_svg(owner: str, repo: str, request: Request) -> Response:
             pass
     link = f"{svc.settings.web_url.rstrip('/')}/{shown}"
     return Response(
-        badge.render(verdict, link),
+        badge.render(verdict, stats, link),
         media_type="image/svg+xml",
         headers={"Cache-Control": BADGE_CACHE},
     )

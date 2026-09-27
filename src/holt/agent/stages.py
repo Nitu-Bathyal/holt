@@ -11,6 +11,7 @@ import random
 from collections.abc import Iterable
 
 from holt.agent.findings import Findings
+from holt.agent.people import maintainers
 from holt.agent.signals import Thread, looks_like_bot, pr_key
 from holt.agent.verify import automated_body
 from holt.model import ModelClient, guarded, untrusted
@@ -246,17 +247,12 @@ def normalise_citation(repo: str, cited: str) -> str:
     return cited
 
 
-# GitHub's CommentAuthorAssociation values for people with write access. The
-# rest -- CONTRIBUTOR, FIRST_TIME_CONTRIBUTOR, FIRST_TIMER, NONE, MANNEQUIN --
-# are outside the team as far as a would-be contributor is concerned.
-INSIDER_ASSOCIATIONS = frozenset({"OWNER", "MEMBER", "COLLABORATOR"})
-
 # Appended to the Outcomes system prompt when the evidence says who is who.
 OUTSIDER_NOTE = """
 
 Every thread below was opened by someone outside the project's team. Replies are
-labelled with who wrote them, and "maintainer" marks someone with write access
-to the repository. The author's own replies and automated posts have been
+labelled with who wrote them, and "maintainer" marks someone on the project's
+team. The author's own replies and automated posts have been
 removed, so what is left is how other people reacted."""
 
 
@@ -312,22 +308,20 @@ def outsider_conversations(
 ) -> dict[str, list[tuple[object, str, str]]]:
     """Each outsider thread's replies from other people, labelled by role.
 
-    Outsider means the pull request's author is neither a bot nor someone with
-    write access (OWNER, MEMBER, COLLABORATOR). A reply is kept when a person
-    other than the author wrote it and no program did: the author's own replies,
-    bot accounts and automated bodies ("Automated comment by QA Swarm", "Approved
-    automatically ...") say nothing about how the project treats newcomers.
+    Outsider means the pull request's author is neither a bot nor on the team,
+    as `people.maintainers` reads it: write access, or doing a maintainer's job
+    in the sample (merging, closing others' work, regular formal review), which
+    catches staff whose organisation membership is private. A reply is kept
+    when a person other than the author wrote it and no program did: the
+    author's own replies, bot accounts and automated bodies ("Automated comment
+    by QA Swarm", "Approved automatically ...") say nothing about how the
+    project treats newcomers.
     """
     records = list(records)
-    insiders = {
-        pr_key(r.evidence_id)
-        for r in records
-        if r.evidence_id.endswith(":opened")
-        and r.payload.get("author_association") in INSIDER_ASSOCIATIONS
-    }
+    team = maintainers(records)
     out: dict[str, list[tuple[object, str, str]]] = {
         t.key: [] for t in threads.values()
-        if not t.author_is_bot and t.key not in insiders
+        if not t.author_is_bot and t.author not in team
     }
     for r in records:
         if ":review:" not in r.evidence_id and ":comment:" not in r.evidence_id:
@@ -341,7 +335,7 @@ def outsider_conversations(
         if (who == threads[key].author or looks_like_bot(who, bool(p.get("author_is_bot")))
                 or not body.strip() or automated_body(body)):
             continue
-        role = ", maintainer" if p.get("author_association") in INSIDER_ASSOCIATIONS else ""
+        role = ", maintainer" if who in team else ""
         out[key].append((r.timestamp, f"{who}{role}", body))
     return out
 
@@ -388,7 +382,7 @@ def read_outcomes(
 ) -> None:
     """Read a spread of outsider threads and judge what each reveals.
 
-    Given `records` that say who has write access, only outsider threads are
+    Given `records` that say who is on the team, only outsider threads are
     read, spread across outcomes, with the author's replies and automated posts
     removed. Evidence without that (captures older than the v2 evidence, which
     is every committed benchmark fixture) keeps the original selection, the

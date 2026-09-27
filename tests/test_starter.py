@@ -286,7 +286,7 @@ LANDING = [Area("docs", 8, 10), Area("src/widgets", 4, 6), Area("src", 9, 20),
 def test_landing_boost_for_a_named_area():
     points, result = score(issue(title="Fix wording in the docs"), landing=LANDING)
     assert points > score(issue(title="Fix wording in the docs"))[0]
-    assert ("Mentions docs/, where 8 of 10 pull requests from first-time "
+    assert ("Mentions docs/, where 8 of 10 pull requests from outside "
             "contributors were merged") in result.why
 
 
@@ -549,7 +549,7 @@ def test_cli_start_find_text_and_json(monkeypatch, capsys):
     assert seen == {"languages": ["python", "rust"], "topics": ["cli"],
                     "hacktoberfest": True}
     assert "1. o/r: Worth your time" in out
-    assert "4 of 10 recent pull requests from first-time contributors" in out
+    assert "4 of 10 recent pull requests from outside contributors" in out
     assert "https://github.com/o/r/issues/7" in out
 
     assert cli.main(["start", "--lang", "python", "--json"]) == 0

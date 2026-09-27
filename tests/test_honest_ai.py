@@ -103,6 +103,19 @@ def test_outcomes_reads_only_outsider_threads_without_self_replies_or_automation
     assert client.calls[0]["system"].startswith(stages.OUTCOMES_SYSTEM + stages.OUTSIDER_NOTE)
 
 
+def test_staff_with_private_membership_are_not_outsiders():
+    """GitHub shows them as CONTRIBUTOR; merging other people's work gives them away."""
+    records = [
+        *pr(1, "quiet-staffer", "CONTRIBUTOR", replies=[("kim", "NONE", "Nice idea")]),
+        *pr(2, "newcomer", "NONE", state="merged"),
+    ]
+    records.append(rec("pr:a/b#2:merged", 500, author="newcomer", merged=True,
+                       merged_by="quiet-staffer", merged_by_is_bot=False))
+    threads = build_threads(records)
+    conversations = stages.outsider_conversations(records, threads)
+    assert set(conversations) == {"pr:a/b#2"}
+
+
 def test_outcomes_samples_across_outcomes_not_the_chattiest():
     records = []
     for n in range(1, 13):  # twelve merged threads with long conversations
