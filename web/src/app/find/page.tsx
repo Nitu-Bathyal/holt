@@ -11,6 +11,7 @@ import { PageTransition } from "@/components/motion/page-transition";
 export const metadata: Metadata = {
   title: "Find your first contribution",
   description: "Pick your languages and how much time you have. Holt finds welcoming projects and specific issues to start with.",
+  alternates: { canonical: "/find" },
 };
 
 const LANGS = ["Python", "JavaScript", "TypeScript", "Go", "Rust", "Java", "C++", "Ruby", "PHP", "Nix"];
