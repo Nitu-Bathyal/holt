@@ -1,4 +1,4 @@
-"""Assessment + Trace -> the Report object in API.md.
+"""Assessment + Trace -> the Report object in API.md (`schema.Report`).
 
 The engine's `Assessment` is shaped for a terminal: rendered Markdown lines for
 the landing section, claims flattened to text. This rebuilds what the web needs
@@ -17,9 +17,11 @@ from typing import Any
 from holt.agent import landing as landing_mod
 from holt.agent.pipeline import MODEL_NOTE_LABEL
 from holt.agent.signals import Signals, Thread, build_threads, newcomer_threads
-from holt.agent.verdict import headline
+from holt.agent.verdict import rule_codes
 from holt.report import Assessment
 from holt.types import EvidenceRecord
+
+from holt_server import schema
 
 RULES_ONLY_UNKNOWN = (
     "No AI read the conversations for this report, so it doesn't say how "
@@ -177,15 +179,19 @@ def build(
     if not signals.outsider_threads:
         unknowns.append(NO_OUTSIDERS_UNKNOWN)
 
-    return {
+    # Validated here, so a report that breaks the contract fails its job
+    # instead of reaching a page. The dump includes the derived fields
+    # (headline, tone, verdict_line, odds), so the stored job result and the
+    # SSE `done` event carry them too.
+    return schema.Report.model_validate({
         "repo": repo,
         "mode": mode,
         "days": assessment.contributor_days,
         "verdict": assessment.verdict.value,
-        "headline": headline(assessment.verdict),
         "summary": (assessment.summary or None) if mode == "ai" else None,
         "stats": stats(signals),
         "decided_by": [str(r) for r in assessment.rules],
+        "rule_codes": [c or "" for c in rule_codes(assessment.rules)],
         "unknowns": unknowns,
         "landing": [{"path": a.path, "merged": a.landed, "attempted": a.attempted}
                     for a in where.landed],
@@ -194,4 +200,4 @@ def build(
         "evidence_until": iso(assessment.as_of),
         "generated_at": iso(generated_at or datetime.now(UTC)),
         "cost": cost if mode == "ai" else None,
-    }
+    }).model_dump(mode="json")

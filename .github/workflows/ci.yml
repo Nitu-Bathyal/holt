@@ -54,3 +54,29 @@ jobs:
         run: |
           PYTHONPATH=. uv run holt analyze NixOS/nixpkgs --replay
           PYTHONPATH=. uv run python eval/harness.py --replay --run-tag run1
+
+  # web/src/lib/api-schema.ts is generated from the server's pydantic models
+  # (API.md). A server change that isn't regenerated fails here.
+  api-types:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.1.0
+        with:
+          enable-cache: true
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        run: |
+          uv sync
+          npm ci --prefix web
+
+      - name: Generated API types are up to date
+        run: server/scripts/api_types.sh --check

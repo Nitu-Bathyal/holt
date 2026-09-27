@@ -1,6 +1,7 @@
 // Realistic fixtures for MOCK_API=1. Numbers and sentences follow the shape of
 // real Holt reports; issue and PR links point at real GitHub URLs.
 import type { EvidenceItem, Report, StarterIssue, Verdict } from "../types";
+import { withDerived } from "./derived";
 
 interface Seed {
   repo: string;
@@ -328,19 +329,12 @@ function toEvidence(repo: string, ev: Seed["evidence"], mode: "rules" | "ai"): E
   });
 }
 
-const HEADLINES: Record<Verdict, string> = {
-  viable: "Worth your time",
-  not_viable: "Not worth your time",
-  insufficient_evidence: "Not enough evidence",
-};
-
 function fromSeed(seed: Seed, mode: "rules" | "ai", days: number): Report {
-  return {
+  return withDerived({
     repo: seed.repo,
     mode,
     days,
     verdict: seed.verdict,
-    headline: HEADLINES[seed.verdict],
     summary: mode === "ai" ? seed.summary : null,
     stats: seed.stats,
     decided_by: seed.decided_by,
@@ -351,7 +345,7 @@ function fromSeed(seed: Seed, mode: "rules" | "ai", days: number): Report {
     evidence_until: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10) + "T00:00:00Z",
     generated_at: hoursAgo(2),
     cost: mode === "ai" ? { model: "anthropic/claude-sonnet-5", input_tokens: 9120, output_tokens: 1480 } : null,
-  };
+  });
 }
 
 // Deterministic pseudo-random numbers from a repo name, so any repo "works" in mock mode.

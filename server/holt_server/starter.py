@@ -21,6 +21,7 @@ from datetime import date, datetime
 from enum import Enum
 from typing import Any
 
+from holt_server import schema
 from holt_server.errors import ApiError
 from holt_server.report import iso
 
@@ -91,29 +92,27 @@ STAT_KEYS = ("outsider_attempts", "outsider_merged", "distinct_outsiders",
              "bot_share")
 
 
-def find_result(obj: Any) -> dict[str, Any]:
+def find_result(obj: Any) -> dict[str, Any] | None:
+    """One find result as `schema.FindResult` (with its headline and tone), or
+    None for a verdict Holt doesn't know."""
     from holt.agent.signals import Signals
-    from holt.agent.verdict import headline as headline_for
     from holt_server.report import stats as signal_stats
 
     repo = _get(obj, "repo") or _get(obj, "name_with_owner") or ""
     verdict = _plain(_get(obj, "verdict", "viable"))
+    if verdict not in schema.TONES:
+        return None
     raw_stats = _get(obj, "stats") or _get(obj, "signals") or {}
     if isinstance(raw_stats, Signals):
         stats = signal_stats(raw_stats)
     else:
         stats = {k: v for k, v in _plain(raw_stats).items() if k in STAT_KEYS}
-    try:
-        headline = headline_for(verdict)
-    except ValueError:
-        headline = _get(obj, "headline") or ""
     stars = _get(obj, "stars", _get(obj, "stargazer_count"))
     language = _get(obj, "language", _get(obj, "primary_language"))
     if isinstance(language, dict):  # GraphQL's `primaryLanguage { name }`
         language = language.get("name")
-    return {
+    return schema.FindResult.model_validate({
         "repo": repo,
-        "headline": headline,
         "verdict": verdict,
         # Optional; null when the finder did not supply them.
         "description": _get(obj, "description") or None,
@@ -121,7 +120,7 @@ def find_result(obj: Any) -> dict[str, Any]:
         "stars": int(stars) if isinstance(stars, (int, float)) else None,
         "stats": stats,
         "issues": [issue(i, repo) for i in (_get(obj, "issues") or [])],
-    }
+    }).model_dump(mode="json")
 
 
 def run_starter_issues(repo: str, token: str, limit: int) -> list[dict[str, Any]]:
@@ -181,6 +180,6 @@ def run_find(*, languages: list[str], topics: list[str], hacktoberfest: bool, da
     raw = fn(languages, topics, hacktoberfest, token, limit, **kwargs) or []
     if isinstance(raw, dict):
         raw = raw.get("results", [])
-    results = [find_result(r) for r in raw]
+    results = [r for r in map(find_result, raw) if r is not None]
     # API.md: only repositories whose rules verdict is `viable`.
     return {"results": [r for r in results if r["verdict"] == "viable"][:limit]}
