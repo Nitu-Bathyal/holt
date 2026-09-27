@@ -50,6 +50,55 @@ def score(node, **kw):
     return starter.score_issue(node, AS_OF, **kw)
 
 
+# The evidence queries as they were when `find.json` was recorded, before the
+# v2 capture added fields to them. Recordings are keyed by query text, so a
+# v2 query is looked up under its v1 text: the recorded v1 answer lacks the v2
+# fields, which the projection treats as optional, so it replays unchanged.
+V1_REPO_META = """
+query($owner:String!, $name:String!, $until:GitTimestamp!) {
+  rateLimit { remaining resetAt }
+  repository(owner:$owner, name:$name) {
+    createdAt pushedAt isArchived isMirror isFork stargazerCount
+    description homepageUrl primaryLanguage { name }
+    defaultBranchRef {
+      name
+      target {
+        ... on Commit { history(until:$until, first:1) { nodes { oid committedDate } } }
+      }
+    }
+  }
+}
+"""
+V1_PR_SEARCH = """
+query($q:String!, $cursor:String) {
+  rateLimit { remaining resetAt }
+  search(query:$q, type:ISSUE, first:25, after:$cursor) {
+    issueCount
+    pageInfo { hasNextPage endCursor }
+    nodes {
+      ... on PullRequest {
+        number title createdAt mergedAt closedAt merged
+        additions deletions changedFiles
+        author { login __typename }
+        files(first:20) { nodes { path additions deletions } }
+        reviews(first:20) { nodes { createdAt state body author { login __typename } } }
+        comments(first:30) { nodes { createdAt body author { login __typename } } }
+      }
+    }
+  }
+}
+"""
+
+
+def as_recorded(document: str) -> str:
+    from holt.evidence import github_graphql as gql
+
+    v1 = {gql.REPO_META: V1_REPO_META, gql.PR_SEARCH: V1_PR_SEARCH}
+    return v1.get(document) or document.replace(
+        "rateLimit { cost remaining resetAt }", "rateLimit { remaining resetAt }"
+    )
+
+
 def replay_transport(name: str) -> tuple[starter.GitHub, datetime]:
     """A `starter.GitHub` whose HTTP calls are answered from a recording."""
     recording = json.loads((DATA / name).read_text(encoding="utf-8"))
@@ -58,6 +107,8 @@ def replay_transport(name: str) -> tuple[starter.GitHub, datetime]:
     def handler(request: httpx.Request) -> httpx.Response:
         sent = json.loads(request.content)
         key = starter.query_key(sent["query"], sent["variables"])
+        if key not in by_key:
+            key = starter.query_key(as_recorded(sent["query"]), sent["variables"])
         if key not in by_key:
             raise AssertionError(f"unrecorded GitHub call: {sent['variables']}")
         return httpx.Response(200, json=by_key[key])
