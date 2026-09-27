@@ -21,7 +21,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
-        await svc.db.create_all()
+        await svc.db.migrate()
         if run_jobs:
             await svc.runner.start()
         warming = None
@@ -55,6 +55,7 @@ def run() -> None:
     import uvicorn
 
     logging.basicConfig(level=os.environ.get("LOG_LEVEL", "INFO"))
+    logging.getLogger("alembic").setLevel(logging.WARNING)
     uvicorn.run(
         "holt_server.main:create_app",
         factory=True,

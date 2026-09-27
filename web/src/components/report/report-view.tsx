@@ -1,9 +1,9 @@
 // The full report. Shared by the server page (cached report) and the client
 // runner (report that just finished streaming), so no server-only imports.
 import Link from "next/link";
-import { odds, ODDS_TONE, shortDate, timeAgo, verdictLine, VERDICT_TONE, type Odds } from "@/lib/format";
+import { shortDate, timeAgo } from "@/lib/format";
 import { SITE_URL } from "@/lib/site";
-import type { Report } from "@/lib/types";
+import type { Odds, Report } from "@/lib/types";
 import { CatFace } from "../cat-face";
 import { Track } from "../track";
 import { BadgeSnippet } from "./badge-snippet";
@@ -11,7 +11,7 @@ import { EvidenceList } from "./evidence-list";
 import { LandingMap } from "./landing-map";
 import { ShareBar } from "./share-bar";
 import { StatsGrid } from "./stats-grid";
-import { TONE, VERDICT_MOOD } from "./tone";
+import { TONE, TONE_MOOD } from "./tone";
 import { UpgradeCard } from "./upgrade-card";
 
 /** Delay for a part of the report that fades in when an analysis finishes on the page. */
@@ -33,8 +33,9 @@ export function Section({ n, title, id, children, note, reveal }: { n: string; t
 }
 
 export function VerdictHero({ report, reveal }: { report: Report; reveal?: boolean }) {
-  const tone = VERDICT_TONE[report.verdict];
-  const t = TONE[tone];
+  // Headline, tone, the line under it and the odds all come from the server,
+  // derived there from the verdict, so they can't disagree with it.
+  const t = TONE[report.tone];
   return (
     <div className={`relative overflow-hidden border border-line-strong bg-panel shadow-card`}>
       <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${t.bg}`} />
@@ -42,7 +43,7 @@ export function VerdictHero({ report, reveal }: { report: Report; reveal?: boole
         <div className="flex items-center justify-between gap-4 text-[0.72rem] uppercase tracking-[0.08em] text-faint">
           <span>verdict · {report.mode === "ai" ? "AI report" : "rules report"} · {report.days}-day budget</span>
           <span className={reveal ? "reveal" : ""}>
-            <CatFace mood={VERDICT_MOOD[report.verdict]} blink className="text-[1.1rem] normal-case tracking-normal sm:text-[1.5rem]" />
+            <CatFace mood={TONE_MOOD[report.tone]} blink className="text-[1.1rem] normal-case tracking-normal sm:text-[1.5rem]" />
           </span>
         </div>
         {/* The largest paint: on phones it never animates, on desktop it only moves. */}
@@ -50,10 +51,10 @@ export function VerdictHero({ report, reveal }: { report: Report; reveal?: boole
           {report.headline}
           <span className="text-ink">.</span>
         </h1>
-        <p className={`mt-4 max-w-2xl font-sans text-[1.05rem] leading-relaxed text-ink sm:text-[1.15rem] ${reveal ? "reveal-lcp" : ""}`}>{verdictLine(report)}</p>
-        {report.verdict !== "insufficient_evidence" && <OddsHint odds={odds(report.stats)} />}
+        <p className={`mt-4 max-w-2xl font-sans text-[1.05rem] leading-relaxed text-ink sm:text-[1.15rem] ${reveal ? "reveal-lcp" : ""}`}>{report.verdict_line}</p>
+        <OddsHint odds={report.odds} />
         <p className="mt-4 text-[0.74rem] text-faint">
-          Based on {report.stats.outsider_attempts} pull requests from outside contributors · data until {shortDate(report.evidence_until)} · checked{" "}
+          Based on {report.stats.outsider_attempts} pull requests from outside contributors · {report.evidence_until && <>data until {shortDate(report.evidence_until)} · </>} checked{" "}
           <time dateTime={report.generated_at} suppressHydrationWarning>{timeAgo(report.generated_at)}</time>
         </p>
       </div>
@@ -61,20 +62,15 @@ export function VerdictHero({ report, reveal }: { report: Report; reveal?: boole
   );
 }
 
-const ODDS_TEXT: Record<Odds, string> = {
-  good: "most outside pull requests get a reply, and plenty get merged",
-  fair: "some outside pull requests land; a well-chosen starter issue helps",
-  long: "most outside pull requests here don't land, so pick your first one carefully",
-};
-
+/** Only "Worth your time" reports have odds (the server leaves them null otherwise). */
 function OddsHint({ odds: o }: { odds: Odds | null }) {
   if (!o) return null;
-  const t = TONE[ODDS_TONE[o]];
+  const t = TONE[o.tone];
   return (
     <p className="mt-3 flex flex-wrap items-baseline gap-x-2 text-[0.82rem]">
       <span className="text-faint">Your odds:</span>
-      <strong className={`font-semibold ${t.text}`}>{o}</strong>
-      <span className="font-sans text-muted">· {ODDS_TEXT[o]}</span>
+      <strong className={`font-semibold ${t.text}`}>{o.level}</strong>
+      <span className="font-sans text-muted">· {o.text}</span>
     </p>
   );
 }
@@ -140,7 +136,7 @@ export function ReportView({
           <ul className="space-y-2 font-sans text-[0.98rem]">
             {report.decided_by.map((d) => (
               <li key={d} className="flex gap-3">
-                <span aria-hidden="true" className={TONE[VERDICT_TONE[report.verdict]].text}>→</span>
+                <span aria-hidden="true" className={TONE[report.tone].text}>→</span>
                 <span>{d}</span>
               </li>
             ))}

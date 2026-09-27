@@ -1,9 +1,11 @@
 """Tables and sessions.
 
 Postgres in production (asyncpg); the tests use SQLite (aiosqlite), so column
-types stay portable: JSON, strings, integers, timestamps. The schema is made
-with `create_all` at startup. It is small and pre-launch; when it first needs
-to change in place, that is the moment to add Alembic.
+types stay portable: JSON, strings, integers, timestamps. The schema comes
+from the Alembic migrations in `migrations/` (see `migrate.py`), applied at
+deploy and again, as a no-op, at startup. A change to a model here needs a
+migration too; `python -m holt_server.migrate check` and the tests catch one
+that is missing.
 """
 
 from __future__ import annotations
@@ -139,9 +141,12 @@ class Database:
         self.engine: AsyncEngine = create_async_engine(url, **kwargs)
         self.session = async_sessionmaker(self.engine, expire_on_commit=False)
 
-    async def create_all(self) -> None:
+    async def migrate(self) -> None:
+        """Bring the schema up to date (see `holt_server.migrate`)."""
+        from holt_server.migrate import upgrade
+
         async with self.engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+            await conn.run_sync(upgrade)
 
     async def ping(self) -> bool:
         try:

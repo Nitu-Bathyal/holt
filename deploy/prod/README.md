@@ -17,7 +17,7 @@ is the public route ([TUNNEL.md](TUNNEL.md)). It is built **only from
 | `backup.sh` | `pg_dump` of both databases to `~/backups/holt/<stamp>/`, keeps 14 days. |
 | `warm.sh` | Runs `python -m holt_server.warm` detached in the server image (fills the caches), with the same secrets and token as a deploy. |
 | `edge.conf` | nginx: keeps the port across deploys, `/__build`, `www` → apex redirect, SSE-friendly proxy. |
-| `migrate-web.sh`, `initdb/` | Auth.js tables migration (one-shot `migrate-web` service) and the `holt_web` database. |
+| `migrate-web.sh`, `initdb/` | Auth.js tables migration (one-shot `migrate-web` service) and the `holt_web` database. The API's own migrations run in the one-shot `migrate-server` service. |
 | `TUNNEL.md` | Steps for the user to route githolt.com here. |
 | `umami.sh` | One-time: the analytics service (Umami): its database and role, `.env` keys, first start, admin password. See [Analytics](#analytics). |
 | `stats.sh` | The product numbers from Holt's own database, per day. Read-only, no personal data. |
@@ -33,7 +33,7 @@ Fixed in `compose.yml`: `HOLT_ENV=production`, `NEXT_PUBLIC_SITE_HOST=githolt.co
 (build and run time), `HOLT_WEB_URL` and `AUTH_URL=https://githolt.com`,
 `TRUST_PROXY_HEADERS=1`, no `ROBOTS_NOINDEX` (production is indexed), no
 `MOCK_API`. From `.env`: the generated secrets, `HOLT_STARTER_CACHE_HOURS=24`,
-`HOLT_JOB_CONCURRENCY=1`, `HOLT_PROD_PORT=8310`.
+`HOLT_JOB_CONCURRENCY=6`, `HOLT_PROD_PORT=8310`.
 
 Keys the user owns come from **`~/.config/holt/secrets.env`** (`KEY=value`
 lines, `chmod 600`), read by `deploy.sh` and `warm.sh` on every run (`env.sh`) and mapped:
@@ -79,7 +79,10 @@ What one run does, in order:
 4. Builds `holt-prod-server:<sha>` then `holt-prod-web:<sha>` (never both at
    once) on its own buildx builder `holt-prod` (3 GB cap).
 5. Starts `db` if needed and runs the one-shot `migrate-web` (Auth.js SQL,
-   each file once; the API server's own tables are created on startup).
+   each file once), then `migrate-server` (the API's Alembic migrations, with
+   the new server image; see `server/README.md`). Either failing stops the
+   deploy before anything is swapped. A rollback does not undo a migration,
+   which is why migrations must keep working with the previous release.
 6. `compose up -d`: server is recreated and waited for healthy, then web.
    The edge keeps 127.0.0.1:8310 open throughout and re-resolves `web`, so
    the gap is the few seconds web takes to start.

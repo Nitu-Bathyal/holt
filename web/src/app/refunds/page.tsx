@@ -6,6 +6,7 @@ import { PAYMENT_BRAND } from "@/lib/site";
 export const metadata: Metadata = {
   title: "Refund and Cancellation Policy",
   description: "How to cancel a Holt subscription, when a payment can be refunded, and how to ask for one.",
+  alternates: { canonical: "/refunds" },
 };
 
 export default function RefundsPage() {

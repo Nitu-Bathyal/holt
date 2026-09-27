@@ -6,6 +6,7 @@ import { CONTACT_CITY, CONTACT_EMAIL, GITHUB_REPO_URL, PAYMENT_BRAND } from "@/l
 export const metadata: Metadata = {
   title: "Contact",
   description: "How to reach the person who runs Holt: refunds, account deletion, privacy questions, problems with a report, and security issues.",
+  alternates: { canonical: "/contact" },
 };
 
 const REASONS = [

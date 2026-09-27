@@ -4,8 +4,11 @@ The HTTP API behind the Holt web app. It wraps the engine in `src/holt` and
 implements [`API.md`](../API.md), which is the contract with `web/`.
 
 FastAPI, Postgres (SQLAlchemy async + asyncpg), and an in-process jobs runner.
-No Redis: jobs live in a Postgres table and up to `HOLT_JOB_CONCURRENCY` run at
-once in worker threads.
+No Redis: jobs live in a Postgres table and run in worker threads, in two
+lanes: `HOLT_JOB_CONCURRENCY` workers for people's jobs, and
+`HOLT_BADGE_CONCURRENCY` background workers for badge refreshes and warm
+passes (they take a waiting person's job first). Each job has a time limit.
+While a job waits, its event stream says its place in the queue.
 
 ## Run it locally
 
@@ -22,7 +25,8 @@ curl localhost:20130/health
 ```
 
 `holt-server` reads `server/.env` when started from `server/`, plus the process
-environment (which wins). The schema is created on startup (`create_all`).
+environment (which wins). The schema is brought up to date on startup (see
+[Changing the schema](#changing-the-schema)).
 Stop Postgres with `docker compose -f server/compose.yml down` (add `-v` to
 drop the data).
 
@@ -44,11 +48,14 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `HOLT_INTERNAL_KEY` | *(empty)* | Shared secret with `web/`. Every `/v1` request must send it as `X-Holt-Internal-Key`. Empty means every `/v1` request is refused. |
 | `HOLT_SECRET_KEY` | *(empty)* | Encrypts saved BYOK keys (AES-256-GCM). Use 32 random bytes, base64: `python -c "import os,base64;print(base64.b64encode(os.urandom(32)).decode())"`. Changing it makes saved keys unreadable (users are asked to save them again). |
 | `HOLT_WEB_URL` | `https://githolt.com` | The badge links to `{HOLT_WEB_URL}/{owner}/{repo}`. |
-| `GITHUB_TOKENS` | *(empty)* | Comma-separated GitHub tokens, used round-robin, one per analysis. Read-only public access is enough (a fine-grained token with no extra permissions). |
+| `GITHUB_TOKENS` | *(empty)* | Comma-separated GitHub tokens, used round-robin, one per analysis. A token GitHub refuses is left out for 10 minutes, and one that is rate-limited or nearly used up (points left, read from every reply) until it resets; logs name tokens by position (`token #2`), never by value. Read-only public access is enough (a fine-grained token with no extra permissions). |
 | `OPENROUTER_API_KEY` | *(empty)* | The server's model key, used for users' free AI reports. Empty means AI reports need BYOK. |
 | `OPENROUTER_MODEL` | `openai/gpt-5-mini` | Model id on OpenRouter for server-paid AI reports. |
 | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | OpenAI-compatible endpoint. |
-| `HOLT_JOB_CONCURRENCY` | `2` | Analyses running at once in this process. Each holds a thread and some memory. |
+| `HOLT_JOB_CONCURRENCY` | `2` | User lane: people's analyses and finds running at once in this process. Each holds a thread and some memory. |
+| `HOLT_JOB_TIMEOUT_RULES` | `180` | Seconds a rules report may run before it is stopped and fails with a plain "took too long" error. |
+| `HOLT_JOB_TIMEOUT_AI` | `480` | The same, for AI reports (refunded when stopped). |
+| `HOLT_JOB_TIMEOUT_FIND` | `300` | The same, for `/v1/find`. |
 | `HOLT_CACHE_HOURS` | `24` | How long a finished report is served instead of re-running. |
 | `HOLT_FREE_AI_LIMIT` | `3` | AI reports per user per calendar month on the server's key (plan `free`). `0` turns free AI reports off. |
 | `HOLT_PLAN_AI_LIMIT` | `100` | The same, for any other plan (set by hand in the `users` table for now). |
@@ -59,7 +66,7 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `HOLT_STARTER_CACHE_HOURS` | `1` | How long starter issues per repository are served from the cache. |
 | `HOLT_BADGE_RATE_PER_IP` | `20` | Rules checks a single client can trigger per hour by loading badges (client = `CF-Connecting-IP`, else the socket address). |
 | `HOLT_BADGE_RATE_TOTAL` | `60` | The same, across all clients. |
-| `HOLT_BADGE_CONCURRENCY` | `1` | Badge refreshes and warm-pass jobs running at once. Fewer than `HOLT_JOB_CONCURRENCY` when there are several workers; with a single worker they share it, but only when no user job is waiting. `0` turns them off. |
+| `HOLT_BADGE_CONCURRENCY` | `1` | Background lane: workers of their own, on top of `HOLT_JOB_CONCURRENCY`, for badge refreshes and warm-pass jobs. They take a waiting person's job before any badge work. `0` turns badge and warm work off. |
 | `HOLT_FIND_CACHE_HOURS` | `6` | How long a finished `/v1/find` search is served to anyone asking the same thing. |
 | `HOLT_WARM_INTERVAL_HOURS` | `0` (off) | Run a warm pass in the API process every N hours (one process at a time; Postgres advisory lock). |
 | `HOLT_WARM_SEEDS` | the list shipped in the package (`holt_server/seeds/repos.txt`) | The warm pass's seed list. |
@@ -95,9 +102,43 @@ Per process (fine for one server; revisit with more): rate-limit counters,
 the badge lane's concurrency count and the repo-name cache are in memory. SSE
 fan-out is in memory but falls back to re-reading the jobs table every 15s.
 
-The schema is made with `create_all`, which adds missing tables but never
-alters existing ones. Pre-launch, after a schema change, recreate the dev
-database (`docker compose -f server/compose.yml down -v`).
+## Changing the schema
+
+The tables are defined in `holt_server/db.py` and created and changed by
+Alembic migrations in `holt_server/migrations/versions/` (inside the package,
+so they ship in the server image). `python -m holt_server.migrate` brings
+`$DATABASE_URL` to the latest revision; deploys run it as a one-shot service
+before the new containers start, and the server runs it again on startup (a
+no-op by then). `0001_baseline` is the schema production had when migrations
+started; a database made before that (by `create_all`) is stamped at it, not
+re-created.
+
+To add a migration, from `server/`, with the dev Postgres running:
+
+```sh
+uv run python -m holt_server.migrate                        # dev database to the latest revision
+# edit the models in holt_server/db.py, then:
+uv run alembic revision --autogenerate -m "add feedback table"
+# read and fix the new file in holt_server/migrations/versions/; name the
+# revision id 0002, 0003, ... (--rev-id 0002) so the order is obvious
+uv run python -m holt_server.migrate                        # apply it
+uv run python -m holt_server.migrate check                  # exit 0: models and database agree
+```
+
+Rules:
+
+- **The previous release must keep working on the new schema.** Deploys
+  migrate first and then swap containers, and a rollback does not undo a
+  migration. Add columns as nullable or with a server default; drop or rename
+  in a later release, after nothing reads the old name.
+- Migrations must run on SQLite too (the tests use it). Autogenerate writes
+  column changes as `op.batch_alter_table`, which is a plain `ALTER` on
+  Postgres and a table copy on SQLite; keep it that way in hand-written ones.
+- Never edit a migration that has been deployed; add a new one.
+- `tests/test_server_migrations.py` fails when the models and the migrations
+  disagree, on SQLite locally and on Postgres in CI. To run the server tests
+  on Postgres yourself: `HOLT_TEST_DATABASE_URL=postgresql+asyncpg://holt:holt@127.0.0.1:20131/holt uv run pytest server/tests`
+  (its tables are dropped).
 
 ## Warm cache
 

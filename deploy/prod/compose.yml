@@ -59,6 +59,23 @@ services:
     mem_limit: 64m
     restart: "no"
 
+  # One-shot: brings the API's schema up to date (holt_server/migrations)
+  # with the new server image, then exits. deploy.sh runs it before swapping
+  # the containers, so the old release briefly runs on the new schema: a
+  # migration must keep working with the release before it (docs in
+  # server/README.md). A database from before migrations is only stamped.
+  migrate-server:
+    image: ${HOLT_PROD_PROJECT:-holt-prod}-server:${HOLT_TAG:?set by deploy.sh}
+    labels: *prod-label
+    profiles: [migrate]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://holt:${HOLT_DB_PASSWORD}@db:5432/holt
+    command: ["python", "-m", "holt_server.migrate"]
+    depends_on:
+      db: { condition: service_healthy }
+    mem_limit: 256m
+    restart: "no"
+
   server:
     build:
       context: ${HOLT_SRC:?set by deploy.sh}
@@ -74,13 +91,21 @@ services:
       HOLT_WEB_URL: https://githolt.com
       GITHUB_TOKENS: ${GITHUB_TOKENS}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      HOLT_JOB_CONCURRENCY: ${HOLT_JOB_CONCURRENCY:-1}
+      # Six people's jobs at once, plus one background worker for badges
+      # and warm passes (it takes a waiting person's job first). Each job is
+      # a thread holding one crawl; mem_limit below is sized for seven.
+      HOLT_JOB_CONCURRENCY: ${HOLT_JOB_CONCURRENCY:-6}
+      HOLT_BADGE_CONCURRENCY: ${HOLT_BADGE_CONCURRENCY:-1}
+      # Per-job time limits, in seconds (rules, AI, find).
+      HOLT_JOB_TIMEOUT_RULES: ${HOLT_JOB_TIMEOUT_RULES:-180}
+      HOLT_JOB_TIMEOUT_AI: ${HOLT_JOB_TIMEOUT_AI:-480}
+      HOLT_JOB_TIMEOUT_FIND: ${HOLT_JOB_TIMEOUT_FIND:-300}
       # The warm pass (warm.sh) fills this cache for a day.
       HOLT_STARTER_CACHE_HOURS: ${HOLT_STARTER_CACHE_HOURS:-24}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     depends_on:
       db: { condition: service_healthy }
-    mem_limit: 512m
+    mem_limit: 1536m
     restart: unless-stopped
 
   web:

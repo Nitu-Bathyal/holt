@@ -7,6 +7,7 @@ import { PageTransition } from "@/components/motion/page-transition";
 export const metadata: Metadata = {
   title: "Pricing",
   description: "Rules reports are free forever. A few AI reports a month are free too, and bringing your own key is always free.",
+  alternates: { canonical: "/pricing" },
 };
 
 const PLANS = [
