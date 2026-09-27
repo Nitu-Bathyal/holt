@@ -22,7 +22,7 @@ from holt.evidence.redact import redact_payload
 HERE = Path(__file__).parent
 FIND_ARGS = {"languages": ["python"], "topics": [], "hacktoberfest": True,
              "max_repos": 3, "per_repo": 3, "limit": 3}
-REPO = "ManimCommunity/manim"
+REPO = "beetbox/beets"
 MAX_BODY = 600
 
 

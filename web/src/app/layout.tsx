@@ -36,7 +36,7 @@ export const metadata: Metadata = {
 
 export const viewport: Viewport = {
   themeColor: [
-    { media: "(prefers-color-scheme: light)", color: "#ece8dd" },
+    { media: "(prefers-color-scheme: light)", color: "#f8f6f1" },
     { media: "(prefers-color-scheme: dark)", color: "#121312" },
   ],
 };
@@ -47,7 +47,9 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
-      <body className="flex min-h-dvh flex-col">
+      {/* Extensions such as Grammarly add attributes to <body> before React
+          hydrates. This only silences attribute mismatches on <body> itself. */}
+      <body className="flex min-h-dvh flex-col" suppressHydrationWarning>
         <a href="#content" className="skip-link">
           Skip to content
         </a>
