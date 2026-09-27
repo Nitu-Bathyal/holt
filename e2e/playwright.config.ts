@@ -1,4 +1,5 @@
-// Smoke tests against a deployed Holt. BASE_URL defaults to staging.
+// Smoke tests against a deployed Holt. BASE_URL defaults to staging
+// (https://$STAGING_HOST, staging.githolt.com unless set).
 // Uses the server's cached Chromium (~/.cache/ms-playwright) instead of
 // downloading browsers: set CHROMIUM_PATH to point somewhere else.
 import { defineConfig, devices } from "@playwright/test";
@@ -13,7 +14,7 @@ export default defineConfig({
   retries: 0,
   reporter: process.env.CI ? "list" : [["list"]],
   use: {
-    baseURL: process.env.BASE_URL || "https://holt-new.aahil-khan.xyz",
+    baseURL: process.env.BASE_URL || `https://${process.env.STAGING_HOST || "staging.githolt.com"}`,
     launchOptions: executablePath ? { executablePath } : {},
     trace: "off",
     screenshot: "only-on-failure",

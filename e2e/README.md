@@ -2,8 +2,9 @@
 
 Playwright smoke tests against a deployed Holt, at phone (390×844) and
 desktop (1440×900) sizes. The default target is staging,
-https://holt-new.aahil-khan.xyz. They use **rules mode only** and never
-start an AI report.
+https://staging.githolt.com (`STAGING_HOST` names another staging host,
+`BASE_URL` any other site). They use **rules mode only** and never start an
+AI report.
 
 They use the server's cached Chromium (`~/.cache/ms-playwright`, the one
 `shot` uses) and never download a browser. Set `CHROMIUM_PATH` to use

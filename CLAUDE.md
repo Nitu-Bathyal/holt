@@ -76,7 +76,7 @@ Production: **https://githolt.com** (domain on Cloudflare). The hook is
 "swap hub for holt": github.com/o/r → githolt.com/o/r. It runs on the home
 server for now (stack `holt-prod`, `deploy/prod/`, deployed only from `main`
 with `deploy/prod/deploy.sh` after the user approves); Hetzner later. Staging
-is https://holt-new.aahil-khan.xyz (auto-updates from main plus PRs labelled
+is https://staging.githolt.com (auto-updates from main plus PRs labelled
 `staging`). PyPI releases go through `.github/workflows/publish.yml` on a
 GitHub release (see `docs/RELEASING.md`).
 
