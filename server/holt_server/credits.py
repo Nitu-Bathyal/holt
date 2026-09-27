@@ -14,12 +14,13 @@ Each change writes a `credit_events` row in the same transaction.
 from __future__ import annotations
 
 from datetime import datetime, timedelta
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from holt_server import schema
 from holt_server.db import CreditEvent, Job, User, iso, now, utc
 from holt_server.deps import Caller, caller, services, signed_in
 from holt_server.errors import ApiError
@@ -27,7 +28,7 @@ from holt_server.errors import ApiError
 if TYPE_CHECKING:
     from holt_server.services import Services
 
-router = APIRouter(prefix="/v1/me/credits")
+router = APIRouter(prefix="/v1/me/credits", responses={"default": {"model": schema.ErrorBody}})
 
 
 def claim_every(svc: Services) -> timedelta:
@@ -39,16 +40,15 @@ def next_claim_at(svc: Services, user: User) -> datetime | None:
     return last + claim_every(svc) if last else None
 
 
-def credits_body(svc: Services, user: User) -> dict[str, Any]:
+def credits_body(svc: Services, user: User) -> schema.Credits:
     at = next_claim_at(svc, user)
-    return {
-        "balance": user.ai_credits or 0,
-        "can_claim": at is not None and at <= now(),
-        "next_claim_at": iso(at),
-        "claim_every_days": svc.settings.claim_every_days,
-        # False while the server has no model key: AI reports can't run at all.
-        "ai_available": svc.server_model_available(),
-    }
+    return schema.Credits(
+        balance=user.ai_credits or 0,
+        can_claim=at is not None and at <= now(),
+        next_claim_at=iso(at),
+        claim_every_days=svc.settings.claim_every_days,
+        ai_available=svc.server_model_available(),
+    )
 
 
 async def get_user(svc: Services, user_id: str) -> User:
@@ -134,13 +134,13 @@ async def refund(s: AsyncSession, job: Job) -> None:
 
 
 @router.get("")
-async def get_credits(request: Request, who: Caller = Depends(caller)) -> dict[str, Any]:
+async def get_credits(request: Request, who: Caller = Depends(caller)) -> schema.Credits:
     svc = services(request)
     return credits_body(svc, await get_user(svc, signed_in(who)))
 
 
 @router.post("/claim")
-async def post_claim(request: Request, who: Caller = Depends(caller)) -> dict[str, Any]:
+async def post_claim(request: Request, who: Caller = Depends(caller)) -> schema.Credits:
     svc = services(request)
     user_id = signed_in(who)
     await get_user(svc, user_id)

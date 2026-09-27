@@ -1,19 +1,39 @@
 """The in-process jobs runner.
 
 Jobs live in the `jobs` table, so a queued job survives a restart and every
-API process sees the same state. Up to `HOLT_JOB_CONCURRENCY` run at once, each
-in a worker thread because the engine is synchronous. Progress goes to the
-table (for polling) and to an in-memory hub (for SSE subscribers in this
-process); SSE also re-reads the table, so it keeps working if the job runs in
-another process.
+API process sees the same state. Each runs in a worker thread because the
+engine is synchronous, in one of two lanes:
+
+* the user lane, `HOLT_JOB_CONCURRENCY` workers, runs only people's jobs;
+* the background lane, `HOLT_BADGE_CONCURRENCY` workers, runs badge refreshes
+  and warm passes, but takes a person's queued job first whenever one is
+  waiting. So background work never holds a worker a person needs, and yields
+  to people when there is a queue.
+
+Every job has a time limit (`HOLT_JOB_TIMEOUT_*`). Past it the job fails with
+a plain "took too long" error, and its thread is told to stop at its next
+GitHub call or progress step (a thread can't be killed from outside). Job
+threads come from the runner's own executor, sized with room for such
+leftovers, so they never starve the loop's default executor (repo lookups,
+starter issues) or the jobs that follow.
+
+Progress goes to the table (for polling) and to an in-memory hub (for SSE
+subscribers in this process); SSE also re-reads the table, so it keeps working
+if the job runs in another process. A queued job's subscribers also hear its
+place in the queue each time it moves.
 """
 
 from __future__ import annotations
 
 import asyncio
+import contextvars
+import functools
 import logging
+import threading
+import time
 import uuid
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
@@ -22,6 +42,7 @@ from sqlalchemy import delete, select, update
 from holt_server import credits, starter
 from holt_server.db import BADGE_PRIORITY, FindCache, Job, Report, find_key, now
 from holt_server.errors import ApiError
+from holt_server.github import JobStopped, job_stop
 
 if TYPE_CHECKING:
     from holt_server.services import Services
@@ -33,6 +54,27 @@ POLL_SECONDS = 5.0
 # STALE_AFTER belonged to a process that died, and is queued again.
 HEARTBEAT_SECONDS = 15.0
 STALE_AFTER = timedelta(seconds=90)
+# Queue positions are counted over at most this many queued jobs.
+QUEUE_SCAN = 2000
+
+USER_LANE = "user"
+BACKGROUND_LANE = "background"
+
+
+def timed_out() -> ApiError:
+    return ApiError(
+        "upstream",
+        "This check took too long, so we stopped it. GitHub may be slow right now, "
+        "or the repository is very busy. Please try again in a few minutes.",
+    )
+
+
+def waiting_stage(position: int) -> str:
+    """Plain-English stage for a queued job; `position` 1 is next to start."""
+    if position <= 1:
+        return "In the queue: yours is next"
+    ahead = position - 1
+    return f"In the queue: {ahead} {'check' if ahead == 1 else 'checks'} ahead of yours"
 
 
 class Hub:
@@ -53,6 +95,9 @@ class Hub:
             if not subs:
                 self._subs.pop(job_id, None)
 
+    def watched(self) -> list[str]:
+        return list(self._subs)
+
     def publish(self, job_id: str, event: str, data: dict[str, Any]) -> None:
         for queue in list(self._subs.get(job_id, ())):
             queue.put_nowait((event, data))
@@ -62,17 +107,16 @@ class JobRunner:
     def __init__(self, services: Services, concurrency: int = 2,
                  badge_concurrency: int = 1) -> None:
         self.services = services
+        # User lane workers; they never take badge work.
         self.concurrency = max(1, concurrency)
-        # Never all workers: a user request always has a worker badges can't take.
-        # Badge work (badge refreshes, warm passes) runs at most this many at
-        # once, and never on every worker when there are several. With a
-        # single worker it still gets that worker, but only when no user job
-        # is waiting: claims take the lowest priority number first. 0 turns
-        # badge work off entirely.
-        self.badge_concurrency = (
-            max(1, min(badge_concurrency, self.concurrency - 1)) if badge_concurrency > 0
-            else 0
-        )
+        # Background lane workers (badge refreshes, warm passes). They take the
+        # lowest priority number first, so a waiting person's job always goes
+        # before badge work. 0 turns badge work off entirely.
+        self.badge_concurrency = max(0, badge_concurrency)
+        # Job threads: one per worker, and as many again for threads of timed-out
+        # jobs that haven't reached their next stop check yet.
+        self.executor_size = 2 * (self.concurrency + self.badge_concurrency)
+        self._executor: ThreadPoolExecutor | None = None
         self.hub = Hub()
         self.worker_id = uuid.uuid4().hex
         self._wake = asyncio.Event()
@@ -84,9 +128,16 @@ class JobRunner:
 
     async def start(self) -> None:
         self._stopping = False
+        self._executor = ThreadPoolExecutor(self.executor_size,
+                                            thread_name_prefix="holt-job-thread")
         await self.requeue_stale()
-        self._tasks = [asyncio.create_task(self._worker(i), name=f"holt-job-{i}")
+        self._tasks = [asyncio.create_task(self._worker(i, USER_LANE), name=f"holt-job-{i}")
                        for i in range(self.concurrency)]
+        self._tasks += [asyncio.create_task(self._worker(i, BACKGROUND_LANE),
+                                            name=f"holt-background-{i}")
+                        for i in range(self.badge_concurrency)]
+        log.info("job runner started: %d user worker(s), %d background worker(s)",
+                 self.concurrency, self.badge_concurrency)
         self._tasks.append(asyncio.create_task(self._heartbeat(), name="holt-heartbeat"))
 
     async def requeue_stale(self) -> int:
@@ -130,16 +181,20 @@ class JobRunner:
             task.cancel()
         await asyncio.gather(*self._tasks, return_exceptions=True)
         self._tasks = []
+        if self._executor is not None:
+            # Don't wait: a leftover thread notices its stop flag on its own.
+            self._executor.shutdown(wait=False, cancel_futures=True)
+            self._executor = None
 
     def wake(self) -> None:
         self._wake.set()
 
     # --- the loop -----------------------------------------------------------
 
-    async def _worker(self, index: int) -> None:
+    async def _worker(self, index: int, lane: str = USER_LANE) -> None:
         while not self._stopping:
             try:
-                job = await self._claim()
+                job = await self._claim(lane)
             except Exception:  # noqa: BLE001 -- the database blinked; keep going
                 log.exception("claiming a job failed")
                 job = None
@@ -151,14 +206,18 @@ class JobRunner:
                     pass
                 continue
             try:
-                await self._run(job)
+                await self.announce_queue()
+            except Exception:  # noqa: BLE001 -- positions are a nicety
+                log.exception("announcing queue positions failed")
+            try:
+                await self._run(job, lane)
             finally:
                 self._running.pop(job.id, None)
 
-    async def _claim(self) -> Job | None:
-        badges = sum(1 for p in self._running.values() if p >= BADGE_PRIORITY)
+    async def _claim(self, lane: str = USER_LANE) -> Job | None:
         query = select(Job.id, Job.priority).where(Job.status == "queued")
-        if badges >= self.badge_concurrency:
+        badges = sum(1 for p in self._running.values() if p >= BADGE_PRIORITY)
+        if lane == USER_LANE or badges >= self.badge_concurrency:
             query = query.where(Job.priority < BADGE_PRIORITY)
         async with self.services.db.session() as s:
             rows = (await s.execute(
@@ -175,29 +234,108 @@ class JobRunner:
                     return await s.get(Job, job_id)
         return None
 
-    async def _run(self, job: Job) -> None:
+    # --- queue position -------------------------------------------------------
+
+    async def queue_positions(self, job_ids: list[str] | None = None) -> dict[str, int]:
+        """Place in the queue (1 = next to start) of each queued job, or of `job_ids`."""
+        async with self.services.db.session() as s:
+            rows = (await s.execute(
+                select(Job.id).where(Job.status == "queued")
+                .order_by(Job.priority, Job.created_at, Job.id).limit(QUEUE_SCAN))).scalars()
+            order = {job_id: i + 1 for i, job_id in enumerate(rows)}
+        if job_ids is None:
+            return order
+        return {j: order[j] for j in job_ids if j in order}
+
+    async def stage_event(self, job: Job) -> dict[str, Any]:
+        """The `stage` SSE payload for `job` as the table has it, with its
+        place in the queue while it waits."""
+        if job.status == "queued":
+            position = (await self.queue_positions([job.id])).get(job.id)
+            if position is not None:
+                return {"stage": waiting_stage(position), "progress": 0.0,
+                        "queue_position": position}
+        return {"stage": job.stage, "progress": round(job.progress or 0.0, 3)}
+
+    async def announce_queue(self) -> None:
+        """Tell this process's SSE subscribers where their queued jobs now are."""
+        watched = self.hub.watched()
+        if not watched:
+            return
+        for job_id, position in (await self.queue_positions(watched)).items():
+            self.hub.publish(job_id, "stage", {"stage": waiting_stage(position),
+                                               "progress": 0.0, "queue_position": position})
+
+    # --- running --------------------------------------------------------------
+
+    def timeout_for(self, job: Job) -> float:
+        s = self.services.settings
+        if job.kind == "find":
+            return s.job_timeout_find
+        return s.job_timeout_ai if job.mode == "ai" else s.job_timeout_rules
+
+    async def _run(self, job: Job, lane: str = USER_LANE) -> None:
         loop = asyncio.get_running_loop()
         self.hub.publish(job.id, "stage", {"stage": "Starting", "progress": 0.01})
+        started = time.monotonic()
+        waited = (now() - _aware(job.created_at)).total_seconds() if job.created_at else 0.0
+        what = f"{job.kind}/{job.mode}" if job.kind == "analysis" else job.kind
+        log.info("job %s started: %s %s, %s lane, waited %.0fs", job.id, what,
+                 job.repo or "", lane, waited)
+        stop = threading.Event()
 
         def emit(stage: str, progress: float) -> None:
+            if stop.is_set():
+                raise JobStopped
             asyncio.run_coroutine_threadsafe(self._progress(job.id, stage, progress), loop)
 
+        limit = self.timeout_for(job)
         try:
             if job.kind == "find":
-                result = await asyncio.to_thread(self._find_sync, job, emit, loop)
+                result = await self._in_thread(stop, limit, self._find_sync, job, emit, loop)
             else:
                 # The key is only ever held in memory: the jobs table records
                 # where it came from, not what it is.
                 spec = await self.services.model_spec_for(job) if job.mode == "ai" else None
-                result = await asyncio.to_thread(self._analysis_sync, job, spec, emit)
+                result = await self._in_thread(stop, limit, self._analysis_sync, job, spec, emit)
+        except JobTimedOut:
+            log.warning("job %s timed out after %.0fs (%s %s)", job.id, limit, what,
+                        job.repo or "")
+            await self._fail(job, timed_out())
         except ApiError as err:
+            log.warning("job %s failed after %.1fs: %s", job.id,
+                        time.monotonic() - started, err.code)
             await self._fail(job, err)
         except Exception:  # noqa: BLE001
             log.exception("job %s crashed", job.id)
             await self._fail(job, ApiError(
                 "internal", "Something went wrong on our side. Please try again in a minute."))
         else:
+            log.info("job %s done in %.1fs", job.id, time.monotonic() - started)
             await self._finish(job, result)
+
+    async def _in_thread(self, stop: threading.Event, limit: float, fn, *args) -> Any:
+        """`fn(*args)` on the runner's executor, for at most `limit` seconds.
+
+        On timeout `stop` is set, which the thread notices at its next GitHub
+        call (`github.job_stop`) or progress step; whatever it returns after
+        that is dropped.
+        """
+        if self._executor is None:  # not started (tests driving _run directly)
+            self._executor = ThreadPoolExecutor(self.executor_size,
+                                                thread_name_prefix="holt-job-thread")
+        # run_in_executor doesn't copy contextvars the way to_thread does.
+        ctx = contextvars.copy_context()
+        ctx.run(job_stop.set, stop)
+        work = asyncio.get_running_loop().run_in_executor(
+            self._executor, functools.partial(ctx.run, fn, *args))
+        done, _ = await asyncio.wait({work}, timeout=limit)
+        if not done:
+            stop.set()
+            # Nobody awaits it any more; keep its late error out of the log.
+            work.add_done_callback(lambda f: f.cancelled() or f.exception())
+            raise JobTimedOut
+        return work.result()
 
     def _analysis_sync(self, job: Job, spec, emit) -> dict[str, Any]:
         svc = self.services
@@ -269,6 +407,15 @@ class JobRunner:
             await credits.refund(s, job)
             await s.commit()
         self.hub.publish(job.id, "error", {"error": err.body()})
+
+
+class JobTimedOut(Exception):
+    pass
+
+
+def _aware(when: datetime) -> datetime:
+    # SQLite hands back naive datetimes; they were written in UTC.
+    return when if when.tzinfo else when.replace(tzinfo=UTC)
 
 
 async def fresh_rules_report(svc, repo: str, days: int) -> dict[str, Any] | None:

@@ -1,6 +1,7 @@
 // The only way web/ talks to server/ (see API.md). Server code only: the
 // internal key must never reach the browser.
 import "server-only";
+import { cache } from "react";
 import type {
   AnalysisStart, ApiError, Credits, FindQuery, FindResult, FindStart, HistoryItem, JobStatus, Me, Mode,
   Report, Result, StarterIssue,
@@ -105,10 +106,15 @@ export async function jobEvents(kind: "analyses" | "find", jobId: string, signal
   }
 }
 
-export async function getReport(repo: string, mode: Mode = "rules", days = 7): Promise<Result<Report>> {
+// Once per request: a report page's metadata and body ask for the same report.
+const cachedReport = cache(async (repo: string, mode: Mode, days: number): Promise<Result<Report>> => {
   if (!repoOk(repo)) return BAD_REPO;
   if (MOCK) return mock.getReport(repo, mode, days);
   return call(`/v1/reports/${repoPath(repo)}?mode=${mode}&days=${days}`);
+});
+
+export function getReport(repo: string, mode: Mode = "rules", days = 7): Promise<Result<Report>> {
+  return cachedReport(repo, mode, days); // defaults filled in, so both calls share one key
 }
 
 /**

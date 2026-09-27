@@ -1,18 +1,15 @@
 import { reportPageUrl } from "./config";
-import type { Lookup, Report, Repo, Verdict } from "./types";
+import type { Lookup, Report, Repo, Tone } from "./types";
 
 export const CHIP_CLASS = "holt-chip";
 
-const HEADLINES: Record<Verdict, string> = {
-  viable: "Worth your time",
-  not_viable: "Not worth your time",
-  insufficient_evidence: "Not enough evidence",
-};
+const TONES: readonly string[] = ["good", "bad", "warn"] satisfies Tone[];
+const MAX_HEADLINE = 60;
 
 export type ChipState = { state: "loading" } | Lookup<Report>;
 
 export interface ChipView {
-  tone: "viable" | "not_viable" | "insufficient_evidence" | "unknown";
+  tone: Tone | "unknown";
   label: string;
   stat: string | null;
   title: string;
@@ -24,11 +21,14 @@ export function chipView(s: ChipState, r: Repo): ChipView {
   if (s.state === "loading") {
     return { tone: "unknown", label: "Holt", stat: "checking…", title: `Looking up ${name} on Holt` };
   }
-  if (s.state === "found" && s.data.verdict in HEADLINES) {
-    const v = s.data.verdict;
+  // The server words and colours the verdict; the chip only shows it. Anything
+  // that isn't a short headline is treated as no answer.
+  const headline = s.state === "found" ? s.data.headline : undefined;
+  if (s.state === "found" && typeof headline === "string" && headline && headline.length <= MAX_HEADLINE) {
+    const tone = s.data.tone;
     return {
-      tone: v,
-      label: `Holt: ${HEADLINES[v]}`,
+      tone: typeof tone === "string" && TONES.includes(tone) ? tone : "unknown",
+      label: `Holt: ${headline}`,
       stat: statLine(s.data),
       title: `Holt's verdict for newcomers to ${name}. Click for the full report.`,
     };

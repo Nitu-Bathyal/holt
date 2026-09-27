@@ -4,8 +4,11 @@ The HTTP API behind the Holt web app. It wraps the engine in `src/holt` and
 implements [`API.md`](../API.md), which is the contract with `web/`.
 
 FastAPI, Postgres (SQLAlchemy async + asyncpg), and an in-process jobs runner.
-No Redis: jobs live in a Postgres table and up to `HOLT_JOB_CONCURRENCY` run at
-once in worker threads.
+No Redis: jobs live in a Postgres table and run in worker threads, in two
+lanes: `HOLT_JOB_CONCURRENCY` workers for people's jobs, and
+`HOLT_BADGE_CONCURRENCY` background workers for badge refreshes and warm
+passes (they take a waiting person's job first). Each job has a time limit.
+While a job waits, its event stream says its place in the queue.
 
 ## Run it locally
 
@@ -44,11 +47,14 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `DATABASE_URL` | `postgresql+asyncpg://holt:holt@127.0.0.1:20131/holt` | SQLAlchemy async URL. `sqlite+aiosqlite:///path.db` works for quick experiments. |
 | `HOLT_INTERNAL_KEY` | *(empty)* | Shared secret with `web/`. Every `/v1` request must send it as `X-Holt-Internal-Key`. Empty means every `/v1` request is refused. |
 | `HOLT_WEB_URL` | `https://githolt.com` | The badge links to `{HOLT_WEB_URL}/{owner}/{repo}`. |
-| `GITHUB_TOKENS` | *(empty)* | Comma-separated GitHub tokens, used round-robin, one per analysis. Read-only public access is enough (a fine-grained token with no extra permissions). |
+| `GITHUB_TOKENS` | *(empty)* | Comma-separated GitHub tokens, used round-robin, one per analysis. A token GitHub refuses is left out for 10 minutes, and one that is rate-limited or nearly used up (points left, read from every reply) until it resets; logs name tokens by position (`token #2`), never by value. Read-only public access is enough (a fine-grained token with no extra permissions). |
 | `OPENROUTER_API_KEY` | *(empty)* | The server's model key; every AI report runs on it. Empty means AI reports are off: requests get `ai_unavailable` and spend nothing. |
 | `OPENROUTER_MODEL` | `openai/gpt-5-mini` | Model id on OpenRouter for server-paid AI reports. |
 | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | OpenAI-compatible endpoint. |
-| `HOLT_JOB_CONCURRENCY` | `2` | Analyses running at once in this process. Each holds a thread and some memory. |
+| `HOLT_JOB_CONCURRENCY` | `2` | User lane: people's analyses and finds running at once in this process. Each holds a thread and some memory. |
+| `HOLT_JOB_TIMEOUT_RULES` | `180` | Seconds a rules report may run before it is stopped and fails with a plain "took too long" error. |
+| `HOLT_JOB_TIMEOUT_AI` | `480` | The same, for AI reports (refunded when stopped). |
+| `HOLT_JOB_TIMEOUT_FIND` | `300` | The same, for `/v1/find`. |
 | `HOLT_CACHE_HOURS` | `24` | How long a finished report is served instead of re-running. |
 | `HOLT_SIGNUP_AI_CREDITS` | `3` | Free AI reports every signed-in user gets once, on their first visit. |
 | `HOLT_CLAIM_EVERY_DAYS` | `7` | After that, one more can be claimed each time this many days have passed since the last claim (or the welcome grant). |
@@ -59,7 +65,7 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `HOLT_STARTER_CACHE_HOURS` | `1` | How long starter issues per repository are served from the cache. |
 | `HOLT_BADGE_RATE_PER_IP` | `20` | Rules checks a single client can trigger per hour by loading badges (client = `CF-Connecting-IP`, else the socket address). |
 | `HOLT_BADGE_RATE_TOTAL` | `60` | The same, across all clients. |
-| `HOLT_BADGE_CONCURRENCY` | `1` | Badge refreshes and warm-pass jobs running at once. Fewer than `HOLT_JOB_CONCURRENCY` when there are several workers; with a single worker they share it, but only when no user job is waiting. `0` turns them off. |
+| `HOLT_BADGE_CONCURRENCY` | `1` | Background lane: workers of their own, on top of `HOLT_JOB_CONCURRENCY`, for badge refreshes and warm-pass jobs. They take a waiting person's job before any badge work. `0` turns badge and warm work off. |
 | `HOLT_FIND_CACHE_HOURS` | `6` | How long a finished `/v1/find` search is served to anyone asking the same thing. |
 | `HOLT_WARM_INTERVAL_HOURS` | `0` (off) | Run a warm pass in the API process every N hours (one process at a time; Postgres advisory lock). |
 | `HOLT_WARM_SEEDS` | the list shipped in the package (`holt_server/seeds/repos.txt`) | The warm pass's seed list. |

@@ -44,8 +44,10 @@ class Services:
         self.analysis_fn: Callable[..., dict[str, Any]] = engine.analyze
 
     def _live_provider(self, repo: str, as_of: datetime):
-        return engine.live_provider(self.pool.next(), as_of, self.settings.max_pages,
-                                    http=self.http)
+        # The pool's transport: it skips dead or used-up tokens and hears back
+        # how many points each one has left.
+        return engine.live_provider(None, as_of, self.settings.max_pages,
+                                    transport=self.pool.transport(self.http))
 
     async def canonical(self, repo: str) -> str:
         """GitHub's casing for `repo`, or `not_found`. Remembered per process."""

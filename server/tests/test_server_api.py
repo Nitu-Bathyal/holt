@@ -337,6 +337,7 @@ def test_find(h, fake_starter):
     assert [x["repo"] for x in body["results"]] == ["octo/one"]
     assert body["results"][0]["headline"] == "Worth your time"
     assert body["results"][0]["stats"] == {"outsider_merged": 4}
+    assert body["results"][0]["tone"] == "good"
     assert fake_starter["find"] == (["python"], [], True, 20)  # computed for >= 20
     # find jobs are not analyses
     assert h.get(f"/v1/analyses/{r.json()['job_id']}").status_code == 404
@@ -410,12 +411,22 @@ def test_user_jobs_run_before_badge_refreshes(make_harness):
     h.client.get("/badge/octo/two.svg")
     user_job = h.post("/v1/analyses", {"repo": "octo/three"}).json()["job_id"]
     runner = h.svc.runner
-    first = h.client.portal.call(runner._claim)
+    # The background lane takes a waiting person's job before any badge work.
+    first = h.client.portal.call(runner._claim, "background")
     assert first.id == user_job
-    second = h.client.portal.call(runner._claim)
+    second = h.client.portal.call(runner._claim, "background")
     assert second.priority == 10
     # One badge job at a time: the other badge job waits even with a free worker.
-    assert h.client.portal.call(runner._claim) is None
+    assert h.client.portal.call(runner._claim, "background") is None
+
+
+def test_user_lane_never_takes_badge_work(make_harness):
+    h = make_harness(run_jobs=False)
+    h.client.get("/badge/octo/one.svg")
+    runner = h.svc.runner
+    assert h.client.portal.call(runner._claim, "user") is None
+    user_job = h.post("/v1/analyses", {"repo": "octo/two"}).json()["job_id"]
+    assert h.client.portal.call(runner._claim, "user").id == user_job
 
 
 def test_joining_a_badge_job_promotes_it(make_harness):
@@ -488,16 +499,17 @@ def test_report_list_for_sitemaps(h):
     assert len(h.get("/v1/reports?limit=2").json()["reports"]) == 2
 
 
-def test_badge_work_runs_even_with_a_single_worker(make_harness):
-    """Staging runs one worker; badge and warm jobs must not starve there."""
+def test_badge_work_has_its_own_lane(make_harness):
+    """Staging runs one user worker; badge and warm jobs must not starve there,
+    and must not take that worker either."""
     h = make_harness(run_jobs=False, HOLT_JOB_CONCURRENCY=1)
-    assert h.svc.runner.badge_concurrency == 1
+    runner = h.svc.runner
+    assert (runner.concurrency, runner.badge_concurrency) == (1, 1)
     h.client.get("/badge/octo/one.svg")
     user_job = h.post("/v1/analyses", {"repo": "octo/two"}).json()["job_id"]
-    runner = h.svc.runner
-    first = h.client.portal.call(runner._claim)
-    assert first.id == user_job  # the user's job still goes first
-    runner._running.pop(first.id)
-    assert h.client.portal.call(runner._claim).priority == 10  # then the badge job
+    assert h.client.portal.call(runner._claim, "user").id == user_job
+    assert h.client.portal.call(runner._claim, "background").priority == 10
     off = make_harness(run_jobs=False, HOLT_JOB_CONCURRENCY=1, HOLT_BADGE_CONCURRENCY=0)
     assert off.svc.runner.badge_concurrency == 0
+    off.client.get("/badge/octo/one.svg")
+    assert off.client.portal.call(off.svc.runner._claim, "user") is None

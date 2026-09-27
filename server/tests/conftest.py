@@ -29,6 +29,11 @@ KNOWN = {r.lower(): r for r in (
 )}
 
 
+STATS = {"outsider_attempts": 20, "outsider_merged": 8, "distinct_outsiders": 15,
+         "first_time_merged_authors": 6, "no_reply": 2, "median_first_response_hours": 3.0,
+         "bot_share": 0.1}
+
+
 def canned_report(repo: str, mode: str = "rules", days: int = 7,
                   verdict: str = "viable") -> dict[str, Any]:
     headline = {"viable": "Worth your time", "not_viable": "Not worth your time",
@@ -36,7 +41,7 @@ def canned_report(repo: str, mode: str = "rules", days: int = 7,
     return {
         "repo": repo, "mode": mode, "days": days, "verdict": verdict,
         "headline": headline, "summary": "ok" if mode == "ai" else None,
-        "stats": {}, "decided_by": [], "unknowns": [], "landing": [],
+        "stats": STATS, "decided_by": [], "unknowns": [], "landing": [],
         "never_landed": [], "evidence": [], "evidence_until": None,
         "generated_at": "2026-09-25T00:00:00Z",
         "cost": {"model": "m", "input_tokens": 1, "output_tokens": 1} if mode == "ai" else None,

@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { humanHours, pct, VERDICT_TONE } from "@/lib/format";
+import { humanHours, pct } from "@/lib/format";
 import type { Report } from "@/lib/types";
 import { CatFace } from "../cat-face";
-import { TONE, VERDICT_MOOD } from "../report/tone";
+import { TONE, TONE_MOOD } from "../report/tone";
 
 export function CompareShell({ repo, removeHref, children }: { repo: string; removeHref: string; children: React.ReactNode }) {
   return (
@@ -23,7 +23,7 @@ export function CompareShell({ repo, removeHref, children }: { repo: string; rem
 
 export function CompareBody({ report }: { report: Report }) {
   const s = report.stats;
-  const t = TONE[VERDICT_TONE[report.verdict]];
+  const t = TONE[report.tone];
   const top = report.landing[0];
   const rows: [string, React.ReactNode][] = [
     ["Outside PRs merged", <><strong className="text-ink">{s.outsider_merged}</strong> of {s.outsider_attempts} ({pct(s.outsider_merged, s.outsider_attempts)}%)</>],
@@ -35,7 +35,7 @@ export function CompareBody({ report }: { report: Report }) {
   return (
     <>
       <div className={`p-4 ${t.soft}`}>
-        <CatFace mood={VERDICT_MOOD[report.verdict]} className="text-[1.1rem]" />
+        <CatFace mood={TONE_MOOD[report.tone]} className="text-[1.1rem]" />
         <p className={`mt-2 text-[1.35rem] font-semibold leading-tight tracking-tight ${t.text}`}>{report.headline}</p>
       </div>
       <dl className="divide-y divide-line">

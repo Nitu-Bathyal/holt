@@ -64,11 +64,13 @@ class RecordingProvider:
         return getattr(self.inner, name)
 
 
-def live_provider(token: str, as_of: datetime, max_pages: int = 8, http=None):
+def live_provider(token: str | None, as_of: datetime, max_pages: int = 8, http=None,
+                  transport=None):
     from holt.evidence.github_graphql import GitHubGraphQL, LiveGitHubProvider
 
     return LiveGitHubProvider(
-        Window.PRE_T, cutoff=as_of, transport=GitHubGraphQL(token=token, client=http),
+        Window.PRE_T, cutoff=as_of,
+        transport=transport or GitHubGraphQL(token=token, client=http),
         max_pages=max_pages,
     )
 

@@ -37,8 +37,10 @@ def replay_harness(make_harness, **overrides):
 def check_report_shape(report: dict, mode: str) -> None:
     keys = {"repo", "mode", "days", "verdict", "headline", "summary", "stats",
             "decided_by", "unknowns", "landing", "never_landed", "evidence",
-            "evidence_until", "generated_at", "cost"}
+            "evidence_until", "generated_at", "cost", "rule_codes", "tone",
+            "verdict_line", "odds"}
     assert set(report) == keys
+    assert len(report["rule_codes"]) == len(report["decided_by"])
     assert report["repo"] == REPO and report["mode"] == mode
     assert report["verdict"] in ("viable", "not_viable", "insufficient_evidence")
     assert set(report["stats"]) == {
@@ -53,7 +55,8 @@ def check_report_shape(report: dict, mode: str) -> None:
         assert set(area) == {"path", "attempted"}
     assert report["evidence_until"] == "2026-06-01T00:00:00Z"
     # What a beginner reads is plain English. (`kind`/`value` are machine keys.)
-    prose = " ".join([report["headline"], report["summary"] or "", *report["decided_by"],
+    prose = " ".join([report["headline"], report["verdict_line"],
+                      (report["odds"] or {}).get("text", ""), report["summary"] or "", *report["decided_by"],
                       *report["unknowns"], *(e["text"] for e in report["evidence"])])
     for jargon in ("not_viable", "MCC", "repo_kind", "insufficient_evidence"):
         assert jargon not in prose
