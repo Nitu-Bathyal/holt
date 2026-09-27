@@ -3,7 +3,7 @@
 //   node scripts/record-demo/record.mjs [desktop|phone|trick ...]
 //
 // Env:
-//   HOLT_URL        site to record (default https://holt-new.aahil-khan.xyz)
+//   HOLT_URL        site to record (default https://staging.githolt.com)
 //   OUT_DIR         where raw .webm files go (default scripts/record-demo/out)
 //   PLAYWRIGHT_CORE path to a playwright-core package (default: resolve it, then ~/.local/share/cx-tools)
 //   CHROMIUM_PATH   browser binary (default: newest cached headless shell in ~/.cache/ms-playwright)
@@ -16,7 +16,7 @@ import os from "node:os";
 import path from "node:path";
 
 const require = createRequire(import.meta.url);
-const HOLT_URL = (process.env.HOLT_URL || "https://holt-new.aahil-khan.xyz").replace(/\/$/, "");
+const HOLT_URL = (process.env.HOLT_URL || "https://staging.githolt.com").replace(/\/$/, "");
 const HOST = new URL(HOLT_URL).host;
 const OUT = path.resolve(process.env.OUT_DIR || path.join(path.dirname(new URL(import.meta.url).pathname), "out"));
 const REPO_URL = "https://github.com/pallets/flask";

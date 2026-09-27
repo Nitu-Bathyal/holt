@@ -6,7 +6,9 @@
 # - copies preview.sh to ~/.local/share/holt-staging/bin/ (the timer runs that
 #   copy, so a PR can't change the loop; re-run install.sh to update it)
 # - writes the systemd --user units holt-stage.service / holt-stage.timer
-# - routes holt-new.aahil-khan.xyz to the stack's port with stagectl
+# It does not route the site: https://$STAGING_HOST (default
+# staging.githolt.com) reaches the stack's port through a Cloudflare tunnel,
+# and that config is hand-managed (deploy/README.md, "The public route").
 # No sudo. Needs linger for the timer to run while logged out
 # (`loginctl show-user $USER -p Linger`).
 set -euo pipefail
@@ -20,7 +22,7 @@ install -m 755 "$here/preview.sh" "$STATE/bin/preview.sh"
 
 cat > "$UNITS/holt-stage.service" <<UNIT
 [Unit]
-Description=Holt staging preview: rebuild holt-new.aahil-khan.xyz when origin changes
+Description=Holt staging preview: rebuild the staging site when origin changes
 After=network-online.target docker.service
 
 [Service]
@@ -45,7 +47,7 @@ WantedBy=timers.target
 UNIT
 
 systemctl --user daemon-reload
-"$HOME/staging/bin/stagectl" proxy holt-new "$PORT"
+echo "the stack listens on 127.0.0.1:$PORT; the tunnel routes the staging host to it (deploy/README.md)"
 if [[ "${1:-}" != "--no-timer" ]]; then
     systemctl --user enable --now holt-stage.timer
     systemctl --user list-timers holt-stage.timer --no-pager

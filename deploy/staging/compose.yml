@@ -1,13 +1,20 @@
-# Holt staging stack at https://holt-new.aahil-khan.xyz
+# Holt staging stack at https://${STAGING_HOST} (default staging.githolt.com)
 #
 # Run it through preview.sh (or see ../README.md). Compose project:
-# stage-holt-new. Only the edge publishes a port, on 127.0.0.1, and the
-# staging nginx proxies holt-new.aahil-khan.xyz to it
-# (`~/staging/bin/stagectl proxy holt-new <port>`).
+# stage-holt-new (the name is from the site's first address and stays, so
+# the running stack and its database volume carry over). Only the edge
+# publishes a port, on 127.0.0.1, and a Cloudflare tunnel routes
+# STAGING_HOST to it.
 #
 #   edge (nginx, /__build) -> web (Next.js) -> server (FastAPI) -> db
 #
-# Secrets come from .env next to this file (gitignored; make-env.sh writes it).
+# STAGING_HOST is the one host setting: NEXT_PUBLIC_SITE_HOST, HOLT_WEB_URL
+# and AUTH_URL below are all written from it, and an old HOLT_WEB_URL or
+# NEXT_PUBLIC_SITE_HOST line in .env is ignored.
+#
+# Secrets come from .env next to this file (gitignored; make-env.sh writes
+# it); preview.sh adds the contact details and the staging-only sign-in keys
+# from ~/.config/holt/secrets.env.
 name: stage-holt-new
 
 x-stage-label: &stage-label
@@ -64,7 +71,7 @@ services:
       DATABASE_URL: postgresql+asyncpg://holt:${HOLT_DB_PASSWORD}@db:5432/holt
       HOLT_INTERNAL_KEY: ${HOLT_INTERNAL_KEY:?run make-env.sh}
       HOLT_SECRET_KEY: ${HOLT_SECRET_KEY:?run make-env.sh}
-      HOLT_WEB_URL: ${HOLT_WEB_URL}
+      HOLT_WEB_URL: https://${STAGING_HOST:-staging.githolt.com}
       GITHUB_TOKENS: ${GITHUB_TOKENS}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       HOLT_JOB_CONCURRENCY: ${HOLT_JOB_CONCURRENCY:-1}
@@ -82,7 +89,7 @@ services:
       dockerfile: ../deploy/web/Dockerfile
       labels: *stage-label
       args:
-        NEXT_PUBLIC_SITE_HOST: ${NEXT_PUBLIC_SITE_HOST}
+        NEXT_PUBLIC_SITE_HOST: ${STAGING_HOST:-staging.githolt.com}
         NEXT_PUBLIC_FREE_AI_QUOTA: ${NEXT_PUBLIC_FREE_AI_QUOTA:-3}
         # The policy pages. Required, so a missing value fails the build
         # instead of shipping the literal CONTACT_EMAIL / CONTACT_CITY.
@@ -97,17 +104,19 @@ services:
       HOLT_INTERNAL_KEY: ${HOLT_INTERNAL_KEY}
       DATABASE_URL: postgres://holt:${HOLT_DB_PASSWORD}@db:5432/holt_web
       AUTH_SECRET: ${AUTH_SECRET:?run make-env.sh}
+      # Staging's own OAuth apps (STAGING_*_OAUTH_* in secrets.env, mapped by
+      # preview.sh), never production's. Empty means that sign-in is off.
       AUTH_GITHUB_ID: ${AUTH_GITHUB_ID:-}
       AUTH_GITHUB_SECRET: ${AUTH_GITHUB_SECRET:-}
       AUTH_GOOGLE_ID: ${AUTH_GOOGLE_ID:-}
       AUTH_GOOGLE_SECRET: ${AUTH_GOOGLE_SECRET:-}
-      NEXT_PUBLIC_SITE_HOST: ${NEXT_PUBLIC_SITE_HOST}
-      AUTH_URL: ${HOLT_WEB_URL}
+      NEXT_PUBLIC_SITE_HOST: ${STAGING_HOST:-staging.githolt.com}
+      AUTH_URL: https://${STAGING_HOST:-staging.githolt.com}
       NEXT_PUBLIC_CONTACT_EMAIL: ${NEXT_PUBLIC_CONTACT_EMAIL}
       NEXT_PUBLIC_CONTACT_CITY: ${NEXT_PUBLIC_CONTACT_CITY}
       # Read the visitor IP from CF-Connecting-IP / X-Forwarded-For. Safe only
-      # because web publishes no port: the one way in is tunnel -> staging
-      # nginx -> edge (127.0.0.1) -> web.
+      # because web publishes no port: the one way in is the tunnel -> edge
+      # (127.0.0.1) -> web.
       TRUST_PROXY_HEADERS: "1"
       ROBOTS_NOINDEX: "1"
       NODE_OPTIONS: --max-old-space-size=384

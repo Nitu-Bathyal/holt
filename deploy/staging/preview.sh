@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# preview.sh -- keep https://holt-new.aahil-khan.xyz on the latest preview.
+# preview.sh -- keep the staging site on the latest preview.
+# The site is https://$STAGING_HOST (default staging.githolt.com).
 #
 # One run: fetch origin; if main, any open PR labelled `staging`, or any
 # branch in deploy/staging/extra-branches moved, build a preview commit
@@ -11,6 +12,11 @@
 # The systemd --user timer from install.sh runs it every 3 minutes.
 # By hand:   preview.sh            (no-op when nothing changed)
 #            FORCE=1 preview.sh    (rebuild anyway, and skip the load check)
+#
+# STAGING_HOST is the one host setting: the web app's site host, HOLT_WEB_URL
+# and AUTH_URL (compose.yml), "site" on /__build and the smoke tests' BASE_URL
+# all come from it. It lives in deploy/staging/.env (make-env.sh writes it);
+# an exported STAGING_HOST wins for that run.
 #
 # Serialised with flock: a run that finds another in progress exits.
 # Waits for the 1-minute load < 6 and MemAvailable > 3 GB before building.
@@ -28,6 +34,7 @@ MAX_LOAD="${HOLT_STAGE_MAX_LOAD:-6}"
 MIN_AVAIL_MB="${HOLT_STAGE_MIN_AVAIL_MB:-3072}"
 MAX_WAIT="${HOLT_STAGE_MAX_WAIT:-1800}"            # seconds to wait for room, then retry next tick
 DEPLOY="$SRC/deploy/staging"
+DEFAULT_HOST=staging.githolt.com
 FORCE="${FORCE:-0}"
 
 mkdir -p "$STATE/logs"
@@ -49,6 +56,20 @@ if [[ ! -d "$SRC/.git" ]]; then
     git -C "$SRC" config user.email "holt-staging@localhost"
 fi
 cd "$SRC"
+
+# --- the host ---------------------------------------------------------------
+if [[ -z "${STAGING_HOST:-}" && -f "$DEPLOY/.env" ]]; then
+    STAGING_HOST="$(sed -n 's/^STAGING_HOST=//p' "$DEPLOY/.env" | tail -1)"
+fi
+STAGING_HOST="${STAGING_HOST:-$DEFAULT_HOST}"
+if [[ ! "$STAGING_HOST" =~ ^[a-z0-9]([a-z0-9.-]*[a-z0-9])?$ ]]; then
+    log "STAGING_HOST must be a bare host name like $DEFAULT_HOST, not '$STAGING_HOST'"; exit 1
+fi
+if [[ "$STAGING_HOST" == githolt.com || "$STAGING_HOST" == www.githolt.com ]]; then
+    log "STAGING_HOST is production's host ($STAGING_HOST); staging needs its own"; exit 1
+fi
+export STAGING_HOST
+SITE="https://$STAGING_HOST"
 
 # --- what should be in the preview ------------------------------------------
 # Sets main_sha, CANDIDATES, fingerprint and $RUN/skipped.tsv. Called again
@@ -93,7 +114,7 @@ resolve() {
             printf 'branch\t%s\t%s\t\t\t\t%s\n' "$b" "$b" "branch not found on origin or locally" >> "$RUN/skipped.tsv"
         fi
     done < "$RUN/extra"
-    fingerprint="$( { echo "main $main_sha"; printf '%s\n' "${CANDIDATES[@]}" | cut -f1-4; cat "$RUN/skipped.tsv"; } | sha256sum | cut -c1-16)"
+    fingerprint="$( { echo "host $STAGING_HOST"; echo "main $main_sha"; printf '%s\n' "${CANDIDATES[@]}" | cut -f1-4; cat "$RUN/skipped.tsv"; } | sha256sum | cut -c1-16)"
 }
 
 declare -a CANDIDATES=()
@@ -108,7 +129,7 @@ BUILD_DIR="$DEPLOY/build"
 write_build_json() {   # status message [preview_sha]
     mkdir -p "$BUILD_DIR"
     STATUS="$1" MESSAGE="$2" PREVIEW="${3:-}" MAIN="$main_sha" RUN="$RUN" STATE="$STATE" \
-    OUT="$BUILD_DIR/build.json" REPO="$REPO" python3 - <<'PY'
+    OUT="$BUILD_DIR/build.json" REPO="$REPO" SITE="$SITE" python3 - <<'PY'
 import json, os, datetime
 env = os.environ
 def rows(name, keys):
@@ -149,7 +170,7 @@ try:
         smoke = json.load(f)
 except FileNotFoundError:
     smoke = None
-doc = {"site": "https://holt-new.aahil-khan.xyz", "live": live, "smoke": smoke, "last_attempt": attempt}
+doc = {"site": env["SITE"], "live": live, "smoke": smoke, "last_attempt": attempt}
 tmp = env["OUT"] + ".tmp"
 with open(tmp, "w", encoding="utf-8") as f:
     json.dump(doc, f, indent=2)
@@ -213,9 +234,10 @@ fail() {   # record a failed attempt; don't retry the same inputs until somethin
 
 # The policy pages' contact details come from ~/.config/holt/secrets.env
 # (CONTACT_EMAIL, CONTACT_CITY), the same file production reads, so staging
-# shows what production will. Only these two keys are taken from it: the
-# rest of that file is production's. A missing value fails the build here
-# instead of shipping the literal placeholders.
+# shows what production will. Only these two keys and the STAGING_* ones
+# below are taken from it: the rest of that file is production's. A missing
+# contact value fails the build here instead of shipping the literal
+# placeholders.
 SECRETS="${HOLT_SECRETS_FILE:-$HOME/.config/holt/secrets.env}"
 secret() {   # secret KEY: the value of KEY=value in $SECRETS, else empty
     [[ -f "$SECRETS" ]] || return 0
@@ -229,6 +251,31 @@ for k in CONTACT_EMAIL CONTACT_CITY; do
     [[ -n "${!v}" && "${!v}" != "$k" ]] || fail "$k is not set in $SECRETS; the policy pages would show the placeholder"
 done
 
+# Staging-only sign-in, optional: STAGING_GITHUB_OAUTH_ID/SECRET and
+# STAGING_GOOGLE_OAUTH_ID/SECRET in the same file, from OAuth apps made for
+# https://$STAGING_HOST. Production's keys (GITHUB_OAUTH_*, GOOGLE_OAUTH_*)
+# are never read as a fallback, and a staging key that equals production's
+# is refused. AUTH_* is always exported, empty when off, so nothing in .env
+# or the caller's environment can turn a provider on instead.
+staging_oauth() {   # staging_oauth GITHUB|GOOGLE display-name
+    local p="$1" name="$2" id key
+    id="$(secret "STAGING_${p}_OAUTH_ID")"
+    key="$(secret "STAGING_${p}_OAUTH_SECRET")"
+    if [[ -z "$id" && -z "$key" ]]; then
+        log "$name sign-in: off (no STAGING_${p}_OAUTH_ID/SECRET)"
+    elif [[ -z "$id" || -z "$key" ]]; then
+        log "$name sign-in: off (STAGING_${p}_OAUTH_ID and STAGING_${p}_OAUTH_SECRET are needed together)"
+        id="" key=""
+    elif [[ "$id" == "$(secret "${p}_OAUTH_ID")" || "$key" == "$(secret "${p}_OAUTH_SECRET")" ]]; then
+        log "$name sign-in: off (STAGING_${p}_OAUTH_* is production's key; make a separate OAuth app for $STAGING_HOST)"
+        id="" key=""
+    else
+        log "$name sign-in: on"
+    fi
+    export "AUTH_${p}_ID=$id" "AUTH_${p}_SECRET=$key"
+}
+staging_oauth GITHUB GitHub
+staging_oauth GOOGLE Google
 
 # --- build and restart this stack only ------------------------------------------
 write_build_json building "building ${preview_sha:0:7}" "$preview_sha"
@@ -262,7 +309,7 @@ done
 rm -f "$STATE/smoke.json"   # belongs to the previous build
 write_build_json live "live" "$preview_sha"
 echo "$fingerprint" > "$STATE/fingerprint"
-log "live: ${preview_sha:0:7} on 127.0.0.1:$port"
+log "live: ${preview_sha:0:7} on 127.0.0.1:$port ($SITE)"
 
 # --- smoke tests (e2e/) against the public URL --------------------------------------
 # Once per live build, one browser at a time. A failure doesn't roll back; it shows
@@ -305,7 +352,7 @@ if [[ -f "$E2E/package.json" && "${HOLT_STAGE_SMOKE:-1}" == 1 ]]; then
         write_smoke failed "couldn't install the smoke tests (npm ci); see $slog"
     else
         report="$RUN/smoke.json"
-        if (cd "$E2E" && PLAYWRIGHT_JSON_OUTPUT_NAME="$report" BASE_URL="https://holt-new.aahil-khan.xyz" \
+        if (cd "$E2E" && PLAYWRIGHT_JSON_OUTPUT_NAME="$report" BASE_URL="$SITE" \
                 timeout 900 npx playwright test --workers=1 --reporter=json) >>"$slog" 2>&1; then
             write_smoke passed "all smoke tests passed" "$report"
         elif [[ -s "$report" ]]; then

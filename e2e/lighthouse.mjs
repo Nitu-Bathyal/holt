@@ -21,7 +21,7 @@ const opt = (f, d) => { const i = argv.indexOf(f); if (i < 0) return d; const v 
 const calibrate = flag("--calibrate");
 const runs = Number(opt("--runs", 1));
 const fixedCpu = opt("--cpu", null);
-const base = (process.env.BASE_URL || "https://holt-new.aahil-khan.xyz").replace(/\/$/, "");
+const base = (process.env.BASE_URL || `https://${process.env.STAGING_HOST || "staging.githolt.com"}`).replace(/\/$/, "");
 const pages = argv.length ? argv : ["/", "/pallets/flask", "/find"];
 const maxLoad = Number(process.env.LH_MAX_LOAD || 4);
 
