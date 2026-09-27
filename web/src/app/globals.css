@@ -1,6 +1,8 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+/* Phones held sideways: wide but under ~500px tall, so heroes need to be compact. */
+@custom-variant short (@media (orientation: landscape) and (max-height: 500px));
 
 /*
  * Holt design tokens. Dark is the original brand (website/); light is a warm
