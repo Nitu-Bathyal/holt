@@ -94,7 +94,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
             </p>
             <p className="mt-3 text-[0.78rem] text-faint">This page is for October. Outside Hacktoberfest, use <Link href="/find" className="text-link">find a project</Link>.</p>
             <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
-              <a href="#tips" className="bracket-link bracket-link--hf">[ 5 tips so your PR isn&apos;t ignored ]</a>
+              <a href="#tips" className="bracket-link bracket-link--hf px-3 text-center text-[0.76rem] sm:px-4 sm:text-[0.82rem]">[ 5 tips so your PR isn&apos;t ignored ]</a>
               <ShareBar url={`${SITE_URL}/hacktoberfest`} text={`Doing Hacktoberfest ${YEAR}? These repos actually review newcomers' pull requests:`} />
             </div>
           </div>
