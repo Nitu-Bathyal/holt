@@ -63,14 +63,14 @@ export default function HowItWorks() {
                 key={t.name}
                 className={`relative grid grid-cols-[40px_1fr_auto] items-baseline gap-x-4 gap-y-1 border-b border-line py-4 md:grid-cols-[62px_170px_1fr_96px] ${t.decision ? "bg-green/[0.06]" : ""}`}
               >
-                <span className="text-[0.75rem] text-blue">{t.i}</span>
+                <span className="text-[0.82rem] text-blue">{t.i}</span>
                 <span className="text-ink">{t.name}</span>
                 <span className="col-span-2 col-start-2 row-start-2 font-sans text-[0.9rem] text-muted md:col-span-1 md:col-start-3 md:row-start-1">{t.copy}</span>
-                <span className={`text-right text-[0.72rem] uppercase ${t.owner === "no model" ? "text-green" : "text-faint"}`}>{t.owner}</span>
+                <span className={`text-right text-[0.8rem] uppercase ${t.owner === "no model" ? "text-green" : "text-faint"}`}>{t.owner}</span>
               </div>
             ))}
           </div>
-          <p className="mt-6 text-[0.82rem] text-muted">
+          <p className="mt-6 text-[0.88rem] text-muted">
             <strong className="font-medium text-ink">Typical input:</strong> 642 evidence records across 200 pull-request conversations.
           </p>
         </Block>
@@ -85,7 +85,7 @@ export default function HowItWorks() {
           <div className="border-t border-line-strong">
             {SCORES.map((s) => (
               <div key={s.label} className="grid grid-cols-[1fr_54px] items-center gap-3 border-b border-line py-5 md:grid-cols-[230px_1fr_64px] md:gap-6">
-                <span className={`text-[0.8rem] ${s.holt ? "text-green" : "text-muted"}`}>{s.label}</span>
+                <span className={`text-[0.87rem] ${s.holt ? "text-green" : "text-muted"}`}>{s.label}</span>
                 <div className="meter col-span-2 row-start-2 md:col-span-1 md:row-start-auto" aria-hidden="true">
                   <span className={s.holt ? "bg-green" : "bg-faint"} style={{ width: `${s.v * 100}%` }} />
                 </div>
@@ -101,11 +101,11 @@ export default function HowItWorks() {
             ].map(([a, b], i) => (
               <li key={a} className={`py-5 md:px-6 ${i ? "border-t border-line md:border-l md:border-t-0" : "md:pl-0"}`}>
                 <strong className="block text-[1.25rem] font-medium">{a}</strong>
-                <span className="text-[0.75rem] text-faint">{b}</span>
+                <span className="text-[0.82rem] text-faint">{b}</span>
               </li>
             ))}
           </ul>
-          <p className="mt-6 text-[0.82rem] text-faint">
+          <p className="mt-6 text-[0.88rem] text-faint">
             Score: Matthews correlation, out of sample.{" "}
             <a className="text-link" href={`${GITHUB_REPO_URL}/blob/main/docs/research/REPRODUCTION.md`}>[ reproduce the result → ]</a>{" "}
             <a className="text-link" href={`${GITHUB_REPO_URL}/blob/main/docs/research/EVALUATION.md`}>[ full evaluation ]</a>
@@ -119,10 +119,10 @@ export default function HowItWorks() {
           <div className="mb-10 grid max-w-[760px] grid-cols-[auto_1fr_auto] items-center border border-line-strong bg-panel">
             <span aria-hidden="true" className="pl-4 text-amber">$</span>
             <code className="min-w-0 overflow-x-auto whitespace-nowrap px-3 py-4 text-[0.9rem]">uv tool install holt-cli</code>
-            <CopyButton text="uv tool install holt-cli" className="self-stretch border-l border-line-strong px-4 text-[0.85rem] text-muted transition-colors hover:bg-green hover:text-on-accent" />
+            <CopyButton text="uv tool install holt-cli" className="self-stretch border-l border-line-strong px-4 text-[0.89rem] text-muted transition-colors hover:bg-green hover:text-on-accent" />
           </div>
           <figure className="m-0 border border-line-strong bg-[#101010]">
-            <div className="flex min-h-10 items-center justify-between border-b border-[#292b29] px-4 text-[0.7rem] text-[#8a8a83]">
+            <div className="flex min-h-10 items-center justify-between border-b border-[#292b29] px-4 text-[0.78rem] text-[#8a8a83]">
               <span>repository assessment / terminal interface</span>
               <span className="text-[#69c7a6]">● read-only</span>
             </div>

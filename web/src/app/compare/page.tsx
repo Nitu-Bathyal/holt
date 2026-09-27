@@ -75,7 +75,7 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
               return (
                 <CompareShell key={repo} repo={name} removeHref={href(all.filter((x) => x !== repo))}>
                   {r.ok ? <CompareBody report={r.data} /> : r.error.code === "not_found" ? <CompareLive repo={repo} /> : (
-                    <p className="p-4 font-sans text-[0.88rem] text-orange">{r.error.message}</p>
+                    <p className="p-4 font-sans text-[0.9rem] text-orange">{r.error.message}</p>
                   )}
                 </CompareShell>
               );

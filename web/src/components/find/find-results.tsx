@@ -36,7 +36,7 @@ export function FindResults({ results, days }: { results: FindResult[]; days: nu
                   </Link>
                 </h2>
                 {r.description && <p className="mt-1 font-sans text-[0.92rem] text-muted">{r.description}</p>}
-                <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[0.75rem] text-faint">
+                <p className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[0.82rem] text-faint">
                   {r.language && <span>{r.language}</span>}
                   {r.stars != null && <span>★ {compact(r.stars)}</span>}
                   {s.first_time_merged_authors != null && <span className="text-green">{s.first_time_merged_authors} first-timers merged</span>}
@@ -47,13 +47,13 @@ export function FindResults({ results, days }: { results: FindResult[]; days: nu
               <div className="hidden sm:block"><VerdictPill verdict={r.verdict} /></div>
             </div>
             <div className="p-5 sm:p-6">
-              <p className="mb-3 text-[0.72rem] uppercase tracking-[0.08em] text-faint">Pick one of these</p>
+              <p className="mb-3 text-[0.8rem] uppercase tracking-[0.08em] text-faint">Pick one of these</p>
               <ul className="grid gap-3 md:grid-cols-2">
                 {r.issues.slice(0, 4).map((issue) => (
                   <StarterIssueCard key={issue.number} issue={issue} compact />
                 ))}
               </ul>
-              <Link href={`/${r.repo}`} className="mt-4 inline-block text-[0.8rem] text-green hover:underline">
+              <Link href={`/${r.repo}`} className="mt-4 inline-block text-[0.87rem] text-green hover:underline">
                 [ full report for {r.repo} → ]
               </Link>
             </div>

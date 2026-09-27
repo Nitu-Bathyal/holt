@@ -40,7 +40,7 @@ export function CompareBody({ report }: { report: Report }) {
       </div>
       <dl className="divide-y divide-line">
         {rows.map(([k, v]) => (
-          <div key={k} className="grid grid-cols-[1fr_auto] gap-3 px-4 py-3 text-[0.82rem]">
+          <div key={k} className="grid grid-cols-[1fr_auto] gap-3 px-4 py-3 text-[0.88rem]">
             <dt className="font-sans text-muted">{k}</dt>
             <dd className="text-right text-muted">{v}</dd>
           </div>

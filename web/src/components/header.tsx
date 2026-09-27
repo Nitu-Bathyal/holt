@@ -6,6 +6,10 @@ import { CatFace } from "./cat-face";
 import { MenuAutoClose } from "./motion/menu-autoclose";
 import { ThemeToggle } from "./theme-toggle";
 
+// Every route is dynamic (the header reads the session), so a default prefetch
+// stops at loading.tsx: a click showed the skeleton, which React then holds
+// for at least 300ms even when the page arrives in 15ms. These pages are cheap
+// to render with no query, so the nav prefetches them in full.
 const NAV = [
   { href: "/find", label: "find a project" },
   { href: "/compare", label: "compare" },
@@ -30,9 +34,9 @@ export async function Header() {
           <span className="text-[0.95rem] font-semibold tracking-tight">holt<span className="sr-only"> home</span></span>
         </Link>
 
-        <nav aria-label="Main" className="hidden items-center gap-6 text-[0.78rem] text-muted lg:flex">
+        <nav aria-label="Main" className="hidden items-center gap-6 text-[0.85rem] text-muted lg:flex">
           {NAV.map((n) => (
-            <Link key={n.href} href={n.href} className="py-2 transition-colors hover:text-ink">
+            <Link key={n.href} href={n.href} prefetch className="py-2 transition-colors hover:text-ink">
               {n.label}
             </Link>
           ))}
@@ -50,13 +54,13 @@ export async function Header() {
                   // eslint-disable-next-line @next/next/no-img-element
                   <img src={user.image} alt="" width={28} height={28} className="size-7 rounded-full border border-line-strong" />
                 ) : (
-                  <span className="grid size-7 place-items-center rounded-full bg-blue text-[0.75rem] font-bold text-on-accent">{initial}</span>
+                  <span className="grid size-7 place-items-center rounded-full bg-blue text-[0.82rem] font-bold text-on-accent">{initial}</span>
                 )}
                 <svg className="menu-chevron size-3.5 text-faint" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                   <path d="M4 6l4 4 4-4" />
                 </svg>
               </button>
-              <div id="account-menu" popover="auto" className="menu w-56 text-[0.82rem]">
+              <div id="account-menu" popover="auto" className="menu w-56 text-[0.88rem]">
                 <p className="truncate px-3 py-2 text-faint">{user.name || user.email}</p>
                 <Link href="/me/history" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">your history</Link>
                 <Link href="/settings" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">settings &amp; API key</Link>
@@ -67,7 +71,7 @@ export async function Header() {
               </div>
             </>
           ) : (
-            <Link href="/signin" className="hidden min-h-11 items-center px-3 text-[0.8rem] text-ink transition-colors hover:text-blue sm:inline-flex">
+            <Link href="/signin" className="hidden min-h-11 items-center px-3 text-[0.87rem] text-ink transition-colors hover:text-blue sm:inline-flex">
               sign in
             </Link>
           )}
@@ -81,7 +85,7 @@ export async function Header() {
           </button>
           <nav id="mobile-nav" popover="auto" aria-label="Mobile" className="sheet text-[0.95rem] lg:hidden">
             {NAV.map((n) => (
-              <Link key={n.href} href={n.href} className="block px-4 py-3 transition-colors hover:bg-panel-2">{n.label}</Link>
+              <Link key={n.href} href={n.href} prefetch className="block px-4 py-3 transition-colors hover:bg-panel-2">{n.label}</Link>
             ))}
             {!user && <Link href="/signin" className="block px-4 py-3 transition-colors hover:bg-panel-2">sign in</Link>}
             <a href={GITHUB_REPO_URL} className="block px-4 py-3 text-green transition-colors hover:bg-panel-2">github ↗</a>

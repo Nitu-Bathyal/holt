@@ -122,11 +122,11 @@ export default async function RepoPage({ params, searchParams }: Props) {
               <span className="text-muted">{dOwner}/</span>
               {dRepo}
             </p>
-            <a href={`https://github.com/${display}`} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center truncate text-[0.75rem] text-faint hover:text-blue sm:block sm:min-h-0">
+            <a href={`https://github.com/${display}`} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center truncate text-[0.82rem] text-faint hover:text-blue sm:block sm:min-h-0">
               github.com/{display} ↗
             </a>
           </div>
-          <nav aria-label="Report type" className="relative grid w-full grid-cols-2 border border-line-strong text-center text-[0.78rem] sm:w-auto">
+          <nav aria-label="Report type" className="relative grid w-full grid-cols-2 border border-line-strong text-center text-[0.85rem] sm:w-auto">
             {/* One pill under both tabs; it slides to the current one. */}
             <span aria-hidden="true" className={`tab-pill absolute inset-y-0 left-0 w-1/2 ${mode === "ai" ? "translate-x-full bg-blue" : "bg-ink"}`} />
             {/* No prefetch: one tab is this page, the other is sign-in for most visitors. */}

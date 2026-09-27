@@ -5,7 +5,7 @@ export function UpgradeCard({ repo, signedIn }: { repo: string; signedIn: boolea
   const href = signedIn ? aiHref : `/signin?callbackUrl=${encodeURIComponent(aiHref)}`;
   return (
     <div className="relative overflow-hidden border border-blue/50 bg-blue/[0.06] p-5 sm:p-6">
-      <p className="text-[0.72rem] uppercase tracking-[0.08em] text-blue">AI report</p>
+      <p className="text-[0.8rem] uppercase tracking-[0.08em] text-blue">AI report</p>
       <h3 className="mt-1 text-[1.15rem] font-semibold tracking-tight">Want it explained like a mentor would?</h3>
       <p className="mt-2 font-sans text-[0.92rem] text-muted">
         An AI reads the same evidence and writes a short, cited explanation: what to try first and what to avoid.
@@ -15,7 +15,7 @@ export function UpgradeCard({ repo, signedIn }: { repo: string; signedIn: boolea
         <Link href={href} prefetch={false} className="btn-primary bg-blue">
           upgrade to AI report <span aria-hidden="true">→</span>
         </Link>
-        <span className="text-[0.75rem] text-faint">
+        <span className="text-[0.82rem] text-faint">
           {signedIn ? "free monthly quota, or bring your own key" : "sign in, then use the free quota or your own key"}
         </span>
       </div>

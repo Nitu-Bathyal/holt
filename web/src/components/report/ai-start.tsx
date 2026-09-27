@@ -28,7 +28,7 @@ export function AiStart({ repo, days, signedIn, access, requested }: { repo: str
       className="border border-line-strong bg-panel p-5 shadow-card sm:p-8"
       data-model-picker
     >
-      <p className="text-[0.72rem] uppercase tracking-[0.08em] text-blue">AI report · {repo}</p>
+      <p className="text-[0.8rem] uppercase tracking-[0.08em] text-blue">AI report · {repo}</p>
       <h1 className="mt-2 text-[1.6rem] font-semibold tracking-tight sm:text-[2rem]">Pick a model to write it</h1>
       <p className="mt-2 max-w-2xl font-sans text-muted">
         The verdict comes from the same fixed rules whichever you choose. The model only changes how the evidence is
@@ -48,7 +48,7 @@ export function AiStart({ repo, days, signedIn, access, requested }: { repo: str
                 className={`relative flex flex-col border p-4 transition-colors ${
                   locked
                     ? "cursor-not-allowed border-dashed border-line-strong opacity-75"
-                    : "cursor-pointer border-line-strong bg-bg hover:border-blue has-[:checked]:border-blue has-[:checked]:bg-blue/10 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-blue"
+                    : "cursor-pointer border-line-strong bg-bg hover:border-blue has-[:checked]:border-blue has-[:checked]:bg-blue/10 has-[:checked]:shadow-[inset_0_0_0_1px_var(--blue)] has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-blue"
                 }`}
               >
                 <input
@@ -63,18 +63,18 @@ export function AiStart({ repo, days, signedIn, access, requested }: { repo: str
                 <span className="flex items-start justify-between gap-2">
                   <span>
                     <span className="block font-semibold text-ink">{m.label}</span>
-                    <span className="block text-[0.72rem] text-faint">{m.vendor}</span>
+                    <span className="block text-[0.8rem] text-faint">{m.vendor}</span>
                   </span>
                   <span
-                    className={`shrink-0 rounded-full border px-2 py-0.5 text-[0.66rem] uppercase tracking-[0.06em] ${
+                    className={`shrink-0 rounded-full border px-2 py-0.5 text-[0.75rem] uppercase tracking-[0.06em] ${
                       m.tier === "free" ? "border-green/50 text-green" : "border-blue/50 text-blue"
                     }`}
                   >
                     {m.tier}
                   </span>
                 </span>
-                <span className="mt-2 flex-1 font-sans text-[0.88rem] text-muted">{m.goodAt}</span>
-                <span className="mt-3 flex items-center justify-between gap-2 text-[0.72rem]">
+                <span className="mt-2 flex-1 font-sans text-[0.9rem] text-muted">{m.goodAt}</span>
+                <span className="mt-3 flex items-center justify-between gap-2 text-[0.8rem]">
                   <span className="text-faint">{m.credits == null ? "credits: TBD" : `${m.credits} credits`}</span>
                   {locked ? (
                     a.reason === "upgrade" ? (
@@ -103,7 +103,7 @@ export function AiStart({ repo, days, signedIn, access, requested }: { repo: str
           write my AI report <span aria-hidden="true">→</span>
         </button>
         {access.kind === "free" && (
-          <span className="font-sans text-[0.85rem] text-muted">
+          <span className="font-sans text-[0.89rem] text-muted">
             Want the pro models? <Link href="/pricing#compare" className="text-link">see plans</Link> or{" "}
             <Link href="/settings#byok" className="text-link">add your own key (free)</Link>.
           </span>

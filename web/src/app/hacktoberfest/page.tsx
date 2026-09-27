@@ -69,7 +69,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
             style={{ backgroundImage: "repeating-linear-gradient(135deg, var(--hf) 0 2px, transparent 2px 14px)" }}
           />
           <div className="wrap relative py-10 sm:py-14">
-            <div className="mb-6 flex flex-wrap items-center gap-2 text-[0.72rem] uppercase tracking-[0.08em]">
+            <div className="mb-6 flex flex-wrap items-center gap-2 text-[0.8rem] uppercase tracking-[0.08em]">
               <span className="rounded-full bg-hf px-3 py-1 font-semibold text-bg">limited-time event</span>
               <span className="rounded-full border border-hf-line px-3 py-1 text-hf">Hacktoberfest {YEAR} · 1–31 October</span>
               {hf && (
@@ -92,9 +92,9 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
               Every project below takes part in Hacktoberfest, replies to newcomers and merges their work. Each comes with
               open issues you could pick up today, and what to do next.
             </p>
-            <p className="mt-3 text-[0.78rem] text-faint">This page is for October. Outside Hacktoberfest, use <Link href="/find" className="text-link">find a project</Link>.</p>
+            <p className="mt-3 text-[0.85rem] text-faint">This page is for October. Outside Hacktoberfest, use <Link href="/find" className="text-link">find a project</Link>.</p>
             <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
-              <a href="#tips" className="bracket-link bracket-link--hf px-3 text-center text-[0.76rem] sm:px-4 sm:text-[0.82rem]">[ 5 tips so your PR isn&apos;t ignored ]</a>
+              <a href="#tips" className="bracket-link bracket-link--hf px-3 text-center text-[0.83rem] sm:px-4 sm:text-[0.88rem]">[ 5 tips so your PR isn&apos;t ignored ]</a>
               <ShareBar url={`${SITE_URL}/hacktoberfest`} text={`Doing Hacktoberfest ${YEAR}? These repos actually review newcomers' pull requests:`} />
             </div>
           </div>
@@ -109,7 +109,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
                     href={l.id === "all" ? "/hacktoberfest" : `/hacktoberfest?lang=${l.id}`}
                     scroll={false}
                     aria-current={l.id === tab.id ? "page" : undefined}
-                    className={`chip min-h-11 whitespace-nowrap px-4 text-[0.85rem] transition-colors ${l.id === tab.id ? "border-hf bg-hf text-bg" : "hover:border-hf hover:text-ink"}`}
+                    className={`chip min-h-11 whitespace-nowrap px-4 text-[0.89rem] transition-colors ${l.id === tab.id ? "border-hf bg-hf text-bg" : "hover:border-hf hover:text-ink"}`}
                   >
                     {l.label}
                     {l.id !== "all" && <span className="sr-only"> projects</span>}

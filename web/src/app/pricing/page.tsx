@@ -63,10 +63,10 @@ export default function PricingPage() {
         <ul className="grid gap-4 lg:grid-cols-3">
           {PLANS.map((p) => (
             <li key={p.name} className={`relative flex flex-col border bg-panel p-6 ${p.accent} ${p.featured ? "shadow-card" : "shadow-soft"}`}>
-              {p.featured && <span className="absolute -top-3 left-6 bg-blue px-2 py-0.5 text-[0.7rem] font-semibold text-on-accent">most students start here</span>}
-              <p className="text-[0.78rem] uppercase tracking-[0.08em] text-faint">{p.name}</p>
+              {p.featured && <span className="absolute -top-3 left-6 bg-blue px-2 py-0.5 text-[0.78rem] font-semibold text-on-accent">most students start here</span>}
+              <p className="text-[0.85rem] uppercase tracking-[0.08em] text-faint">{p.name}</p>
               <p className="mt-3 text-[2.4rem] font-semibold leading-none tracking-tight">
-                {p.price} <span className="text-[0.85rem] font-normal tracking-normal text-muted">{p.tag}</span>
+                {p.price} <span className="text-[0.89rem] font-normal tracking-normal text-muted">{p.tag}</span>
               </p>
               <p className="mt-3 font-sans text-muted">{p.body}</p>
               <ul className="mt-5 flex-1 space-y-2 font-sans text-[0.92rem]">

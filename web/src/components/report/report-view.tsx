@@ -22,9 +22,9 @@ export function Section({ n, title, id, children, note, reveal }: { n: string; t
   return (
     <section aria-labelledby={id} className={`border-t border-line pt-8 ${r.className}`} style={r.style}>
       <div className="mb-5 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <span className="text-[0.72rem] text-blue">{n}</span>
+        <span className="text-[0.8rem] text-blue">{n}</span>
         <h2 id={id} className="text-[1.25rem] font-semibold tracking-tight sm:text-[1.4rem]">{title}</h2>
-        {note && <span className="font-sans text-[0.85rem] text-faint">{note}</span>}
+        {note && <span className="font-sans text-[0.89rem] text-faint">{note}</span>}
       </div>
       {children}
     </section>
@@ -38,7 +38,7 @@ export function VerdictHero({ report, reveal }: { report: Report; reveal?: boole
     <div className={`relative overflow-hidden border border-line-strong bg-panel shadow-card`}>
       <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${t.bg}`} />
       <div className="p-5 pl-6 sm:p-8 sm:pl-10">
-        <div className="flex items-center justify-between gap-4 text-[0.72rem] uppercase tracking-[0.08em] text-faint">
+        <div className="flex items-center justify-between gap-4 text-[0.8rem] uppercase tracking-[0.08em] text-faint">
           <span>verdict · {report.mode === "ai" ? "AI report" : "rules report"} · {report.days}-day budget</span>
           <span className={reveal ? "reveal" : ""}>
             <CatFace mood={VERDICT_MOOD[report.verdict]} blink className="text-[1.1rem] normal-case tracking-normal sm:text-[1.5rem]" />
@@ -51,7 +51,7 @@ export function VerdictHero({ report, reveal }: { report: Report; reveal?: boole
         </h1>
         <p className={`mt-4 max-w-2xl font-sans text-[1.05rem] leading-relaxed text-ink sm:text-[1.15rem] ${reveal ? "reveal-lcp" : ""}`}>{verdictLine(report)}</p>
         {report.verdict !== "insufficient_evidence" && <OddsHint odds={odds(report.stats)} />}
-        <p className="mt-4 text-[0.74rem] text-faint">
+        <p className="mt-4 text-[0.82rem] text-faint">
           Based on {report.stats.outsider_attempts} pull requests from outside contributors · data until {shortDate(report.evidence_until)} · checked{" "}
           <time dateTime={report.generated_at} suppressHydrationWarning>{timeAgo(report.generated_at)}</time>
         </p>
@@ -70,7 +70,7 @@ function OddsHint({ odds: o }: { odds: Odds | null }) {
   if (!o) return null;
   const t = TONE[ODDS_TONE[o]];
   return (
-    <p className="mt-3 flex flex-wrap items-baseline gap-x-2 text-[0.82rem]">
+    <p className="mt-3 flex flex-wrap items-baseline gap-x-2 text-[0.88rem]">
       <span className="text-faint">Your odds:</span>
       <strong className={`font-semibold ${t.text}`}>{o}</strong>
       <span className="font-sans text-muted">· {ODDS_TEXT[o]}</span>
@@ -103,9 +103,9 @@ export function ReportView({
 
         {report.summary && (
           <div className="border-l-2 border-blue pl-5">
-            <p className="text-[0.72rem] uppercase tracking-[0.08em] text-blue">AI explanation</p>
+            <p className="text-[0.8rem] uppercase tracking-[0.08em] text-blue">AI explanation</p>
             <p className="mt-2 font-sans text-[1.02rem] leading-relaxed text-ink">{report.summary}</p>
-            <p className="mt-2 text-[0.72rem] text-faint">
+            <p className="mt-2 text-[0.8rem] text-faint">
               Written by {report.cost?.model ?? "a model"} from the evidence below. The verdict itself comes from fixed rules.
             </p>
           </div>
@@ -145,7 +145,7 @@ export function ReportView({
           </ul>
           {report.unknowns.length > 0 && (
             <div className="mt-5">
-              <p className="text-[0.72rem] uppercase tracking-[0.08em] text-faint">What Holt couldn&apos;t check</p>
+              <p className="text-[0.8rem] uppercase tracking-[0.08em] text-faint">What Holt couldn&apos;t check</p>
               <ul className="mt-2 space-y-1.5 font-sans text-[0.92rem] text-muted">
                 {report.unknowns.map((u) => (
                   <li key={u} className="flex gap-3">
@@ -171,12 +171,12 @@ export function ReportView({
       <aside className="hidden lg:block" aria-label="Share and more">
         <div className="sticky top-24 space-y-4">
           <div className="panel p-4">
-            <p className="mb-3 text-[0.72rem] uppercase tracking-[0.08em] text-faint">Share this report</p>
+            <p className="mb-3 text-[0.8rem] uppercase tracking-[0.08em] text-faint">Share this report</p>
             <ShareBar url={url} text={shareText} />
           </div>
           {report.mode === "rules" && <UpgradeCard repo={repo} signedIn={signedIn} />}
           <BadgeSnippet repo={repo} />
-          <Link href={`/compare?repos=${repo}`} className="block text-[0.8rem] text-muted hover:text-ink">
+          <Link href={`/compare?repos=${repo}`} className="block text-[0.87rem] text-muted hover:text-ink">
             [ compare with another repo → ]
           </Link>
         </div>

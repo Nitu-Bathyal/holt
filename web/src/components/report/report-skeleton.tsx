@@ -108,7 +108,7 @@ export function ReportHeaderSkeleton() {
           <Skeleton className="h-2.5 w-52" />
         </span>
       </div>
-      <div aria-hidden="true" className="grid w-full grid-cols-2 border border-line-strong text-center text-[0.78rem] text-faint sm:w-auto">
+      <div aria-hidden="true" className="grid w-full grid-cols-2 border border-line-strong text-center text-[0.85rem] text-faint sm:w-auto">
         <span className="inline-flex min-h-11 items-center justify-center px-3">free report</span>
         <span className="inline-flex min-h-11 items-center justify-center px-3">AI report ✦</span>
       </div>

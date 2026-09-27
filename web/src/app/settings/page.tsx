@@ -72,19 +72,19 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
         {m && (
           <section aria-labelledby="quota" className="mt-8 grid gap-px border border-line bg-line shadow-soft sm:grid-cols-2">
             <div className="bg-panel p-5">
-              <p id="quota" className="text-[0.72rem] uppercase tracking-[0.08em] text-faint">Plan</p>
+              <p id="quota" className="text-[0.8rem] uppercase tracking-[0.08em] text-faint">Plan</p>
               <p className="mt-1 text-[1.3rem] font-semibold capitalize">{m.plan}</p>
-              <Link href="/pricing" className="text-[0.78rem] text-green hover:underline">see plans →</Link>
+              <Link href="/pricing" className="text-[0.85rem] text-green hover:underline">see plans →</Link>
             </div>
             <div className="bg-panel p-5">
-              <p className="text-[0.72rem] uppercase tracking-[0.08em] text-faint">Free AI reports this month</p>
+              <p className="text-[0.8rem] uppercase tracking-[0.08em] text-faint">Free AI reports this month</p>
               <p className="mt-1 text-[1.3rem] font-semibold">
                 {Math.max(0, m.quota.ai_limit - m.quota.ai_used)} <span className="text-[0.9rem] font-normal text-muted">of {m.quota.ai_limit} left</span>
               </p>
               <div className="meter mt-2" aria-hidden="true">
                 <span className="bg-blue" style={{ width: `${m.quota.ai_limit ? Math.min(100, ((m.quota.ai_limit - m.quota.ai_used) / m.quota.ai_limit) * 100) : 0}%` }} />
               </div>
-              <p className="mt-2 text-[0.75rem] text-faint">Resets {shortDate(m.quota.resets_at)}</p>
+              <p className="mt-2 text-[0.82rem] text-faint">Resets {shortDate(m.quota.resets_at)}</p>
             </div>
           </section>
         )}
@@ -98,7 +98,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
 
           {byok && (
             <div className="mt-6 flex flex-wrap items-center justify-between gap-3 border border-green/50 bg-green/10 p-4">
-              <div className="text-[0.85rem]">
+              <div className="text-[0.89rem]">
                 <p className="text-green">● key saved for {current?.name ?? byok.provider}</p>
                 <p className="mt-1 text-muted">model: <code className="text-ink">{byok.model}</code> · key: <span aria-label="hidden">••••••••••••</span></p>
               </div>
@@ -110,10 +110,10 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
 
           <form action={saveKey} className="mt-6 space-y-5">
             <fieldset>
-              <legend className="mb-2 text-[0.78rem] uppercase tracking-[0.08em] text-faint">Provider</legend>
+              <legend className="mb-2 text-[0.85rem] uppercase tracking-[0.08em] text-faint">Provider</legend>
               <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
                 {PROVIDERS.map((p) => (
-                  <label key={p.id} className="flex min-h-12 cursor-pointer items-center justify-center border border-line-strong px-2 text-center text-[0.82rem] transition-colors hover:border-blue has-[:checked]:border-blue has-[:checked]:bg-blue/10 has-[:checked]:text-blue has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-blue">
+                  <label key={p.id} className="flex min-h-12 cursor-pointer items-center justify-center border border-line-strong px-2 text-center text-[0.88rem] transition-colors hover:border-blue has-[:checked]:border-blue has-[:checked]:bg-blue has-[:checked]:font-semibold has-[:checked]:text-on-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-blue">
                     <input type="radio" name="provider" value={p.id} required defaultChecked={(byok?.provider ?? "openrouter") === p.id} className="sr-only" />
                     {p.name}
                   </label>
@@ -121,7 +121,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
               </div>
             </fieldset>
             <div>
-              <label htmlFor="api_key" className="mb-2 block text-[0.78rem] uppercase tracking-[0.08em] text-faint">API key</label>
+              <label htmlFor="api_key" className="mb-2 block text-[0.85rem] uppercase tracking-[0.08em] text-faint">API key</label>
               <input
                 id="api_key"
                 name="api_key"
@@ -133,7 +133,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
                 placeholder={byok ? "paste a new key to replace the saved one" : "sk-…"}
                 className="h-12 w-full border border-line-strong bg-bg px-3 text-[0.9rem] outline-none focus:border-blue"
               />
-              <p className="mt-1.5 font-sans text-[0.8rem] text-faint">
+              <p className="mt-1.5 font-sans text-[0.87rem] text-faint">
                 Get one from{" "}
                 {PROVIDERS.map((p, i) => (
                   <span key={p.id}>
@@ -144,7 +144,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
               </p>
             </div>
             <div>
-              <label htmlFor="model" className="mb-2 block text-[0.78rem] uppercase tracking-[0.08em] text-faint">Model <span className="normal-case tracking-normal">(optional)</span></label>
+              <label htmlFor="model" className="mb-2 block text-[0.85rem] uppercase tracking-[0.08em] text-faint">Model <span className="normal-case tracking-normal">(optional)</span></label>
               <input
                 id="model"
                 name="model"
