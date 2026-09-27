@@ -91,6 +91,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/feedback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Post Feedback */
+        post: operations["post_feedback_v1_feedback_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/find": {
         parameters: {
             query?: never;
@@ -354,6 +371,50 @@ export interface components {
             url: string;
             /** Value */
             value: string | null;
+        };
+        /** FeedbackIn */
+        FeedbackIn: {
+            /**
+             * Days
+             * @default 7
+             */
+            days: number;
+            /** Generated At */
+            generated_at: string;
+            /**
+             * Mode
+             * @default rules
+             * @enum {string}
+             */
+            mode: "rules" | "ai";
+            /** Reason */
+            reason?: string | null;
+            /** Repo */
+            repo: string;
+            /**
+             * Vote
+             * @enum {string}
+             */
+            vote: "up" | "down";
+        };
+        /**
+         * FeedbackOut
+         * @description The answer as saved, with the verdict of the report it is about.
+         */
+        FeedbackOut: {
+            /** Generated At */
+            generated_at: string;
+            /** Reason */
+            reason: string | null;
+            /** Repo */
+            repo: string;
+            /** Verdict */
+            verdict: string;
+            /**
+             * Vote
+             * @enum {string}
+             */
+            vote: "up" | "down";
         };
         /** FindDone */
         FindDone: {
@@ -698,6 +759,8 @@ export type Credits = components['schemas']['Credits'];
 export type Error = components['schemas']['Error'];
 export type ErrorBody = components['schemas']['ErrorBody'];
 export type EvidenceItem = components['schemas']['EvidenceItem'];
+export type FeedbackIn = components['schemas']['FeedbackIn'];
+export type FeedbackOut = components['schemas']['FeedbackOut'];
 export type FindDone = components['schemas']['FindDone'];
 export type FindIn = components['schemas']['FindIn'];
 export type FindJobStatus = components['schemas']['FindJobStatus'];
@@ -891,6 +954,43 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    post_feedback_v1_feedback_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FeedbackIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FeedbackOut"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

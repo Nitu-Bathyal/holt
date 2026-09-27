@@ -13,6 +13,7 @@ import { ShareBar } from "./share-bar";
 import { StatsGrid } from "./stats-grid";
 import { TONE, TONE_MOOD } from "./tone";
 import { UpgradeCard } from "./upgrade-card";
+import { VerdictFeedback } from "./verdict-feedback";
 
 /** Delay for a part of the report that fades in when an analysis finishes on the page. */
 const step = (reveal: boolean | undefined, ms: number) =>
@@ -155,6 +156,8 @@ export function ReportView({
             </div>
           )}
         </Section>
+
+        <VerdictFeedback report={report} />
 
         <Section n="05" id="evidence" title="The evidence" note="every claim links to GitHub" reveal={reveal ? 280 : undefined}>
           <EvidenceList evidence={report.evidence} />

@@ -51,6 +51,7 @@ signed in:
   120/h). Viewing, reloading and sharing report pages can never use up work.
 
 `GET /v1/reports/…` reads only the cache and is not rate limited.
+`POST /v1/feedback` has a small bucket of its own (see Feedback).
 
 ## Repo identifiers
 
@@ -225,6 +226,26 @@ is ever due. Spending, claiming and refunds are atomic on the server.
 
 Plans and payments are not implemented yet; `plan` is set manually in the DB
 for now.
+
+### Feedback: "Was this verdict right?"
+- `POST /v1/feedback` body `{"repo": "owner/repo", "mode": "rules"|"ai", "days": 7,
+  "generated_at": "<the report's generated_at>", "vote": "up"|"down", "reason": "…"|null}`
+  → `200 {"repo", "generated_at", "verdict", "vote", "reason"}`.
+- Anonymous or signed in. The person is `X-Holt-User` when present, else
+  `X-Holt-Client-Ip` (required then; 400 `invalid_request` without it). The
+  server stores a salted hash of the IP, never the IP itself.
+- `generated_at` (with repo, mode and days) names the exact report version on
+  screen; `404 not_found` if the server has no such report. The stored verdict
+  is that report's, not anything the browser sends.
+- One answer per person per report version: answering again replaces the
+  vote and reason (a missing or blank `reason` clears it). Reasons are trimmed
+  to 500 characters.
+- Its own hourly limit, separate from work and read: 30 answers per IP
+  anonymously, 120 per user; over it, 429 `rate_limited`.
+- For the engine's golden set, `python -m holt_server.feedback export
+  [--format csv|json] [--out FILE] [--since YYYY-MM-DD]` writes every answer
+  with the report's key numbers and a pseudonymous voter id (no user ids or IP
+  hashes). There is no HTTP export.
 
 ## Public proxy for the browser extension (implemented by `web/`)
 
