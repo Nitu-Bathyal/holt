@@ -235,9 +235,9 @@ fail() {   # record a failed attempt; don't retry the same inputs until somethin
 # The policy pages' contact details come from ~/.config/holt/secrets.env
 # (CONTACT_EMAIL, CONTACT_CITY), the same file production reads, so staging
 # shows what production will. Only these two keys and the STAGING_* ones
-# below are taken from it: the rest of that file is production's. A missing
-# contact value fails the build here instead of shipping the literal
-# placeholders.
+# below (and STAGING_CF_ACCESS_* for the smoke run) are taken from it: the
+# rest of that file is production's. A missing contact value fails the build
+# here instead of shipping the literal placeholders.
 SECRETS="${HOLT_SECRETS_FILE:-$HOME/.config/holt/secrets.env}"
 secret() {   # secret KEY: the value of KEY=value in $SECRETS, else empty
     [[ -f "$SECRETS" ]] || return 0
@@ -344,15 +344,28 @@ PY
     write_build_json live "live" "$preview_sha" || true
 }
 
+# Behind Cloudflare Access, the smoke run gets through with a service token:
+# STAGING_CF_ACCESS_CLIENT_ID/SECRET from $SECRETS, passed to that one command
+# only and never logged. e2e/ trades it for Access's cookie on $STAGING_HOST
+# alone (e2e/README.md). Without both keys the run is the same as before.
 E2E="$SRC/e2e"
 if [[ -f "$E2E/package.json" && "${HOLT_STAGE_SMOKE:-1}" == 1 ]]; then
     slog="$STATE/logs/smoke-$(date -u +%Y%m%dT%H%M%SZ).log"
+    cf_id="$(secret STAGING_CF_ACCESS_CLIENT_ID)"
+    cf_secret="$(secret STAGING_CF_ACCESS_CLIENT_SECRET)"
+    if [[ -n "$cf_id" && -n "$cf_secret" ]]; then
+        log "smoke: through Cloudflare Access with the service token"
+    else
+        [[ -n "$cf_id$cf_secret" ]] && log "smoke: no Cloudflare Access token (STAGING_CF_ACCESS_CLIENT_ID and STAGING_CF_ACCESS_CLIENT_SECRET are needed together)"
+        cf_id="" cf_secret=""
+    fi
     write_smoke running "running the smoke tests"
     if ! (cd "$E2E" && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 npm ci --no-audit --no-fund) >"$slog" 2>&1; then
         write_smoke failed "couldn't install the smoke tests (npm ci); see $slog"
     else
         report="$RUN/smoke.json"
         if (cd "$E2E" && PLAYWRIGHT_JSON_OUTPUT_NAME="$report" BASE_URL="$SITE" \
+                STAGING_CF_ACCESS_CLIENT_ID="$cf_id" STAGING_CF_ACCESS_CLIENT_SECRET="$cf_secret" \
                 timeout 900 npx playwright test --workers=1 --reporter=json) >>"$slog" 2>&1; then
             write_smoke passed "all smoke tests passed" "$report"
         elif [[ -s "$report" ]]; then

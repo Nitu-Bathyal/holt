@@ -56,9 +56,10 @@ printf 200
     "npm": """#!/bin/sh
 exit 0
 """,
-    # The smoke run: keep the URL it was pointed at.
+    # The smoke run: keep the URL it was pointed at, and the Access token it was given.
     "npx": """#!/bin/sh
 printf '%s' "$BASE_URL" > "$STUB_DIR/base_url"
+printf '%s\n%s\n' "${STAGING_CF_ACCESS_CLIENT_ID-(unset)}" "${STAGING_CF_ACCESS_CLIENT_SECRET-(unset)}" > "$STUB_DIR/cf_access"
 exit 0
 """,
 }
@@ -105,7 +106,7 @@ class Sandbox:
         self.secrets.write_text("".join(f"{k}={v}\n" for k, v in lines.items()), encoding="utf-8")
 
     def run(self, **env: str) -> subprocess.CompletedProcess[str]:
-        for name in ("compose.env", "base_url", "calls"):
+        for name in ("compose.env", "base_url", "calls", "cf_access"):
             (self.stub_dir / name).unlink(missing_ok=True)
         return subprocess.run(
             ["bash", str(STAGING / "preview.sh")],
@@ -137,6 +138,12 @@ class Sandbox:
     @property
     def base_url(self) -> str:
         return (self.stub_dir / "base_url").read_text(encoding="utf-8")
+
+    @property
+    def cf_access(self) -> tuple[str, str]:
+        """The Cloudflare Access id and secret the smoke run was given."""
+        id_, secret = (self.stub_dir / "cf_access").read_text(encoding="utf-8").splitlines()
+        return id_, secret
 
 
 @pytest.fixture
@@ -253,6 +260,33 @@ def test_secrets_are_not_logged(sandbox: Sandbox) -> None:
     assert done.returncode == 0, done.stdout + done.stderr
     assert "GitHub sign-in: on" in done.stdout
     assert "stage-secret" not in done.stdout + done.stderr
+
+
+def test_the_smoke_run_gets_the_access_token_and_nothing_logs_it(sandbox: Sandbox) -> None:
+    sandbox.write_secrets(STAGING_CF_ACCESS_CLIENT_ID="cf-id.access", STAGING_CF_ACCESS_CLIENT_SECRET="cf-secret-value")
+    done = sandbox.run()
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert sandbox.cf_access == ("cf-id.access", "cf-secret-value")
+    assert "through Cloudflare Access" in done.stdout
+    logs = "".join(p.read_text(encoding="utf-8") for p in (sandbox.state / "logs").glob("*.log"))
+    for value in ("cf-id.access", "cf-secret-value"):
+        assert value not in done.stdout + done.stderr + logs
+    # The compose stack never sees it; only the smoke run does.
+    assert "cf-secret" not in (sandbox.stub_dir / "compose.env").read_text(encoding="utf-8")
+
+
+def test_without_the_access_token_the_smoke_run_is_unchanged(sandbox: Sandbox) -> None:
+    done = sandbox.run()
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert sandbox.cf_access == ("", "")
+    assert "Cloudflare Access" not in done.stdout
+
+    # Half a token is no token, and says so.
+    sandbox.write_secrets(STAGING_CF_ACCESS_CLIENT_ID="cf-id.access")
+    done = sandbox.run()
+    assert sandbox.cf_access == ("", "")
+    assert "needed together" in done.stdout
+    assert "cf-id.access" not in done.stdout + done.stderr
 
 
 def test_the_old_address_is_gone_from_what_runs_staging() -> None:

@@ -102,6 +102,46 @@ Then `FORCE=1 ~/.local/share/holt-staging/bin/preview.sh`; its log says
   the environment of whoever runs the script are overridden.
 - Accounts made on staging live in staging's database only.
 
+### Behind Cloudflare Access
+
+When staging sits behind Cloudflare Access (email one-time PIN for people),
+the smoke run after each build still needs to get in. Give it a **service
+token**:
+
+1. Zero Trust → Access → Service credentials → Service Tokens → create one
+   (for example `holt-staging-smoke`).
+2. In the staging application, add a policy with the action **Service
+   Auth** that includes that token.
+3. Put the token in `~/.config/holt/secrets.env`:
+
+   ```sh
+   STAGING_CF_ACCESS_CLIENT_ID=<client id>.access
+   STAGING_CF_ACCESS_CLIENT_SECRET=<client secret>
+   ```
+
+`preview.sh` reads the two keys on every run and hands them to the smoke
+run's command only (never to the stack, never to a log). Its log says
+`smoke: through Cloudflare Access with the service token`, or, with just
+one of the two keys, that both are needed. Without them the smoke run is
+the same as before (and, once Access is on, fails on the login page).
+
+`e2e/` doesn't send the token on page loads: it trades it once for Access's
+session cookie and gives the browser only that cookie, set for the staging
+host alone, so neither the token nor the cookie reaches github.com or any
+other site. See [`e2e/README.md`](../e2e/README.md).
+
+The `curl` checks above then need the token too:
+
+```sh
+export $(grep '^STAGING_CF_ACCESS_' ~/.config/holt/secrets.env | xargs)   # just these two keys
+curl -s -H "CF-Access-Client-Id: $STAGING_CF_ACCESS_CLIENT_ID" \
+        -H "CF-Access-Client-Secret: $STAGING_CF_ACCESS_CLIENT_SECRET" \
+        https://staging.githolt.com/__build | jq -r .site
+```
+
+`preview.sh` runs from the copy `install.sh` made, so after changing it
+re-run `deploy/staging/install.sh`.
+
 ### How it runs
 
 - Everything lives in `~/.local/share/holt-staging/`: `src/` is a dedicated
