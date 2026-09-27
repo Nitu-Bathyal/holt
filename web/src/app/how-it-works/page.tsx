@@ -21,12 +21,6 @@ const TRACE = [
   { i: "E", name: "narrate", copy: "Explain an answer it cannot change", owner: "model" },
 ];
 
-const SCORES = [
-  { label: "README + metadata prompt", v: 0.21 },
-  { label: "Same evidence, one prompt", v: 0.32 },
-  { label: "Holt", v: 0.63, holt: true },
-];
-
 function Block({ n, label, title, children, alt = false }: { n: string; label: string; title: string; children: React.ReactNode; alt?: boolean }) {
   return (
     <section className={`border-t border-line py-16 md:py-20 ${alt ? "bg-section-alt" : ""}`}>
@@ -77,23 +71,10 @@ export default function HowItWorks() {
 
         <Block alt n="02" label="confidence" title="Useful enough to guide you. Open enough to question.">
           <p className="prose-sans mb-10 max-w-[740px] text-[1.05rem]">
-            We tested Holt against what later happened to real contributors, using outcomes it couldn&apos;t see while
-            analysing. The bars show how well each approach agreed with those outcomes, where 0 is a coin flip and 1 is
-            perfect. Holt did far better than asking a model to judge from the README, but no score makes every call
-            right, so the evidence stays visible.
+            No score makes every call right, so the evidence behind the verdict stays visible: open any citation and
+            check it against the real GitHub thread yourself.
           </p>
-          <div className="border-t border-line-strong">
-            {SCORES.map((s) => (
-              <div key={s.label} className="grid grid-cols-[1fr_54px] items-center gap-3 border-b border-line py-5 md:grid-cols-[230px_1fr_64px] md:gap-6">
-                <span className={`text-[0.8rem] ${s.holt ? "text-green" : "text-muted"}`}>{s.label}</span>
-                <div className="meter col-span-2 row-start-2 md:col-span-1 md:row-start-auto" aria-hidden="true">
-                  <span className={s.holt ? "bg-green" : "bg-faint"} style={{ width: `${s.v * 100}%` }} />
-                </div>
-                <span className={`text-right ${s.holt ? "text-green" : "text-muted"}`}>{s.v.toFixed(2)}</span>
-              </div>
-            ))}
-          </div>
-          <ul className="mt-10 grid border-y border-line md:grid-cols-3">
+          <ul className="grid border-y border-line md:grid-cols-3">
             {[
               ["55 / 55", "verdicts identical across three runs"],
               ["read-only", "never writes to GitHub"],
@@ -106,8 +87,9 @@ export default function HowItWorks() {
             ))}
           </ul>
           <p className="mt-6 text-[0.82rem] text-faint">
-            Score: Matthews correlation, out of sample.{" "}
-            <a className="text-link" href={`${GITHUB_REPO_URL}/blob/main/docs/research/REPRODUCTION.md`}>[ reproduce the result → ]</a>{" "}
+            Holt started as a benchmarked competition entry; that evaluation is now historical research, not a live
+            product claim.{" "}
+            <a className="text-link" href={`${GITHUB_REPO_URL}/blob/main/docs/research/REPRODUCTION.md`}>[ reproduce it → ]</a>{" "}
             <a className="text-link" href={`${GITHUB_REPO_URL}/blob/main/docs/research/EVALUATION.md`}>[ full evaluation ]</a>
           </p>
         </Block>
