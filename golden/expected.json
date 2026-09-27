@@ -347,26 +347,27 @@
   ]
  },
  "facebook/fresco": {
-  "verdict": "insufficient_evidence",
+  "verdict": "viable",
   "rules": [
-   "few_merges"
+   "merges",
+   "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 199,
-   "outsider_merged": 1,
-   "outsider_ignored": 117,
-   "median_first_response_hours": 126.3,
+   "outsider_threads": 134,
+   "outsider_merged": 66,
+   "outsider_ignored": 47,
+   "median_first_response_hours": 107.8,
    "bot_share": 0.005,
    "distinct_outsider_authors": 106,
-   "distinct_merged_authors": 1,
-   "reviewed_share": 0.0,
-   "merge_rate": 0.005,
-   "merged_files_median": 2.0,
+   "distinct_merged_authors": 66,
+   "reviewed_share": 0.44,
+   "merge_rate": 0.493,
+   "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
-   "merged_with_files": 2,
+   "merged_with_files": 100,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 81
+   "outsider_answered": 53
   },
   "history": [
    {
@@ -374,6 +375,12 @@
     "from": null,
     "to": "insufficient_evidence",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "insufficient_evidence",
+    "to": "viable",
+    "reason": "ticket 05: PRs landed off the merge button (merge bot / internal sync commit, Gerrit, GitGitGadget, maintainer 'Merged to' comments) now count as merged; outside work visibly lands here"
    }
   ]
  },
@@ -442,26 +449,27 @@
   ]
  },
  "git/git": {
-  "verdict": "not_viable",
+  "verdict": "viable",
   "rules": [
-   "ignored"
+   "merges",
+   "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 199,
-   "outsider_merged": 0,
-   "outsider_ignored": 145,
-   "median_first_response_hours": 4.3,
+   "outsider_threads": 166,
+   "outsider_merged": 9,
+   "outsider_ignored": 106,
+   "median_first_response_hours": 4.4,
    "bot_share": 0.005,
    "distinct_outsider_authors": 102,
-   "distinct_merged_authors": 0,
-   "reviewed_share": null,
-   "merge_rate": 0.0,
-   "merged_files_median": null,
-   "merged_dirs_median": null,
-   "merged_with_files": 0,
+   "distinct_merged_authors": 9,
+   "reviewed_share": 0.125,
+   "merge_rate": 0.054,
+   "merged_files_median": 1.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 16,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 54
+   "outsider_answered": 53
   },
   "history": [
    {
@@ -473,32 +481,33 @@
    {
     "date": "2026-09-27",
     "from": "insufficient_evidence",
-    "to": "not_viable",
-    "reason": "ticket 04: plain comments from regulars no longer count as maintainer replies (only formal reviews do). git/git reviews on its mailing list and mirror/busybox is a read-only mirror, so nobody who maintains them answers on GitHub."
+    "to": "viable",
+    "reason": "ticket 05: PRs landed off the merge button (merge bot / internal sync commit, Gerrit, GitGitGadget, maintainer 'Merged to' comments) now count as merged; outside work visibly lands here"
    }
   ]
  },
  "golang/go": {
-  "verdict": "not_viable",
+  "verdict": "viable",
   "rules": [
    "awaiting_reply",
-   "ignored"
+   "merges",
+   "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 200,
-   "outsider_merged": 0,
-   "outsider_ignored": 195,
+   "outsider_threads": 147,
+   "outsider_merged": 33,
+   "outsider_ignored": 110,
    "median_first_response_hours": 0.3,
    "bot_share": 0.0,
    "distinct_outsider_authors": 114,
-   "distinct_merged_authors": 0,
-   "reviewed_share": null,
-   "merge_rate": 0.0,
-   "merged_files_median": null,
-   "merged_dirs_median": null,
-   "merged_with_files": 0,
-   "outsider_awaiting_reply": 3,
+   "distinct_merged_authors": 33,
+   "reviewed_share": 0.0,
+   "merge_rate": 0.224,
+   "merged_files_median": 2.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 52,
+   "outsider_awaiting_reply": 2,
    "outsider_answered": 2
   },
   "history": [
@@ -507,6 +516,12 @@
     "from": null,
     "to": "not_viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "not_viable",
+    "to": "viable",
+    "reason": "ticket 05: PRs landed off the merge button (merge bot / internal sync commit, Gerrit, GitGitGadget, maintainer 'Merged to' comments) now count as merged; outside work visibly lands here"
    }
   ]
  },
@@ -642,22 +657,23 @@
   "verdict": "viable",
   "rules": [
    "awaiting_reply",
-   "merges"
+   "merges",
+   "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
    "outsider_threads": 131,
-   "outsider_merged": 49,
+   "outsider_merged": 50,
    "outsider_ignored": 19,
    "median_first_response_hours": 21.8,
    "bot_share": 0.0,
    "distinct_outsider_authors": 112,
-   "distinct_merged_authors": 49,
-   "reviewed_share": 0.642,
-   "merge_rate": 0.374,
-   "merged_files_median": 1,
-   "merged_dirs_median": 1,
-   "merged_with_files": 105,
+   "distinct_merged_authors": 50,
+   "reviewed_share": 0.645,
+   "merge_rate": 0.382,
+   "merged_files_median": 1.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 106,
    "outsider_awaiting_reply": 1,
    "outsider_answered": 93
   },
@@ -769,24 +785,25 @@
  "material-components/material-components-android": {
   "verdict": "viable",
   "rules": [
-   "merges"
+   "merges",
+   "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 185,
-   "outsider_merged": 2,
-   "outsider_ignored": 105,
-   "median_first_response_hours": 124.7,
+   "outsider_threads": 52,
+   "outsider_merged": 13,
+   "outsider_ignored": 24,
+   "median_first_response_hours": 100.5,
    "bot_share": 0.075,
    "distinct_outsider_authors": 35,
-   "distinct_merged_authors": 2,
-   "reviewed_share": 0.5,
-   "merge_rate": 0.011,
-   "merged_files_median": 10.5,
-   "merged_dirs_median": 1.5,
-   "merged_with_files": 2,
+   "distinct_merged_authors": 13,
+   "reviewed_share": 0.477,
+   "merge_rate": 0.25,
+   "merged_files_median": 1.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 86,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 79
+   "outsider_answered": 23
   },
   "history": [
    {
@@ -864,7 +881,7 @@
  "mirror/busybox": {
   "verdict": "not_viable",
   "rules": [
-   "ignored"
+   "elsewhere"
   ],
   "numbers": {
    "total_threads": 26,
@@ -894,7 +911,7 @@
     "date": "2026-09-27",
     "from": "insufficient_evidence",
     "to": "not_viable",
-    "reason": "ticket 04: plain comments from regulars no longer count as maintainer replies (only formal reviews do). git/git reviews on its mailing list and mirror/busybox is a read-only mirror, so nobody who maintains them answers on GitHub."
+    "reason": "ticket 05: mirror detection in rules mode (GitHub's mirror flag, or a self-described mirror where nothing from outside landed)"
    }
   ]
  },
@@ -931,7 +948,7 @@
     "date": "2026-09-27",
     "from": "viable",
     "to": "insufficient_evidence",
-    "reason": "ticket 04: only maintainer replies count. The first reply on these came from CLAassistant within a minute; without it the maintainers' own replies decide."
+    "reason": "ticket 04: only maintainer replies count. monica's first reply came from CLAassistant within a minute; without it the maintainers' own replies decide."
    }
   ]
  },
@@ -968,27 +985,28 @@
   ]
  },
  "openssl/openssl": {
-  "verdict": "insufficient_evidence",
+  "verdict": "viable",
   "rules": [
    "awaiting_reply",
-   "few_merges"
+   "merges",
+   "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 196,
-   "outsider_merged": 1,
-   "outsider_ignored": 48,
-   "median_first_response_hours": 3.9,
+   "outsider_threads": 104,
+   "outsider_merged": 24,
+   "outsider_ignored": 38,
+   "median_first_response_hours": 7.6,
    "bot_share": 0.005,
    "distinct_outsider_authors": 64,
-   "distinct_merged_authors": 1,
+   "distinct_merged_authors": 24,
    "reviewed_share": 1.0,
-   "merge_rate": 0.005,
-   "merged_files_median": 15.0,
-   "merged_dirs_median": 5.5,
-   "merged_with_files": 2,
-   "outsider_awaiting_reply": 4,
-   "outsider_answered": 144
+   "merge_rate": 0.231,
+   "merged_files_median": 2.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 74,
+   "outsider_awaiting_reply": 3,
+   "outsider_answered": 63
   },
   "history": [
    {
@@ -996,6 +1014,12 @@
     "from": null,
     "to": "insufficient_evidence",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "insufficient_evidence",
+    "to": "viable",
+    "reason": "ticket 05: PRs landed off the merge button (merge bot / internal sync commit, Gerrit, GitGitGadget, maintainer 'Merged to' comments) now count as merged; outside work visibly lands here"
    }
   ]
  },
@@ -1157,27 +1181,28 @@
   ]
  },
  "pytorch/pytorch": {
-  "verdict": "insufficient_evidence",
+  "verdict": "viable",
   "rules": [
    "awaiting_reply",
-   "few_merges"
+   "merges",
+   "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 195,
-   "outsider_merged": 1,
-   "outsider_ignored": 94,
-   "median_first_response_hours": 4.6,
+   "outsider_threads": 138,
+   "outsider_merged": 22,
+   "outsider_ignored": 63,
+   "median_first_response_hours": 7.9,
    "bot_share": 0.015,
    "distinct_outsider_authors": 92,
-   "distinct_merged_authors": 1,
-   "reviewed_share": 0.0,
-   "merge_rate": 0.005,
-   "merged_files_median": 3.0,
-   "merged_dirs_median": 1.5,
-   "merged_with_files": 2,
-   "outsider_awaiting_reply": 38,
-   "outsider_answered": 62
+   "distinct_merged_authors": 22,
+   "reviewed_share": 0.762,
+   "merge_rate": 0.159,
+   "merged_files_median": 2.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 42,
+   "outsider_awaiting_reply": 31,
+   "outsider_answered": 39
   },
   "history": [
    {
@@ -1185,31 +1210,38 @@
     "from": null,
     "to": "insufficient_evidence",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "insufficient_evidence",
+    "to": "viable",
+    "reason": "ticket 05: PRs landed off the merge button (merge bot / internal sync commit, Gerrit, GitGitGadget, maintainer 'Merged to' comments) now count as merged; outside work visibly lands here"
    }
   ]
  },
  "react/react-native": {
-  "verdict": "not_viable",
+  "verdict": "viable",
   "rules": [
    "awaiting_reply",
-   "ignored"
+   "merges",
+   "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 192,
-   "outsider_merged": 0,
-   "outsider_ignored": 154,
-   "median_first_response_hours": 21.0,
+   "outsider_threads": 74,
+   "outsider_merged": 33,
+   "outsider_ignored": 28,
+   "median_first_response_hours": 16.1,
    "bot_share": 0.04,
    "distinct_outsider_authors": 55,
-   "distinct_merged_authors": 0,
-   "reviewed_share": null,
-   "merge_rate": 0.0,
-   "merged_files_median": null,
-   "merged_dirs_median": null,
-   "merged_with_files": 0,
+   "distinct_merged_authors": 33,
+   "reviewed_share": 0.138,
+   "merge_rate": 0.446,
+   "merged_files_median": 4.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 116,
    "outsider_awaiting_reply": 6,
-   "outsider_answered": 32
+   "outsider_answered": 16
   },
   "history": [
    {
@@ -1217,6 +1249,12 @@
     "from": null,
     "to": "not_viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "not_viable",
+    "to": "viable",
+    "reason": "ticket 05: PRs landed off the merge button (merge bot / internal sync commit, Gerrit, GitGitGadget, maintainer 'Merged to' comments) now count as merged; outside work visibly lands here"
    }
   ]
  },
@@ -1315,26 +1353,27 @@
   ]
  },
  "semgrep/semgrep": {
-  "verdict": "not_viable",
+  "verdict": "insufficient_evidence",
   "rules": [
-   "ignored"
+   "few_merges",
+   "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 47,
-   "outsider_merged": 0,
-   "outsider_ignored": 37,
+   "outsider_threads": 44,
+   "outsider_merged": 1,
+   "outsider_ignored": 36,
    "median_first_response_hours": 87.4,
    "bot_share": 0.765,
    "distinct_outsider_authors": 34,
-   "distinct_merged_authors": 0,
-   "reviewed_share": 0.959,
-   "merge_rate": 0.0,
-   "merged_files_median": 20,
-   "merged_dirs_median": 5,
-   "merged_with_files": 47,
+   "distinct_merged_authors": 1,
+   "reviewed_share": 0.96,
+   "merge_rate": 0.023,
+   "merged_files_median": 20.0,
+   "merged_dirs_median": 5.0,
+   "merged_with_files": 48,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 10
+   "outsider_answered": 8
   },
   "history": [
    {
@@ -1342,12 +1381,6 @@
     "from": null,
     "to": "insufficient_evidence",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
-   },
-   {
-    "date": "2026-09-27",
-    "from": "insufficient_evidence",
-    "to": "not_viable",
-    "reason": "ticket 04: only maintainer replies count. The first reply on these came from CLAassistant within a minute; without it the maintainers' own replies decide."
    }
   ]
  },
@@ -1460,7 +1493,7 @@
    "bot_share": 0.005,
    "distinct_outsider_authors": 25,
    "distinct_merged_authors": 16,
-   "reviewed_share": 0.305,
+   "reviewed_share": 0.309,
    "merge_rate": 0.552,
    "merged_files_median": 2.0,
    "merged_dirs_median": 1.0,
@@ -1540,26 +1573,26 @@
   ]
  },
  "v8/v8": {
-  "verdict": "insufficient_evidence",
+  "verdict": "not_viable",
   "rules": [
-   "few_merges"
+   "elsewhere"
   ],
   "numbers": {
    "total_threads": 166,
-   "outsider_threads": 109,
-   "outsider_merged": 0,
-   "outsider_ignored": 72,
-   "median_first_response_hours": 2.8,
+   "outsider_threads": 103,
+   "outsider_merged": 1,
+   "outsider_ignored": 68,
+   "median_first_response_hours": 2.2,
    "bot_share": 0.343,
    "distinct_outsider_authors": 89,
-   "distinct_merged_authors": 0,
-   "reviewed_share": null,
-   "merge_rate": 0.0,
-   "merged_files_median": null,
-   "merged_dirs_median": null,
-   "merged_with_files": 0,
+   "distinct_merged_authors": 1,
+   "reviewed_share": 0.5,
+   "merge_rate": 0.01,
+   "merged_files_median": 1.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 2,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 37
+   "outsider_answered": 34
   },
   "history": [
    {
@@ -1567,6 +1600,12 @@
     "from": null,
     "to": "insufficient_evidence",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "insufficient_evidence",
+    "to": "not_viable",
+    "reason": "ticket 05: mirror detection in rules mode (GitHub's mirror flag, or a self-described mirror where nothing from outside landed)"
    }
   ]
  },

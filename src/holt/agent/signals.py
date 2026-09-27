@@ -19,7 +19,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
-from holt.agent import replies
+from holt.agent import landing_detection, replies
 from holt.types import EvidenceRecord
 
 
@@ -67,6 +67,10 @@ class Thread:
     deletions: int = 0
     merged: bool = False
     closed_unmerged: bool = False
+    # Set when GitHub shows the pull request closed but it landed another way
+    # (a merge bot, an internal sync, Gerrit, a maintainer's push): a VIA key
+    # from landing_detection. `merged` is then True as well.
+    landed_via: str | None = None
     responses: list[tuple[object, str, str]] = field(default_factory=list)
     # (when, who) for each maintainer reply; see agent/replies.py. None on a
     # thread built by hand, where every non-author response counts.
@@ -127,6 +131,7 @@ def build_threads(records: Iterable[EvidenceRecord]) -> dict[str, Thread]:
                 thread.responses.append(
                     (r.timestamp, r.payload.get("author", ""), r.payload.get("body") or "")
                 )
+    landing_detection.mark_landed(threads, records)
     replies.attach(threads, records)
     return threads
 
