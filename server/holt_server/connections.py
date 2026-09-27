@@ -134,6 +134,8 @@ async def connect_github(data: ConnectIn, request: Request,
     at = now()
     async with svc.db.session() as s:
         conn = await s.get(GitHubConnection, user_id)
+        # A new connection has no pull requests stored yet: nothing to recount.
+        recount = conn is not None and conn.stats_opt_out != data.stats_opt_out
         if conn is None:
             conn = GitHubConnection(user_id=user_id, github_id=data.github_id,
                                     connected_at=at, adult_confirmed_at=at)
@@ -142,10 +144,10 @@ async def connect_github(data: ConnectIn, request: Request,
             conn.github_id, conn.connected_at = data.github_id, at
         conn.login = login
         conn.adult_confirmed_at = at
-        if conn.stats_opt_out != data.stats_opt_out:
-            conn.stats_opt_out = data.stats_opt_out
-            await repo_stats.rebuild(s, await repo_stats.user_repos(s, user_id))
+        conn.stats_opt_out = data.stats_opt_out
         try:
+            if recount:
+                await repo_stats.rebuild(s, await repo_stats.user_repos(s, user_id))
             await s.commit()
         except IntegrityError as exc:
             # Someone else connected this GitHub account a moment ago, or this
