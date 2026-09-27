@@ -54,3 +54,44 @@ jobs:
         run: |
           PYTHONPATH=. uv run holt analyze NixOS/nixpkgs --replay
           PYTHONPATH=. uv run python eval/harness.py --replay --run-tag run1
+
+  # The server's tests again, on the database production runs. The app's
+  # startup migrates it from empty, so the migrations are exercised too.
+  server-postgres:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: holt
+          POSTGRES_PASSWORD: holt
+          POSTGRES_DB: holt
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U holt -d holt"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+    env:
+      HOLT_TEST_DATABASE_URL: postgresql+asyncpg://holt:holt@127.0.0.1:5432/holt
+      DATABASE_URL: postgresql+asyncpg://holt:holt@127.0.0.1:5432/holt
+    steps:
+      - uses: actions/checkout@v7.0.1
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.1.0
+        with:
+          enable-cache: true
+
+      - name: Install
+        run: uv sync
+
+      - name: Migrate an empty database and compare it with the models
+        working-directory: server
+        run: |
+          uv run python -m holt_server.migrate
+          uv run python -m holt_server.migrate check
+
+      - name: Server tests
+        run: uv run pytest -rs server/tests

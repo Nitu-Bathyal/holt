@@ -9,7 +9,7 @@
 #
 # One run: fetch origin, check the commit is on main, wait until the box is
 # quiet, build the server and web images one at a time (tagged with the
-# commit SHA), run the one-shot web migration, swap the containers behind the
+# commit SHA), run the one-shot web and server migrations, swap the containers behind the
 # edge (its port never moves), health-check on 127.0.0.1, and roll back to
 # the previous tag if that fails. Then prune only this stack's images.
 #
@@ -168,9 +168,10 @@ else
 fi
 
 # --- migrate, swap, check, roll back ------------------------------------------------
-log "starting db and applying web migrations"
+log "starting db and applying web and server migrations"
 compose up -d db >>"$dlog" 2>&1
 compose --profile migrate run --rm migrate-web >>"$dlog" 2>&1 || die "web migration failed; see $dlog"
+compose --profile migrate run --rm migrate-server >>"$dlog" 2>&1 || die "server migration failed; see $dlog"
 
 write_build_json deploying "starting $short"
 log "swapping containers to $short (previous: ${current:0:7})"
