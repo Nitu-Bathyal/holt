@@ -19,6 +19,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 
+from holt.agent import replies
 from holt.types import EvidenceRecord
 
 
@@ -67,18 +68,18 @@ class Thread:
     merged: bool = False
     closed_unmerged: bool = False
     responses: list[tuple[object, str, str]] = field(default_factory=list)
+    # (when, who) for each maintainer reply; see agent/replies.py. None on a
+    # thread built by hand, where every non-author response counts.
+    replies: list[tuple[object, str]] | None = None
 
     @property
     def first_response_hours(self) -> float | None:
-        """Hours until someone other than the author first said anything."""
-        others = [t for t, who, _ in self.responses if who != self.author]
-        if not others:
-            return None
-        return (min(others) - self.opened_at).total_seconds() / 3600
+        """Hours until a maintainer first replied."""
+        return replies.first_reply_hours(self)
 
     @property
     def engaged(self) -> bool:
-        return any(who != self.author for _, who, _ in self.responses)
+        return replies.answered(self)
 
     def awaiting_reply(self, as_of: datetime | None, min_age_hours: float) -> bool:
         """Still open, unanswered, and too new for that silence to mean anything."""
@@ -126,6 +127,7 @@ def build_threads(records: Iterable[EvidenceRecord]) -> dict[str, Thread]:
                 thread.responses.append(
                     (r.timestamp, r.payload.get("author", ""), r.payload.get("body") or "")
                 )
+    replies.attach(threads, records)
     return threads
 
 

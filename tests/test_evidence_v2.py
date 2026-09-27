@@ -40,6 +40,10 @@ V2_KEYS = {
     "closed_by", "closed_by_is_bot", "closer", "name_with_owner", "parent",
     "mirror_url", "release_count",
 }
+# Read by the engine already. Ticket 04: who counts as a maintainer replying
+# (agent/replies.py).
+READ_V2_KEYS = {"author_association", "merged_by", "merged_by_is_bot",
+                "closed_by", "closed_by_is_bot"}
 
 
 def records(slug: str) -> dict[str, EvidenceRecord]:
@@ -300,14 +304,16 @@ class _Serve(EvidenceProvider):
                                   "openssl/openssl", "pallets/flask"])
 def test_the_verdict_does_not_read_v2_fields_yet(slug):
     # Same evidence with and without the v2 additions: identical numbers,
-    # verdict and reasons. The rules start reading them in later tickets.
+    # verdict and reasons. The rules start reading them in later tickets;
+    # READ_V2_KEYS are the ones already read, and are kept on both sides.
     as_of = RECORDED_AT
     meta = RECORDED[slug]["meta"]
     v2 = [gql.project_repo_meta(slug, meta), *gql.project_releases(slug, meta),
           *gql.project(slug, RECORDED[slug]["pull_requests"])]
+    unread = V2_KEYS - READ_V2_KEYS
     v1 = [
         EvidenceRecord(r.evidence_id, r.source, r.url, r.timestamp,
-                       {k: v for k, v in r.payload.items() if k not in V2_KEYS})
+                       {k: v for k, v in r.payload.items() if k not in unread})
         for r in v2 if ":reference:" not in r.evidence_id and ":release:" not in r.evidence_id
     ]
     s2, s1 = compute(build_threads(v2), as_of), compute(build_threads(v1), as_of)

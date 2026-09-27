@@ -8,18 +8,18 @@
    "total_threads": 200,
    "outsider_threads": 105,
    "outsider_merged": 60,
-   "outsider_ignored": 27,
-   "median_first_response_hours": 6.0,
+   "outsider_ignored": 39,
+   "median_first_response_hours": 47.3,
    "bot_share": 0.055,
    "distinct_outsider_authors": 95,
    "distinct_merged_authors": 60,
-   "reviewed_share": 0.815,
+   "reviewed_share": 0.638,
    "merge_rate": 0.571,
    "merged_files_median": 3,
    "merged_dirs_median": 1,
    "merged_with_files": 129,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 68
+   "outsider_answered": 39
   },
   "history": [
    {
@@ -40,18 +40,18 @@
    "total_threads": 200,
    "outsider_threads": 169,
    "outsider_merged": 81,
-   "outsider_ignored": 34,
-   "median_first_response_hours": 21.9,
+   "outsider_ignored": 38,
+   "median_first_response_hours": 21.4,
    "bot_share": 0.03,
    "distinct_outsider_authors": 142,
    "distinct_merged_authors": 81,
-   "reviewed_share": 0.848,
+   "reviewed_share": 0.838,
    "merge_rate": 0.479,
    "merged_files_median": 1,
    "merged_dirs_median": 1,
    "merged_with_files": 99,
    "outsider_awaiting_reply": 2,
-   "outsider_answered": 128
+   "outsider_answered": 124
   },
   "history": [
    {
@@ -103,18 +103,18 @@
    "total_threads": 200,
    "outsider_threads": 94,
    "outsider_merged": 18,
-   "outsider_ignored": 4,
-   "median_first_response_hours": 3.5,
+   "outsider_ignored": 5,
+   "median_first_response_hours": 4.9,
    "bot_share": 0.065,
    "distinct_outsider_authors": 72,
    "distinct_merged_authors": 18,
-   "reviewed_share": 0.708,
+   "reviewed_share": 0.514,
    "merge_rate": 0.191,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 72,
-   "outsider_awaiting_reply": 47,
-   "outsider_answered": 39
+   "outsider_awaiting_reply": 56,
+   "outsider_answered": 27
   },
   "history": [
    {
@@ -199,17 +199,17 @@
    "outsider_threads": 61,
    "outsider_merged": 18,
    "outsider_ignored": 31,
-   "median_first_response_hours": 9.3,
+   "median_first_response_hours": 7.9,
    "bot_share": 0.075,
    "distinct_outsider_authors": 37,
    "distinct_merged_authors": 18,
-   "reviewed_share": 0.626,
+   "reviewed_share": 0.617,
    "merge_rate": 0.295,
    "merged_files_median": 3,
    "merged_dirs_median": 1,
    "merged_with_files": 107,
    "outsider_awaiting_reply": 1,
-   "outsider_answered": 25
+   "outsider_answered": 24
   },
   "history": [
    {
@@ -229,18 +229,18 @@
    "total_threads": 200,
    "outsider_threads": 121,
    "outsider_merged": 25,
-   "outsider_ignored": 70,
-   "median_first_response_hours": 49.6,
+   "outsider_ignored": 80,
+   "median_first_response_hours": 56.6,
    "bot_share": 0.16,
    "distinct_outsider_authors": 91,
    "distinct_merged_authors": 25,
-   "reviewed_share": 0.569,
+   "reviewed_share": 0.542,
    "merge_rate": 0.207,
    "merged_files_median": 2.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 72,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 49
+   "outsider_answered": 38
   },
   "history": [
    {
@@ -292,18 +292,18 @@
    "total_threads": 200,
    "outsider_threads": 135,
    "outsider_merged": 25,
-   "outsider_ignored": 58,
-   "median_first_response_hours": 50.4,
+   "outsider_ignored": 74,
+   "median_first_response_hours": 24.4,
    "bot_share": 0.095,
    "distinct_outsider_authors": 105,
    "distinct_merged_authors": 25,
-   "reviewed_share": 0.667,
+   "reviewed_share": 0.617,
    "merge_rate": 0.185,
    "merged_files_median": 2.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 60,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 77
+   "outsider_answered": 60
   },
   "history": [
    {
@@ -324,18 +324,18 @@
    "total_threads": 200,
    "outsider_threads": 169,
    "outsider_merged": 4,
-   "outsider_ignored": 129,
-   "median_first_response_hours": 35.3,
+   "outsider_ignored": 160,
+   "median_first_response_hours": 71.6,
    "bot_share": 0.01,
    "distinct_outsider_authors": 119,
    "distinct_merged_authors": 4,
-   "reviewed_share": 0.36,
+   "reviewed_share": 0.28,
    "merge_rate": 0.024,
    "merged_files_median": 10,
    "merged_dirs_median": 1,
    "merged_with_files": 25,
    "outsider_awaiting_reply": 1,
-   "outsider_answered": 38
+   "outsider_answered": 7
   },
   "history": [
    {
@@ -355,8 +355,8 @@
    "total_threads": 200,
    "outsider_threads": 199,
    "outsider_merged": 1,
-   "outsider_ignored": 97,
-   "median_first_response_hours": 102.6,
+   "outsider_ignored": 106,
+   "median_first_response_hours": 80.8,
    "bot_share": 0.005,
    "distinct_outsider_authors": 106,
    "distinct_merged_authors": 1,
@@ -366,7 +366,7 @@
    "merged_dirs_median": 1.0,
    "merged_with_files": 2,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 101
+   "outsider_answered": 92
   },
   "history": [
    {
@@ -386,8 +386,8 @@
    "total_threads": 200,
    "outsider_threads": 130,
    "outsider_merged": 3,
-   "outsider_ignored": 33,
-   "median_first_response_hours": 9.4,
+   "outsider_ignored": 40,
+   "median_first_response_hours": 8.6,
    "bot_share": 0.155,
    "distinct_outsider_authors": 86,
    "distinct_merged_authors": 3,
@@ -397,7 +397,7 @@
    "merged_dirs_median": 1.0,
    "merged_with_files": 68,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 96
+   "outsider_answered": 89
   },
   "history": [
    {
@@ -450,8 +450,8 @@
    "total_threads": 200,
    "outsider_threads": 199,
    "outsider_merged": 0,
-   "outsider_ignored": 121,
-   "median_first_response_hours": 10.0,
+   "outsider_ignored": 138,
+   "median_first_response_hours": 5.0,
    "bot_share": 0.005,
    "distinct_outsider_authors": 102,
    "distinct_merged_authors": 0,
@@ -461,7 +461,7 @@
    "merged_dirs_median": null,
    "merged_with_files": 0,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 78
+   "outsider_answered": 61
   },
   "history": [
    {
@@ -482,8 +482,8 @@
    "total_threads": 200,
    "outsider_threads": 200,
    "outsider_merged": 0,
-   "outsider_ignored": 191,
-   "median_first_response_hours": 7.8,
+   "outsider_ignored": 195,
+   "median_first_response_hours": 0.3,
    "bot_share": 0.0,
    "distinct_outsider_authors": 114,
    "distinct_merged_authors": 0,
@@ -493,7 +493,7 @@
    "merged_dirs_median": null,
    "merged_with_files": 0,
    "outsider_awaiting_reply": 3,
-   "outsider_answered": 6
+   "outsider_answered": 2
   },
   "history": [
    {
@@ -546,18 +546,18 @@
    "total_threads": 200,
    "outsider_threads": 113,
    "outsider_merged": 41,
-   "outsider_ignored": 33,
-   "median_first_response_hours": 5.7,
+   "outsider_ignored": 36,
+   "median_first_response_hours": 7.1,
    "bot_share": 0.095,
    "distinct_outsider_authors": 94,
    "distinct_merged_authors": 41,
-   "reviewed_share": 0.99,
+   "reviewed_share": 0.97,
    "merge_rate": 0.363,
    "merged_files_median": 2.0,
    "merged_dirs_median": 2.0,
    "merged_with_files": 100,
-   "outsider_awaiting_reply": 20,
-   "outsider_answered": 59
+   "outsider_awaiting_reply": 21,
+   "outsider_answered": 54
   },
   "history": [
    {
@@ -578,8 +578,8 @@
    "total_threads": 200,
    "outsider_threads": 199,
    "outsider_merged": 0,
-   "outsider_ignored": 188,
-   "median_first_response_hours": 182.0,
+   "outsider_ignored": 197,
+   "median_first_response_hours": null,
    "bot_share": 0.005,
    "distinct_outsider_authors": 132,
    "distinct_merged_authors": 0,
@@ -589,7 +589,7 @@
    "merged_dirs_median": null,
    "merged_with_files": 0,
    "outsider_awaiting_reply": 2,
-   "outsider_answered": 9
+   "outsider_answered": 0
   },
   "history": [
    {
@@ -642,8 +642,8 @@
    "total_threads": 200,
    "outsider_threads": 131,
    "outsider_merged": 49,
-   "outsider_ignored": 16,
-   "median_first_response_hours": 18.2,
+   "outsider_ignored": 19,
+   "median_first_response_hours": 17.9,
    "bot_share": 0.0,
    "distinct_outsider_authors": 112,
    "distinct_merged_authors": 49,
@@ -653,7 +653,7 @@
    "merged_dirs_median": 1,
    "merged_with_files": 105,
    "outsider_awaiting_reply": 1,
-   "outsider_answered": 100
+   "outsider_answered": 97
   },
   "history": [
    {
@@ -674,18 +674,18 @@
    "total_threads": 200,
    "outsider_threads": 58,
    "outsider_merged": 2,
-   "outsider_ignored": 42,
-   "median_first_response_hours": 3.0,
+   "outsider_ignored": 43,
+   "median_first_response_hours": 2.0,
    "bot_share": 0.095,
    "distinct_outsider_authors": 43,
    "distinct_merged_authors": 2,
-   "reviewed_share": 0.153,
+   "reviewed_share": 0.093,
    "merge_rate": 0.034,
    "merged_files_median": 6.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 118,
    "outsider_awaiting_reply": 1,
-   "outsider_answered": 15
+   "outsider_answered": 13
   },
   "history": [
    {
@@ -706,18 +706,18 @@
    "total_threads": 200,
    "outsider_threads": 136,
    "outsider_merged": 25,
-   "outsider_ignored": 48,
-   "median_first_response_hours": 9.5,
+   "outsider_ignored": 61,
+   "median_first_response_hours": 15.4,
    "bot_share": 0.0,
    "distinct_outsider_authors": 105,
    "distinct_merged_authors": 25,
-   "reviewed_share": 1.0,
+   "reviewed_share": 0.964,
    "merge_rate": 0.184,
    "merged_files_median": 5.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 56,
    "outsider_awaiting_reply": 6,
-   "outsider_answered": 82
+   "outsider_answered": 67
   },
   "history": [
    {
@@ -738,18 +738,18 @@
    "total_threads": 200,
    "outsider_threads": 150,
    "outsider_merged": 28,
-   "outsider_ignored": 24,
-   "median_first_response_hours": 2.8,
+   "outsider_ignored": 33,
+   "median_first_response_hours": 2.5,
    "bot_share": 0.005,
    "distinct_outsider_authors": 115,
    "distinct_merged_authors": 28,
-   "reviewed_share": 0.448,
+   "reviewed_share": 0.276,
    "merge_rate": 0.187,
    "merged_files_median": 2.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 58,
-   "outsider_awaiting_reply": 50,
-   "outsider_answered": 65
+   "outsider_awaiting_reply": 64,
+   "outsider_answered": 36
   },
   "history": [
    {
@@ -769,8 +769,8 @@
    "total_threads": 200,
    "outsider_threads": 185,
    "outsider_merged": 2,
-   "outsider_ignored": 101,
-   "median_first_response_hours": 119.3,
+   "outsider_ignored": 105,
+   "median_first_response_hours": 124.7,
    "bot_share": 0.075,
    "distinct_outsider_authors": 35,
    "distinct_merged_authors": 2,
@@ -780,7 +780,7 @@
    "merged_dirs_median": 1.5,
    "merged_with_files": 2,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 83
+   "outsider_answered": 79
   },
   "history": [
    {
@@ -806,7 +806,7 @@
    "bot_share": 0.055,
    "distinct_outsider_authors": 53,
    "distinct_merged_authors": 31,
-   "reviewed_share": 1.0,
+   "reviewed_share": 0.992,
    "merge_rate": 0.463,
    "merged_files_median": 4.0,
    "merged_dirs_median": 1.0,
@@ -865,8 +865,8 @@
    "total_threads": 26,
    "outsider_threads": 26,
    "outsider_merged": 0,
-   "outsider_ignored": 17,
-   "median_first_response_hours": 6563.9,
+   "outsider_ignored": 18,
+   "median_first_response_hours": 19374.2,
    "bot_share": 0.0,
    "distinct_outsider_authors": 25,
    "distinct_merged_authors": 0,
@@ -876,7 +876,7 @@
    "merged_dirs_median": null,
    "merged_with_files": 0,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 9
+   "outsider_answered": 8
   },
   "history": [
    {
@@ -888,16 +888,16 @@
   ]
  },
  "monicahq/monica": {
-  "verdict": "viable",
+  "verdict": "insufficient_evidence",
   "rules": [
-   "merges"
+   "slow"
   ],
   "numbers": {
    "total_threads": 200,
    "outsider_threads": 47,
    "outsider_merged": 4,
-   "outsider_ignored": 5,
-   "median_first_response_hours": 0.0,
+   "outsider_ignored": 41,
+   "median_first_response_hours": 368.7,
    "bot_share": 0.655,
    "distinct_outsider_authors": 40,
    "distinct_merged_authors": 4,
@@ -907,7 +907,7 @@
    "merged_dirs_median": 1.0,
    "merged_with_files": 34,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 40
+   "outsider_answered": 4
   },
   "history": [
    {
@@ -915,6 +915,12 @@
     "from": null,
     "to": "viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "viable",
+    "to": "insufficient_evidence",
+    "reason": "ticket 04: only maintainer replies count. The first reply on these came from CLAassistant within a minute; without it the maintainers' own replies decide."
    }
   ]
  },
@@ -928,8 +934,8 @@
    "total_threads": 200,
    "outsider_threads": 151,
    "outsider_merged": 7,
-   "outsider_ignored": 120,
-   "median_first_response_hours": 18.5,
+   "outsider_ignored": 127,
+   "median_first_response_hours": 17.1,
    "bot_share": 0.0,
    "distinct_outsider_authors": 103,
    "distinct_merged_authors": 7,
@@ -938,8 +944,8 @@
    "merged_files_median": 4,
    "merged_dirs_median": 1,
    "merged_with_files": 39,
-   "outsider_awaiting_reply": 11,
-   "outsider_answered": 20
+   "outsider_awaiting_reply": 12,
+   "outsider_answered": 12
   },
   "history": [
    {
@@ -960,7 +966,7 @@
    "total_threads": 200,
    "outsider_threads": 196,
    "outsider_merged": 1,
-   "outsider_ignored": 43,
+   "outsider_ignored": 47,
    "median_first_response_hours": 4.1,
    "bot_share": 0.005,
    "distinct_outsider_authors": 64,
@@ -971,7 +977,7 @@
    "merged_dirs_median": 5.5,
    "merged_with_files": 2,
    "outsider_awaiting_reply": 4,
-   "outsider_answered": 149
+   "outsider_answered": 145
   },
   "history": [
    {
@@ -991,7 +997,7 @@
    "total_threads": 200,
    "outsider_threads": 152,
    "outsider_merged": 7,
-   "outsider_ignored": 64,
+   "outsider_ignored": 65,
    "median_first_response_hours": 1.4,
    "bot_share": 0.005,
    "distinct_outsider_authors": 137,
@@ -1002,7 +1008,7 @@
    "merged_dirs_median": 3,
    "merged_with_files": 49,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 87
+   "outsider_answered": 86
   },
   "history": [
    {
@@ -1027,7 +1033,7 @@
    "bot_share": 0.0,
    "distinct_outsider_authors": 164,
    "distinct_merged_authors": 5,
-   "reviewed_share": 0.267,
+   "reviewed_share": 0.2,
    "merge_rate": 0.026,
    "merged_files_median": 3,
    "merged_dirs_median": 2,
@@ -1058,7 +1064,7 @@
    "bot_share": 0.63,
    "distinct_outsider_authors": 35,
    "distinct_merged_authors": 9,
-   "reviewed_share": 0.034,
+   "reviewed_share": 0.027,
    "merge_rate": 0.257,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
@@ -1117,18 +1123,18 @@
    "total_threads": 200,
    "outsider_threads": 91,
    "outsider_merged": 18,
-   "outsider_ignored": 30,
-   "median_first_response_hours": 3.2,
+   "outsider_ignored": 33,
+   "median_first_response_hours": 3.1,
    "bot_share": 0.0,
    "distinct_outsider_authors": 54,
    "distinct_merged_authors": 18,
-   "reviewed_share": 0.33,
+   "reviewed_share": 0.299,
    "merge_rate": 0.198,
    "merged_files_median": 3,
    "merged_dirs_median": 2,
    "merged_with_files": 97,
-   "outsider_awaiting_reply": 14,
-   "outsider_answered": 42
+   "outsider_awaiting_reply": 19,
+   "outsider_answered": 33
   },
   "history": [
    {
@@ -1149,18 +1155,18 @@
    "total_threads": 200,
    "outsider_threads": 195,
    "outsider_merged": 1,
-   "outsider_ignored": 83,
-   "median_first_response_hours": 4.3,
+   "outsider_ignored": 89,
+   "median_first_response_hours": 6.1,
    "bot_share": 0.015,
    "distinct_outsider_authors": 92,
    "distinct_merged_authors": 1,
-   "reviewed_share": 1.0,
+   "reviewed_share": 0.0,
    "merge_rate": 0.005,
    "merged_files_median": 3.0,
    "merged_dirs_median": 1.5,
    "merged_with_files": 2,
    "outsider_awaiting_reply": 38,
-   "outsider_answered": 74
+   "outsider_answered": 67
   },
   "history": [
    {
@@ -1181,8 +1187,8 @@
    "total_threads": 200,
    "outsider_threads": 192,
    "outsider_merged": 0,
-   "outsider_ignored": 148,
-   "median_first_response_hours": 24.3,
+   "outsider_ignored": 151,
+   "median_first_response_hours": 24.2,
    "bot_share": 0.04,
    "distinct_outsider_authors": 55,
    "distinct_merged_authors": 0,
@@ -1192,7 +1198,7 @@
    "merged_dirs_median": null,
    "merged_with_files": 0,
    "outsider_awaiting_reply": 6,
-   "outsider_answered": 38
+   "outsider_answered": 35
   },
   "history": [
    {
@@ -1212,18 +1218,18 @@
    "total_threads": 200,
    "outsider_threads": 191,
    "outsider_merged": 30,
-   "outsider_ignored": 115,
-   "median_first_response_hours": 545.5,
+   "outsider_ignored": 151,
+   "median_first_response_hours": 186.5,
    "bot_share": 0.03,
    "distinct_outsider_authors": 165,
    "distinct_merged_authors": 30,
-   "reviewed_share": 0.526,
+   "reviewed_share": 0.342,
    "merge_rate": 0.157,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 38,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 64
+   "outsider_answered": 22
   },
   "history": [
    {
@@ -1244,18 +1250,18 @@
    "total_threads": 200,
    "outsider_threads": 123,
    "outsider_merged": 43,
-   "outsider_ignored": 18,
-   "median_first_response_hours": 0.7,
+   "outsider_ignored": 22,
+   "median_first_response_hours": 0.8,
    "bot_share": 0.0,
    "distinct_outsider_authors": 91,
    "distinct_merged_authors": 43,
-   "reviewed_share": 0.964,
+   "reviewed_share": 0.726,
    "merge_rate": 0.35,
    "merged_files_median": 4.5,
    "merged_dirs_median": 1.0,
    "merged_with_files": 84,
-   "outsider_awaiting_reply": 6,
-   "outsider_answered": 97
+   "outsider_awaiting_reply": 7,
+   "outsider_answered": 86
   },
   "history": [
    {
@@ -1275,18 +1281,18 @@
    "total_threads": 200,
    "outsider_threads": 167,
    "outsider_merged": 47,
-   "outsider_ignored": 57,
+   "outsider_ignored": 58,
    "median_first_response_hours": 61.8,
    "bot_share": 0.005,
    "distinct_outsider_authors": 141,
    "distinct_merged_authors": 47,
-   "reviewed_share": 0.915,
+   "reviewed_share": 0.901,
    "merge_rate": 0.281,
    "merged_files_median": 1,
    "merged_dirs_median": 1,
    "merged_with_files": 71,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 108
+   "outsider_answered": 106
   },
   "history": [
    {
@@ -1298,26 +1304,26 @@
   ]
  },
  "semgrep/semgrep": {
-  "verdict": "insufficient_evidence",
+  "verdict": "not_viable",
   "rules": [
-   "few_merges"
+   "ignored"
   ],
   "numbers": {
    "total_threads": 200,
    "outsider_threads": 47,
    "outsider_merged": 0,
-   "outsider_ignored": 19,
-   "median_first_response_hours": 0.0,
+   "outsider_ignored": 37,
+   "median_first_response_hours": 87.4,
    "bot_share": 0.765,
    "distinct_outsider_authors": 34,
    "distinct_merged_authors": 0,
-   "reviewed_share": 1.0,
+   "reviewed_share": 0.959,
    "merge_rate": 0.0,
    "merged_files_median": 20,
    "merged_dirs_median": 5,
    "merged_with_files": 47,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 28
+   "outsider_answered": 10
   },
   "history": [
    {
@@ -1325,6 +1331,12 @@
     "from": null,
     "to": "insufficient_evidence",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "insufficient_evidence",
+    "to": "not_viable",
+    "reason": "ticket 04: only maintainer replies count. The first reply on these came from CLAassistant within a minute; without it the maintainers' own replies decide."
    }
   ]
  },
@@ -1338,8 +1350,8 @@
    "total_threads": 200,
    "outsider_threads": 87,
    "outsider_merged": 16,
-   "outsider_ignored": 61,
-   "median_first_response_hours": 17.4,
+   "outsider_ignored": 67,
+   "median_first_response_hours": 9.7,
    "bot_share": 0.125,
    "distinct_outsider_authors": 72,
    "distinct_merged_authors": 16,
@@ -1349,7 +1361,7 @@
    "merged_dirs_median": 2.0,
    "merged_with_files": 38,
    "outsider_awaiting_reply": 2,
-   "outsider_answered": 24
+   "outsider_answered": 18
   },
   "history": [
    {
@@ -1369,18 +1381,18 @@
    "total_threads": 200,
    "outsider_threads": 199,
    "outsider_merged": 7,
-   "outsider_ignored": 74,
-   "median_first_response_hours": 6.7,
+   "outsider_ignored": 114,
+   "median_first_response_hours": 4.4,
    "bot_share": 0.0,
    "distinct_outsider_authors": 173,
    "distinct_merged_authors": 7,
-   "reviewed_share": 0.25,
+   "reviewed_share": 0.125,
    "merge_rate": 0.035,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 8,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 120
+   "outsider_answered": 79
   },
   "history": [
    {
@@ -1401,18 +1413,18 @@
    "total_threads": 200,
    "outsider_threads": 38,
    "outsider_merged": 0,
-   "outsider_ignored": 3,
-   "median_first_response_hours": 17.8,
+   "outsider_ignored": 7,
+   "median_first_response_hours": 18.2,
    "bot_share": 0.81,
    "distinct_outsider_authors": 16,
    "distinct_merged_authors": 0,
-   "reviewed_share": 0.043,
+   "reviewed_share": 0.0,
    "merge_rate": 0.0,
    "merged_files_median": 2,
    "merged_dirs_median": 1,
    "merged_with_files": 23,
-   "outsider_awaiting_reply": 3,
-   "outsider_answered": 32
+   "outsider_awaiting_reply": 7,
+   "outsider_answered": 24
   },
   "history": [
    {
@@ -1463,8 +1475,8 @@
    "total_threads": 200,
    "outsider_threads": 29,
    "outsider_merged": 17,
-   "outsider_ignored": 3,
-   "median_first_response_hours": 0.2,
+   "outsider_ignored": 4,
+   "median_first_response_hours": 0.6,
    "bot_share": 0.005,
    "distinct_outsider_authors": 28,
    "distinct_merged_authors": 17,
@@ -1474,7 +1486,7 @@
    "merged_dirs_median": 1,
    "merged_with_files": 171,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 26
+   "outsider_answered": 25
   },
   "history": [
    {
@@ -1525,8 +1537,8 @@
    "total_threads": 166,
    "outsider_threads": 109,
    "outsider_merged": 0,
-   "outsider_ignored": 57,
-   "median_first_response_hours": 5.2,
+   "outsider_ignored": 66,
+   "median_first_response_hours": 5.1,
    "bot_share": 0.343,
    "distinct_outsider_authors": 89,
    "distinct_merged_authors": 0,
@@ -1536,7 +1548,7 @@
    "merged_dirs_median": null,
    "merged_with_files": 0,
    "outsider_awaiting_reply": 0,
-   "outsider_answered": 52
+   "outsider_answered": 43
   },
   "history": [
    {
@@ -1557,18 +1569,18 @@
    "total_threads": 200,
    "outsider_threads": 81,
    "outsider_merged": 14,
-   "outsider_ignored": 55,
-   "median_first_response_hours": 6.2,
+   "outsider_ignored": 56,
+   "median_first_response_hours": 6.1,
    "bot_share": 0.03,
    "distinct_outsider_authors": 43,
    "distinct_merged_authors": 14,
-   "reviewed_share": 0.97,
+   "reviewed_share": 0.879,
    "merge_rate": 0.173,
    "merged_files_median": 4.5,
    "merged_dirs_median": 1.0,
    "merged_with_files": 66,
-   "outsider_awaiting_reply": 6,
-   "outsider_answered": 20
+   "outsider_awaiting_reply": 7,
+   "outsider_answered": 17
   },
   "history": [
    {
@@ -1589,8 +1601,8 @@
    "total_threads": 200,
    "outsider_threads": 144,
    "outsider_merged": 7,
-   "outsider_ignored": 28,
-   "median_first_response_hours": 1.3,
+   "outsider_ignored": 32,
+   "median_first_response_hours": 1.9,
    "bot_share": 0.015,
    "distinct_outsider_authors": 94,
    "distinct_merged_authors": 7,
@@ -1599,8 +1611,8 @@
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 12,
-   "outsider_awaiting_reply": 26,
-   "outsider_answered": 90
+   "outsider_awaiting_reply": 28,
+   "outsider_answered": 84
   },
   "history": [
    {
