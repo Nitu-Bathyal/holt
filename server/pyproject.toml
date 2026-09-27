@@ -3,7 +3,7 @@ name = "holt-server"
 version = "0.1.0"
 description = "HTTP API behind the Holt web app. Wraps the holt-cli engine."
 requires-python = ">=3.11"
-license = "Apache-2.0"
+license = "AGPL-3.0-only"
 dependencies = [
     "holt-cli",
     "fastapi>=0.115",
