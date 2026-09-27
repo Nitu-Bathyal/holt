@@ -11,7 +11,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from holt.agent import landing, stages
+from holt.agent import landing, repo_kind_rules, stages
 from holt.agent.findings import Finding, Findings
 from holt.agent.signals import MIN_AGE_HOURS, Signals, build_threads, compute
 from holt.agent.verdict import classify as decide
@@ -275,8 +275,16 @@ def analyze_without_model(
         findings.add("is_archived", True, (meta.evidence_id,),
                      "GitHub reports this repository as archived")
 
+    # What Stage A would call a registry or a list, measured from the diffs
+    # outside contributors sent instead of asked of a model. The AI report
+    # still takes the model's word (see repo_kind_rules).
+    catalogue = repo_kind_rules.detect(records)
+    if catalogue is not None:
+        repo_kind_rules.add_finding(findings, catalogue)
+
     report("Applying the rules", 0.9)
     verdict, rules = decide(findings, signals, contributor_days)
+    rules = repo_kind_rules.explain(rules, catalogue)
 
     s = signals.as_dict()
     if signals.outsider_threads:
@@ -312,8 +320,9 @@ def analyze_without_model(
         bottom_line=f"{headline(verdict)}. " + deciding,
         limits=(
             "No model ran. This answer comes from counting the pull request "
-            "history, so it can't tell you what specific threads said, who was "
-            "welcoming, or what kind of project this is, and it cites no specific "
+            "history, so it can't tell you what specific threads said or who was "
+            "welcoming, and beyond spotting catalogues and lists it can't tell what "
+            "kind of project this is. It cites no specific "
             "threads, where a full AI report cites about 12. In our testing on "
             "repositories it hadn't seen, counting alone predicted how newcomers "
             "would fare a little less well than the full report (a score of 0.55 "
@@ -325,7 +334,8 @@ def analyze_without_model(
         as_of=as_of,
         landing=landing.render(landing.compute(threads)),
         claims=[
-            Claim(text=f"{i.field.replace('_', ' ')}: {i.value}", evidence_id=i.evidence_ids[0])
+            Claim(text=i.note if i.field == "repo_kind" else f"{i.field.replace('_', ' ')}: {i.value}",
+                  evidence_id=i.evidence_ids[0])
             for i in findings
         ],
         method=NO_MODEL_METHOD,
