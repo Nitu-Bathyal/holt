@@ -23,7 +23,7 @@ export default function PrivacyPage() {
           <li>If you sign in, we keep your name, email and profile picture from GitHub or Google, and your report history. Nothing else from either account. See <a href="#google" className="text-link">signing in with Google</a>.</li>
           <li>If you add your own AI key, it is encrypted and never shown back.</li>
           <li>Payments are handled by Razorpay (INR) and Dodo Payments (USD). Card details never reach us.</li>
-          <li>One cookie to keep you signed in, one setting for your theme. No trackers, no ads, no selling data.</li>
+          <li>One cookie to keep you signed in, one setting for your theme. Visits are counted by our own analytics, which sets no cookie and runs on our server. No ads, no third-party trackers, no selling data.</li>
           <li>Email us and we&rsquo;ll delete your account and everything tied to it.</li>
         </ul>
       </div>
@@ -39,6 +39,8 @@ export default function PrivacyPage() {
       <ul>
         <li><strong>Your IP address</strong> is used to rate-limit anonymous requests so one person can&rsquo;t overload the service. The limiter keeps it in memory for up to an hour. IP addresses also appear in ordinary server and proxy logs for a short time, which we use only to keep the site running.</li>
         <li><strong>The repositories you look up</strong> are recorded as analysis jobs. For visitors who aren&rsquo;t signed in, a job isn&rsquo;t tied to a person.</li>
+        <li><strong>A daily count of requests.</strong> Each time someone asks for a report or runs a search, we note the day, the repository and a scrambled code made from your IP address (or your account, if you&rsquo;re signed in). The code changes every day, so it tells us how many different people used Holt on a given day, but not who they are, and it can&rsquo;t link your visits across days. The IP address itself isn&rsquo;t stored.</li>
+        <li><strong>Visit counts</strong> from our own analytics. See <a href="#analytics" className="text-link">section 5</a>.</li>
       </ul>
 
       <h3>If you sign in</h3>
@@ -149,6 +151,18 @@ export default function PrivacyPage() {
       </ul>
       <p>That&rsquo;s all. There are no advertising cookies, no third-party analytics scripts, and no tracking pixels.</p>
 
+      <h3 id="analytics">How we count visits</h3>
+      <p>
+        We count visits with <strong>Umami</strong>, an open-source analytics tool that we run ourselves, on the same server as Holt. Its script is
+        loaded from githolt.com and sends its counts only to githolt.com. No analytics company receives anything.
+      </p>
+      <ul>
+        <li><strong>No cookies and nothing stored in your browser.</strong> That is why there is no cookie banner.</li>
+        <li><strong>What it records:</strong> the page you opened and the page you came from, your browser, operating system, device type, screen size and language, your country and approximate city (worked out from your IP address), and a few actions: pasting a repository, opening a report (with its verdict), opening a suggested starter issue, running a search and choosing a sign-in button.</li>
+        <li><strong>Not you.</strong> To tell one visitor from another, Umami combines your IP address and browser details into a scrambled code that changes every month. It doesn&rsquo;t store your IP address, and nothing it records is tied to your account, name or email.</li>
+        <li>If your browser blocks the script, Holt works exactly the same.</li>
+      </ul>
+
       <h2>6. Public GitHub data and reports</h2>
       <p>
         Holt fetches public repositories, pull requests and comments through GitHub&rsquo;s API. Reports are cached and shown publicly
@@ -186,6 +200,7 @@ export default function PrivacyPage() {
       <ul>
         <li>Account details, your history and your encrypted key: until you delete them or ask us to.</li>
         <li>Rate-limit records: up to an hour, in memory.</li>
+        <li>The daily request counts and the visit counts: kept to see how Holt is used over time. Neither contains your IP address or anything that identifies you.</li>
         <li>Cached reports: kept so public report pages load fast and so we can see how a project changes over time. They contain public GitHub data, not account data.</li>
         <li>Payment records: as long as Indian tax and accounting rules require.</li>
       </ul>

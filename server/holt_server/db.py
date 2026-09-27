@@ -221,3 +221,24 @@ class Feedback(Base):
         Index("ux_feedback_report_voter", "report_id", "voter", unique=True),
         Index("ix_feedback_updated", "updated_at"),
     )
+
+
+class Usage(Base):
+    """One row per analysis or search someone asked for, cached or not: the
+    product numbers (deploy/prod/stats.sh). `who` is a hash of the user id or
+    IP that changes every UTC day (usage.py), so it counts distinct people per
+    day but can't be traced back or linked across days. Nothing else about
+    the person is kept."""
+
+    __tablename__ = "usage_events"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    day: Mapped[str] = mapped_column(String(10))  # "YYYY-MM-DD", UTC
+    kind: Mapped[str] = mapped_column(String(10))  # analysis | find
+    who: Mapped[str] = mapped_column(String(32))
+    signed_in: Mapped[bool] = mapped_column(Boolean, default=False)
+    repo_key: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    mode: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+    __table_args__ = (Index("ix_usage_day_kind", "day", "kind"),)

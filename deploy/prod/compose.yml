@@ -163,5 +163,39 @@ services:
     mem_limit: 32m
     restart: unless-stopped
 
+  # Cookieless page and event counts (web/src/lib/analytics.ts). Opt-in
+  # profile: deploy/prod/umami.sh creates its database and role in `db`,
+  # writes UMAMI_* and COMPOSE_PROFILES=analytics to .env, starts it and
+  # replaces the default admin password. From then on every deploy's
+  # `compose up` keeps it running. The public only reaches /stats/script.js
+  # and /stats/api/send, through the edge; the dashboard (login required) is
+  # on 127.0.0.1:${HOLT_UMAMI_PORT:-8311} only, for an SSH tunnel.
+  umami:
+    image: ghcr.io/umami-software/umami:3.4.0
+    labels: *prod-label
+    profiles: [analytics]
+    environment:
+      # Its own role and database in the same Postgres: no second server to
+      # run, and the role can't read Holt's tables.
+      DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD:-}@db:5432/umami
+      APP_SECRET: ${UMAMI_APP_SECRET:-}
+      DISABLE_TELEMETRY: "1"
+      DISABLE_UPDATES: "1"
+      # The edge forwards Cloudflare's header untouched.
+      CLIENT_IP_HEADER: cf-connecting-ip
+      NODE_OPTIONS: --max-old-space-size=192
+    ports:
+      - "127.0.0.1:${HOLT_UMAMI_PORT:-8311}:3000"
+    depends_on:
+      db: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/heartbeat >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    mem_limit: 320m
+    restart: unless-stopped
+
 volumes:
   pgdata:

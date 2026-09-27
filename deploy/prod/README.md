@@ -19,6 +19,8 @@ is the public route ([TUNNEL.md](TUNNEL.md)). It is built **only from
 | `edge.conf` | nginx: keeps the port across deploys, `/__build`, `www` → apex redirect, SSE-friendly proxy. |
 | `migrate-web.sh`, `initdb/` | Auth.js tables migration (one-shot `migrate-web` service) and the `holt_web` database. The API's own migrations run in the one-shot `migrate-server` service. |
 | `TUNNEL.md` | Steps for the user to route githolt.com here. |
+| `umami.sh` | One-time: the analytics service (Umami): its database and role, `.env` keys, first start, admin password. See [Analytics](#analytics). |
+| `stats.sh` | The product numbers from Holt's own database, per day. Read-only, no personal data. |
 
 State lives in `~/.local/share/holt-prod/` (outside every checkout, so
 removing a worktree can't delete secrets): `.env`, `src/` (a clone at the
@@ -191,3 +193,67 @@ docker buildx rm holt-prod
 docker image prune -af --filter label=holt.stack=holt-prod
 rm -rf ~/.local/share/holt-prod ~/.config/systemd/user/holt-prod-backup.*
 ```
+
+## Analytics
+
+Two sources, both on this box, neither a third party:
+
+- **Holt's own database** (`deploy/prod/stats.sh`): the product numbers.
+  Per UTC day: distinct people asking for a report (the reach number,
+  signed in or not), requests, repositories, reports actually generated,
+  AI reports, `/find` searches, new accounts. People are counted from
+  `usage_events.who`, a hash of the user id or IP that changes every day
+  (`server/holt_server/usage.py`), so the numbers are per day only.
+  `generated` includes badge refreshes and the warm pass.
+- **Umami** (compose service `umami`, image pinned to `3.4.0`): page views,
+  referrers, countries, and the browser events `paste-submit`,
+  `report-view` (with `verdict`), `starter-issue-click`, `find-run`,
+  `sign-in` (with `provider`). Cookieless, nothing in browser storage, so
+  no cookie banner. Only githolt.com builds load it
+  (`web/src/lib/analytics.ts`); staging sends nothing.
+
+```sh
+deploy/prod/stats.sh          # last 14 days
+deploy/prod/stats.sh 30
+```
+
+### Umami: first time
+
+After a deploy that contains the `umami` service:
+
+```sh
+deploy/prod/umami.sh
+```
+
+It adds `UMAMI_DB_PASSWORD`, `UMAMI_APP_SECRET` and
+`COMPOSE_PROFILES=analytics` to `.env` (so every later deploy's `compose up`
+keeps Umami running), creates the `umami` role and database in the running
+`db` (that role can't connect to `holt` or `holt_web`), starts `umami`,
+**replaces the default `admin` / `umami` password** with a random one saved
+to `~/.local/share/holt-prod/umami-admin` (`chmod 600`), and creates the
+githolt.com site with the fixed id the web app sends. Safe to run again.
+Nothing else in the stack is restarted.
+
+Why the same Postgres: a second server would cost another ~50 MB and its
+own backups for a few small tables. Umami gets its own role and database,
+and `backup.sh` dumps it with the others.
+
+### Where to see it
+
+The dashboard is **not public**: it listens on `127.0.0.1:8311` only
+(`HOLT_UMAMI_PORT`) and needs the admin login. The edge exposes just
+`/stats/script.js` and `/stats/api/send` (the tracker and its endpoint, on
+githolt.com's own origin, so the CSP needs no extra host). From the laptop:
+
+```sh
+ssh -N -L 8311:127.0.0.1:8311 aahil-server     # then http://localhost:8311
+```
+
+User `admin`, password on line 2 of `~/.local/share/holt-prod/umami-admin`.
+Change it in the dashboard if you like (Settings, Profile); the file is only
+what `umami.sh` set.
+
+Memory: `umami` is capped at 320 MB. To turn it off: remove
+`COMPOSE_PROFILES=analytics` from `.env` and `dc --profile analytics stop umami`;
+the pages carry on (the script request just fails).
+

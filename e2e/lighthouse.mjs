@@ -10,10 +10,17 @@
 // a mid-tier phone target: >=1500 -> 4x, 1000-1500 -> 2x, <1000 -> 1x.
 // Each run waits until the 1-minute load is under LH_MAX_LOAD (default 4,
 // up to 10 minutes). Reports go to lighthouse/<page>-<n>.json.
-import { spawnSync } from "node:child_process";
+//
+// Behind Cloudflare Access, set STAGING_CF_ACCESS_CLIENT_ID and
+// STAGING_CF_ACCESS_CLIENT_SECRET: the token is traded for Access's cookie
+// (access.mjs), and each run gets a Chrome of its own with that cookie set for
+// the site's host only, which Lighthouse drives with --port. Lighthouse's own
+// --extra-headers would send the token to every origin a page loads from.
+import { spawn, spawnSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { accessCookie, accessToken } from "./access.mjs";
 
 const argv = process.argv.slice(2);
 const flag = (f) => { const i = argv.indexOf(f); if (i < 0) return false; argv.splice(i, 1); return true; };
@@ -41,16 +48,72 @@ function waitForQuiet() {
   console.error(`host still busy (load ${os.loadavg()[0].toFixed(1)}); measuring anyway`);
 }
 
+// Chrome with Access's cookie, for Lighthouse to connect to. The flags are
+// chrome-launcher's defaults (what Lighthouse launches with) plus ours.
+const LAUNCHER_FLAGS = ["--disable-features=Translate,OptimizationHints,MediaRouter,DialMediaRouteProvider,CalculateNativeWinOcclusion,InterestFeedContentSuggestions,CertificateTransparencyComponentUpdater,AutofillServerCommunication,PrivacySandboxSettings4",
+  "--disable-extensions", "--disable-component-extensions-with-background-pages", "--disable-background-networking",
+  "--disable-component-update", "--disable-client-side-phishing-detection", "--disable-sync", "--metrics-recording-only",
+  "--disable-default-apps", "--mute-audio", "--no-default-browser-check", "--no-first-run",
+  "--disable-backgrounding-occluded-windows", "--disable-renderer-backgrounding", "--disable-background-timer-throttling",
+  "--disable-ipc-flooding-protection", "--password-store=basic", "--use-mock-keychain",
+  "--force-fieldtrials=*BackgroundTracing/default/", "--disable-hang-monitor", "--disable-prompt-on-repost",
+  "--disable-domain-reliability", "--propagate-iph-for-testing"];
+
+async function chromeWithCookie(cookie) {
+  const profile = fs.mkdtempSync(path.join(os.tmpdir(), "holt-lh-"));
+  const proc = spawn(chrome(), [...LAUNCHER_FLAGS, "--headless=new", "--no-sandbox", "--disable-gpu",
+    "--remote-debugging-port=0", `--user-data-dir=${profile}`, "about:blank"], { stdio: "ignore", detached: true });
+  const exited = new Promise((r) => proc.once("exit", r));
+  const close = async () => {
+    try { process.kill(-proc.pid); } catch { /* already gone */ }   // Chrome and its helpers
+    await exited;
+    // Helpers can still be flushing the profile for a moment after the main process exits.
+    fs.rmSync(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
+  };
+  try {
+    const portFile = path.join(profile, "DevToolsActivePort");
+    for (let i = 0; i < 100 && !fs.existsSync(portFile); i++) await new Promise((r) => setTimeout(r, 100));
+    const port = Number(fs.readFileSync(portFile, "utf-8").split("\n")[0]);
+    const { webSocketDebuggerUrl } = await (await fetch(`http://127.0.0.1:${port}/json/version`)).json();
+    const ws = new WebSocket(webSocketDebuggerUrl);
+    await new Promise((ok, fail) => { ws.onopen = ok; ws.onerror = fail; });
+    // `url` and no domain: a host-only cookie, as the site itself would set it.
+    const { name, value, secure, httpOnly, sameSite } = cookie;
+    const url = `${secure ? "https" : "http"}://${cookie.domain}/`;
+    ws.send(JSON.stringify({ id: 1, method: "Storage.setCookies", params: { cookies: [{ name, value, url, secure, httpOnly, sameSite }] } }));
+    const reply = await new Promise((ok) => { ws.onmessage = (m) => ok(JSON.parse(m.data)); });
+    ws.close();
+    if (reply.error) throw new Error(`couldn't set the Access cookie in Chrome: ${reply.error.message}`);
+    return { port, close };
+  } catch (e) {
+    await close();
+    throw e;
+  }
+}
+
+const token = accessToken();
+const cookie = token ? await accessCookie(base, token) : null;
+
 const multiplierFor = (bi) => (bi >= 1500 ? 4 : bi >= 1000 ? 2 : 1);
 
-function lighthouse(url, out, cpu) {
+async function lighthouse(url, out, cpu) {
   waitForQuiet();
   const args = ["-y", "lighthouse@13", url, "--quiet", "--output=json", `--output-path=${out}`,
     "--only-categories=performance,accessibility,best-practices,seo",
     "--chrome-flags=--headless=new --no-sandbox --disable-gpu"];
   if (cpu) args.push(`--throttling.cpuSlowdownMultiplier=${cpu}`);
-  const r = spawnSync("npx", args, { stdio: ["ignore", "ignore", "inherit"], env: { ...process.env, CHROME_PATH: chrome() } });
-  return r.status === 0 && fs.existsSync(out) ? JSON.parse(fs.readFileSync(out, "utf-8")) : null;
+  const browser = cookie ? await chromeWithCookie(cookie) : null;
+  if (browser) args.push(`--port=${browser.port}`);
+  // The token stays out of Lighthouse's environment; it only needs the cookie already in Chrome.
+  const env = { ...process.env, CHROME_PATH: chrome() };
+  delete env.STAGING_CF_ACCESS_CLIENT_ID;
+  delete env.STAGING_CF_ACCESS_CLIENT_SECRET;
+  try {
+    const r = spawnSync("npx", args, { stdio: ["ignore", "ignore", "inherit"], env });
+    return r.status === 0 && fs.existsSync(out) ? JSON.parse(fs.readFileSync(out, "utf-8")) : null;
+  } finally {
+    await browser?.close();
+  }
 }
 
 fs.mkdirSync("lighthouse", { recursive: true });
@@ -60,10 +123,10 @@ for (const p of pages) {
   const slug = p.replace(/[^a-z0-9]+/gi, "_").replace(/^_|_$/g, "") || "home";
   const results = [];
   for (let n = 1; n <= runs; n++) {
-    let lhr = lighthouse(base + p, path.join("lighthouse", `${slug}-${n}.json`), fixedCpu);
+    let lhr = await lighthouse(base + p, path.join("lighthouse", `${slug}-${n}.json`), fixedCpu);
     if (lhr && calibrate) {
       const cpu = multiplierFor(lhr.environment.benchmarkIndex);
-      if (cpu !== 4) lhr = lighthouse(base + p, path.join("lighthouse", `${slug}-${n}-cal.json`), cpu);
+      if (cpu !== 4) lhr = await lighthouse(base + p, path.join("lighthouse", `${slug}-${n}-cal.json`), cpu);
     }
     if (lhr) results.push(lhr);
   }

@@ -66,15 +66,10 @@ def test_fresh_database_migrates_to_head_matching_the_models(db):
     assert run(db, revision) == head()
 
 
-def create_baseline(conn) -> None:
-    """What `create_all` made before migrations: the baseline tables only, not
-    tables later migrations add."""
-    Base.metadata.create_all(
-        conn, tables=[Base.metadata.tables[t] for t in sorted(migrate.BASELINE_TABLES)])
-
-
 def test_create_all_database_is_stamped_and_keeps_its_rows(db):
-    run(db, create_baseline)
+    # What create_all made before migrations: the baseline's tables only.
+    baseline = [Base.metadata.tables[t] for t in migrate.BASELINE_TABLES]
+    run(db, lambda c: Base.metadata.create_all(c, tables=baseline))
     run(db, lambda c: c.execute(text(
         "INSERT INTO users (id, plan, ai_used, ai_period, created_at) "
         "VALUES ('u1', 'free', 2, '2026-09', CURRENT_TIMESTAMP)")))

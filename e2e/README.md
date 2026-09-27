@@ -19,6 +19,41 @@ BASE_URL=http://127.0.0.1:3000 npx playwright test   # a local web app (needs th
 node lighthouse.mjs                              # mobile Lighthouse for /, /pallets/flask, /find
 ```
 
+## Behind Cloudflare Access
+
+If the site is behind Cloudflare Access, set a service token and everything
+here gets through:
+
+```sh
+export STAGING_CF_ACCESS_CLIENT_ID=<client id>.access
+export STAGING_CF_ACCESS_CLIENT_SECRET=<client secret>
+npx playwright test --workers=1
+node lighthouse.mjs
+```
+
+How it works (`access.mjs`): before the first test, one request to the
+site's `/` sends the `CF-Access-Client-Id` / `CF-Access-Client-Secret`
+headers, without following redirects, and keeps the `CF_Authorization`
+cookie Access answers with. `global-setup.ts` saves that cookie in
+`.access/state.json` (gitignored, deleted when the run ends), and the
+config's `storageState` starts every browser context and API request
+context with it, set for the site's host only. The browser never sends the
+token itself. Headers added per request would go further than that: a
+route's headers follow redirects to other sites, and so do an API request
+context's `extraHTTPHeaders`. A cookie stays with its host, so github.com,
+redirects and third-party images never see it.
+
+`lighthouse.mjs` does the same with a Chrome of its own per run (the cookie
+set over the DevTools protocol, then `lighthouse --port`). Lighthouse's
+`--extra-headers` would send the token to every origin a page loads from.
+`scripts/record-demo/record.mjs` reads the same variables.
+
+Both are needed together; one alone stops the run with a message. A token
+Access doesn't accept stops the run before any test, saying so. Without
+either variable nothing changes. Staging's own run gets them from
+`~/.config/holt/secrets.env` (see `deploy/README.md`, "Behind Cloudflare
+Access").
+
 What they check:
 
 - The landing paste box takes `https://github.com/pallets/flask` and ends on
