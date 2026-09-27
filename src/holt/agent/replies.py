@@ -11,12 +11,15 @@ nothing else counts:
   the fastest maintainers in the golden set;
 - not strangers. A "+1" or "any update?" from another user is not an answer.
 
-A maintainer is someone GitHub says is one (OWNER, MEMBER or COLLABORATOR on
-the comment), or someone the sample shows acting as one: merging a pull
-request, or closing somebody else's (both need write or triage access). The
-second half matters because GitHub reports a member whose organisation
-membership is private as CONTRIBUTOR, so a staff reviewer on a Meta or Rust
-repository can look like a stranger by association alone.
+Who is a maintainer is decided in one place, `maintainers()`, which every
+engine rule that needs "is this person staff?" should use (the outsider count
+included), so a person is never a maintainer for replies and an outsider for
+merges. It is someone GitHub says is one (OWNER, MEMBER or COLLABORATOR), or
+someone the sample shows acting as one: merging a pull request, closing
+somebody else's (both need write or triage access), or formally reviewing
+other people's. The inferred half matters because GitHub reports a member whose
+organisation membership is private as CONTRIBUTOR, so a staff reviewer on a
+Meta or Kubernetes repository can look like a stranger by association alone.
 
 Captures made before the association was recorded (the committed fixtures and
 the benchmark) keep the old rule: anyone but the author or a bot. That is
@@ -36,10 +39,13 @@ if TYPE_CHECKING:
 
 MAINTAINER_ASSOCIATIONS = frozenset({"OWNER", "MEMBER", "COLLABORATOR"})
 
-# A CONTRIBUTOR (someone with work already in the repository) who replied on
-# this many other people's pull requests in the sample is reviewing, not
-# passing by.
+# A CONTRIBUTOR (someone with work already in the repository) who approved or
+# requested changes on this many other people's pull requests in the sample is
+# doing a reviewer's job. Plain comments do not count: a helpful regular
+# answering newcomers must not make a repository look responsive when its
+# maintainers ignore them.
 REGULAR_REVIEWER_PRS = 3
+_VERDICT_REVIEWS = frozenset({"APPROVED", "CHANGES_REQUESTED"})
 
 # Automation on user accounts that the generic patterns below miss, each seen
 # replying in the golden set or in the audit. Matched as substrings, so they
@@ -82,42 +88,56 @@ def _key(evidence_id: str) -> str:
     return ":".join(evidence_id.split(":")[:2])
 
 
-def acting_maintainers(records: Iterable[EvidenceRecord],
-                       regular_prs: int = REGULAR_REVIEWER_PRS) -> frozenset[str]:
-    """People the sample shows doing a maintainer's job, whatever GitHub's
-    association says: they merged a pull request, closed one somebody else
-    opened, or are a CONTRIBUTOR who replied on `regular_prs` or more pull
-    requests by other people. Automation is left out."""
-    authors: dict[str, str] = {}
-    acts: list[tuple[str, str | None, bool]] = []
-    talk: list[tuple[str, dict]] = []
+def maintainers(records: Iterable[EvidenceRecord],
+                regular_prs: int = REGULAR_REVIEWER_PRS) -> frozenset[str]:
+    """Everyone in the evidence who maintains the repository.
+
+    - GitHub says so: OWNER, MEMBER or COLLABORATOR on anything they wrote;
+    - they merged a pull request;
+    - they closed a pull request somebody else opened;
+    - they are a CONTRIBUTOR who approved or requested changes on
+      `regular_prs` or more pull requests by other people.
+
+    Automation is never a maintainer. Records without `author_association`
+    (captures older than evidence v2) add nobody by association.
+    """
+    records = list(records)
+    authors = {_key(r.evidence_id): r.payload.get("author") or ""
+               for r in records if r.evidence_id.endswith(":opened")}
+    found: set[str] = set()
+    reviewed: dict[str, set[str]] = {}
     for r in records:
         p = r.payload
         eid = r.evidence_id
-        if eid.endswith(":opened"):
-            authors[_key(eid)] = p.get("author") or ""
-        elif eid.endswith(":merged"):
-            acts.append((_key(eid), p.get("merged_by"), bool(p.get("merged_by_is_bot"))))
+        key = _key(eid)
+        if eid.endswith(":merged"):
+            actor = (p.get("merged_by"), bool(p.get("merged_by_is_bot")))
         elif eid.endswith(":closed"):
-            acts.append((_key(eid), p.get("closed_by"), bool(p.get("closed_by_is_bot"))))
-        elif ":review:" in eid or ":comment:" in eid:
-            talk.append((_key(eid), p))
-    found = {
-        who for key, who, is_bot in acts
-        if who and who != authors.get(key) and not looks_like_automation(who, is_bot)
-    }
-    reviewed: dict[str, set[str]] = {}
-    for key, p in talk:
+            actor = (p.get("closed_by"), bool(p.get("closed_by_is_bot")))
+        else:
+            actor = None
+        if actor and actor[0] and actor[0] != authors.get(key) \
+                and not looks_like_automation(*actor):
+            found.add(actor[0])
+
         who = p.get("author") or ""
-        if (p.get("author_association") == "CONTRIBUTOR" and who != authors.get(key)
-                and not looks_like_automation(who, bool(p.get("author_is_bot")))):
+        if not who or looks_like_automation(who, bool(p.get("author_is_bot"))):
+            continue
+        association = p.get("author_association")
+        if association in MAINTAINER_ASSOCIATIONS:
+            found.add(who)
+        elif (association == "CONTRIBUTOR" and ":review:" in eid
+              and p.get("state") in _VERDICT_REVIEWS and who != authors.get(key)):
             reviewed.setdefault(who, set()).add(key)
     found.update(who for who, keys in reviewed.items() if len(keys) >= regular_prs)
     return frozenset(found)
 
 
-def counts_as_reply(payload: dict, pr_author: str, maintainers: frozenset[str]) -> bool:
-    """Whether one comment or review, on a pull request by `pr_author`, is a reply."""
+def counts_as_reply(payload: dict, pr_author: str, staff: frozenset[str]) -> bool:
+    """Whether one comment or review, on a pull request by `pr_author`, is a reply.
+
+    `staff` is `maintainers()` over the same evidence.
+    """
     who = payload.get("author") or ""
     flagged = bool(payload.get("author_is_bot"))
     if who == pr_author:
@@ -126,20 +146,20 @@ def counts_as_reply(payload: dict, pr_author: str, maintainers: frozenset[str]) 
         return not _legacy_bot(who, flagged)
     if looks_like_automation(who, flagged):
         return False
-    return payload["author_association"] in MAINTAINER_ASSOCIATIONS or who in maintainers
+    return who in staff
 
 
 def attach(threads: dict[str, Thread], records: Iterable[EvidenceRecord]) -> None:
     """Fill each thread's `replies`: (when, who) for every maintainer reply."""
     records = list(records)
-    maintainers = acting_maintainers(records)
+    staff = maintainers(records)
     for thread in threads.values():
         thread.replies = []
     for r in records:
         if ":review:" not in r.evidence_id and ":comment:" not in r.evidence_id:
             continue
         thread = threads.get(_key(r.evidence_id))
-        if thread is not None and counts_as_reply(r.payload, thread.author, maintainers):
+        if thread is not None and counts_as_reply(r.payload, thread.author, staff):
             thread.replies.append((r.timestamp, r.payload.get("author") or ""))
 
 
