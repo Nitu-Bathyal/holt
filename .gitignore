@@ -14,6 +14,8 @@ node_modules/
 # Worktrees are checkouts, not content. `git add -A` swept one in once.
 .claude/worktrees/
 .claude/settings.local.json
+# Maintainer plugin choices (third-party marketplaces); copied into worktrees via .worktreeinclude
+.claude/settings.json
 
 # Live TUI runs record here, deliberately outside fixtures/trajectories/ so a
 # session can never rewrite the recordings the eval harness replays.
