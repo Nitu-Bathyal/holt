@@ -10,6 +10,7 @@ app and API server.
 | `staging/compose.yml` | The staging stack, compose project `stage-holt-new`: Postgres, one-shot web and server migrations, server, web, and a small nginx `edge` that serves `/__build` and proxies everything else to web. Only `edge` publishes a port, on `127.0.0.1:9110`. Every URL in it comes from `STAGING_HOST`. |
 | `staging/preview.sh` | One update: build `origin/main` + every open PR labelled `staging` + `staging/extra-branches`, restart the stack. |
 | `staging/install.sh` | One-time setup: the timer's copy of `preview.sh` and the systemd `--user` timer (every 3 minutes). It does not touch the public route. |
+| `staging/compose.pro.yml` | The optional paid-features service beside staging, compose project `stage-holt-pro`, joined to the staging network as `pro`, no published port. `preview.sh` runs it; see "Paid features". |
 | `staging/make-env.sh` | Writes `staging/.env` (gitignored): random keys, `gh auth token` (overridden on each run, see "The GitHub token"), `STAGING_HOST`. |
 | `prod/` | Production, https://githolt.com: compose project `holt-prod` on `127.0.0.1:8310` behind a Cloudflare tunnel, built only from `origin/main` by `prod/deploy.sh` (never on a timer), nightly backups. See [`prod/README.md`](prod/README.md) and [`prod/TUNNEL.md`](prod/TUNNEL.md). |
 
@@ -157,6 +158,56 @@ curl -s -H "CF-Access-Client-Id: $STAGING_CF_ACCESS_CLIENT_ID" \
 `preview.sh` runs from the copy `install.sh` made, so after changing it
 re-run `deploy/staging/install.sh`.
 
+### Paid features
+
+Paid features run in an optional internal service, a separate private
+program the server calls over the Docker network (`HOLT_PRO_URL`,
+`HOLT_PRO_KEY`; see [`server/README.md`](../server/README.md)). On staging
+it runs only when its private checkout exists at `~/projects/holt-pro`
+(`HOLT_PRO_REPO` overrides the path). Without it, staging works as before
+and paid features say "not available yet".
+
+`preview.sh` keeps a clone of that checkout's `origin/main` in
+`~/.local/share/holt-staging/pro-src`, and a new commit there triggers a
+rebuild like a change to main. It builds the image after server and web,
+then runs it as its own compose project, `stage-holt-pro`
+([`staging/compose.pro.yml`](staging/compose.pro.yml)), on the staging
+stack's network as `pro`, with no published port and a 256m memory limit.
+It is not part of `stage-holt-new`, whose `up --remove-orphans` would
+remove it. Any problem with it (no key, no database, a failed build) leaves
+paid features off and the rest of staging untouched; the log says why
+(`paid features: on` / `off (...)`).
+
+**One-time setup (you do this):**
+
+1. Make the service's database in the staging Postgres. A database volume
+   created from now on gets it from `staging/initdb/20-pro-db.sh`; the
+   running one needs it once:
+
+   ```sh
+   docker exec stage-holt-new-db-1 psql -U holt -d holt -c 'CREATE DATABASE holt_pro'
+   ```
+
+2. Add a staging key to `~/.config/holt/secrets.env`. It must differ from
+   production's `HOLT_PRO_KEY` (the same value is refused):
+
+   ```sh
+   echo "STAGING_HOLT_PRO_KEY=$(python3 -c 'import secrets;print(secrets.token_hex(24))')" >> ~/.config/holt/secrets.env
+   ```
+
+3. Re-run `deploy/staging/install.sh` (the timer's copy of `preview.sh`),
+   then `FORCE=1 ~/.local/share/holt-staging/bin/preview.sh`.
+
+Check it (the server logs one line at startup, and can ping on demand):
+
+```sh
+docker logs stage-holt-new-server-1 2>&1 | grep holt-pro    # holt-pro: ok at http://pro:8000 (...)
+docker exec stage-holt-new-server-1 python -m holt_server.pro
+```
+
+To take it away: remove `STAGING_HOLT_PRO_KEY`, run `preview.sh` with
+`FORCE=1`, then `docker compose -p stage-holt-pro down`.
+
 ### How it runs
 
 - Everything lives in `~/.local/share/holt-staging/`: `src/` is a dedicated
@@ -182,7 +233,8 @@ re-run `deploy/staging/install.sh`.
   public URL (one browser, `--workers=1`). A failure does not roll back; it
   shows on `/__build`. Set `HOLT_STAGE_SMOKE=0` in the environment of the
   service to skip it.
-- Memory limits: web 512m, server 512m, db 256m, edge 32m.
+- Memory limits: web 512m, server 512m, db 256m, edge 32m, and the
+  paid-features service 256m when it runs.
 - The policy pages' contact details (`CONTACT_EMAIL`, `CONTACT_CITY`) are
   read from `~/.config/holt/secrets.env` on every run, the same file
   production uses. Besides those two, only the `STAGING_*` keys above are
