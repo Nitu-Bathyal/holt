@@ -2,9 +2,10 @@
 // reports return at once, anything else becomes a job with stages over SSE.
 import "server-only";
 import type {
-  AnalysisStart, ApiError, Credits, FindJobStatus, FindQuery, FindResult, FindStart, HistoryItem,
+  AnalysisStart, ApiError, Credits, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, HistoryItem,
   JobStatus, Me, Mode, Report, Result, StarterIssue,
 } from "../types";
+import type { FeedbackInput } from "../feedback";
 import { MODELS } from "../models";
 import { verdictView } from "./derived";
 import { canonicalName, isMockNotFound, mockFindPool, mockIssues, mockReport, PRECACHED } from "./fixtures";
@@ -280,6 +281,13 @@ function findResults(q: FindQuery): FindResult[] {
       issues: q.days <= 1 ? issues.filter((i) => i.labels.some((l) => /doc|typo|good first/i.test(l))).slice(0, 2) : issues,
     }))
     .filter((r) => r.issues.length > 0);
+}
+
+/** Accepts an answer for any cached report version, like the server. */
+export async function sendFeedback(input: FeedbackInput): Promise<Result<FeedbackOut>> {
+  const r = state().cache.get(key(input.repo, input.mode, input.days));
+  if (!r || r.generated_at !== input.generated_at) return err(404, "not_found", "We couldn't find that report any more. Reload the page and try again.");
+  return { ok: true, data: { repo: r.repo, generated_at: r.generated_at, verdict: r.verdict, vote: input.vote, reason: input.reason } };
 }
 
 export async function me(userId: string): Promise<Result<Me>> {

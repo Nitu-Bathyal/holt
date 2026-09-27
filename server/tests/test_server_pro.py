@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import os
 import threading
 
 import httpx
@@ -224,7 +225,7 @@ def test_on_with_a_url(tmp_path):
         asyncio.run(svc.pro.aclose())
 
 
-def test_startup_pings_and_logs_one_line(tmp_path, caplog):
+def test_startup_pings_and_logs_one_line(tmp_path, caplog, drop_everything):
     caplog.set_level(logging.INFO, logger="holt_server.pro")
     pinged = threading.Event()
 
@@ -233,6 +234,13 @@ def test_startup_pings_and_logs_one_line(tmp_path, caplog):
         return httpx.Response(200, json=PING)
 
     svc = Services(make_settings(tmp_path, HOLT_PRO_URL=URL, HOLT_PRO_KEY=KEY))
+    if os.environ.get("HOLT_TEST_DATABASE_URL"):
+        # A shared Postgres starts from empty, as in the make_harness fixture.
+        async def reset():
+            await drop_everything(svc.db.engine)
+            await svc.db.engine.dispose()
+
+        asyncio.run(reset())
     asyncio.run(svc.pro.aclose())
     svc.pro = pro.ProClient(URL, KEY, transport=httpx.MockTransport(handler))
     with TestClient(create_app(services=svc, run_jobs=False)) as client:

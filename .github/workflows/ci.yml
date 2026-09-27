@@ -55,6 +55,12 @@ jobs:
           PYTHONPATH=. uv run holt analyze NixOS/nixpkgs --replay
           PYTHONPATH=. uv run python eval/harness.py --replay --run-tag run1
 
+      # Offline. Fails on any verdict or count on the golden set that changed
+      # without `python -m golden approve --reason` (golden/README.md). The
+      # pytest run above checks the same thing; this prints the table.
+      - name: Golden set
+        run: uv run python -m golden check
+
   # The server's tests again, on the database production runs. The app's
   # startup migrates it from empty, so the migrations are exercised too.
   server-postgres:

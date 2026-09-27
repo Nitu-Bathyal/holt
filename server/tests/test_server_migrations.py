@@ -110,6 +110,8 @@ def test_ai_credits_migration_deletes_saved_keys_and_keeps_users(db):
         "VALUES ('older', 'free', 0, '2026-09', CURRENT_TIMESTAMP)")))
     assert run(db, lambda c: c.execute(text(
         "SELECT ai_credits FROM users WHERE id = 'older'")).scalar()) == 0
+    # Later migrations add their own tables: compare the models at head.
+    run(db, lambda c: command.upgrade(migrate.config(c), "head"))
     assert run(db, migrate.differences) == []
 
     run(db, lambda c: command.downgrade(migrate.config(c), "0002"))
