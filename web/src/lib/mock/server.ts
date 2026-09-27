@@ -5,6 +5,7 @@ import type {
   AnalysisStart, ApiError, ByokProvider, FindJobStatus, FindQuery, FindResult, FindStart, HistoryItem,
   JobStatus, Me, Mode, Report, Result, StarterIssue,
 } from "../types";
+import type { FeedbackInput } from "../feedback";
 import { MODELS } from "../models";
 import { canonicalName, isMockNotFound, mockFindPool, mockIssues, mockReport, PRECACHED } from "./fixtures";
 
@@ -274,6 +275,13 @@ function findResults(q: FindQuery): FindResult[] {
       issues: q.days <= 1 ? issues.filter((i) => i.labels.some((l) => /doc|typo|good first/i.test(l))).slice(0, 2) : issues,
     }))
     .filter((r) => r.issues.length > 0);
+}
+
+/** Accepts an answer for any cached report version, like the server. */
+export async function sendFeedback(input: FeedbackInput): Promise<Result<FeedbackInput & { verdict: string }>> {
+  const r = state().cache.get(key(input.repo, input.mode, input.days));
+  if (!r || r.generated_at !== input.generated_at) return err(404, "not_found", "We couldn't find that report any more. Reload the page and try again.");
+  return { ok: true, data: { ...input, repo: r.repo, verdict: r.verdict } };
 }
 
 export async function me(userId: string): Promise<Result<Me>> {

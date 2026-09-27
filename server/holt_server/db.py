@@ -187,3 +187,37 @@ class StarterCache(Base):
     repo: Mapped[str] = mapped_column(String(200))
     issues: Mapped[list] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class Feedback(Base):
+    """"Was this verdict right?" answers: one per person per report version.
+
+    `report_id` is the report row the person was shown, so the answer stays
+    tied to that exact version (and its verdict) after the repo is re-checked.
+    `voter` is `user:<id>` when signed in, else `ip:<salted hash>`; the raw IP
+    is never stored. See `holt_server.feedback`.
+    """
+
+    __tablename__ = "feedback"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    report_id: Mapped[int] = mapped_column(Integer)
+    repo: Mapped[str] = mapped_column(String(200))
+    repo_key: Mapped[str] = mapped_column(String(200))
+    mode: Mapped[str] = mapped_column(String(10))
+    days: Mapped[int] = mapped_column(Integer)
+    # The report's own `generated_at`, and the verdict it showed.
+    generated_at: Mapped[str] = mapped_column(String(40))
+    verdict: Mapped[str] = mapped_column(String(40))
+    vote: Mapped[str] = mapped_column(String(10))  # up | down
+    reason: Mapped[str | None] = mapped_column(Text, nullable=True)
+    voter: Mapped[str] = mapped_column(String(210))
+    user_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    ip_hash: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+    __table_args__ = (
+        Index("ux_feedback_report_voter", "report_id", "voter", unique=True),
+        Index("ix_feedback_updated", "updated_at"),
+    )
