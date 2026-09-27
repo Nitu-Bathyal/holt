@@ -41,6 +41,7 @@ npm run dev -- -p $PORT
 | `/find` | Beginner flow: languages, time, Hacktoberfest → welcoming repos + starter issues |
 | `/compare?repos=a/b,c/d` | Up to 4 repos side by side |
 | `/signin`, `/settings`, `/pricing`, `/me/history`, `/how-it-works` | Account and free AI reports, plans, history, methodology |
+| `/me/contributions` | My Contributions: a connected user's public pull requests with Holt's verdict per repo, "found via Holt", refresh with a 15-minute cooldown |
 | `/terms`, `/privacy`, `/refunds`, `/contact` | Policy pages the payment processors require. Static; contact details come from `NEXT_PUBLIC_CONTACT_EMAIL` / `NEXT_PUBLIC_CONTACT_CITY` (`src/lib/site.ts`), and `LEGAL_UPDATED` there is the "Last updated" date |
 | `/badge/{owner}/{repo}.svg` | README badge (proxied from the API) |
 | `/api/*` | BFF route handlers: start analysis, SSE proxy, starter issues, find events |

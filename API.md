@@ -300,7 +300,8 @@ the user's GitHub token. Stored in `github_connections` and `repo_views`.
 - `PATCH /v1/me/github` body `{"stats_opt_out": true}` → `GitHubConnection`. The
   "Don't include me in statistics" switch. 404 `not_found` when not connected.
 - `DELETE /v1/me/github` → `{"connected": false, "account": null}`. Deletes the
-  connection and every `repo_views` row for the user.
+  connection, every `repo_views` row and every fetched pull request (My
+  Contributions) for the user.
 - `POST /v1/me/activity` body `{"repo": "owner/name"}` → 204. `web/` sends it when
   a signed-in user opens a report page. Recorded (repo, first and last viewed,
   count) only while the user is connected; otherwise ignored. Bad repo → 400
@@ -309,6 +310,60 @@ the user's GitHub token. Stored in `github_connections` and `repo_views`.
 A connected user's public contributions may be counted, anonymously, in
 cross-user repo statistics (shown only when 5+ people contribute) unless
 `stats_opt_out` is true.
+
+### My Contributions
+
+A connected user's public pull requests, each with Holt's verdict for its
+repository. Read with the server's token pool from GitHub's public search
+(`is:pr is:public author:<login> -user:<login>`, the last 365 days, at most
+200, newest first; the user's own repositories and anything private are left
+out). Fetched when GitHub is connected, again once a day in the background
+(`HOLT_CONTRIBUTIONS_REFRESH_HOURS`, 24; 0 = off), and on refresh. Stored in
+`contributions` and `contribution_syncs`; each fetch replaces the user's rows.
+Nothing here starts an analysis.
+
+`Contributions` =
+```jsonc
+{
+  "login": "octocat",
+  "fetched_at": "…",            // when GitHub was last read
+  "next_refresh_at": "…" | null, // refresh works again from then; null = now
+  "window_days": 365, "truncated": false, // true: GitHub had more than 200
+  "summary": { "opened": 12, "merged": 6, "waiting": 3, "closed": 3,
+               "landed_share": 0.5,  // merged / (merged + closed); null if none decided
+               "found_via_holt": 2 },
+  "pull_requests": [
+    { "repo": "pallets/flask", "number": 5432, "title": "…",
+      "url": "https://github.com/pallets/flask/pull/5432",
+      "state": "open" | "merged" | "closed", "draft": false,
+      "created_at": "…", "closed_at": "…" | null, "merged_at": "…" | null,
+      "verdict": { "verdict": "viable", "headline": "Worth your time", "tone": "good",
+                   "checked_at": "…" } | null,   // latest cached 7-day rules report
+      "found_via_holt": true }
+  ]
+}
+```
+
+- `GET /v1/me/contributions` → `Contributions`. Reads GitHub only when the
+  user has never been fetched (or their login changed); otherwise the stored
+  list. Not connected → 404 `not_found`. GitHub trouble on that first read →
+  `rate_limited` / `upstream`.
+- `POST /v1/me/contributions/refresh` → `Contributions`. Reads GitHub again,
+  unless the last read is under 15 minutes old: then the stored list comes back
+  unchanged (200) with `next_refresh_at`. Reads that reach GitHub are also
+  limited to 6 per user per hour (429 `rate_limited`), which only matters when
+  GitHub keeps failing.
+- `found_via_holt`: the user opened the pull request within 30 days after
+  opening that repository's report page on Holt while connected (`repo_views`
+  keeps the first and the last view of each repository; a pull request within
+  30 days after either counts). Only verifiable data; never self-reported.
+- `GET /v1/metrics/contributions?since=YYYY-MM-DD` (internal key, no user) →
+  `{"since": "" | "YYYY-MM-DD", "window_days": 30, "connected_users",
+  "users_with_pull_requests", "users_with_pr_after_holt", "prs_after_holt",
+  "prs_after_holt_merged"}`: counts only, over connected users who did not turn
+  on `stats_opt_out`, of pull requests opened on or after `since` (default:
+  all stored). Also `python -m holt_server.contributions metric [--since DATE]
+  [--json]`.
 
 ### Feedback: "Was this verdict right?"
 - `POST /v1/feedback` body `{"repo": "owner/repo", "mode": "rules"|"ai", "days": 7,
