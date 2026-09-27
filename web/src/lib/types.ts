@@ -18,6 +18,7 @@ export type Me = S.Me;
 export type HistoryItem = S.HistoryItem;
 export type GitHubConnection = S.GitHubConnection;
 export type ApiError = S.Error;
+export type FeedbackOut = S.FeedbackOut;
 
 export type Mode = Report["mode"];
 export type Verdict = Report["verdict"];

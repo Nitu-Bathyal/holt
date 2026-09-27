@@ -3,9 +3,10 @@
 import "server-only";
 import { cache } from "react";
 import type {
-  AnalysisStart, ApiError, Credits, FindQuery, FindResult, FindStart, GitHubConnection, HistoryItem, JobStatus, Me, Mode,
+  AnalysisStart, ApiError, Credits, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection, HistoryItem, JobStatus, Me, Mode,
   Report, Result, StarterIssue,
 } from "./types";
+import type { FeedbackInput } from "./feedback";
 import { isJobId } from "./ids";
 import * as mock from "./mock/server";
 import { isValidRepo } from "./repo";
@@ -149,6 +150,13 @@ export async function find(q: FindQuery, caller: Caller): Promise<Result<FindSta
   // The server answers 202 {status: "queued", job_id}; accept a direct {results} too.
   if (r.data.job_id) return { ok: true, data: { status: "queued", job_id: r.data.job_id } };
   return { ok: true, data: { status: "done", results: r.data.results ?? [] } };
+}
+
+/** "Was this verdict right?" (API.md, Feedback). One answer per person per report version. */
+export async function sendFeedback(input: FeedbackInput, caller: Caller): Promise<Result<FeedbackOut>> {
+  if (!repoOk(input.repo)) return BAD_REPO;
+  if (MOCK) return mock.sendFeedback(input);
+  return call("/v1/feedback", { method: "POST", body: JSON.stringify(input), caller });
 }
 
 export function me(userId: string): Promise<Result<Me>> {
