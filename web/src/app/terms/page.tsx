@@ -6,6 +6,7 @@ import { CONTACT_CITY, FREE_AI_QUOTA, GITHUB_REPO_URL, PAYMENT_BRAND } from "@/l
 export const metadata: Metadata = {
   title: "Terms of Service",
   description: "The rules for using Holt at githolt.com: what the service does, accounts, paid plans, and what we do and don't promise.",
+  alternates: { canonical: "/terms" },
 };
 
 export default function TermsPage() {

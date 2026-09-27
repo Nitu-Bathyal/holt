@@ -32,7 +32,14 @@ class Settings(BaseSettings):
     openrouter_model: str = Field("openai/gpt-5-mini", alias="OPENROUTER_MODEL")
     openrouter_base_url: str = Field("https://openrouter.ai/api/v1", alias="OPENROUTER_BASE_URL")
 
+    # Analyses and finds running at once for people (the user lane). Each is a
+    # worker thread holding one crawl in memory; see deploy/prod/compose.yml.
     job_concurrency: int = Field(2, alias="HOLT_JOB_CONCURRENCY")
+    # A job running longer than this is stopped and fails with a plain
+    # "took too long" error (seconds; rules reports, AI reports, find).
+    job_timeout_rules: float = Field(180, alias="HOLT_JOB_TIMEOUT_RULES")
+    job_timeout_ai: float = Field(480, alias="HOLT_JOB_TIMEOUT_AI")
+    job_timeout_find: float = Field(300, alias="HOLT_JOB_TIMEOUT_FIND")
     cache_hours: float = Field(24, alias="HOLT_CACHE_HOURS")
     # How many AI reports a user may run on the server's key per calendar month.
     free_ai_limit: int = Field(3, alias="HOLT_FREE_AI_LIMIT")
@@ -50,7 +57,9 @@ class Settings(BaseSettings):
     # Separate from the buckets user requests draw from.
     badge_rate_per_ip: int = Field(20, alias="HOLT_BADGE_RATE_PER_IP")
     badge_rate_total: int = Field(60, alias="HOLT_BADGE_RATE_TOTAL")
-    # Badge refreshes running at once, at most. They also queue behind user jobs.
+    # The background lane: workers of their own for badge refreshes and warm
+    # passes, on top of HOLT_JOB_CONCURRENCY. They take a person's queued job
+    # first whenever one is waiting. 0 turns badge and warm work off.
     badge_concurrency: int = Field(1, alias="HOLT_BADGE_CONCURRENCY")
     # Warm cache (see warm.py). 0 hours = no in-process schedule.
     warm_interval_hours: float = Field(0, alias="HOLT_WARM_INTERVAL_HOURS")
