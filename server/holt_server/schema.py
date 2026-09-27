@@ -389,3 +389,17 @@ class Health(Model):
     ok: bool
     version: str
     database: bool | None = None
+
+
+class GitHubAccount(Model):
+    id: int
+    login: str
+    connected_at: str
+    adult_confirmed_at: str
+    # True when they chose "Don't include me in statistics".
+    stats_opt_out: bool
+
+
+class GitHubConnection(Model):
+    connected: bool
+    account: GitHubAccount | None

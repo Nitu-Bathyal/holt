@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from holt_server import __version__, credits, errors, feedback, pro
+from holt_server import __version__, connections, credits, errors, feedback, pro
 from holt_server.api import public, router
 from holt_server.services import Services
 from holt_server.settings import Settings, get_settings
@@ -56,6 +56,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(router)
     app.include_router(credits.router)
     app.include_router(feedback.router)
+    app.include_router(connections.router)
     return app
 
 

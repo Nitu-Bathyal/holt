@@ -227,6 +227,39 @@ is ever due. Spending, claiming and refunds are atomic on the server.
 Plans and payments are not implemented yet; `plan` is set manually in the DB
 for now.
 
+### Connect GitHub
+
+Free and optional. `web/` sends the numeric GitHub account id from the user's
+own Auth.js GitHub account (signed in with GitHub, or linked from the Connect
+screen), never from user input. The server looks up the login with its own
+token pool (`GET https://api.github.com/user/{id}`, public data); it never gets
+the user's GitHub token. Stored in `github_connections` and `repo_views`.
+
+`GitHubConnection` = `{"connected": true, "account": {"id": 583231, "login": "octocat",
+"connected_at": "…", "adult_confirmed_at": "…", "stats_opt_out": false}}`, or
+`{"connected": false, "account": null}`.
+
+- `GET /v1/me/github` → `GitHubConnection`.
+- `POST /v1/me/github` body `{"github_id": 583231, "adult_confirmed": true, "stats_opt_out": false}`
+  → `GitHubConnection`. Connects, or updates the connection (the login is looked
+  up again; `connected_at` is kept unless the GitHub account changes).
+  `adult_confirmed` must be true (the user ticked "I'm 18 or older"; its time is
+  stored), else 400 `invalid_request`. A GitHub id connected to another user →
+  409 `invalid_request`. An id GitHub doesn't know → 400 `invalid_request`.
+  GitHub trouble → `rate_limited` / `upstream`.
+- `PATCH /v1/me/github` body `{"stats_opt_out": true}` → `GitHubConnection`. The
+  "Don't include me in statistics" switch. 404 `not_found` when not connected.
+- `DELETE /v1/me/github` → `{"connected": false, "account": null}`. Deletes the
+  connection and every `repo_views` row for the user.
+- `POST /v1/me/activity` body `{"repo": "owner/name"}` → 204. `web/` sends it when
+  a signed-in user opens a report page. Recorded (repo, first and last viewed,
+  count) only while the user is connected; otherwise ignored. Bad repo → 400
+  `invalid_repo`.
+
+A connected user's public contributions may be counted, anonymously, in
+cross-user repo statistics (shown only when 5+ people contribute) unless
+`stats_opt_out` is true.
+
 ### Feedback: "Was this verdict right?"
 - `POST /v1/feedback` body `{"repo": "owner/repo", "mode": "rules"|"ai", "days": 7,
   "generated_at": "<the report's generated_at>", "vote": "up"|"down", "reason": "…"|null}`

@@ -176,6 +176,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/activity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Record View
+         * @description A signed-in user opened a report page. Kept only while GitHub is connected.
+         */
+        post: operations["record_view_v1_me_activity_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/credits": {
         parameters: {
             query?: never;
@@ -208,6 +228,26 @@ export interface paths {
         options?: never;
         head?: never;
         patch?: never;
+        trace?: never;
+    };
+    "/v1/me/github": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Github */
+        get: operations["get_github_v1_me_github_get"];
+        put?: never;
+        /** Connect Github */
+        post: operations["connect_github_v1_me_github_post"];
+        /** Disconnect Github */
+        delete: operations["disconnect_github_v1_me_github_delete"];
+        options?: never;
+        head?: never;
+        /** Github Settings */
+        patch: operations["github_settings_v1_me_github_patch"];
         trace?: never;
     };
     "/v1/me/history": {
@@ -285,6 +325,11 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** ActivityIn */
+        ActivityIn: {
+            /** Repo */
+            repo: string;
+        };
         /** AnalysisDone */
         AnalysisDone: {
             report: components["schemas"]["Report"];
@@ -315,6 +360,18 @@ export interface components {
             refresh: boolean;
             /** Repo */
             repo: string;
+        };
+        /** ConnectIn */
+        ConnectIn: {
+            /** Adult Confirmed */
+            adult_confirmed: boolean;
+            /** Github Id */
+            github_id: number;
+            /**
+             * Stats Opt Out
+             * @default false
+             */
+            stats_opt_out: boolean;
         };
         /** Cost */
         Cost: {
@@ -489,6 +546,30 @@ export interface components {
              * @enum {string}
              */
             verdict: "viable" | "not_viable" | "insufficient_evidence";
+        };
+        /** GitHubAccount */
+        GitHubAccount: {
+            /** Adult Confirmed At */
+            adult_confirmed_at: string;
+            /** Connected At */
+            connected_at: string;
+            /** Id */
+            id: number;
+            /** Login */
+            login: string;
+            /** Stats Opt Out */
+            stats_opt_out: boolean;
+        };
+        /** GitHubConnection */
+        GitHubConnection: {
+            account: components["schemas"]["GitHubAccount"] | null;
+            /** Connected */
+            connected: boolean;
+        };
+        /** GitHubSettingsIn */
+        GitHubSettingsIn: {
+            /** Stats Opt Out */
+            stats_opt_out: boolean;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -752,8 +833,10 @@ export interface components {
     headers: never;
     pathItems: never;
 }
+export type ActivityIn = components['schemas']['ActivityIn'];
 export type AnalysisDone = components['schemas']['AnalysisDone'];
 export type AnalysisIn = components['schemas']['AnalysisIn'];
+export type ConnectIn = components['schemas']['ConnectIn'];
 export type Cost = components['schemas']['Cost'];
 export type Credits = components['schemas']['Credits'];
 export type Error = components['schemas']['Error'];
@@ -765,6 +848,9 @@ export type FindDone = components['schemas']['FindDone'];
 export type FindIn = components['schemas']['FindIn'];
 export type FindJobStatus = components['schemas']['FindJobStatus'];
 export type FindResult = components['schemas']['FindResult'];
+export type GitHubAccount = components['schemas']['GitHubAccount'];
+export type GitHubConnection = components['schemas']['GitHubConnection'];
+export type GitHubSettingsIn = components['schemas']['GitHubSettingsIn'];
 export type HttpValidationError = components['schemas']['HTTPValidationError'];
 export type Health = components['schemas']['Health'];
 export type History = components['schemas']['History'];
@@ -1140,6 +1226,41 @@ export interface operations {
             };
         };
     };
+    record_view_v1_me_activity_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ActivityIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     get_credits_v1_me_credits_get: {
         parameters: {
             query?: never;
@@ -1193,6 +1314,146 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Credits"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_github_v1_me_github_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitHubConnection"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    connect_github_v1_me_github_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConnectIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitHubConnection"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    disconnect_github_v1_me_github_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitHubConnection"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    github_settings_v1_me_github_patch: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GitHubSettingsIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GitHubConnection"];
                 };
             };
             /** @description Default Response */
