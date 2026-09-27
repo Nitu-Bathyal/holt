@@ -1,0 +1,115 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import { redirect } from "next/navigation";
+import { CatFace } from "@/components/cat-face";
+import { PrList } from "@/components/contributions/pr-list";
+import { RefreshButton } from "@/components/contributions/refresh-button";
+import { ErrorPanel } from "@/components/error-panel";
+import { PageHead } from "@/components/page-head";
+import { PageTransition } from "@/components/motion/page-transition";
+import { contributions } from "@/lib/api";
+import { foundViaHoltLine, landedLine, landedPct } from "@/lib/contributions";
+import { timeAgo } from "@/lib/format";
+import { currentUser } from "@/lib/session";
+import { refresh } from "./actions";
+
+export const metadata: Metadata = { title: "Your contributions", robots: { index: false } };
+
+const NOTICES: Record<string, { tone: string; text: string }> = {
+  done: { tone: "text-green border-green/50 bg-green/10", text: "Updated from GitHub." },
+  wait: { tone: "text-muted border-line-strong", text: "Already up to date: we checked GitHub a few minutes ago." },
+  limited: { tone: "text-orange border-orange/50 bg-orange/10", text: "GitHub is asking us to slow down. Your list below is from the last check; try again in a few minutes." },
+  error: { tone: "text-orange border-orange/50 bg-orange/10", text: "We couldn't reach GitHub just now. Your list below is from the last check; try again in a minute." },
+};
+
+function Tile({ label, value, note }: { label: string; value: string; note?: string | null }) {
+  return (
+    <div className="bg-panel p-4 sm:p-5">
+      <p className="text-[0.72rem] uppercase tracking-[0.08em] text-faint">{label}</p>
+      <p className="mt-1 text-[1.5rem] font-semibold">{value}</p>
+      {note && <p className="mt-1 text-[0.75rem] text-faint">{note}</p>}
+    </div>
+  );
+}
+
+export default async function ContributionsPage({ searchParams }: PageProps<"/me/contributions">) {
+  const user = await currentUser();
+  if (!user) redirect("/signin?callbackUrl=/me/contributions");
+  const sp = await searchParams;
+  const r = await contributions(user.id);
+  const notConnected = !r.ok && r.error.code === "not_found";
+  const notice = typeof sp.refresh === "string" ? NOTICES[sp.refresh] : undefined;
+  const d = r.ok ? r.data : null;
+  const pct = d ? landedPct(d.summary) : null;
+  const via = d ? foundViaHoltLine(d.summary.found_via_holt) : null;
+
+  return (
+    <PageTransition>
+      <>
+      <PageHead narrow>
+        <p className="rail mb-4 flex gap-2">
+          <strong className="m-0">contributions</strong>
+          <span>{d ? `@${d.login}` : user.name || user.email}</span>
+        </p>
+        <h1 className="display text-[clamp(2rem,6vw,3rem)]">Your pull requests</h1>
+        <p className="prose-sans mt-3 max-w-xl text-muted">
+          Your public pull requests to other people&apos;s repos from the last 12 months, with Holt&apos;s verdict on each repo.
+        </p>
+      </PageHead>
+      <div className="wrap max-w-3xl pb-14 pt-2 sm:pb-16">
+        {notice && d && <p role="status" className={`mt-6 border px-4 py-3 font-sans text-[0.9rem] ${notice.tone}`}>{notice.text}</p>}
+
+        {notConnected ? (
+          <div className="mt-8 border border-dashed border-line-strong p-8 text-center">
+            <CatFace mood="thinking" className="text-[1.6rem]" />
+            <p className="prose-sans mx-auto mt-4 max-w-md text-muted">
+              Connect your GitHub account to see your pull requests here, each with Holt&apos;s verdict on the repo. It&apos;s free, and Holt
+              only reads public data.
+            </p>
+            <Link href="/connect" className="btn-primary mt-6 inline-flex">connect GitHub</Link>
+          </div>
+        ) : !r.ok ? (
+          <div className="mt-8"><ErrorPanel error={r.error} retryHref="/me/contributions" /></div>
+        ) : d && (
+          <>
+            <section aria-label="Summary" className="mt-8 grid grid-cols-2 gap-px border border-line bg-line shadow-soft sm:grid-cols-4">
+              <Tile label="Opened" value={String(d.summary.opened)} note={d.truncated ? "your latest 200" : "last 12 months"} />
+              <Tile label="Merged" value={String(d.summary.merged)} />
+              <Tile label="Still waiting" value={String(d.summary.waiting)} note="open, no decision yet" />
+              <Tile label="Landed" value={pct == null ? "–" : `${pct}%`} note={landedLine(d.summary) ?? "nothing decided yet"} />
+            </section>
+            {via && <p className="prose-sans mt-4 text-[0.9rem] text-blue">{via}</p>}
+
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
+              <p className="text-[0.75rem] text-faint">
+                Checked GitHub <time dateTime={d.fetched_at}>{timeAgo(d.fetched_at)}</time>. We check again every day.
+              </p>
+              <RefreshButton action={refresh} nextRefreshAt={d.next_refresh_at} />
+            </div>
+
+            <div className="mt-4">
+              {d.pull_requests.length === 0 ? (
+                <div className="border border-dashed border-line-strong p-8 text-center">
+                  <CatFace mood="startled" className="text-[1.6rem]" />
+                  <p className="prose-sans mx-auto mt-4 max-w-md text-muted">
+                    No public pull requests to other people&apos;s repos in the last 12 months. Holt can help you pick a first one.
+                  </p>
+                  <Link href="/find" className="bracket-link mt-6">[ find a project → ]</Link>
+                </div>
+              ) : (
+                <PrList prs={d.pull_requests} />
+              )}
+            </div>
+
+            <p className="mt-6 font-sans text-[0.8rem] text-faint">
+              &ldquo;Found via Holt&rdquo; marks a pull request you opened within 30 days of checking that repo here while connected.
+              The verdict is Holt&apos;s latest check of each repo; no verdict yet means nobody has checked it.
+              Pull requests to your own repos are left out. <Link href="/settings#github" className="text-link">GitHub settings</Link>
+            </p>
+          </>
+        )}
+      </div>
+      </>
+    </PageTransition>
+  );
+}
