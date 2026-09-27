@@ -116,7 +116,10 @@ they cannot disagree with each other or with the verdict:
 - `rule_codes` is `[]` on reports cached before it existed. Codes include
   `archived`, `closed_kind`, `non_software_kind`, `awaiting_reply`,
   `no_attempts`, `ignored`, `merges`, `rubber_stamp`, `slow`,
-  `too_few_attempts`; new ones may appear.
+  `too_few_attempts`, `elsewhere` (a mirror or a fork; decides alone, like
+  `archived`), `landed_off_button` (says how many merges GitHub shows as
+  closed because they landed another way; never decides); new ones may
+  appear.
 
 New fields are added with a default, so older cached reports stay valid.
 
