@@ -471,10 +471,11 @@ def sse(svc: Services, job_id: str, kind: str, request: Request) -> StreamingRes
                     if job.status == "error":
                         yield sse_event("error", {"error": job.error})
                         return
-                    current = (job.stage, round(job.progress or 0.0, 3))
+                    data = await svc.runner.stage_event(job)
+                    current = (data["stage"], data["progress"])
                     if current != last:
                         last = current
-                        yield sse_event("stage", {"stage": current[0], "progress": current[1]})
+                        yield sse_event("stage", data)
                 job = None
                 try:
                     event, data = await asyncio.wait_for(queue.get(), SSE_KEEPALIVE_SECONDS)

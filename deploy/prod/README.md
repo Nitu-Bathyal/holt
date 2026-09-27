@@ -31,7 +31,7 @@ Fixed in `compose.yml`: `HOLT_ENV=production`, `NEXT_PUBLIC_SITE_HOST=githolt.co
 (build and run time), `HOLT_WEB_URL` and `AUTH_URL=https://githolt.com`,
 `TRUST_PROXY_HEADERS=1`, no `ROBOTS_NOINDEX` (production is indexed), no
 `MOCK_API`. From `.env`: the generated secrets, `HOLT_STARTER_CACHE_HOURS=24`,
-`HOLT_JOB_CONCURRENCY=1`, `HOLT_PROD_PORT=8310`.
+`HOLT_JOB_CONCURRENCY=6`, `HOLT_PROD_PORT=8310`.
 
 Keys the user owns come from **`~/.config/holt/secrets.env`** (`KEY=value`
 lines, `chmod 600`), read by `deploy.sh` and `warm.sh` on every run (`env.sh`) and mapped:

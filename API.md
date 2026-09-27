@@ -108,7 +108,11 @@ Body: `{"repo": "owner/repo", "mode": "rules"|"ai", "days": 7, "refresh": false}
 Events: `stage` `{"stage": "…", "progress": 0.0–1.0}`, then exactly one of
 `done` `{"report": Report}` or `error` `{"error": Error}`. `stage` strings are
 plain English ("Fetching pull requests", "Reading threads", "Checking evidence",
-"Writing the report").
+"Writing the report"). While the job waits to start, `stage` events also carry
+`"queue_position": n` (1 = next to start) with a matching stage such as
+"In the queue: 3 checks ahead of yours", sent again each time the queue moves.
+The same applies to `/v1/find/{job_id}/events`. A job that runs past its time
+limit ends with `error` code `upstream` and a "took too long" message.
 
 ### `GET /v1/reports?limit=500` (internal key, like other reads)
 The latest 7-day rules report per repository, newest first, for sitemaps:
