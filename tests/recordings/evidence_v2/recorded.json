@@ -1,0 +1,2373 @@
+{
+ "points_used": 22,
+ "recorded_at": "2026-09-27T16:10:11+00:00",
+ "repos": {
+  "base/chains": {
+   "meta": {
+    "createdAt": "2023-02-21T21:48:44Z",
+    "defaultBranchRef": {
+     "name": "master",
+     "target": {
+      "history": {
+       "nodes": [
+        {
+         "committedDate": "2023-07-28T09:49:53Z",
+         "oid": "16efd0a7257ebd7f1e2ba55caef2a4496851a36e"
+        }
+       ]
+      }
+     }
+    },
+    "description": "provides metadata for networkIDs and chainIDs",
+    "homepageUrl": "https://chainid.network",
+    "isArchived": true,
+    "isFork": true,
+    "isMirror": false,
+    "mirrorUrl": null,
+    "nameWithOwner": "base/chains",
+    "parent": {
+     "nameWithOwner": "ethereum-lists/chains"
+    },
+    "primaryLanguage": {
+     "name": "Kotlin"
+    },
+    "pushedAt": "2024-02-15T14:07:52Z",
+    "releases": {
+     "nodes": [],
+     "totalCount": 0
+    },
+    "stargazerCount": 78645
+   }
+  },
+  "openssl/openssl": {
+   "meta": {
+    "createdAt": "2013-01-15T22:34:48Z",
+    "defaultBranchRef": {
+     "name": "master",
+     "target": {
+      "history": {
+       "nodes": [
+        {
+         "committedDate": "2026-09-27T09:04:28Z",
+         "oid": "1e369089f47c6c80a4d00c14cbee3a1300abe9da"
+        }
+       ]
+      }
+     }
+    },
+    "description": "General purpose TLS and crypto library",
+    "homepageUrl": "https://openssl-library.org/",
+    "isArchived": false,
+    "isFork": false,
+    "isMirror": false,
+    "mirrorUrl": null,
+    "nameWithOwner": "openssl/openssl",
+    "parent": null,
+    "primaryLanguage": {
+     "name": "C"
+    },
+    "pushedAt": "2026-09-27T14:00:16Z",
+    "releases": {
+     "nodes": [
+      {
+       "createdAt": "2026-09-23T13:15:29Z",
+       "isPrerelease": true,
+       "name": "OpenSSL 4.1.0-beta1",
+       "publishedAt": "2026-09-23T13:24:11Z",
+       "tagName": "openssl-4.1.0-beta1"
+      },
+      {
+       "createdAt": "2026-09-09T13:15:38Z",
+       "isPrerelease": true,
+       "name": "OpenSSL 4.1.0-alpha1",
+       "publishedAt": "2026-09-09T13:28:44Z",
+       "tagName": "openssl-4.1.0-alpha1"
+      },
+      {
+       "createdAt": "2026-08-25T12:14:59Z",
+       "isPrerelease": false,
+       "name": "OpenSSL 3.0.22",
+       "publishedAt": "2026-08-25T12:20:18Z",
+       "tagName": "openssl-3.0.22"
+      },
+      {
+       "createdAt": "2026-08-25T12:06:59Z",
+       "isPrerelease": false,
+       "name": "OpenSSL 3.4.7",
+       "publishedAt": "2026-08-25T12:10:59Z",
+       "tagName": "openssl-3.4.7"
+      },
+      {
+       "createdAt": "2026-08-25T11:57:30Z",
+       "isPrerelease": false,
+       "name": "OpenSSL 3.5.8",
+       "publishedAt": "2026-08-25T12:02:03Z",
+       "tagName": "openssl-3.5.8"
+      },
+      {
+       "createdAt": "2026-08-25T11:49:21Z",
+       "isPrerelease": false,
+       "name": "OpenSSL 3.6.4",
+       "publishedAt": "2026-08-25T11:53:03Z",
+       "tagName": "openssl-3.6.4"
+      },
+      {
+       "createdAt": "2026-08-25T11:39:23Z",
+       "isPrerelease": false,
+       "name": "OpenSSL 4.0.2",
+       "publishedAt": "2026-08-25T11:44:22Z",
+       "tagName": "openssl-4.0.2"
+      },
+      {
+       "createdAt": "2026-06-09T12:20:46Z",
+       "isPrerelease": false,
+       "name": "OpenSSL 3.0.21",
+       "publishedAt": "2026-06-09T12:24:12Z",
+       "tagName": "openssl-3.0.21"
+      },
+      {
+       "createdAt": "2026-06-09T12:02:17Z",
+       "isPrerelease": false,
+       "name": "OpenSSL 3.4.6",
+       "publishedAt": "2026-06-09T12:06:13Z",
+       "tagName": "openssl-3.4.6"
+      },
+      {
+       "createdAt": "2026-06-09T11:54:27Z",
+       "isPrerelease": false,
+       "name": "OpenSSL 3.5.7",
+       "publishedAt": "2026-06-09T11:59:05Z",
+       "tagName": "openssl-3.5.7"
+      }
+     ],
+     "totalCount": 317
+    },
+    "stargazerCount": 30847
+   },
+   "pull_requests": [
+    {
+     "additions": 34,
+     "author": {
+      "__typename": "User",
+      "login": "openssl-machine"
+     },
+     "authorAssociation": "COLLABORATOR",
+     "changedFiles": 10,
+     "closedAt": "2026-09-23T13:19:31Z",
+     "comments": {
+      "nodes": []
+     },
+     "createdAt": "2026-09-23T13:15:57Z",
+     "deletions": 34,
+     "files": {
+      "nodes": [
+       {
+        "additions": 1,
+        "deletions": 1,
+        "path": "VERSION.dat"
+       },
+       {
+        "additions": 1,
+        "deletions": 1,
+        "path": "crypto/asn1/a_dup.c"
+       },
+       {
+        "additions": 1,
+        "deletions": 1,
+        "path": "fuzz/quic-server.c"
+       },
+       {
+        "additions": 8,
+        "deletions": 8,
+        "path": "providers/fips-sources.checksums"
+       },
+       {
+        "additions": 1,
+        "deletions": 1,
+        "path": "providers/fips.checksum"
+       },
+       {
+        "additions": 1,
+        "deletions": 1,
+        "path": "providers/implementations/kdfs/krb5kdf.c"
+       },
+       {
+        "additions": 1,
+        "deletions": 1,
+        "path": "test/fake_rsaprov.c"
+       },
+       {
+        "additions": 1,
+        "deletions": 1,
+        "path": "test/quic_cfq_test.c"
+       },
+       {
+        "additions": 1,
+        "deletions": 1,
+        "path": "test/x509_req_test.c"
+       },
+       {
+        "additions": 18,
+        "deletions": 18,
+        "path": "util/libcrypto.num"
+       }
+      ]
+     },
+     "isDraft": false,
+     "labels": {
+      "nodes": [
+       {
+        "name": "approval: done"
+       },
+       {
+        "name": "cla: 1.0 no AI"
+       }
+      ]
+     },
+     "merged": true,
+     "mergedAt": "2026-09-23T13:19:31Z",
+     "mergedBy": {
+      "__typename": "User",
+      "login": "openssl-machine"
+     },
+     "number": 32953,
+     "reviews": {
+      "nodes": [
+       {
+        "author": {
+         "__typename": "User",
+         "login": "esyr"
+        },
+        "authorAssociation": "MEMBER",
+        "body": "",
+        "createdAt": "2026-09-23T13:18:48Z",
+        "state": "APPROVED"
+       },
+       {
+        "author": {
+         "__typename": "User",
+         "login": "n13l"
+        },
+        "authorAssociation": "CONTRIBUTOR",
+        "body": "",
+        "createdAt": "2026-09-23T13:18:56Z",
+        "state": "APPROVED"
+       }
+      ]
+     },
+     "timelineItems": {
+      "nodes": [
+       {
+        "__typename": "ClosedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "openssl-machine"
+        },
+        "closer": null,
+        "createdAt": "2026-09-23T13:19:31Z"
+       }
+      ]
+     },
+     "title": "4.1.0-beta1 release commits for openssl-4.1"
+    },
+    {
+     "additions": 202,
+     "author": {
+      "__typename": "User",
+      "login": "Rayan-and-beyond"
+     },
+     "authorAssociation": "NONE",
+     "changedFiles": 8,
+     "closedAt": null,
+     "comments": {
+      "nodes": []
+     },
+     "createdAt": "2026-09-26T16:37:26Z",
+     "deletions": 2,
+     "files": {
+      "nodes": [
+       {
+        "additions": 36,
+        "deletions": 0,
+        "path": "crypto/x509/v3_purp.c"
+       },
+       {
+        "additions": 1,
+        "deletions": 0,
+        "path": "crypto/x509/x509_local.h"
+       },
+       {
+        "additions": 3,
+        "deletions": 0,
+        "path": "crypto/x509/x509_vfy.c"
+       },
+       {
+        "additions": 10,
+        "deletions": 0,
+        "path": "crypto/x509/x_all.c"
+       },
+       {
+        "additions": 2,
+        "deletions": 1,
+        "path": "doc/man3/X509_VERIFY_PARAM_set_flags.pod"
+       },
+       {
+        "additions": 5,
+        "deletions": 0,
+        "path": "doc/man3/X509_sign.pod"
+       },
+       {
+        "additions": 3,
+        "deletions": 1,
+        "path": "test/recipes/03-test_internal_x509.t"
+       },
+       {
+        "additions": 142,
+        "deletions": 0,
+        "path": "test/x509_internal_test.c"
+       }
+      ]
+     },
+     "isDraft": false,
+     "labels": {
+      "nodes": [
+       {
+        "name": "approval: review pending"
+       }
+      ]
+     },
+     "merged": false,
+     "mergedAt": null,
+     "mergedBy": null,
+     "number": 33004,
+     "reviews": {
+      "nodes": []
+     },
+     "timelineItems": {
+      "nodes": [
+       {
+        "__typename": "ClosedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "Rayan-and-beyond"
+        },
+        "closer": null,
+        "createdAt": "2026-09-27T01:30:57Z"
+       }
+      ]
+     },
+     "title": "Validate ML-DSA certificate keyUsage"
+    },
+    {
+     "additions": 124,
+     "author": {
+      "__typename": "User",
+      "login": "jogme"
+     },
+     "authorAssociation": "CONTRIBUTOR",
+     "changedFiles": 8,
+     "closedAt": "2026-09-27T09:05:06Z",
+     "comments": {
+      "nodes": [
+       {
+        "author": {
+         "__typename": "User",
+         "login": "jogme"
+        },
+        "authorAssociation": "CONTRIBUTOR",
+        "body": "merged to master. Thank you for the weekend approvals!",
+        "createdAt": "2026-09-27T09:05:06Z"
+       }
+      ]
+     },
+     "createdAt": "2026-09-26T15:13:40Z",
+     "deletions": 124,
+     "files": {
+      "nodes": [
+       {
+        "additions": 15,
+        "deletions": 15,
+        "path": "test/recipes/80-test_cmp_http_data/Mock/newWithNew.pem"
+       },
+       {
+        "additions": 17,
+        "deletions": 17,
+        "path": "test/recipes/80-test_cmp_http_data/Mock/newWithOld.pem"
+       },
+       {
+        "additions": 17,
+        "deletions": 17,
+        "path": "test/recipes/80-test_cmp_http_data/Mock/oldWithNew.pem"
+       },
+       {
+        "additions": 15,
+        "deletions": 15,
+        "path": "test/recipes/80-test_cmp_http_data/Mock/oldWithOld.pem"
+       },
+       {
+        "additions": 15,
+        "deletions": 15,
+        "path": "test/recipes/80-test_cmp_http_data/Mock/server.crt"
+       },
+       {
+        "additions": 26,
+        "deletions": 26,
+        "path": "test/recipes/80-test_cmp_http_data/Mock/server.key"
+       },
+       {
+        "additions": 4,
+        "deletions": 4,
+        "path": "test/recipes/80-test_cmp_http_data/Mock/setup-mock.sh"
+       },
+       {
+        "additions": 15,
+        "deletions": 15,
+        "path": "test/recipes/80-test_cmp_http_data/Mock/trusted.crt"
+       }
+      ]
+     },
+     "isDraft": false,
+     "labels": {
+      "nodes": [
+       {
+        "name": "approval: done"
+       },
+       {
+        "name": "branch: master"
+       },
+       {
+        "name": "severity: urgent"
+       },
+       {
+        "name": "cla: 1.0 no AI"
+       }
+      ]
+     },
+     "merged": false,
+     "mergedAt": null,
+     "mergedBy": null,
+     "number": 33003,
+     "reviews": {
+      "nodes": [
+       {
+        "author": {
+         "__typename": "User",
+         "login": "n13l"
+        },
+        "authorAssociation": "CONTRIBUTOR",
+        "body": "",
+        "createdAt": "2026-09-26T15:18:53Z",
+        "state": "DISMISSED"
+       },
+       {
+        "author": {
+         "__typename": "User",
+         "login": "beldmit"
+        },
+        "authorAssociation": "MEMBER",
+        "body": "LGTM ",
+        "createdAt": "2026-09-26T15:24:03Z",
+        "state": "DISMISSED"
+       },
+       {
+        "author": {
+         "__typename": "User",
+         "login": "mbroz"
+        },
+        "authorAssociation": "MEMBER",
+        "body": "ok with urgent. approval expires in 30 days ;-)",
+        "createdAt": "2026-09-26T15:42:17Z",
+        "state": "DISMISSED"
+       },
+       {
+        "author": {
+         "__typename": "User",
+         "login": "vdukhovni"
+        },
+        "authorAssociation": "NONE",
+        "body": "",
+        "createdAt": "2026-09-26T16:05:10Z",
+        "state": "CHANGES_REQUESTED"
+       },
+       {
+        "author": {
+         "__typename": "User",
+         "login": "n13l"
+        },
+        "authorAssociation": "CONTRIBUTOR",
+        "body": "ok with urgent",
+        "createdAt": "2026-09-26T22:19:50Z",
+        "state": "APPROVED"
+       },
+       {
+        "author": {
+         "__typename": "User",
+         "login": "idrassi"
+        },
+        "authorAssociation": "CONTRIBUTOR",
+        "body": "LGTM.",
+        "createdAt": "2026-09-26T22:30:48Z",
+        "state": "APPROVED"
+       },
+       {
+        "author": {
+         "__typename": "User",
+         "login": "mbroz"
+        },
+        "authorAssociation": "MEMBER",
+        "body": "ok with urgent",
+        "createdAt": "2026-09-27T01:24:07Z",
+        "state": "APPROVED"
+       }
+      ]
+     },
+     "timelineItems": {
+      "nodes": [
+       {
+        "__typename": "ClosedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "jogme"
+        },
+        "closer": null,
+        "createdAt": "2026-09-27T09:05:06Z"
+       },
+       {
+        "__typename": "ReferencedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "openssl-machine"
+        },
+        "commit": {
+         "oid": "1e369089f47c6c80a4d00c14cbee3a1300abe9da"
+        },
+        "commitRepository": {
+         "nameWithOwner": "openssl/openssl"
+        },
+        "createdAt": "2026-09-27T09:05:18Z"
+       }
+      ]
+     },
+     "title": "regenerate CMP mock server certs, crosscerts had expired"
+    },
+    {
+     "additions": 517,
+     "author": {
+      "__typename": "User",
+      "login": "Trust-Worthy"
+     },
+     "authorAssociation": "CONTRIBUTOR",
+     "changedFiles": 6,
+     "closedAt": null,
+     "comments": {
+      "nodes": [
+       {
+        "author": {
+         "__typename": "User",
+         "login": "n13l"
+        },
+        "authorAssociation": "CONTRIBUTOR",
+        "body": "The no-op on zero-length update and clearing stale AAD on reuse are already fixed, along with tests.",
+        "createdAt": "2026-09-25T15:50:04Z"
+       },
+       {
+        "author": {
+         "__typename": "User",
+         "login": "Trust-Worthy"
+        },
+        "authorAssociation": "CONTRIBUTOR",
+        "body": "@n13l Thanks for taking a look. I didn't find anything in recent master or the open GCM-SIV PRs that addresses this. If I've missed where it was fixed, could you point me to the commit or PR? I'm happy to close this if so.\r\n\r\nFrom what I see: \r\nossl_aes_gcm_siv_init() doesn't clear the AAD, so it ca",
+        "createdAt": "2026-09-25T17:08:38Z"
+       },
+       {
+        "author": {
+         "__typename": "User",
+         "login": "n13l"
+        },
+        "authorAssociation": "CONTRIBUTOR",
+        "body": "> @n13l Thanks for taking a look. I didn't find anything in recent master or the open GCM-SIV PRs that addresses this. If I've missed where it was fixed, could you point me to the commit or PR? I'm happy to close this if so.\r\n> \r\n> From what I see: ossl_aes_gcm_siv_init() doesn't clear the AAD, so i",
+        "createdAt": "2026-09-25T17:32:43Z"
+       },
+       {
+        "author": {
+         "__typename": "User",
+         "login": "bbbrumley"
+        },
+        "authorAssociation": "CONTRIBUTOR",
+        "body": "> It's not in the master branch yet. It's waiting in the private repository to be merged.\r\n\r\n@n13l do you have a PR for ref?",
+        "createdAt": "2026-09-25T17:41:20Z"
+       },
+       {
+        "author": {
+         "__typename": "User",
+         "login": "n13l"
+        },
+        "authorAssociation": "CONTRIBUTOR",
+        "body": "> > It's not in the master branch yet. It's waiting in the private repository to be merged.\r\n> \r\n> @n13l do you have a PR for ref?\r\n\r\n@bbbrumley There's an approved PR ready to merge, but it's in the private OpenSSL repo.",
+        "createdAt": "2026-09-25T17:43:24Z"
+       }
+      ]
+     },
+     "createdAt": "2026-09-25T15:10:19Z",
+     "deletions": 257,
+     "files": {
+      "nodes": [
+       {
+        "additions": 5,
+        "deletions": 1,
+        "path": "crypto/modes/siv128.c"
+       },
+       {
+        "additions": 13,
+        "deletions": 1,
+        "path": "providers/implementations/ciphers/cipher_aes_siv_hw.c"
+       },
+       {
+        "additions": 5,
+        "deletions": 0,
+        "path": "test/build.info"
+       },
+       {
+        "additions": 484,
+        "deletions": 0,
+        "path": "test/evp_aead_test.c"
+       },
+       {
+        "additions": 0,
+        "deletions": 255,
+        "path": "test/evp_extra_test.c"
+       },
+       {
+        "additions": 10,
+        "deletions": 0,
+        "path": "test/recipes/30-test_evp_aead.t"
+       }
+      ]
+     },
+     "isDraft": true,
+     "labels": {
+      "nodes": [
+       {
+        "name": "approval: review pending"
+       }
+      ]
+     },
+     "merged": false,
+     "mergedAt": null,
+     "mergedBy": null,
+     "number": 32995,
+     "reviews": {
+      "nodes": []
+     },
+     "timelineItems": {
+      "nodes": []
+     },
+     "title": "GCM-SIV: clear the AAD on context reinitialization"
+    },
+    {
+     "additions": 141,
+     "author": {
+      "__typename": "User",
+      "login": "HeliC829"
+     },
+     "authorAssociation": "CONTRIBUTOR",
+     "changedFiles": 2,
+     "closedAt": null,
+     "comments": {
+      "nodes": [
+       {
+        "author": {
+         "__typename": "User",
+         "login": "HeliC829"
+        },
+        "authorAssociation": "CONTRIBUTOR",
+        "body": "also cc @xry111 @xen0n ",
+        "createdAt": "2026-09-26T18:00:11Z"
+       }
+      ]
+     },
+     "createdAt": "2026-09-26T17:59:46Z",
+     "deletions": 66,
+     "files": {
+      "nodes": [
+       {
+        "additions": 73,
+        "deletions": 33,
+        "path": "crypto/sha/asm/sha256-loongarch64.pl"
+       },
+       {
+        "additions": 68,
+        "deletions": 33,
+        "path": "crypto/sha/asm/sha512-loongarch64.pl"
+       }
+      ]
+     },
+     "isDraft": false,
+     "labels": {
+      "nodes": [
+       {
+        "name": "approval: review pending"
+       },
+       {
+        "name": "severity: fips change"
+       },
+       {
+        "name": "cla: 1.0 no AI"
+       }
+      ]
+     },
+     "merged": false,
+     "mergedAt": null,
+     "mergedBy": null,
+     "number": 33005,
+     "reviews": {
+      "nodes": []
+     },
+     "timelineItems": {
+      "nodes": []
+     },
+     "title": "LoongArch64: shorten the SHA-2 round chain for better performance"
+    }
+   ]
+  },
+  "pallets/flask": {
+   "meta": {
+    "createdAt": "2010-04-06T11:11:59Z",
+    "defaultBranchRef": {
+     "name": "main",
+     "target": {
+      "history": {
+       "nodes": [
+        {
+         "committedDate": "2026-09-08T16:40:41Z",
+         "oid": "d73fa1cdcbd8b1465c151db8924ba58b1dd14e35"
+        }
+       ]
+      }
+     }
+    },
+    "description": "The Python micro framework for building web applications.",
+    "homepageUrl": "https://flask.palletsprojects.com",
+    "isArchived": false,
+    "isFork": false,
+    "isMirror": false,
+    "mirrorUrl": null,
+    "nameWithOwner": "pallets/flask",
+    "parent": null,
+    "primaryLanguage": {
+     "name": "Python"
+    },
+    "pushedAt": "2026-09-08T16:40:53Z",
+    "releases": {
+     "nodes": [
+      {
+       "createdAt": "2026-02-19T04:56:48Z",
+       "isPrerelease": false,
+       "name": "",
+       "publishedAt": "2026-02-19T05:01:30Z",
+       "tagName": "3.1.3"
+      },
+      {
+       "createdAt": "2025-08-19T20:57:58Z",
+       "isPrerelease": false,
+       "name": "",
+       "publishedAt": "2025-08-19T21:03:31Z",
+       "tagName": "3.1.2"
+      },
+      {
+       "createdAt": "2025-05-13T14:53:02Z",
+       "isPrerelease": false,
+       "name": "",
+       "publishedAt": "2025-05-13T15:01:32Z",
+       "tagName": "3.1.1"
+      },
+      {
+       "createdAt": "2024-11-13T18:20:14Z",
+       "isPrerelease": false,
+       "name": "",
+       "publishedAt": "2024-11-13T18:29:05Z",
+       "tagName": "3.1.0"
+      },
+      {
+       "createdAt": "2024-04-07T19:19:46Z",
+       "isPrerelease": false,
+       "name": "",
+       "publishedAt": "2024-04-07T19:27:16Z",
+       "tagName": "3.0.3"
+      },
+      {
+       "createdAt": "2024-02-03T21:03:16Z",
+       "isPrerelease": false,
+       "name": "",
+       "publishedAt": "2024-02-03T21:12:56Z",
+       "tagName": "3.0.2"
+      },
+      {
+       "createdAt": "2024-01-18T19:57:54Z",
+       "isPrerelease": false,
+       "name": "",
+       "publishedAt": "2024-01-18T20:03:56Z",
+       "tagName": "3.0.1"
+      },
+      {
+       "createdAt": "2023-09-30T14:26:06Z",
+       "isPrerelease": false,
+       "name": "3.0.0",
+       "publishedAt": "2023-09-30T14:38:50Z",
+       "tagName": "3.0.0"
+      },
+      {
+       "createdAt": "2023-08-21T17:57:53Z",
+       "isPrerelease": false,
+       "name": "",
+       "publishedAt": "2023-08-21T19:52:49Z",
+       "tagName": "2.3.3"
+      },
+      {
+       "createdAt": "2023-05-02T14:36:00Z",
+       "isPrerelease": false,
+       "name": "",
+       "publishedAt": "2023-05-02T14:43:59Z",
+       "tagName": "2.2.5"
+      }
+     ],
+     "totalCount": 38
+    },
+    "stargazerCount": 74797
+   },
+   "pull_requests": [
+    {
+     "additions": 14,
+     "author": {
+      "__typename": "User",
+      "login": "davidism"
+     },
+     "authorAssociation": "MEMBER",
+     "changedFiles": 3,
+     "closedAt": "2026-08-11T20:19:14Z",
+     "comments": {
+      "nodes": []
+     },
+     "createdAt": "2026-08-11T20:17:29Z",
+     "deletions": 2,
+     "files": {
+      "nodes": [
+       {
+        "additions": 1,
+        "deletions": 0,
+        "path": "CHANGES.rst"
+       },
+       {
+        "additions": 8,
+        "deletions": 0,
+        "path": "src/flask/sansio/scaffold.py"
+       },
+       {
+        "additions": 5,
+        "deletions": 2,
+        "path": "tests/test_basic.py"
+       }
+      ]
+     },
+     "isDraft": false,
+     "labels": {
+      "nodes": []
+     },
+     "merged": true,
+     "mergedAt": "2026-08-11T20:19:14Z",
+     "mergedBy": {
+      "__typename": "User",
+      "login": "davidism"
+     },
+     "number": 6133,
+     "reviews": {
+      "nodes": []
+     },
+     "timelineItems": {
+      "nodes": [
+       {
+        "__typename": "ClosedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "davidism"
+        },
+        "closer": null,
+        "createdAt": "2026-08-11T20:19:14Z"
+       }
+      ]
+     },
+     "title": "add `app.query` route decorator"
+    },
+    {
+     "additions": 29,
+     "author": {
+      "__typename": "User",
+      "login": "gcoinstash-cmd"
+     },
+     "authorAssociation": "NONE",
+     "changedFiles": 1,
+     "closedAt": "2026-09-13T00:27:54Z",
+     "comments": {
+      "nodes": [
+       {
+        "author": {
+         "__typename": "User",
+         "login": "ThiefMaster"
+        },
+        "authorAssociation": "MEMBER",
+        "body": "https://palletsprojects.com/contributing/llm-ai",
+        "createdAt": "2026-09-13T00:27:54Z"
+       }
+      ]
+     },
+     "createdAt": "2026-09-13T00:08:36Z",
+     "deletions": 0,
+     "files": {
+      "nodes": [
+       {
+        "additions": 29,
+        "deletions": 0,
+        "path": "tests/test_json_response_headers_suite.py"
+       }
+      ]
+     },
+     "isDraft": false,
+     "labels": {
+      "nodes": [
+       {
+        "name": "rejected AI"
+       }
+      ]
+     },
+     "merged": false,
+     "mergedAt": null,
+     "mergedBy": null,
+     "number": 6162,
+     "reviews": {
+      "nodes": []
+     },
+     "timelineItems": {
+      "nodes": [
+       {
+        "__typename": "ClosedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "ThiefMaster"
+        },
+        "closer": null,
+        "createdAt": "2026-09-13T00:27:54Z"
+       }
+      ]
+     },
+     "title": "[rejected AI] add unit test suite for jsonify response header invariance"
+    },
+    {
+     "additions": 1,
+     "author": {
+      "__typename": "User",
+      "login": "BruceWae"
+     },
+     "authorAssociation": "NONE",
+     "changedFiles": 1,
+     "closedAt": "2026-08-11T09:32:51Z",
+     "comments": {
+      "nodes": [
+       {
+        "author": {
+         "__typename": "User",
+         "login": "ThiefMaster"
+        },
+        "authorAssociation": "MEMBER",
+        "body": "\"seek\" is a technical term in this context, and it makes sense to use a slightly incorrect english tense for it.\r\n\r\nAlso, write your contributions in English, clearly you speak and understand english when making fixes to english wording...",
+        "createdAt": "2026-08-11T09:32:51Z"
+       },
+       {
+        "author": {
+         "__typename": "User",
+         "login": "davidism"
+        },
+        "authorAssociation": "MEMBER",
+        "body": "This is the correct edit: d318b683. Rather than blindly changing grammar without context, clarify the technical sentence.",
+        "createdAt": "2026-08-16T18:36:14Z"
+       }
+      ]
+     },
+     "createdAt": "2026-08-11T09:26:58Z",
+     "deletions": 1,
+     "files": {
+      "nodes": [
+       {
+        "additions": 1,
+        "deletions": 1,
+        "path": "src/flask/helpers.py"
+       }
+      ]
+     },
+     "isDraft": true,
+     "labels": {
+      "nodes": []
+     },
+     "merged": false,
+     "mergedAt": null,
+     "mergedBy": null,
+     "number": 6132,
+     "reviews": {
+      "nodes": []
+     },
+     "timelineItems": {
+      "nodes": [
+       {
+        "__typename": "ClosedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "ThiefMaster"
+        },
+        "closer": null,
+        "createdAt": "2026-08-11T09:32:51Z"
+       }
+      ]
+     },
+     "title": "\u4fee\u6b63\u6587\u4ef6\u6307\u9488\u6587\u6863\u62fc\u5199"
+    },
+    {
+     "additions": 1,
+     "author": {
+      "__typename": "User",
+      "login": "zihjiang"
+     },
+     "authorAssociation": "NONE",
+     "changedFiles": 1,
+     "closedAt": "2026-09-11T14:56:40Z",
+     "comments": {
+      "nodes": [
+       {
+        "author": {
+         "__typename": "User",
+         "login": "davidism"
+        },
+        "authorAssociation": "MEMBER",
+        "body": "https://palletsprojects.com/contributing/llm-ai",
+        "createdAt": "2026-09-11T14:56:40Z"
+       }
+      ]
+     },
+     "createdAt": "2026-09-11T14:53:09Z",
+     "deletions": 0,
+     "files": {
+      "nodes": [
+       {
+        "additions": 1,
+        "deletions": 0,
+        "path": "docs/deploying/index.rst"
+       }
+      ]
+     },
+     "isDraft": false,
+     "labels": {
+      "nodes": [
+       {
+        "name": "rejected AI"
+       }
+      ]
+     },
+     "merged": false,
+     "mergedAt": null,
+     "mergedBy": null,
+     "number": 6158,
+     "reviews": {
+      "nodes": []
+     },
+     "timelineItems": {
+      "nodes": [
+       {
+        "__typename": "ClosedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "davidism"
+        },
+        "closer": null,
+        "createdAt": "2026-09-11T14:56:40Z"
+       }
+      ]
+     },
+     "title": "[rejected AI] add Cloudflare Workers hosting link"
+    }
+   ]
+  },
+  "pytorch/pytorch": {
+   "meta": {
+    "createdAt": "2016-08-13T05:26:41Z",
+    "defaultBranchRef": {
+     "name": "main",
+     "target": {
+      "history": {
+       "nodes": [
+        {
+         "committedDate": "2026-09-27T14:35:29Z",
+         "oid": "4b0647edace7000cd959f43b857da716d06247c9"
+        }
+       ]
+      }
+     }
+    },
+    "description": "Tensors and Dynamic neural networks in Python with strong GPU acceleration",
+    "homepageUrl": "https://pytorch.org",
+    "isArchived": false,
+    "isFork": false,
+    "isMirror": false,
+    "mirrorUrl": null,
+    "nameWithOwner": "pytorch/pytorch",
+    "parent": null,
+    "primaryLanguage": {
+     "name": "Python"
+    },
+    "pushedAt": "2026-09-27T15:51:19Z",
+    "releases": {
+     "nodes": [
+      {
+       "createdAt": "2026-08-27T02:23:46Z",
+       "isPrerelease": false,
+       "name": "PyTorch 2.14.0 Release",
+       "publishedAt": "2026-09-02T17:40:10Z",
+       "tagName": "v2.14.0"
+      },
+      {
+       "createdAt": "2026-07-03T20:27:09Z",
+       "isPrerelease": false,
+       "name": "PyTorch 2.13.0 Release",
+       "publishedAt": "2026-07-08T17:39:58Z",
+       "tagName": "v2.13.0"
+      },
+      {
+       "createdAt": "2026-06-09T19:27:18Z",
+       "isPrerelease": false,
+       "name": "PyTorch 2.12.1 Release, bug fix release",
+       "publishedAt": "2026-06-18T00:41:17Z",
+       "tagName": "v2.12.1"
+      },
+      {
+       "createdAt": "2026-05-11T21:33:43Z",
+       "isPrerelease": false,
+       "name": "PyTorch 2.12.0 Release",
+       "publishedAt": "2026-05-13T17:38:06Z",
+       "tagName": "v2.12.0"
+      },
+      {
+       "createdAt": "2026-03-21T03:11:45Z",
+       "isPrerelease": false,
+       "name": "PyTorch 2.11.0 Release",
+       "publishedAt": "2026-03-23T18:38:28Z",
+       "tagName": "v2.11.0"
+      },
+      {
+       "createdAt": "2026-01-16T00:29:35Z",
+       "isPrerelease": false,
+       "name": "PyTorch 2.10.0 Release",
+       "publishedAt": "2026-01-21T17:05:16Z",
+       "tagName": "v2.10.0"
+      },
+      {
+       "createdAt": "2025-11-11T01:02:50Z",
+       "isPrerelease": false,
+       "name": "PyTorch 2.9.1 Release, bug fix release",
+       "publishedAt": "2025-11-12T19:27:19Z",
+       "tagName": "v2.9.1"
+      },
+      {
+       "createdAt": "2025-10-09T01:09:57Z",
+       "isPrerelease": false,
+       "name": "2.9 Release Notes",
+       "publishedAt": "2025-10-15T17:12:27Z",
+       "tagName": "v2.9.0"
+      },
+      {
+       "createdAt": "2025-08-04T16:51:07Z",
+       "isPrerelease": false,
+       "name": "PyTorch 2.8.0 Release",
+       "publishedAt": "2025-08-06T17:06:10Z",
+       "tagName": "v2.8.0"
+      },
+      {
+       "createdAt": "2025-05-29T01:18:53Z",
+       "isPrerelease": false,
+       "name": "PyTorch 2.7.1 Release, bug fix release",
+       "publishedAt": "2025-06-04T18:13:15Z",
+       "tagName": "v2.7.1"
+      }
+     ],
+     "totalCount": 69
+    },
+    "stargazerCount": 103408
+   },
+   "pull_requests": [
+    {
+     "additions": 1,
+     "author": {
+      "__typename": "User",
+      "login": "atalman"
+     },
+     "authorAssociation": "COLLABORATOR",
+     "changedFiles": 1,
+     "closedAt": "2026-09-25T17:42:12Z",
+     "comments": {
+      "nodes": [
+       {
+        "author": {
+         "__typename": "Bot",
+         "login": "pytorch-bot"
+        },
+        "authorAssociation": "NONE",
+        "body": "<!-- drci-comment-start -->\n\n## :link: Helpful Links\n### :test_tube: See artifacts and rendered test results at [hud.pytorch.org/pr/198661](https://hud.pytorch.org/pr/198661)\n* :page_facing_up: Preview [Python docs built from this PR](https://docs-preview.pytorch.org/pytorch/pytorch/198661/index.htm",
+        "createdAt": "2026-09-25T17:34:22Z"
+       }
+      ]
+     },
+     "createdAt": "2026-09-25T17:34:18Z",
+     "deletions": 1,
+     "files": {
+      "nodes": [
+       {
+        "additions": 1,
+        "deletions": 1,
+        "path": "version.txt"
+       }
+      ]
+     },
+     "isDraft": false,
+     "labels": {
+      "nodes": [
+       {
+        "name": "topic: not user facing"
+       }
+      ]
+     },
+     "merged": true,
+     "mergedAt": "2026-09-25T17:42:12Z",
+     "mergedBy": {
+      "__typename": "User",
+      "login": "atalman"
+     },
+     "number": 198661,
+     "reviews": {
+      "nodes": [
+       {
+        "author": {
+         "__typename": "User",
+         "login": "jathu"
+        },
+        "authorAssociation": "CONTRIBUTOR",
+        "body": "",
+        "createdAt": "2026-09-25T17:35:32Z",
+        "state": "APPROVED"
+       }
+      ]
+     },
+     "timelineItems": {
+      "nodes": [
+       {
+        "__typename": "ClosedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "atalman"
+        },
+        "closer": null,
+        "createdAt": "2026-09-25T17:42:12Z"
+       }
+      ]
+     },
+     "title": "[release-only] Update version to 2.14.1"
+    },
+    {
+     "additions": 55,
+     "author": {
+      "__typename": "User",
+      "login": "Isalia20"
+     },
+     "authorAssociation": "COLLABORATOR",
+     "changedFiles": 5,
+     "closedAt": "2026-09-26T22:07:14Z",
+     "comments": {
+      "nodes": [
+       {
+        "author": {
+         "__typename": "Bot",
+         "login": "pytorch-bot"
+        },
+        "authorAssociation": "NONE",
+        "body": "<!-- drci-comment-start -->\n\n## :link: Helpful Links\n### :test_tube: See artifacts and rendered test results at [hud.pytorch.org/pr/198719](https://hud.pytorch.org/pr/198719)\n* :page_facing_up: Preview [Python docs built from this PR](https://docs-preview.pytorch.org/pytorch/pytorch/198719/index.htm",
+        "createdAt": "2026-09-26T13:43:22Z"
+       },
+       {
+        "author": {
+         "__typename": "User",
+         "login": "malfet"
+        },
+        "authorAssociation": "COLLABORATOR",
+        "body": "@pytorchbot merge -f \"Lint + MPS are green\"",
+        "createdAt": "2026-09-26T22:05:24Z"
+       },
+       {
+        "author": {
+         "__typename": "User",
+         "login": "pytorchmergebot"
+        },
+        "authorAssociation": "COLLABORATOR",
+        "body": "### Merge started\nYour change will be merged immediately since you used the force (-f) flag, **bypassing any CI checks** (ETA: 1-5 minutes).  Please use `-f` as last resort and instead consider `-i/--ignore-current` to continue the merge ignoring current failures.  This will allow currently pending ",
+        "createdAt": "2026-09-26T22:07:00Z"
+       }
+      ]
+     },
+     "createdAt": "2026-09-26T13:43:18Z",
+     "deletions": 101,
+     "files": {
+      "nodes": [
+       {
+        "additions": 10,
+        "deletions": 8,
+        "path": "aten/src/ATen/native/mps/OperationUtils.mm"
+       },
+       {
+        "additions": 40,
+        "deletions": 0,
+        "path": "aten/src/ATen/native/mps/kernels/TensorCompare.metal"
+       },
+       {
+        "additions": 1,
+        "deletions": 82,
+        "path": "aten/src/ATen/native/mps/operations/TensorCompare.mm"
+       },
+       {
+        "additions": 4,
+        "deletions": 4,
+        "path": "c10/metal/indexing.h"
+       },
+       {
+        "additions": 0,
+        "deletions": 7,
+        "path": "torch/testing/_internal/common_methods_invocations.py"
+       }
+      ]
+     },
+     "isDraft": false,
+     "labels": {
+      "nodes": [
+       {
+        "name": "open source"
+       },
+       {
+        "name": "Merged"
+       },
+       {
+        "name": "topic: improvements"
+       },
+       {
+        "name": "release notes: mps"
+       },
+       {
+        "name": "ciflow/mps"
+       }
+      ]
+     },
+     "merged": false,
+     "mergedAt": null,
+     "mergedBy": null,
+     "number": 198719,
+     "reviews": {
+      "nodes": [
+       {
+        "author": {
+         "__typename": "User",
+         "login": "malfet"
+        },
+        "authorAssociation": "COLLABORATOR",
+        "body": "",
+        "createdAt": "2026-09-26T22:05:03Z",
+        "state": "APPROVED"
+       }
+      ]
+     },
+     "timelineItems": {
+      "nodes": [
+       {
+        "__typename": "ReferencedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "pytorchmergebot"
+        },
+        "commit": {
+         "oid": "f46ffe073f5ad959d7748abeded0d6f5ee2d4c87"
+        },
+        "commitRepository": {
+         "nameWithOwner": "pytorch/pytorch"
+        },
+        "createdAt": "2026-09-26T22:07:14Z"
+       },
+       {
+        "__typename": "ClosedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "pytorchmergebot"
+        },
+        "closer": {
+         "__typename": "Commit",
+         "oid": "f46ffe073f5ad959d7748abeded0d6f5ee2d4c87"
+        },
+        "createdAt": "2026-09-26T22:07:15Z"
+       }
+      ]
+     },
+     "title": "[MPS] migrate where to metal"
+    },
+    {
+     "additions": 18,
+     "author": {
+      "__typename": "User",
+      "login": "demandal25"
+     },
+     "authorAssociation": "NONE",
+     "changedFiles": 2,
+     "closedAt": "2026-09-26T22:31:51Z",
+     "comments": {
+      "nodes": [
+       {
+        "author": {
+         "__typename": "Bot",
+         "login": "pytorch-bot"
+        },
+        "authorAssociation": "NONE",
+        "body": "<!-- drci-comment-start -->\n\n## :link: Helpful Links\n### :test_tube: See artifacts and rendered test results at [hud.pytorch.org/pr/198736](https://hud.pytorch.org/pr/198736)\n* :page_facing_up: Preview [Python docs built from this PR](https://docs-preview.pytorch.org/pytorch/pytorch/198736/index.htm",
+        "createdAt": "2026-09-26T22:23:29Z"
+       },
+       {
+        "author": {
+         "__typename": "Bot",
+         "login": "linux-foundation-easycla"
+        },
+        "authorAssociation": "NONE",
+        "body": "<a href=\"https://easycla.lfx.linuxfoundation.org/#/?version=2\"><img src=\"https://s3.amazonaws.com/cla-project-logo-prod/cla-signed.svg?v=2\" alt=\"CLA Signed\" align=\"left\" height=\"28\" width=\"328\" ></a><br >The committers listed above are authorized under a signed CLA.<ul><li>:white_check_mark: login: ",
+        "createdAt": "2026-09-26T22:23:33Z"
+       },
+       {
+        "author": {
+         "__typename": "User",
+         "login": "demandal25"
+        },
+        "authorAssociation": "NONE",
+        "body": "Superseded by #198737, same commit re-raised from the AMD fork rather than a personal one.",
+        "createdAt": "2026-09-26T22:31:50Z"
+       }
+      ]
+     },
+     "createdAt": "2026-09-26T22:23:25Z",
+     "deletions": 2,
+     "files": {
+      "nodes": [
+       {
+        "additions": 3,
+        "deletions": 2,
+        "path": "aten/src/ATen/native/cuda/layer_norm_kernel.cu"
+       },
+       {
+        "additions": 15,
+        "deletions": 0,
+        "path": "test/test_nn.py"
+       }
+      ]
+     },
+     "isDraft": false,
+     "labels": {
+      "nodes": [
+       {
+        "name": "open source"
+       },
+       {
+        "name": "release notes: nn"
+       }
+      ]
+     },
+     "merged": false,
+     "mergedAt": null,
+     "mergedBy": null,
+     "number": 198736,
+     "reviews": {
+      "nodes": []
+     },
+     "timelineItems": {
+      "nodes": [
+       {
+        "__typename": "ClosedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "demandal25"
+        },
+        "closer": null,
+        "createdAt": "2026-09-26T22:31:52Z"
+       }
+      ]
+     },
+     "title": "Fix LayerNorm returning non-zero on constant input"
+    },
+    {
+     "additions": 82,
+     "author": {
+      "__typename": "User",
+      "login": "malfet"
+     },
+     "authorAssociation": "COLLABORATOR",
+     "changedFiles": 2,
+     "closedAt": null,
+     "comments": {
+      "nodes": [
+       {
+        "author": {
+         "__typename": "Bot",
+         "login": "pytorch-bot"
+        },
+        "authorAssociation": "NONE",
+        "body": "<!-- drci-comment-start -->\n\n## :link: Helpful Links\n### :test_tube: See artifacts and rendered test results at [hud.pytorch.org/pr/198740](https://hud.pytorch.org/pr/198740)\n* :page_facing_up: Preview [Python docs built from this PR](https://docs-preview.pytorch.org/pytorch/pytorch/198740/index.htm",
+        "createdAt": "2026-09-26T23:37:51Z"
+       }
+      ]
+     },
+     "createdAt": "2026-09-26T23:37:47Z",
+     "deletions": 44,
+     "files": {
+      "nodes": [
+       {
+        "additions": 44,
+        "deletions": 44,
+        "path": "aten/src/ATen/native/mps/operations/Normalization.mm"
+       },
+       {
+        "additions": 38,
+        "deletions": 0,
+        "path": "test/test_mps.py"
+       }
+      ]
+     },
+     "isDraft": false,
+     "labels": {
+      "nodes": [
+       {
+        "name": "open source"
+       },
+       {
+        "name": "release notes: mps"
+       },
+       {
+        "name": "ciflow/mps"
+       }
+      ]
+     },
+     "merged": false,
+     "mergedAt": null,
+     "mergedBy": null,
+     "number": 198740,
+     "reviews": {
+      "nodes": []
+     },
+     "timelineItems": {
+      "nodes": [
+       {
+        "__typename": "ReferencedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "malfet"
+        },
+        "commit": {
+         "oid": "1a6d904f771cfe89a9c476df6758505c01982588"
+        },
+        "commitRepository": {
+         "nameWithOwner": "pytorch/pytorch"
+        },
+        "createdAt": "2026-09-27T05:10:05Z"
+       },
+       {
+        "__typename": "ReferencedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "malfet"
+        },
+        "commit": {
+         "oid": "ae456f99086f66b75ded101523a4b4490ca54730"
+        },
+        "commitRepository": {
+         "nameWithOwner": "pytorch/pytorch"
+        },
+        "createdAt": "2026-09-27T05:57:49Z"
+       }
+      ]
+     },
+     "title": "[MPS] Fix batch_norm aborting on mixed-dtype running stats"
+    },
+    {
+     "additions": 433,
+     "author": {
+      "__typename": "User",
+      "login": "Isalia20"
+     },
+     "authorAssociation": "COLLABORATOR",
+     "changedFiles": 3,
+     "closedAt": null,
+     "comments": {
+      "nodes": [
+       {
+        "author": {
+         "__typename": "Bot",
+         "login": "pytorch-bot"
+        },
+        "authorAssociation": "NONE",
+        "body": "<!-- drci-comment-start -->\n\n## :link: Helpful Links\n### :test_tube: See artifacts and rendered test results at [hud.pytorch.org/pr/198732](https://hud.pytorch.org/pr/198732)\n* :page_facing_up: Preview [Python docs built from this PR](https://docs-preview.pytorch.org/pytorch/pytorch/198732/index.htm",
+        "createdAt": "2026-09-26T20:38:21Z"
+       }
+      ]
+     },
+     "createdAt": "2026-09-26T20:38:17Z",
+     "deletions": 75,
+     "files": {
+      "nodes": [
+       {
+        "additions": 249,
+        "deletions": 56,
+        "path": "aten/src/ATen/native/mps/kernels/LinearAlgebra.metal"
+       },
+       {
+        "additions": 108,
+        "deletions": 19,
+        "path": "aten/src/ATen/native/mps/operations/LinearAlgebra.mm"
+       },
+       {
+        "additions": 76,
+        "deletions": 0,
+        "path": "test/test_mps.py"
+       }
+      ]
+     },
+     "isDraft": true,
+     "labels": {
+      "nodes": [
+       {
+        "name": "open source"
+       },
+       {
+        "name": "release notes: mps"
+       },
+       {
+        "name": "ciflow/mps"
+       }
+      ]
+     },
+     "merged": false,
+     "mergedAt": null,
+     "mergedBy": null,
+     "number": 198732,
+     "reviews": {
+      "nodes": []
+     },
+     "timelineItems": {
+      "nodes": []
+     },
+     "title": "[MPS] [WIP] Speed up QR with blocked householder updates"
+    }
+   ]
+  },
+  "react/react-native": {
+   "meta": {
+    "createdAt": "2015-01-09T18:10:16Z",
+    "defaultBranchRef": {
+     "name": "main",
+     "target": {
+      "history": {
+       "nodes": [
+        {
+         "committedDate": "2026-09-26T00:03:09Z",
+         "oid": "d7ff82ebe4ed5155b955fd60b31e02bbc76a3c66"
+        }
+       ]
+      }
+     }
+    },
+    "description": "A framework for building native applications using React",
+    "homepageUrl": "https://reactnative.dev",
+    "isArchived": false,
+    "isFork": false,
+    "isMirror": false,
+    "mirrorUrl": null,
+    "nameWithOwner": "react/react-native",
+    "parent": null,
+    "primaryLanguage": {
+     "name": "C++"
+    },
+    "pushedAt": "2026-09-27T15:50:04Z",
+    "releases": {
+     "nodes": [
+      {
+       "createdAt": "2026-09-21T16:15:27Z",
+       "isPrerelease": true,
+       "name": "0.88.0-rc.2",
+       "publishedAt": "2026-09-22T08:52:19Z",
+       "tagName": "v0.88.0-rc.2"
+      },
+      {
+       "createdAt": "2026-09-15T22:16:48Z",
+       "isPrerelease": true,
+       "name": "0.88.0-rc.1",
+       "publishedAt": "2026-09-16T09:35:40Z",
+       "tagName": "v0.88.0-rc.1"
+      },
+      {
+       "createdAt": "2026-09-08T13:53:53Z",
+       "isPrerelease": true,
+       "name": "0.88.0-rc.0",
+       "publishedAt": "2026-09-08T17:26:59Z",
+       "tagName": "v0.88.0-rc.0"
+      },
+      {
+       "createdAt": "2026-08-26T12:51:22Z",
+       "isPrerelease": false,
+       "name": "0.87.1",
+       "publishedAt": "2026-08-26T16:37:29Z",
+       "tagName": "v0.87.1"
+      },
+      {
+       "createdAt": "2026-08-24T14:01:32Z",
+       "isPrerelease": false,
+       "name": "0.86.3",
+       "publishedAt": "2026-08-24T17:12:44Z",
+       "tagName": "v0.86.3"
+      },
+      {
+       "createdAt": "2026-08-11T13:31:13Z",
+       "isPrerelease": false,
+       "name": "0.87.0",
+       "publishedAt": "2026-08-11T17:11:13Z",
+       "tagName": "v0.87.0"
+      },
+      {
+       "createdAt": "2026-08-04T22:03:14Z",
+       "isPrerelease": true,
+       "name": "0.87.0-rc.4",
+       "publishedAt": "2026-08-05T13:24:07Z",
+       "tagName": "v0.87.0-rc.4"
+      },
+      {
+       "createdAt": "2026-07-27T15:24:12Z",
+       "isPrerelease": true,
+       "name": "0.87.0-rc.3",
+       "publishedAt": "2026-07-27T18:47:17Z",
+       "tagName": "v0.87.0-rc.3"
+      },
+      {
+       "createdAt": "2026-07-27T13:58:19Z",
+       "isPrerelease": false,
+       "name": "0.86.2",
+       "publishedAt": "2026-07-27T17:34:55Z",
+       "tagName": "v0.86.2"
+      },
+      {
+       "createdAt": "2026-07-20T20:17:41Z",
+       "isPrerelease": true,
+       "name": "0.87.0-rc.2",
+       "publishedAt": "2026-07-21T18:13:16Z",
+       "tagName": "v0.87.0-rc.2"
+      }
+     ],
+     "totalCount": 476
+    },
+    "stargazerCount": 126745
+   },
+   "pull_requests": [
+    {
+     "additions": 35,
+     "author": {
+      "__typename": "User",
+      "login": "Abbondanzo"
+     },
+     "authorAssociation": "CONTRIBUTOR",
+     "changedFiles": 4,
+     "closedAt": "2026-09-26T00:06:07Z",
+     "comments": {
+      "nodes": [
+       {
+        "author": {
+         "__typename": "Bot",
+         "login": "meta-codesync"
+        },
+        "authorAssociation": "NONE",
+        "body": "@Abbondanzo has **exported** this pull request. If you are a Meta employee, you can view the originating Diff in [D121845437](https://www.internalfb.com/diff/D121845437).",
+        "createdAt": "2026-09-25T18:56:04Z"
+       },
+       {
+        "author": {
+         "__typename": "Bot",
+         "login": "meta-codesync"
+        },
+        "authorAssociation": "NONE",
+        "body": "This pull request has been merged in react/react-native@d7ff82ebe4ed5155b955fd60b31e02bbc76a3c66.",
+        "createdAt": "2026-09-26T00:06:16Z"
+       }
+      ]
+     },
+     "createdAt": "2026-09-25T18:55:56Z",
+     "deletions": 5,
+     "files": {
+      "nodes": [
+       {
+        "additions": 24,
+        "deletions": 0,
+        "path": "packages/react-native/ReactAndroid/src/main/java/com/facebook/react/activityresult/ActivityResultLauncherCompat.java"
+       },
+       {
+        "additions": 2,
+        "deletions": 2,
+        "path": "packages/react-native/ReactAndroid/src/main/java/com/facebook/react/activityresult/DeferredActivityResultLauncher.kt"
+       },
+       {
+        "additions": 8,
+        "deletions": 0,
+        "path": "packages/react-native/ReactAndroid/src/test/java/com/facebook/react/activityresult/ReactActivityResultCallerImplTest.kt"
+       },
+       {
+        "additions": 1,
+        "deletions": 3,
+        "path": "packages/react-native/ReactAndroid/src/test/java/com/facebook/react/activityresult/ReactActivityResultCallerThreadingTest.kt"
+       }
+      ]
+     },
+     "isDraft": false,
+     "labels": {
+      "nodes": [
+       {
+        "name": "CLA Signed"
+       },
+       {
+        "name": "Merged"
+       },
+       {
+        "name": "p: Facebook"
+       },
+       {
+        "name": "Partner"
+       },
+       {
+        "name": "meta-exported"
+       }
+      ]
+     },
+     "merged": false,
+     "mergedAt": null,
+     "mergedBy": null,
+     "number": 58688,
+     "reviews": {
+      "nodes": []
+     },
+     "timelineItems": {
+      "nodes": [
+       {
+        "__typename": "ReferencedEvent",
+        "actor": {
+         "__typename": "Bot",
+         "login": "meta-codesync"
+        },
+        "commit": {
+         "oid": "d7ff82ebe4ed5155b955fd60b31e02bbc76a3c66"
+        },
+        "commitRepository": {
+         "nameWithOwner": "react/react-native"
+        },
+        "createdAt": "2026-09-26T00:06:06Z"
+       },
+       {
+        "__typename": "ClosedEvent",
+        "actor": {
+         "__typename": "Bot",
+         "login": "meta-codesync"
+        },
+        "closer": {
+         "__typename": "Commit",
+         "oid": "d7ff82ebe4ed5155b955fd60b31e02bbc76a3c66"
+        },
+        "createdAt": "2026-09-26T00:06:07Z"
+       }
+      ]
+     },
+     "title": "Fix Activity Result launcher compilation"
+    },
+    {
+     "additions": 2,
+     "author": {
+      "__typename": "User",
+      "login": "j-piasecki"
+     },
+     "authorAssociation": "CONTRIBUTOR",
+     "changedFiles": 1,
+     "closedAt": "2026-09-25T13:51:51Z",
+     "comments": {
+      "nodes": [
+       {
+        "author": {
+         "__typename": "Bot",
+         "login": "meta-codesync"
+        },
+        "authorAssociation": "NONE",
+        "body": "@j-piasecki has **exported** this pull request. If you are a Meta employee, you can view the originating Diff in [D121796928](https://www.internalfb.com/diff/D121796928).",
+        "createdAt": "2026-09-25T13:45:03Z"
+       }
+      ]
+     },
+     "createdAt": "2026-09-25T13:44:47Z",
+     "deletions": 2,
+     "files": {
+      "nodes": [
+       {
+        "additions": 2,
+        "deletions": 2,
+        "path": "packages/react-native/scripts/ios-prebuild/__docs__/headers-rules.md"
+       }
+      ]
+     },
+     "isDraft": false,
+     "labels": {
+      "nodes": [
+       {
+        "name": "CLA Signed"
+       },
+       {
+        "name": "p: Facebook"
+       },
+       {
+        "name": "Partner"
+       },
+       {
+        "name": "p: Software Mansion"
+       },
+       {
+        "name": "meta-exported"
+       }
+      ]
+     },
+     "merged": false,
+     "mergedAt": null,
+     "mergedBy": null,
+     "number": 58680,
+     "reviews": {
+      "nodes": []
+     },
+     "timelineItems": {
+      "nodes": [
+       {
+        "__typename": "ClosedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "j-piasecki"
+        },
+        "closer": null,
+        "createdAt": "2026-09-25T13:51:51Z"
+       }
+      ]
+     },
+     "title": "Fix prettier formatting in headers-rules.md"
+    },
+    {
+     "additions": 312,
+     "author": {
+      "__typename": "User",
+      "login": "Abbondanzo"
+     },
+     "authorAssociation": "CONTRIBUTOR",
+     "changedFiles": 2,
+     "closedAt": "2026-09-25T22:49:52Z",
+     "comments": {
+      "nodes": [
+       {
+        "author": {
+         "__typename": "Bot",
+         "login": "meta-codesync"
+        },
+        "authorAssociation": "NONE",
+        "body": "@Abbondanzo has **exported** this pull request. If you are a Meta employee, you can view the originating Diff in [D121670747](https://www.internalfb.com/diff/D121670747).",
+        "createdAt": "2026-09-25T17:20:35Z"
+       },
+       {
+        "author": {
+         "__typename": "Bot",
+         "login": "meta-codesync"
+        },
+        "authorAssociation": "NONE",
+        "body": "This pull request has been merged in react/react-native@5c87ca977a144ef6cd48da276383b7250c8998ff.",
+        "createdAt": "2026-09-25T22:50:00Z"
+       }
+      ]
+     },
+     "createdAt": "2026-09-25T17:20:08Z",
+     "deletions": 14,
+     "files": {
+      "nodes": [
+       {
+        "additions": 133,
+        "deletions": 14,
+        "path": "packages/react-native/ReactAndroid/src/main/java/com/facebook/react/views/text/TextLayoutManager.kt"
+       },
+       {
+        "additions": 179,
+        "deletions": 0,
+        "path": "packages/react-native/ReactAndroid/src/test/java/com/facebook/react/views/text/TextLayoutManagerStartOverhangTest.kt"
+       }
+      ]
+     },
+     "isDraft": false,
+     "labels": {
+      "nodes": [
+       {
+        "name": "CLA Signed"
+       },
+       {
+        "name": "Merged"
+       },
+       {
+        "name": "p: Facebook"
+       },
+       {
+        "name": "Partner"
+       },
+       {
+        "name": "meta-exported"
+       }
+      ]
+     },
+     "merged": false,
+     "mergedAt": null,
+     "mergedBy": null,
+     "number": 58685,
+     "reviews": {
+      "nodes": []
+     },
+     "timelineItems": {
+      "nodes": [
+       {
+        "__typename": "ReferencedEvent",
+        "actor": {
+         "__typename": "Bot",
+         "login": "meta-codesync"
+        },
+        "commit": {
+         "oid": "5c87ca977a144ef6cd48da276383b7250c8998ff"
+        },
+        "commitRepository": {
+         "nameWithOwner": "react/react-native"
+        },
+        "createdAt": "2026-09-25T22:49:51Z"
+       },
+       {
+        "__typename": "ClosedEvent",
+        "actor": {
+         "__typename": "Bot",
+         "login": "meta-codesync"
+        },
+        "closer": {
+         "__typename": "Commit",
+         "oid": "5c87ca977a144ef6cd48da276383b7250c8998ff"
+        },
+        "createdAt": "2026-09-25T22:49:52Z"
+       }
+      ]
+     },
+     "title": "Guard RTL overhang handling for fixed-line text"
+    },
+    {
+     "additions": 170,
+     "author": {
+      "__typename": "User",
+      "login": "coado"
+     },
+     "authorAssociation": "CONTRIBUTOR",
+     "changedFiles": 3,
+     "closedAt": null,
+     "comments": {
+      "nodes": [
+       {
+        "author": {
+         "__typename": "Bot",
+         "login": "meta-codesync"
+        },
+        "authorAssociation": "NONE",
+        "body": "@coado has **imported** this pull request. If you are a Meta employee, you can view this in [D121777587](https://www.internalfb.com/diff/D121777587).",
+        "createdAt": "2026-09-25T10:46:27Z"
+       },
+       {
+        "author": {
+         "__typename": "Bot",
+         "login": "meta-codesync"
+        },
+        "authorAssociation": "NONE",
+        "body": "@coado has **exported** this pull request. If you are a Meta employee, you can view the originating Diff in [D121777587](https://www.internalfb.com/diff/D121777587).",
+        "createdAt": "2026-09-25T14:02:21Z"
+       }
+      ]
+     },
+     "createdAt": "2026-09-25T10:40:34Z",
+     "deletions": 34,
+     "files": {
+      "nodes": [
+       {
+        "additions": 25,
+        "deletions": 24,
+        "path": "packages/react-native/ReactCommon/React-Fabric.podspec"
+       },
+       {
+        "additions": 88,
+        "deletions": 2,
+        "path": "packages/react-native/scripts/cocoapods/__tests__/utils-test.rb"
+       },
+       {
+        "additions": 57,
+        "deletions": 8,
+        "path": "packages/react-native/scripts/cocoapods/utils.rb"
+       }
+      ]
+     },
+     "isDraft": true,
+     "labels": {
+      "nodes": [
+       {
+        "name": "CLA Signed"
+       },
+       {
+        "name": "p: Facebook"
+       },
+       {
+        "name": "Partner"
+       },
+       {
+        "name": "p: Software Mansion"
+       },
+       {
+        "name": "meta-exported"
+       }
+      ]
+     },
+     "merged": false,
+     "mergedAt": null,
+     "mergedBy": null,
+     "number": 58679,
+     "reviews": {
+      "nodes": []
+     },
+     "timelineItems": {
+      "nodes": [
+       {
+        "__typename": "ReferencedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "coado"
+        },
+        "commit": {
+         "oid": "9f85e0cdac7f68f4a2cda1b975c6a7e7c62a568f"
+        },
+        "commitRepository": {
+         "nameWithOwner": "coado/react-native"
+        },
+        "createdAt": "2026-09-25T11:37:35Z"
+       },
+       {
+        "__typename": "ReferencedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "coado"
+        },
+        "commit": {
+         "oid": "96bab74b87eb28dccf72a721eace4ed2f7323816"
+        },
+        "commitRepository": {
+         "nameWithOwner": "coado/react-native"
+        },
+        "createdAt": "2026-09-25T11:38:03Z"
+       },
+       {
+        "__typename": "ReferencedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "coado"
+        },
+        "commit": {
+         "oid": "983fab83d0fd1258f9283b487af73ba8b09af525"
+        },
+        "commitRepository": {
+         "nameWithOwner": "coado/react-native"
+        },
+        "createdAt": "2026-09-25T11:40:19Z"
+       },
+       {
+        "__typename": "ReferencedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "coado"
+        },
+        "commit": {
+         "oid": "2109765b420f0f145d144ab61c0be7b718455c3d"
+        },
+        "commitRepository": {
+         "nameWithOwner": "coado/react-native"
+        },
+        "createdAt": "2026-09-25T11:44:55Z"
+       },
+       {
+        "__typename": "ReferencedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "coado"
+        },
+        "commit": {
+         "oid": "8cc2ed5c190dd83094649a2635062949f2d7c52c"
+        },
+        "commitRepository": {
+         "nameWithOwner": "coado/react-native"
+        },
+        "createdAt": "2026-09-25T14:01:57Z"
+       },
+       {
+        "__typename": "ReferencedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "coado"
+        },
+        "commit": {
+         "oid": "ee4f484b213ad22463e764fb40089bfe987649c4"
+        },
+        "commitRepository": {
+         "nameWithOwner": "coado/react-native"
+        },
+        "createdAt": "2026-09-25T14:03:24Z"
+       },
+       {
+        "__typename": "ReferencedEvent",
+        "actor": {
+         "__typename": "User",
+         "login": "coado"
+        },
+        "commit": {
+         "oid": "30f8574b8d3764e505bb5c0b5a1ccc7b8bed54f1"
+        },
+        "commitRepository": {
+         "nameWithOwner": "coado/react-native"
+        },
+        "createdAt": "2026-09-25T15:27:54Z"
+       }
+      ]
+     },
+     "title": "Fix dynamic-framework header resolution for stable C++ umbrella headers (#58679)"
+    },
+    {
+     "additions": 163,
+     "author": {
+      "__typename": "User",
+      "login": "camchis"
+     },
+     "authorAssociation": "NONE",
+     "changedFiles": 3,
+     "closedAt": null,
+     "comments": {
+      "nodes": [
+       {
+        "author": {
+         "__typename": "Bot",
+         "login": "meta-cla"
+        },
+        "authorAssociation": "NONE",
+        "body": "Hi @camchis! \n\nThank you for your pull request and welcome to our community. \n\n# Action Required\n\nIn order to merge **any pull request** (code, docs, etc.), we **require** contributors to sign our **Contributor License Agreement**, and we don't seem to have one on file for you.\n\n# Process\n\nIn order ",
+        "createdAt": "2026-09-26T22:14:36Z"
+       },
+       {
+        "author": {
+         "__typename": "Bot",
+         "login": "meta-cla"
+        },
+        "authorAssociation": "NONE",
+        "body": "Thank you for signing our Contributor License Agreement. We can now accept your code for this (and any) Meta Open Source project. Thanks!",
+        "createdAt": "2026-09-26T22:22:34Z"
+       }
+      ]
+     },
+     "createdAt": "2026-09-26T22:14:30Z",
+     "deletions": 1,
+     "files": {
+      "nodes": [
+       {
+        "additions": 44,
+        "deletions": 1,
+        "path": "packages/react-native/React/Fabric/Mounting/ComponentViews/ScrollView/RCTPullToRefreshViewComponentView.mm"
+       },
+       {
+        "additions": 115,
+        "deletions": 0,
+        "path": "packages/react-native/React/Tests/Mounting/RCTPullToRefreshViewComponentViewTests.mm"
+       },
+       {
+        "additions": 4,
+        "deletions": 0,
+        "path": "packages/rn-tester/RNTesterPods.xcodeproj/project.pbxproj"
+       }
+      ]
+     },
+     "isDraft": false,
+     "labels": {
+      "nodes": [
+       {
+        "name": "CLA Signed"
+       },
+       {
+        "name": "Shared with Meta"
+       }
+      ]
+     },
+     "merged": false,
+     "mergedAt": null,
+     "mergedBy": null,
+     "number": 58694,
+     "reviews": {
+      "nodes": []
+     },
+     "timelineItems": {
+      "nodes": []
+     },
+     "title": "Fix iOS RefreshControl appearance after native navigation"
+    }
+   ]
+  },
+  "v8/v8": {
+   "meta": {
+    "createdAt": "2014-09-24T15:24:30Z",
+    "defaultBranchRef": {
+     "name": "main",
+     "target": {
+      "history": {
+       "nodes": [
+        {
+         "committedDate": "2026-09-27T03:13:48Z",
+         "oid": "fe8f6737e1c06f8bf79c2bcf59fa6ba28b77ccb3"
+        }
+       ]
+      }
+     }
+    },
+    "description": "The official mirror of the V8 Git repository",
+    "homepageUrl": "https://chromium.googlesource.com/v8/v8.git",
+    "isArchived": false,
+    "isFork": false,
+    "isMirror": true,
+    "mirrorUrl": "https://chromium.googlesource.com/v8/v8.git",
+    "nameWithOwner": "v8/v8",
+    "parent": null,
+    "primaryLanguage": {
+     "name": "C++"
+    },
+    "pushedAt": "2026-09-27T13:29:22Z",
+    "releases": {
+     "nodes": [],
+     "totalCount": 0
+    },
+    "stargazerCount": 25265
+   }
+  }
+ }
+}

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # backup.sh -- nightly pg_dump of the production databases.
 #
-# Writes ~/backups/holt/<UTC timestamp>/{holt,holt_web}.dump (pg_dump custom
+# Writes ~/backups/holt/<UTC timestamp>/{holt,holt_web,umami}.dump (pg_dump custom
 # format, compressed) plus globals.sql (roles), and deletes sets older than
 # 14 days. install.sh schedules it at 03:30 UTC via a systemd --user timer;
 # by hand: deploy/prod/backup.sh. Restore steps are in README.md.
@@ -19,7 +19,10 @@ stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 out="$DEST/$stamp"
 umask 077
 mkdir -p "$out"
-for name in holt holt_web; do
+# umami: only once deploy/prod/umami.sh has created it.
+names="holt holt_web"
+docker exec "$db" psql -U holt -d postgres -tAc "SELECT 1 FROM pg_database WHERE datname = 'umami'" | grep -q 1 && names="$names umami"
+for name in $names; do
     docker exec "$db" pg_dump -U holt -Fc --compress=6 "$name" > "$out/$name.dump"
 done
 docker exec "$db" pg_dumpall -U holt --globals-only > "$out/globals.sql"

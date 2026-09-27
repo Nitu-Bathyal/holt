@@ -14,7 +14,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 
-from holt_server import __version__, badge, credits, repos, schema, starter
+from holt_server import __version__, badge, credits, repos, schema, starter, usage
 from holt_server.db import (
     ACTIVE,
     BADGE_PRIORITY,
@@ -264,6 +264,9 @@ async def create_analysis(body: AnalysisIn, request: Request,
         raise ApiError("needs_key", "Sign in to get an AI-written report. "
                        "The quick report is free without an account.")
 
+    await usage.record(svc, "analysis", user_id=who.user_id, ip=who.ip, repo_key=key,
+                       mode=body.mode)
+
     if not body.refresh:
         cached = await latest_report(svc, repo, body.mode, body.days)
         if cached is not None and is_fresh(svc, cached):
@@ -499,6 +502,7 @@ async def find(body: FindIn, request: Request, who: Caller = Depends(caller)) ->
     starter.function("find")
     params = find_params(body)
     key = find_key(params["languages"], params["topics"], params["hacktoberfest"], body.days)
+    await usage.record(svc, "find", user_id=who.user_id, ip=who.ip)
     # Cached, or already being searched for someone else: free, no rate limit.
     if (results := await cached_find(svc, key, body.limit)) is not None:
         return JSONResponse(schema.FindDone.model_validate(

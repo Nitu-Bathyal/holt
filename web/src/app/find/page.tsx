@@ -85,7 +85,7 @@ export default async function FindPage({ searchParams }: PageProps<"/find">) {
             </span>
           </label>
 
-          <button type="submit" className="btn-primary w-full sm:w-auto">
+          <button type="submit" data-umami-event="find-run" className="btn-primary w-full sm:w-auto">
             find my first contribution <span aria-hidden="true">→</span>
           </button>
         </form>

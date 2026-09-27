@@ -196,8 +196,9 @@ def screen_slug(slug: str, transport, as_of: datetime, days: int,
     """
     from holt.evidence.github_graphql import LiveGitHubProvider
 
+    # No timeline: it is the slow part of a page, and a screen is a pre-filter.
     provider = LiveGitHubProvider(Window.PRE_T, cutoff=as_of, transport=transport,
-                                  max_pages=SCREEN_PAGES)
+                                  max_pages=SCREEN_PAGES, timeline=False)
     records = list(provider.fetch(slug))
     return screen_records(candidate or Candidate(slug=slug), records, days), records
 

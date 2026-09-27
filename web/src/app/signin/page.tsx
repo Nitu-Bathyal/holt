@@ -56,7 +56,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
                     await signIn(p.id, { redirectTo: callbackUrl });
                   }}
                 >
-                  <button type="submit" className="flex min-h-13 w-full items-center justify-center gap-3 border border-line-strong bg-panel text-[0.92rem] font-semibold transition-colors hover:border-blue">
+                  <button type="submit" data-umami-event="sign-in" data-umami-event-provider={p.id} className="flex min-h-13 w-full items-center justify-center gap-3 border border-line-strong bg-panel text-[0.92rem] font-semibold transition-colors hover:border-blue">
                     {ICONS[p.id]} continue with {p.name}
                   </button>
                 </form>

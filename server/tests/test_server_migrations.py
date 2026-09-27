@@ -89,13 +89,13 @@ def test_create_all_database_is_stamped_and_keeps_its_rows(db):
 def test_ai_credits_migration_deletes_saved_keys_and_keeps_users(db):
     from alembic import command
 
-    run(db, lambda c: command.upgrade(migrate.config(c), "0001"))
+    run(db, lambda c: command.upgrade(migrate.config(c), "0002"))
     run(db, lambda c: c.execute(text(
         "INSERT INTO users (id, plan, ai_used, ai_period, byok_provider, byok_model, "
         "byok_cipher, created_at) VALUES "
         "('keyed', 'free', 1, '2026-09', 'openai', 'gpt-5-mini', 'AQID-sealed', CURRENT_TIMESTAMP), "
         "('plain', 'pro', 0, '', NULL, NULL, NULL, CURRENT_TIMESTAMP)")))
-    run(db, lambda c: command.upgrade(migrate.config(c), "0002"))
+    run(db, lambda c: command.upgrade(migrate.config(c), "0003"))
 
     got = run(db, lambda c: c.execute(text(
         "SELECT id, plan, byok_provider, byok_model, byok_cipher, ai_credits, "
@@ -112,7 +112,7 @@ def test_ai_credits_migration_deletes_saved_keys_and_keeps_users(db):
         "SELECT ai_credits FROM users WHERE id = 'older'")).scalar()) == 0
     assert run(db, migrate.differences) == []
 
-    run(db, lambda c: command.downgrade(migrate.config(c), "0001"))
+    run(db, lambda c: command.downgrade(migrate.config(c), "0002"))
     tables = run(db, lambda c: inspect(c).get_table_names())
     assert "credit_events" not in tables
     cols = {col["name"] for col in run(db, lambda c: inspect(c).get_columns("users"))}
