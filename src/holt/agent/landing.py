@@ -25,7 +25,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 
-from holt.agent.signals import Thread, newcomer_threads
+from holt.agent.signals import Thread, outsider_threads
 
 # Two path segments. One is too coarse to act on in a monorepo (`pkgs`, `src`);
 # three splits the same area into a dozen near-identical rows.
@@ -88,7 +88,7 @@ def _tally(outsiders: list[Thread], depth: int) -> tuple[Counter, Counter]:
 
 
 def compute(threads: dict[str, Thread]) -> Landing:
-    outsiders = newcomer_threads(threads)
+    outsiders = outsider_threads(threads)
     depth = DEPTH
     landed, attempted = _tally(outsiders, depth)
     if outsiders and len(attempted) > REGROUP_ABOVE * len(outsiders):

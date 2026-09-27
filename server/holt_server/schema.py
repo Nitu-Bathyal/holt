@@ -192,7 +192,7 @@ def verdict_line(verdict: str, s: Stats, decided_by: list[str], rule_codes: list
                 "most pull requests don't land" if low_merge else "",
                 f"{_silent_phrase(silent)} get no reply" if many_silent else "",
             ) if b]
-            return (f"Newcomers do get merged here ({merged} recently), but "
+            return (f"Outside contributors do get merged here ({merged} recently), but "
                     f"{' and '.join(buts)}, so start with one of the starter issues below.")
         if silent < 0.3:
             return ("Outside contributors get real replies here, and "

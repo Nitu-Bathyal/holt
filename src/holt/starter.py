@@ -493,7 +493,7 @@ def score_issue(node: dict[str, Any], as_of: datetime, *,
     if landing and (area := _mentioned_area(f"{title}\n{body}", landing, repo)):
         score += 2
         why.append(f"Mentions {area.path}/, where {area.landed} of {area.attempted} "
-                   "pull requests from first-time contributors were merged")
+                   "pull requests from outside contributors were merged")
 
     if idle <= 14:
         score += 1.5
@@ -602,7 +602,7 @@ def _stats_subset(signals) -> dict[str, Any]:
         "outsider_attempts": signals.outsider_threads,
         "outsider_merged": signals.outsider_merged,
         "distinct_outsiders": signals.distinct_outsider_authors,
-        "first_time_merged_authors": signals.distinct_merged_authors,
+        "first_time_merged_authors": signals.distinct_first_timer_merged_authors,
         "no_reply": signals.outsider_ignored,
         "median_first_response_hours": signals.median_first_response_hours,
     }
@@ -837,7 +837,7 @@ def _stats_line(stats: dict[str, Any]) -> str:
     parts = []
     tried, merged = stats.get("outsider_attempts"), stats.get("outsider_merged")
     if tried:
-        parts.append(f"{merged} of {tried} recent pull requests from first-time "
+        parts.append(f"{merged} of {tried} recent pull requests from outside "
                      "contributors were merged")
     hours = stats.get("median_first_response_hours")
     if hours is not None:
@@ -864,7 +864,7 @@ def render_find(results: Sequence[FindResult], describe: str) -> str:
                   "open starter issue right now. Try another language or topic, or "
                   "drop --hacktoberfest.", ""]
         return "\n".join(lines)
-    lines += ["Each repository below merges pull requests from first-time contributors "
+    lines += ["Each repository below merges pull requests from outside contributors "
               "(checked from its recent history). Issues are listed best first.", ""]
     for i, result in enumerate(results, 1):
         lines.append(f"{i}. {result.repo}: {result.headline}")

@@ -308,8 +308,8 @@ def classify(
 
     if signals.outsider_awaiting_reply:
         trace.append(Rule(
-            f"{_n(signals.outsider_awaiting_reply, 'pull request')} from newcomers "
-            f"{'was' if signals.outsider_awaiting_reply == 1 else 'were'} opened "
+            f"{_n(signals.outsider_awaiting_reply, 'pull request')} from outside "
+            f"contributors {'was' if signals.outsider_awaiting_reply == 1 else 'were'} opened "
             f"in the last {MIN_AGE_HOURS:g} hours and haven't had time to get a "
             "reply yet, so they aren't counted as ignored.",
             code="awaiting_reply",
@@ -337,7 +337,7 @@ def classify(
     ):
         trace.append(Rule(
             f"{signals.outsider_ignored} of {_n(judgeable, 'pull request')} from "
-            "newcomers got no reply at all, and none were merged.",
+            "outside contributors got no reply at all, and none were merged.",
             code="ignored",
             legacy=(
                 f"{signals.outsider_ignored}/{signals.outsider_threads} outsider attempts "
@@ -354,7 +354,7 @@ def classify(
         and not slow
     ):
         text = (
-            f"{_n(signals.outsider_merged, 'pull request')} from first-time "
+            f"{_n(signals.outsider_merged, 'pull request')} from outside "
             f"contributors {'was' if signals.outsider_merged == 1 else 'were'} "
             f"merged, by {_n(signals.distinct_merged_authors, 'different person', 'different people')}, "
             f"out of {_n(signals.outsider_threads, 'attempt')} by "
@@ -362,7 +362,7 @@ def classify(
         )
         if median is not None:
             text += (
-                " Among newcomers who got a reply, half heard back within "
+                " Of those who got a reply, half heard back within "
                 f"{hours_phrase(median)}."
             )
         # The median covers only attempts that got a reply; the ones that never
@@ -392,7 +392,7 @@ def classify(
             trace.append(Rule(
                 f"But only {signals.reviewed_share:.0%} of merged pull requests got "
                 f"any comment from a person, while {signals.merge_rate:.0%} of "
-                "newcomer attempts were merged. Changes here seem to be merged "
+                "outside attempts were merged. Changes here seem to be merged "
                 "without anyone reviewing them, so you wouldn't get feedback on yours.",
                 code="rubber_stamp",
                 legacy=(
@@ -406,7 +406,7 @@ def classify(
 
     if slow:
         trace.append(Rule(
-            f"Newcomers who got a reply typically waited {hours_phrase(median)} for it, "
+            f"Outside contributors who got a reply typically waited {hours_phrase(median)} for it, "
             f"longer than the {days} you have.",
             code="slow",
             legacy=(
@@ -418,8 +418,8 @@ def classify(
     if signals.outsider_merged == 0 and ignored_share > IGNORED_SHARE:
         trace.append(Rule(
             f"{signals.outsider_ignored} of {_n(judgeable, 'pull request')} from "
-            "newcomers got no reply, but that's too few attempts to be sure the "
-            "project ignores newcomers.",
+            "outside contributors got no reply, but that's too few attempts to be "
+            "sure the project ignores them.",
             code="too_few_attempts",
             legacy=(
                 f"{signals.outsider_ignored}/{signals.outsider_threads} attempts ignored, "
@@ -428,7 +428,7 @@ def classify(
         ))
     elif signals.outsider_merged < MIN_MERGES:
         trace.append(Rule(
-            f"Only {_n(signals.outsider_merged, 'pull request')} from first-time "
+            f"Only {_n(signals.outsider_merged, 'pull request')} from outside "
             "contributors got merged in the period we looked at, too few to show "
             "a pattern.",
             code="few_merges",

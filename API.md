@@ -96,6 +96,17 @@ responses. The server also accepts and normalises full URLs
 
 Every evidence item MUST have a clickable `url`.
 
+In `stats`, an outsider is anyone not on the project's team. The team is the
+repository's OWNER, MEMBER and COLLABORATOR accounts on GitHub, plus anyone the
+sample shows merging or closing someone else's pull request, approving or
+requesting changes on 3 or more other people's, or (in a project that labels
+outside work, like PyTorch's "open source") never getting that label.
+Returning outsiders count.
+`first_time_merged_authors` is the number of those who were new to this repo
+(nothing of theirs merged here before) and got a pull request merged. Reports
+cached from evidence without GitHub's association use the earlier rule: an
+outsider had nothing merged earlier in the sample.
+
 `headline`, `tone`, `verdict_line` and `odds` are derived by the server from
 `verdict`, `stats` and `decided_by`/`rule_codes`, every time a report is
 served (so cached reports pick up wording changes). Every surface (web, OG

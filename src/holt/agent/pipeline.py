@@ -159,6 +159,7 @@ def analyze(
     narrated_signals = {
         k: v for k, v in narrated_signals.items()
         if k not in ("outsider_awaiting_reply", "outsider_answered")
+        and not k.startswith(("first_timer_", "distinct_first_timer_"))
     }
     report("Writing the report", 0.85)
     narrated = stages.narrate(
@@ -282,9 +283,10 @@ def analyze_without_model(
     if signals.outsider_threads:
         summary = (
             f"{s['outsider_merged']} of {s['outsider_threads']} pull requests from "
-            f"newcomers were merged, by {s['distinct_merged_authors']} of the "
+            f"outside contributors were merged, by {s['distinct_merged_authors']} of the "
             f"{s['distinct_outsider_authors']} people who tried."
         )
+        summary += " " + first_timer_sentence(signals)
         if s["median_first_response_hours"] is not None:
             summary += (
                 f" Of the {s['outsider_answered']} that got a reply, half heard "
@@ -333,6 +335,24 @@ def analyze_without_model(
         models=[],
         dropped_claims=0,
     ), _done(report, Trace(signals=signals, rules=rules))
+
+
+def first_timer_sentence(signals: Signals) -> str:
+    """The first-timers among the outsiders, in one sentence.
+
+    Their own numbers because they answer a different question: whether this
+    project lands a stranger's *first* pull request, not only a regular's.
+    """
+    tried = signals.first_timer_threads
+    if not tried:
+        return "None of them came from someone new to this repo."
+    merged = signals.first_timer_merged
+    people = signals.distinct_first_timer_authors
+    return (
+        f"{tried} of them came from {people} "
+        f"{'person' if people == 1 else 'people'} new to this repo, "
+        f"and {merged} of those {'was' if merged == 1 else 'were'} merged."
+    )
 
 
 def _done(report: Progress, trace: Trace) -> Trace:

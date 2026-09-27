@@ -571,8 +571,14 @@ def _same_repo_references(repo_slug: str, pr: dict[str, Any]) -> list[dict[str, 
     return out
 
 
-def project(repo_slug: str, nodes: Iterable[dict[str, Any]]) -> Iterator[EvidenceRecord]:
+def project(
+    repo_slug: str, nodes: Iterable[dict[str, Any]], home: str | None = None
+) -> Iterator[EvidenceRecord]:
     """Turn pull requests into timestamped, individually-addressable evidence.
+
+    `home` is the name GitHub currently uses for the repository, when it
+    differs from `repo_slug` (the name asked for, which the evidence ids keep).
+    Links and same-repository commit references use it.
 
     The fields the v2 capture added -- `author_association`, `is_draft`,
     `labels`, `merged_by`, `closed_by`/`closer` and the `:reference:` records --
@@ -582,10 +588,11 @@ def project(repo_slug: str, nodes: Iterable[dict[str, Any]]) -> Iterator[Evidenc
     Draft state and labels are read at fetch time, like the association: a pull
     request labelled `spam` after the cutoff carries the label here.
     """
+    home = home or repo_slug
     for pr in nodes:
         number = pr["number"]
         base = f"pr:{repo_slug}#{number}"
-        url = f"https://github.com/{repo_slug}/pull/{number}"
+        url = f"https://github.com/{home}/pull/{number}"
         shared = _with_association(
             {"author": _login(pr["author"]), "author_is_bot": _is_bot(pr["author"])}, pr
         )
@@ -670,7 +677,7 @@ def project(repo_slug: str, nodes: Iterable[dict[str, Any]]) -> Iterator[Evidenc
         # Each reference is its own dated fact: a commit can land after the
         # cutoff on a pull request opened before it, and must be sliced off
         # like any other later event.
-        for i, ref in enumerate(_same_repo_references(repo_slug, pr)):
+        for i, ref in enumerate(_same_repo_references(home, pr)):
             yield EvidenceRecord(
                 evidence_id=f"{base}:reference:{i}",
                 source="github",
@@ -869,7 +876,14 @@ class LiveGitHubProvider(EvidenceProvider):
         if history:
             docs = self.transport.docs_at(owner, name, history[0]["oid"])
             records.extend(project_docs(request, docs, history[0]))
-        query = search_query(request, self.window, self.cutoff)
+        # A search under a repository's old name finds nothing, although
+        # GitHub answers the lookup above under either name and redirects its
+        # pages: facebook/react-native, now react/react-native, read as a
+        # project with no pull requests at all. So the search uses the name
+        # GitHub gives back. The evidence ids keep the name asked for, which
+        # is the one every caller looks them up by.
+        home = meta.get("nameWithOwner") or request
+        query = search_query(home, self.window, self.cutoff)
         # The keyword only when screening, so a transport written before it
         # existed (the tests have several) still serves full fetches.
         nodes = (
@@ -877,7 +891,7 @@ class LiveGitHubProvider(EvidenceProvider):
             if self.timeline
             else self.transport.search_pull_requests(query, self.max_pages, timeline=False)
         )
-        records.extend(project(request, nodes))
+        records.extend(project(request, nodes, home=home))
 
         # Slice at the source; the base-class assertion is the safety net, not
         # the filter. A PR created before T can still carry a merge after it.
