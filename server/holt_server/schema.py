@@ -403,3 +403,79 @@ class GitHubAccount(Model):
 class GitHubConnection(Model):
     connected: bool
     account: GitHubAccount | None
+
+
+# --- My Contributions ----------------------------------------------------------------
+
+PullState = Literal["open", "merged", "closed"]
+
+
+class RepoVerdict(Model):
+    """Holt's latest rules verdict for a repository, from the report cache."""
+
+    verdict: Verdict
+    checked_at: str
+
+    @computed_field
+    @property
+    def headline(self) -> str:
+        return verdict_headline(self.verdict)
+
+    @computed_field
+    @property
+    def tone(self) -> Tone:
+        return TONES[self.verdict]
+
+
+class ContributionPullRequest(Model):
+    repo: str
+    number: int
+    title: str
+    url: str
+    state: PullState
+    draft: bool
+    created_at: str
+    closed_at: str | None
+    merged_at: str | None
+    # null when Holt has no report for the repository yet.
+    verdict: RepoVerdict | None
+    # Opened within 30 days after this user looked at the repository on Holt.
+    found_via_holt: bool
+
+
+class ContributionSummary(Model):
+    opened: int
+    merged: int
+    # Still open: waiting for a decision.
+    waiting: int
+    # Closed without being merged.
+    closed: int
+    # merged / (merged + closed); null until any pull request was decided.
+    landed_share: float | None
+    found_via_holt: int
+
+
+class Contributions(Model):
+    login: str
+    # When GitHub was last read for this user.
+    fetched_at: str
+    # The refresh button works again from this time; null means now.
+    next_refresh_at: str | None
+    # How far back the list goes, and whether GitHub had more than we keep.
+    window_days: int
+    truncated: bool
+    summary: ContributionSummary
+    pull_requests: list[ContributionPullRequest]
+
+
+class ContributionMetric(Model):
+    """The product metric: pull requests opened after checking a repo on Holt.
+    Counts only, no people."""
+
+    since: str
+    window_days: int
+    connected_users: int
+    users_with_pull_requests: int
+    users_with_pr_after_holt: int
+    prs_after_holt: int
+    prs_after_holt_merged: int

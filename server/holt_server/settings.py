@@ -74,6 +74,9 @@ class Settings(BaseSettings):
     warm_max_age_hours: float = Field(20, alias="HOLT_WARM_MAX_AGE_HOURS")
     # Stop a warm pass when any GitHub token has fewer GraphQL points left.
     warm_min_points: int = Field(1500, alias="HOLT_WARM_MIN_POINTS")
+    # My Contributions: re-read connected users' pull requests this often, in
+    # the background (contributions.py). 0 = no background refresh.
+    contributions_refresh_hours: float = Field(24, alias="HOLT_CONTRIBUTIONS_REFRESH_HOURS")
     # How long a finished /v1/find result is served for the same search.
     find_cache_hours: float = Field(6, alias="HOLT_FIND_CACHE_HOURS")
     # Pull-request pages crawled per analysis (25 PRs a page).
