@@ -14,7 +14,16 @@ from pydantic import BaseModel, Field
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 
-from holt_server import __version__, badge, credits, repos, schema, starter, usage
+from holt_server import (
+    __version__,
+    badge,
+    credits,
+    entitlements,
+    repos,
+    schema,
+    starter,
+    usage,
+)
 from holt_server.db import (
     ACTIVE,
     BADGE_PRIORITY,
@@ -62,8 +71,10 @@ def rate_limit(svc: Services, who: Caller, bucket: str = "work") -> None:
 # --- account ------------------------------------------------------------------
 
 
-def me_body(svc: Services, user: User) -> schema.Me:
-    return schema.Me(plan=user.plan or "free", credits=credits.credits_body(svc, user))
+async def me_body(svc: Services, user: User) -> schema.Me:
+    return schema.Me(plan=entitlements.effective_plan(entitlements.catalogue(svc), user),
+                     plan_expires_at=iso(user.plan_expires_at),
+                     credits=await credits.credits_body(svc, user))
 
 
 # --- bodies -------------------------------------------------------------------
@@ -291,11 +302,17 @@ async def create_analysis(body: AnalysisIn, request: Request,
     if body.mode == "ai":
         await get_user(svc, who.user_id)  # the welcome credits, on a first visit
         job.key_source, job.charged = "server", True
-        job.params["paid_with"] = "credit"
         user_id = who.user_id
 
         async def charge(s, job: Job) -> None:
-            await credits.spend(s, user_id, job)
+            paid = await entitlements.charge(s, svc, user_id, "ai_report", job_id=job.id)
+            params = {k: v for k, v in (job.params or {}).items()
+                      if k not in ("charge", "paid_with")}  # a retry charges again
+            params["charge"] = paid
+            if paid.get("draws") == [{"source": "free", "lot": None, "amount": 1}]:
+                # What the release before entitlements refunds, should it run this job.
+                params["paid_with"] = "credit"
+            job.params = params
 
     job, _created = await insert_or_join(svc, job, charge)
     return queued(job.id)
@@ -544,7 +561,19 @@ async def find_events(job_id: str, request: Request) -> StreamingResponse:
 @router.get("/me")
 async def me(request: Request, who: Caller = Depends(caller)) -> schema.Me:
     svc = services(request)
-    return me_body(svc, await get_user(svc, signed_in(who)))
+    return await me_body(svc, await get_user(svc, signed_in(who)))
+
+
+@router.get("/me/entitlements")
+async def me_entitlements(request: Request, who: Caller = Depends(caller)) -> schema.Entitlements:
+    """Each paid feature: can this user use it now, and what would it cost."""
+    svc = services(request)
+    user = await get_user(svc, signed_in(who))
+    cat = entitlements.catalogue(svc)
+    access = [await entitlements.check(svc, user.id, f) for f in cat.features]
+    return schema.Entitlements(plan=entitlements.effective_plan(cat, user),
+                               plan_expires_at=iso(user.plan_expires_at),
+                               features=[schema.Access(**a.__dict__) for a in access])
 
 
 @router.get("/me/history")

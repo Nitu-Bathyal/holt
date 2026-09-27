@@ -50,6 +50,11 @@ class Settings(BaseSettings):
     # be claimed each time this many days have passed since the last claim.
     signup_ai_credits: int = Field(3, alias="HOLT_SIGNUP_AI_CREDITS")
     claim_every_days: float = Field(7, alias="HOLT_CLAIM_EVERY_DAYS")
+    # Features, plans and credit packs (pricing.py). Empty: the packaged
+    # holt_server/pricing.json, where every price is still TBD.
+    pricing_file: str = Field("", alias="HOLT_PRICING_FILE")
+    # User ids (comma-separated) that may read /v1/admin/*. Empty: nobody.
+    admin_users: str = Field("", alias="HOLT_ADMIN_USERS")
     # New work (jobs, starter-issue lookups) per hour.
     anon_rate_per_hour: int = Field(10, alias="HOLT_ANON_RATE_PER_HOUR")
     user_rate_per_hour: int = Field(60, alias="HOLT_USER_RATE_PER_HOUR")
@@ -82,6 +87,10 @@ class Settings(BaseSettings):
     @property
     def token_list(self) -> list[str]:
         return [t.strip() for t in self.github_tokens.split(",") if t.strip()]
+
+    @property
+    def admin_user_ids(self) -> frozenset[str]:
+        return frozenset(u.strip() for u in self.admin_users.split(",") if u.strip())
 
 
 @lru_cache

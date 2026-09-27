@@ -39,7 +39,7 @@ from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import delete, select, update
 
-from holt_server import credits, starter
+from holt_server import entitlements, starter
 from holt_server.db import BADGE_PRIORITY, FindCache, Job, Report, find_key, now
 from holt_server.errors import ApiError
 from holt_server.github import JobStopped, job_stop
@@ -404,7 +404,7 @@ class JobRunner:
                 return
             # A report that never arrived costs nothing: its credit comes
             # back in the same transaction.
-            await credits.refund(s, job)
+            await entitlements.refund_job(s, job)
             await s.commit()
         self.hub.publish(job.id, "error", {"error": err.body()})
 
