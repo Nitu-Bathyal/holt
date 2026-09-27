@@ -10,6 +10,7 @@ import { PageTransition } from "@/components/motion/page-transition";
 export const metadata: Metadata = {
   title: "How Holt decides",
   description: "Holt gathers pull request history, turns it into cited findings, checks every source, and applies one fixed set of rules.",
+  alternates: { canonical: "/how-it-works" },
 };
 
 const TRACE = [
