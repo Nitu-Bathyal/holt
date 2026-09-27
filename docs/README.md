@@ -31,6 +31,7 @@ Start with the [README](../README.md). Everything else is here.
 | [DESIGN.md](DESIGN.md) | Why the verdict is a pipeline of rules and not a prompt |
 | [research/EVALUATION.md](research/EVALUATION.md) | How the benchmark was built, the numbers, and what they depend on |
 | [research/REPRODUCTION.md](research/REPRODUCTION.md) | Reproduce every published number from a clone, with no key and no spend |
+| [../golden/README.md](../golden/README.md) | The golden set: 52 recorded repositories, the engine's approved answer on each, and the before/after table every engine change is checked with |
 | [../eval/](../eval/) | The benchmark itself: pools, labels, recorded runs and their pre-registration notes |
 
 ## Plans and drafts
