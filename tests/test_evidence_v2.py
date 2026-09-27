@@ -296,10 +296,10 @@ class _Serve(EvidenceProvider):
         return None
 
 
-# The v2 fields the verdict reads: who is an outsider (ticket 03) comes from
-# the author's association and from who merged or closed other people's work.
-READ_BY_THE_VERDICT = {"author_association", "merged_by", "merged_by_is_bot",
-                       "closed_by", "closed_by_is_bot"}
+# The v2 fields that say who is on the project's team (people.maintainers):
+# the association, who merged or closed other people's work, and labels.
+READ_BY_THE_TEAM = {"author_association", "merged_by", "merged_by_is_bot",
+                    "closed_by", "closed_by_is_bot", "labels"}
 
 
 def _without(records: list[EvidenceRecord], keys: set[str]) -> list[EvidenceRecord]:
@@ -312,22 +312,27 @@ def _without(records: list[EvidenceRecord], keys: set[str]) -> list[EvidenceReco
 
 @pytest.mark.parametrize("slug", ["pytorch/pytorch", "react/react-native",
                                   "openssl/openssl", "pallets/flask"])
-def test_the_verdict_reads_only_the_v2_fields_that_say_who_is_an_outsider(slug):
+def test_the_rest_of_v2_only_adds_to_what_a_capture_shows(slug):
     # Same evidence with every v2 addition, and with only the ones that decide
-    # who is an outsider: identical numbers, verdict and reasons. The rules
-    # start reading the rest in later tickets.
+    # who is on the team. The rest (how a pull request was closed) can only
+    # reveal more landings; where nothing landed off the button (flask) the
+    # two read identically. Older captures, without the association either,
+    # are test_signals' test_every_committed_fixture_counts_outsiders_exactly_as_before.
     as_of = RECORDED_AT
     meta = RECORDED[slug]["meta"]
     v2 = [gql.project_repo_meta(slug, meta), *gql.project_releases(slug, meta),
           *gql.project(slug, RECORDED[slug]["pull_requests"])]
-    some = _without(v2, V2_KEYS - READ_BY_THE_VERDICT)
-    s2, s1 = compute(build_threads(v2), as_of), compute(build_threads(some), as_of)
-    assert s2.as_dict() == s1.as_dict()
-    assert classify(Findings(), s2) == classify(Findings(), s1)
+    some = _without(v2, V2_KEYS - READ_BY_THE_TEAM)
+    t2, t1 = build_threads(v2), build_threads(some)
+    assert t2.keys() == t1.keys()
+    assert {k for k, t in t1.items() if t.merged} <= {k for k, t in t2.items() if t.merged}
 
     a2, _ = analyze_without_model(slug, _Serve(v2, as_of), as_of=as_of)
     a1, _ = analyze_without_model(slug, _Serve(some, as_of), as_of=as_of)
-    assert a2 == a1
+    if slug == "pallets/flask":
+        assert compute(t2, as_of).as_dict() == compute(t1, as_of).as_dict()
+        assert classify(Findings(), compute(t2, as_of)) == classify(Findings(), compute(t1, as_of))
+        assert a2 == a1
 
 
 def test_maintainers_stop_counting_as_outsiders_once_association_is_known():

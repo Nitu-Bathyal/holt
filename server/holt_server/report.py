@@ -15,6 +15,7 @@ from datetime import UTC, datetime
 from typing import Any
 
 from holt.agent import landing as landing_mod
+from holt.agent.landing_detection import VIA
 from holt.agent.pipeline import MODEL_NOTE_LABEL
 from holt.agent.signals import Signals, Thread, build_threads, outsider_threads
 from holt.agent.verdict import rule_codes
@@ -119,7 +120,10 @@ def counted_examples(threads: dict[str, Thread],
             continue
         title = (records.get(evidence_id).payload.get("title") or "").strip() \
             if evidence_id in records else ""
-        what = "was merged" if value == "merged" else "had no reply from anyone when we looked"
+        what = "had no reply from anyone when we looked"
+        if value == "merged":
+            # GitHub shows an off-button landing as closed; say how it went in.
+            what = f"landed {VIA[t.landed_via]}" if t.landed_via else "was merged"
         text = f"Outside contributor's pull request #{t.number} {what}"
         out.append({"id": evidence_id, "url": url, "kind": "outsider_pr", "value": value,
                     "text": text + (f": “{title}”" if title else ""), "quote": None})

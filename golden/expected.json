@@ -397,30 +397,31 @@
   ]
  },
  "facebook/fresco": {
-  "verdict": "insufficient_evidence",
+  "verdict": "viable",
   "rules": [
-   "few_merges"
+   "merges",
+   "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
    "outsider_threads": 146,
-   "outsider_merged": 1,
-   "outsider_ignored": 54,
+   "outsider_merged": 80,
+   "outsider_ignored": 27,
    "median_first_response_hours": 73.9,
    "bot_share": 0.005,
    "distinct_outsider_authors": 97,
-   "distinct_merged_authors": 1,
-   "reviewed_share": 0.0,
-   "merge_rate": 0.007,
-   "merged_files_median": 2.0,
+   "distinct_merged_authors": 62,
+   "reviewed_share": 0.53,
+   "merge_rate": 0.548,
+   "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
-   "merged_with_files": 2,
+   "merged_with_files": 100,
    "outsider_awaiting_reply": 0,
    "outsider_answered": 91,
-   "first_timer_threads": 64,
-   "first_timer_merged": 1,
-   "distinct_first_timer_authors": 46,
-   "distinct_first_timer_merged_authors": 1
+   "first_timer_threads": 112,
+   "first_timer_merged": 62,
+   "distinct_first_timer_authors": 93,
+   "distinct_first_timer_merged_authors": 62
   },
   "history": [
    {
@@ -428,6 +429,12 @@
     "from": null,
     "to": "insufficient_evidence",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "insufficient_evidence",
+    "to": "viable",
+    "reason": "ticket 05: PRs landed off the merge button (merge bot / internal sync commit, Gerrit, GitGitGadget, maintainer 'Merged to' comments) now count as merged; outside work visibly lands here"
    }
   ]
  },
@@ -510,30 +517,31 @@
   ]
  },
  "git/git": {
-  "verdict": "insufficient_evidence",
+  "verdict": "viable",
   "rules": [
-   "few_merges"
+   "merges",
+   "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
    "outsider_threads": 199,
-   "outsider_merged": 0,
-   "outsider_ignored": 121,
+   "outsider_merged": 16,
+   "outsider_ignored": 110,
    "median_first_response_hours": 10.0,
    "bot_share": 0.005,
    "distinct_outsider_authors": 102,
-   "distinct_merged_authors": 0,
-   "reviewed_share": null,
-   "merge_rate": 0.0,
-   "merged_files_median": null,
-   "merged_dirs_median": null,
-   "merged_with_files": 0,
+   "distinct_merged_authors": 9,
+   "reviewed_share": 0.312,
+   "merge_rate": 0.08,
+   "merged_files_median": 1.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 16,
    "outsider_awaiting_reply": 0,
    "outsider_answered": 78,
-   "first_timer_threads": 107,
-   "first_timer_merged": 0,
-   "distinct_first_timer_authors": 81,
-   "distinct_first_timer_merged_authors": 0
+   "first_timer_threads": 133,
+   "first_timer_merged": 9,
+   "distinct_first_timer_authors": 89,
+   "distinct_first_timer_merged_authors": 9
   },
   "history": [
    {
@@ -541,35 +549,42 @@
     "from": null,
     "to": "insufficient_evidence",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "insufficient_evidence",
+    "to": "viable",
+    "reason": "ticket 05: PRs landed off the merge button (merge bot / internal sync commit, Gerrit, GitGitGadget, maintainer 'Merged to' comments) now count as merged; outside work visibly lands here"
    }
   ]
  },
  "golang/go": {
-  "verdict": "not_viable",
+  "verdict": "viable",
   "rules": [
    "awaiting_reply",
-   "ignored"
+   "merges",
+   "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
    "outsider_threads": 196,
-   "outsider_merged": 0,
-   "outsider_ignored": 188,
+   "outsider_merged": 50,
+   "outsider_ignored": 139,
    "median_first_response_hours": 7.8,
    "bot_share": 0.0,
    "distinct_outsider_authors": 112,
-   "distinct_merged_authors": 0,
-   "reviewed_share": null,
-   "merge_rate": 0.0,
-   "merged_files_median": null,
-   "merged_dirs_median": null,
-   "merged_with_files": 0,
+   "distinct_merged_authors": 31,
+   "reviewed_share": 0.019,
+   "merge_rate": 0.255,
+   "merged_files_median": 2.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 52,
    "outsider_awaiting_reply": 2,
    "outsider_answered": 6,
-   "first_timer_threads": 83,
-   "first_timer_merged": 0,
-   "distinct_first_timer_authors": 66,
-   "distinct_first_timer_merged_authors": 0
+   "first_timer_threads": 120,
+   "first_timer_merged": 31,
+   "distinct_first_timer_authors": 96,
+   "distinct_first_timer_merged_authors": 31
   },
   "history": [
    {
@@ -577,6 +592,12 @@
     "from": null,
     "to": "not_viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "not_viable",
+    "to": "viable",
+    "reason": "ticket 05: PRs landed off the merge button (merge bot / internal sync commit, Gerrit, GitGitGadget, maintainer 'Merged to' comments) now count as merged; outside work visibly lands here"
    }
   ]
  },
@@ -734,28 +755,29 @@
   "verdict": "viable",
   "rules": [
    "awaiting_reply",
-   "merges"
+   "merges",
+   "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
    "outsider_threads": 165,
-   "outsider_merged": 73,
+   "outsider_merged": 74,
    "outsider_ignored": 16,
    "median_first_response_hours": 17.5,
    "bot_share": 0.0,
    "distinct_outsider_authors": 107,
-   "distinct_merged_authors": 44,
-   "reviewed_share": 0.698,
-   "merge_rate": 0.442,
-   "merged_files_median": 1,
-   "merged_dirs_median": 1,
-   "merged_with_files": 105,
+   "distinct_merged_authors": 45,
+   "reviewed_share": 0.701,
+   "merge_rate": 0.448,
+   "merged_files_median": 1.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 106,
    "outsider_awaiting_reply": 1,
    "outsider_answered": 122,
-   "first_timer_threads": 123,
-   "first_timer_merged": 44,
-   "distinct_first_timer_authors": 105,
-   "distinct_first_timer_merged_authors": 44
+   "first_timer_threads": 124,
+   "first_timer_merged": 45,
+   "distinct_first_timer_authors": 106,
+   "distinct_first_timer_merged_authors": 45
   },
   "history": [
    {
@@ -875,30 +897,31 @@
   ]
  },
  "material-components/material-components-android": {
-  "verdict": "insufficient_evidence",
+  "verdict": "viable",
   "rules": [
-   "few_merges"
+   "merges",
+   "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
    "outsider_threads": 183,
-   "outsider_merged": 0,
-   "outsider_ignored": 101,
+   "outsider_merged": 81,
+   "outsider_ignored": 61,
    "median_first_response_hours": 122.0,
    "bot_share": 0.075,
    "distinct_outsider_authors": 33,
-   "distinct_merged_authors": 0,
-   "reviewed_share": 0.5,
-   "merge_rate": 0.0,
-   "merged_files_median": 10.5,
-   "merged_dirs_median": 1.5,
-   "merged_with_files": 2,
+   "distinct_merged_authors": 11,
+   "reviewed_share": 0.488,
+   "merge_rate": 0.443,
+   "merged_files_median": 1.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 86,
    "outsider_awaiting_reply": 0,
    "outsider_answered": 82,
-   "first_timer_threads": 29,
-   "first_timer_merged": 0,
-   "distinct_first_timer_authors": 23,
-   "distinct_first_timer_merged_authors": 0
+   "first_timer_threads": 49,
+   "first_timer_merged": 11,
+   "distinct_first_timer_authors": 32,
+   "distinct_first_timer_merged_authors": 11
   },
   "history": [
    {
@@ -906,12 +929,6 @@
     "from": null,
     "to": "viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
-   },
-   {
-    "date": "2026-09-27",
-    "from": "viable",
-    "to": "insufficient_evidence",
-    "reason": "Ticket 03: its 2 merges were by Google staff who read CONTRIBUTOR but merge and close other people's PRs here (kendrickumstattd, dsn5ft). No outside PR of the 183 was merged."
    }
   ]
  },
@@ -988,10 +1005,9 @@
   ]
  },
  "mirror/busybox": {
-  "verdict": "insufficient_evidence",
+  "verdict": "not_viable",
   "rules": [
-   "slow",
-   "few_merges"
+   "elsewhere"
   ],
   "numbers": {
    "total_threads": 26,
@@ -1020,6 +1036,12 @@
     "from": null,
     "to": "insufficient_evidence",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "insufficient_evidence",
+    "to": "not_viable",
+    "reason": "ticket 05: mirror detection in rules mode (GitHub's mirror flag, or a self-described mirror where nothing from outside landed)"
    }
   ]
  },
@@ -1095,31 +1117,32 @@
   ]
  },
  "openssl/openssl": {
-  "verdict": "insufficient_evidence",
+  "verdict": "viable",
   "rules": [
    "awaiting_reply",
-   "few_merges"
+   "merges",
+   "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
    "outsider_threads": 79,
-   "outsider_merged": 0,
+   "outsider_merged": 14,
    "outsider_ignored": 30,
    "median_first_response_hours": 7.7,
    "bot_share": 0.005,
    "distinct_outsider_authors": 44,
-   "distinct_merged_authors": 0,
+   "distinct_merged_authors": 6,
    "reviewed_share": 1.0,
-   "merge_rate": 0.0,
-   "merged_files_median": 15.0,
-   "merged_dirs_median": 5.5,
-   "merged_with_files": 2,
+   "merge_rate": 0.177,
+   "merged_files_median": 2.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 74,
    "outsider_awaiting_reply": 3,
    "outsider_answered": 46,
-   "first_timer_threads": 47,
-   "first_timer_merged": 0,
-   "distinct_first_timer_authors": 26,
-   "distinct_first_timer_merged_authors": 0
+   "first_timer_threads": 52,
+   "first_timer_merged": 6,
+   "distinct_first_timer_authors": 31,
+   "distinct_first_timer_merged_authors": 6
   },
   "history": [
    {
@@ -1127,6 +1150,12 @@
     "from": null,
     "to": "insufficient_evidence",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "insufficient_evidence",
+    "to": "viable",
+    "reason": "ticket 05: PRs landed off the merge button (merge bot / internal sync commit, Gerrit, GitGitGadget, maintainer 'Merged to' comments) now count as merged; outside work visibly lands here"
    }
   ]
  },
@@ -1308,31 +1337,32 @@
   ]
  },
  "pytorch/pytorch": {
-  "verdict": "insufficient_evidence",
+  "verdict": "viable",
   "rules": [
    "awaiting_reply",
-   "few_merges"
+   "merges",
+   "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
    "outsider_threads": 87,
-   "outsider_merged": 0,
+   "outsider_merged": 7,
    "outsider_ignored": 44,
    "median_first_response_hours": 16.5,
    "bot_share": 0.015,
    "distinct_outsider_authors": 42,
-   "distinct_merged_authors": 0,
-   "reviewed_share": 1.0,
-   "merge_rate": 0.0,
-   "merged_files_median": 3.0,
-   "merged_dirs_median": 1.5,
-   "merged_with_files": 2,
+   "distinct_merged_authors": 6,
+   "reviewed_share": 0.929,
+   "merge_rate": 0.08,
+   "merged_files_median": 2.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 42,
    "outsider_awaiting_reply": 17,
    "outsider_answered": 26,
-   "first_timer_threads": 30,
-   "first_timer_merged": 0,
-   "distinct_first_timer_authors": 20,
-   "distinct_first_timer_merged_authors": 0
+   "first_timer_threads": 39,
+   "first_timer_merged": 6,
+   "distinct_first_timer_authors": 26,
+   "distinct_first_timer_merged_authors": 6
   },
   "history": [
    {
@@ -1340,35 +1370,42 @@
     "from": null,
     "to": "insufficient_evidence",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "insufficient_evidence",
+    "to": "viable",
+    "reason": "ticket 05: PRs landed off the merge button (merge bot / internal sync commit, Gerrit, GitGitGadget, maintainer 'Merged to' comments) now count as merged; outside work visibly lands here"
    }
   ]
  },
  "react/react-native": {
-  "verdict": "not_viable",
+  "verdict": "viable",
   "rules": [
    "awaiting_reply",
-   "ignored"
+   "merges",
+   "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
    "outsider_threads": 122,
-   "outsider_merged": 0,
-   "outsider_ignored": 86,
+   "outsider_merged": 54,
+   "outsider_ignored": 47,
    "median_first_response_hours": 16.7,
    "bot_share": 0.04,
    "distinct_outsider_authors": 45,
-   "distinct_merged_authors": 0,
-   "reviewed_share": null,
-   "merge_rate": 0.0,
-   "merged_files_median": null,
-   "merged_dirs_median": null,
-   "merged_with_files": 0,
+   "distinct_merged_authors": 24,
+   "reviewed_share": 0.164,
+   "merge_rate": 0.443,
+   "merged_files_median": 4.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 116,
    "outsider_awaiting_reply": 6,
    "outsider_answered": 30,
-   "first_timer_threads": 28,
-   "first_timer_merged": 0,
-   "distinct_first_timer_authors": 18,
-   "distinct_first_timer_merged_authors": 0
+   "first_timer_threads": 52,
+   "first_timer_merged": 24,
+   "distinct_first_timer_authors": 41,
+   "distinct_first_timer_merged_authors": 24
   },
   "history": [
    {
@@ -1376,6 +1413,12 @@
     "from": null,
     "to": "not_viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "not_viable",
+    "to": "viable",
+    "reason": "ticket 05: PRs landed off the merge button (merge bot / internal sync commit, Gerrit, GitGitGadget, maintainer 'Merged to' comments) now count as merged; outside work visibly lands here"
    }
   ]
  },
@@ -1488,28 +1531,29 @@
  "semgrep/semgrep": {
   "verdict": "insufficient_evidence",
   "rules": [
-   "few_merges"
+   "few_merges",
+   "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
    "outsider_threads": 46,
-   "outsider_merged": 0,
+   "outsider_merged": 1,
    "outsider_ignored": 18,
    "median_first_response_hours": 0.0,
    "bot_share": 0.765,
    "distinct_outsider_authors": 33,
-   "distinct_merged_authors": 0,
+   "distinct_merged_authors": 1,
    "reviewed_share": 1.0,
-   "merge_rate": 0.0,
-   "merged_files_median": 20,
-   "merged_dirs_median": 5,
-   "merged_with_files": 47,
+   "merge_rate": 0.022,
+   "merged_files_median": 20.0,
+   "merged_dirs_median": 5.0,
+   "merged_with_files": 48,
    "outsider_awaiting_reply": 0,
    "outsider_answered": 28,
-   "first_timer_threads": 37,
-   "first_timer_merged": 0,
-   "distinct_first_timer_authors": 28,
-   "distinct_first_timer_merged_authors": 0
+   "first_timer_threads": 38,
+   "first_timer_merged": 1,
+   "distinct_first_timer_authors": 29,
+   "distinct_first_timer_merged_authors": 1
   },
   "history": [
    {
@@ -1641,7 +1685,7 @@
    "bot_share": 0.005,
    "distinct_outsider_authors": 17,
    "distinct_merged_authors": 8,
-   "reviewed_share": 0.339,
+   "reviewed_share": 0.343,
    "merge_rate": 0.672,
    "merged_files_median": 2.0,
    "merged_dirs_median": 1.0,
@@ -1733,9 +1777,9 @@
   ]
  },
  "v8/v8": {
-  "verdict": "insufficient_evidence",
+  "verdict": "not_viable",
   "rules": [
-   "few_merges"
+   "elsewhere"
   ],
   "numbers": {
    "total_threads": 166,
@@ -1764,6 +1808,12 @@
     "from": null,
     "to": "insufficient_evidence",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "insufficient_evidence",
+    "to": "not_viable",
+    "reason": "ticket 05: mirror detection in rules mode (GitHub's mirror flag, or a self-described mirror where nothing from outside landed)"
    }
   ]
  },
@@ -1841,7 +1891,7 @@
     "date": "2026-09-27",
     "from": "viable",
     "to": "insufficient_evidence",
-    "reason": "Ticket 03: 2 of its 3 'outside' merges were by Zephyr's vendor area maintainers (mathieuchopstm, tpambor), who read CONTRIBUTOR but approve or request changes on other people's PRs, so they count as the team (the rule shared with ticket 04's replies). 1 of 125 outside PRs merged."
+    "reason": "Ticket 03: 6 of its 7 'outside' merges were by the team: MEMBERs' first PRs in the sample, a maintainer who merges others' work (teburd), and vendor area maintainers (mathieuchopstm, tpambor) who read CONTRIBUTOR but approve or request changes on other people's PRs. 1 of 109 outside PRs merged."
    }
   ]
  },

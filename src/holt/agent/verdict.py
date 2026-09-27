@@ -281,6 +281,11 @@ def classify(
         ))
         return Verdict.NOT_VIABLE, trace
 
+    # A mirror or a fork, read from GitHub's own fields (landing_detection).
+    if elsewhere := findings.get("contribute_elsewhere"):
+        trace.append(Rule(elsewhere, code="elsewhere"))
+        return Verdict.NOT_VIABLE, trace
+
     if kind in CLOSED_KINDS:
         trace.append(Rule(
             "This is a read-only copy of a project developed somewhere else, so "
