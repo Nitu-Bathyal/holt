@@ -366,6 +366,16 @@ def sse_event(event: str, data: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, separators=(',', ':'))}\n\n"
 
 
+def drop_queued_stages(queue: asyncio.Queue) -> tuple[str, dict[str, Any]] | None:
+    """Empty a subscriber's queue of stage events. Returns the job's end
+    (`done` or `error`) if it is already waiting there."""
+    while not queue.empty():
+        event, data = queue.get_nowait()
+        if event != "stage":
+            return event, data
+    return None
+
+
 def sse(svc: Services, job_id: str, kind: str, request: Request) -> StreamingResponse:
     async def stream():
         queue = svc.runner.hub.subscribe(job_id)
@@ -381,10 +391,17 @@ def sse(svc: Services, job_id: str, kind: str, request: Request) -> StreamingRes
                         yield sse_event("error", {"error": job.error})
                         return
                     data = await svc.runner.stage_event(job)
+                    # Steps queued before this read finished are in it (bar one
+                    # landing mid-read, which the next step replaces); sending
+                    # them after it would step backwards.
+                    end = drop_queued_stages(queue)
                     current = (data["stage"], data["progress"])
                     if current != last:
                         last = current
                         yield sse_event("stage", data)
+                    if end is not None:
+                        yield sse_event(*end)
+                        return
                 job = None
                 try:
                     event, data = await asyncio.wait_for(queue.get(), SSE_KEEPALIVE_SECONDS)
