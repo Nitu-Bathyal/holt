@@ -4,18 +4,29 @@
 import Link from "next/link";
 import { useState } from "react";
 import { availability, initialModel, MODELS, type ModelAccess } from "@/lib/models";
-import type { Mode } from "@/lib/types";
+import { shortDate } from "@/lib/format";
+import type { Credits, Mode } from "@/lib/types";
 import { AnalysisRunner } from "./analysis-runner";
 
 const ACCESS_NOTE: Record<ModelAccess["kind"], string> = {
-  free: "Free models use your monthly allowance. Pro models need a plan, or your own key.",
+  free: "Pro models need a plan.",
   plan: "Every model is included in your plan.",
-  byok: "Your own key pays for these. Pick any model it supports.",
 };
 
-export function AiStart({ repo, days, signedIn, access, requested }: { repo: string; days: number; signedIn: boolean; access: ModelAccess; requested?: string }) {
+/** "N free AI reports left", and what to do when there are none. */
+function creditsNote(c: Credits): string {
+  if (!c.ai_available) return "AI reports aren't switched on yet. Your free ones will be waiting when they are.";
+  const left = `${c.balance} free AI report${c.balance === 1 ? "" : "s"} left.`;
+  if (c.balance > 0) return `${left} Writing this one uses 1; a report that fails doesn't count.`;
+  if (c.can_claim) return `${left} You can claim 1 more in your settings now.`;
+  return `${left} You can claim 1 more${c.next_claim_at ? ` on ${shortDate(c.next_claim_at)}` : " each week"}.`;
+}
+
+export function AiStart({ repo, days, signedIn, access, credits, requested }: { repo: string; days: number; signedIn: boolean; access: ModelAccess; credits: Credits | null; requested?: string }) {
   const [model, setModel] = useState(() => initialModel(access, requested));
   const [started, setStarted] = useState(false);
+  // Only a hint for the button: the server checks and spends the credit.
+  const blocked = credits != null && (!credits.ai_available || credits.balance <= 0);
 
   if (started) return <AnalysisRunner repo={repo} mode={"ai" as Mode} days={days} signedIn={signedIn} model={model} />;
 
@@ -34,6 +45,17 @@ export function AiStart({ repo, days, signedIn, access, requested }: { repo: str
         The verdict comes from the same fixed rules whichever you choose. The model only changes how the evidence is
         explained. {ACCESS_NOTE[access.kind]}
       </p>
+      {credits && (
+        <p className={`mt-3 max-w-2xl border px-3 py-2 font-sans text-[0.9rem] ${blocked ? "border-orange/50 text-orange" : "border-green/50 text-green"}`} data-credits>
+          {creditsNote(credits)}
+          {blocked && credits.ai_available && credits.can_claim && (
+            <>
+              {" "}
+              <Link href="/settings" className="text-link">claim it</Link>
+            </>
+          )}
+        </p>
+      )}
 
       <fieldset className="mt-6">
         <legend className="sr-only">Model</legend>
@@ -77,17 +99,13 @@ export function AiStart({ repo, days, signedIn, access, requested }: { repo: str
                 <span className="mt-3 flex items-center justify-between gap-2 text-[0.72rem]">
                   <span className="text-faint">{m.credits == null ? "credits: TBD" : `${m.credits} credits`}</span>
                   {locked ? (
-                    a.reason === "upgrade" ? (
-                      <span className="inline-flex items-center gap-1 text-blue">
-                        <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
-                          <rect x="5" y="11" width="14" height="10" rx="2" />
-                          <path d="M8 11V7a4 4 0 0 1 8 0v4" />
-                        </svg>
-                        upgrade to use
-                      </span>
-                    ) : (
-                      <span className="text-faint">not on your key</span>
-                    )
+                    <span className="inline-flex items-center gap-1 text-blue">
+                      <svg className="size-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" aria-hidden="true">
+                        <rect x="5" y="11" width="14" height="10" rx="2" />
+                        <path d="M8 11V7a4 4 0 0 1 8 0v4" />
+                      </svg>
+                      upgrade to use
+                    </span>
                   ) : checked ? (
                     <span className="text-blue">✓ selected</span>
                   ) : null}
@@ -99,13 +117,12 @@ export function AiStart({ repo, days, signedIn, access, requested }: { repo: str
       </fieldset>
 
       <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
-        <button type="submit" className="btn-primary bg-blue">
+        <button type="submit" className="btn-primary bg-blue disabled:cursor-not-allowed disabled:opacity-50" disabled={blocked}>
           write my AI report <span aria-hidden="true">→</span>
         </button>
         {access.kind === "free" && (
           <span className="font-sans text-[0.85rem] text-muted">
-            Want the pro models? <Link href="/pricing#compare" className="text-link">see plans</Link> or{" "}
-            <Link href="/settings#byok" className="text-link">add your own key (free)</Link>.
+            Want the pro models? <Link href="/pricing#compare" className="text-link">see plans</Link>.
           </span>
         )}
       </div>

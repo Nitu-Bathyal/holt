@@ -46,12 +46,12 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `HOLT_ENV` | `production` | `dev` serves the interactive docs at `/docs` and `/openapi.json`; otherwise they are off. |
 | `DATABASE_URL` | `postgresql+asyncpg://holt:holt@127.0.0.1:20131/holt` | SQLAlchemy async URL. `sqlite+aiosqlite:///path.db` works for quick experiments. |
 | `HOLT_INTERNAL_KEY` | *(empty)* | Shared secret with `web/`. Every `/v1` request must send it as `X-Holt-Internal-Key`. Empty means every `/v1` request is refused. |
-| `HOLT_SECRET_KEY` | *(empty)* | Encrypts saved BYOK keys (AES-256-GCM). Use 32 random bytes, base64: `python -c "import os,base64;print(base64.b64encode(os.urandom(32)).decode())"`. Changing it makes saved keys unreadable (users are asked to save them again). |
+| `HOLT_SECRET_KEY` | *(empty)* | Server secret for keyed hashes (usage counting). Use 32 random bytes, base64: `python -c "import os,base64;print(base64.b64encode(os.urandom(32)).decode())"`. |
 | `HOLT_WEB_URL` | `https://githolt.com` | The badge links to `{HOLT_WEB_URL}/{owner}/{repo}`. |
 | `GITHUB_TOKENS` | *(empty)* | Comma-separated GitHub tokens, used round-robin, one per analysis. A token GitHub refuses is left out for 10 minutes, and one that is rate-limited or nearly used up (points left, read from every reply) until it resets; logs name tokens by position (`token #2`), never by value. Read-only public access is enough (a fine-grained token with no extra permissions). |
 | `HOLT_PRO_URL` | *(empty)* | Base URL of the optional internal service that runs paid features (a separate program on the server's private network, e.g. `http://pro:8000`). Empty means paid features are off and answer "not available yet". At startup the server pings it once and logs one line, `holt-pro: ok at ...` or `holt-pro: not working at ...`; `python -m holt_server.pro` does the same on demand. |
 | `HOLT_PRO_KEY` | *(empty)* | Shared key for that service, sent as `X-Holt-Pro-Key` on every call. Never logged. |
-| `OPENROUTER_API_KEY` | *(empty)* | The server's model key, used for users' free AI reports. Empty means AI reports need BYOK. |
+| `OPENROUTER_API_KEY` | *(empty)* | The server's model key; every AI report runs on it. Empty means AI reports are off: requests get `ai_unavailable` and spend nothing. |
 | `OPENROUTER_MODEL` | `openai/gpt-5-mini` | Model id on OpenRouter for server-paid AI reports. |
 | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | OpenAI-compatible endpoint. |
 | `HOLT_JOB_CONCURRENCY` | `2` | User lane: people's analyses and finds running at once in this process. Each holds a thread and some memory. |
@@ -59,8 +59,8 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `HOLT_JOB_TIMEOUT_AI` | `480` | The same, for AI reports (refunded when stopped). |
 | `HOLT_JOB_TIMEOUT_FIND` | `300` | The same, for `/v1/find`. |
 | `HOLT_CACHE_HOURS` | `24` | How long a finished report is served instead of re-running. |
-| `HOLT_FREE_AI_LIMIT` | `3` | AI reports per user per calendar month on the server's key (plan `free`). `0` turns free AI reports off. |
-| `HOLT_PLAN_AI_LIMIT` | `100` | The same, for any other plan (set by hand in the `users` table for now). |
+| `HOLT_SIGNUP_AI_CREDITS` | `3` | Free AI reports every signed-in user gets once, on their first visit. |
+| `HOLT_CLAIM_EVERY_DAYS` | `7` | After that, one more can be claimed each time this many days have passed since the last claim (or the welcome grant). |
 | `HOLT_ANON_RATE_PER_HOUR` | `10` | Work bucket: new analyses and find per hour per IP for anonymous callers (`X-Holt-Client-Ip`). Cached answers are free. |
 | `HOLT_USER_RATE_PER_HOUR` | `60` | The same, per signed-in user. |
 | `HOLT_ANON_READ_RATE_PER_HOUR` | `120` | Read bucket, per IP: starter-issue lookups that miss the cache. Separate from the work bucket above, so page views never block analyses. |
@@ -82,24 +82,29 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 
 | File | What |
 |---|---|
-| `holt_server/api.py` | The endpoints. Cache lookups, rate limits, quota and BYOK checks happen here, before a job is queued. |
+| `holt_server/api.py` | The endpoints. Cache lookups, rate limits and the AI credit spend happen here, before a job is queued. |
+| `holt_server/credits.py` | Free AI credits: the welcome grant, the weekly claim, spend and refund, and the `/v1/me/credits` routes. |
 | `holt_server/jobs.py` | The runner: claims queued jobs from Postgres (user jobs before badge refreshes), runs them in threads, publishes progress for SSE. Each runner heartbeats the jobs it holds every 15s; a `running` job with no heartbeat for 90s belonged to a dead process and is queued again. Several processes can share one database. |
 | `holt_server/engine.py` | Calls `holt.agent.pipeline.analyze` / `analyze_without_model`. Wraps the provider and model to report stages; uses the engine's own progress callback when it has one. Maps failures to API error codes. |
 | `holt_server/report.py` | `Assessment` + `Trace` → the Report JSON. Landing areas and evidence URLs come from the records the run read. |
-| `holt_server/llm.py` | Model clients (OpenRouter/OpenAI/Gemini over the OpenAI API, Anthropic native) built per job from the server key or a decrypted BYOK key. Nothing is written to disk. |
+| `holt_server/llm.py` | Model clients (OpenRouter over the OpenAI API; an Anthropic-native client too) built per job from the server key. Nothing is written to disk. |
 | `holt_server/starter.py` | Lazy adapter over `holt.starter`; the endpoints return 501 until that module exists. |
 | `holt_server/pro.py` | Client for the optional paid-features service (`HOLT_PRO_URL`): the key header, 2 s connect / 10 s read timeouts, one retry on a failed connection or a 503, and its error envelope turned into this API's errors with plain messages. `Services.pro` is None when it is off, and `Services.require_pro()` then answers 501 "not available yet". |
 | `holt_server/badge.py` | The README badge SVG. |
 
 Identical requests share one job. That is enforced by a partial unique index
 on `jobs.dedupe_key` (only over queued/running jobs), so two requests racing
-each other still get one job and one quota charge.
+each other still get one job and spend one credit.
 
-Who pays for an AI report: a saved BYOK key if the user has one (it does not
-use up free reports); otherwise the server's OpenRouter key, counted against the
-monthly quota (an atomic `UPDATE`, in the same transaction as the job insert).
-A report that fails is refunded, again atomically and only against the month
-it was charged to.
+AI reports run on the server's OpenRouter key and cost the user one free AI
+credit (`users.ai_credits`). Signed-in users get `HOLT_SIGNUP_AI_CREDITS` once,
+on their first visit, and can claim one more every `HOLT_CLAIM_EVERY_DAYS`;
+claims don't pile up. Spending is a guarded `UPDATE` in the same transaction as
+the job insert, claiming is a guarded `UPDATE` on the claim clock, and a report
+that fails gives its credit back in the transaction that marks it failed. Every
+change also writes a `credit_events` row (grant, claim, spend, refund), the
+ledger later billing builds on. The website doesn't take users' own API keys
+(the CLI does).
 
 Per process (fine for one server; revisit with more): rate-limit counters,
 the badge lane's concurrency count and the repo-name cache are in memory. SSE

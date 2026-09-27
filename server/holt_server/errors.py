@@ -22,6 +22,8 @@ STATUS = {
     "rate_limited": 429,
     "quota_exceeded": 402,
     "needs_key": 403,
+    "claim_not_ready": 409,
+    "ai_unavailable": 503,
     "upstream": 502,
     "internal": 500,
     "not_implemented": 501,

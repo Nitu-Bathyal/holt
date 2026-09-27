@@ -159,7 +159,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/me/byok": {
+    "/v1/me/credits": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Credits */
+        get: operations["get_credits_v1_me_credits_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/credits/claim": {
         parameters: {
             query?: never;
             header?: never;
@@ -167,11 +184,10 @@ export interface paths {
             cookie?: never;
         };
         get?: never;
-        /** Put Byok */
-        put: operations["put_byok_v1_me_byok_put"];
-        post?: never;
-        /** Delete Byok */
-        delete: operations["delete_byok_v1_me_byok_delete"];
+        put?: never;
+        /** Post Claim */
+        post: operations["post_claim_v1_me_credits_claim_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -283,30 +299,6 @@ export interface components {
             /** Repo */
             repo: string;
         };
-        /** Byok */
-        Byok: {
-            /** Model */
-            model: string;
-            /**
-             * Provider
-             * @enum {string}
-             */
-            provider: "openrouter" | "openai" | "anthropic" | "gemini";
-            /** Set */
-            set: boolean;
-        };
-        /** ByokIn */
-        ByokIn: {
-            /** Api Key */
-            api_key: string;
-            /** Model */
-            model?: string | null;
-            /**
-             * Provider
-             * @enum {string}
-             */
-            provider: "openrouter" | "openai" | "anthropic" | "gemini";
-        };
         /** Cost */
         Cost: {
             /** Input Tokens */
@@ -316,13 +308,29 @@ export interface components {
             /** Output Tokens */
             output_tokens: number;
         };
+        /**
+         * Credits
+         * @description Free AI reports: GET /v1/me/credits, and `credits` in GET /v1/me.
+         */
+        Credits: {
+            /** Ai Available */
+            ai_available: boolean;
+            /** Balance */
+            balance: number;
+            /** Can Claim */
+            can_claim: boolean;
+            /** Claim Every Days */
+            claim_every_days: number;
+            /** Next Claim At */
+            next_claim_at: string | null;
+        };
         /** Error */
         Error: {
             /**
              * Code
              * @enum {string}
              */
-            code: "unauthorized" | "not_found" | "invalid_repo" | "invalid_request" | "rate_limited" | "quota_exceeded" | "needs_key" | "upstream" | "internal" | "not_implemented";
+            code: "unauthorized" | "not_found" | "invalid_repo" | "invalid_request" | "rate_limited" | "quota_exceeded" | "needs_key" | "claim_not_ready" | "ai_unavailable" | "upstream" | "internal" | "not_implemented";
             /** Message */
             message: string;
             /** Retry After */
@@ -492,10 +500,9 @@ export interface components {
         };
         /** Me */
         Me: {
-            byok: components["schemas"]["Byok"] | null;
+            credits: components["schemas"]["Credits"];
             /** Plan */
             plan: string;
-            quota: components["schemas"]["Quota"];
         };
         /** NeverLanded */
         NeverLanded: {
@@ -553,15 +560,6 @@ export interface components {
              * @constant
              */
             status: "queued";
-        };
-        /** Quota */
-        Quota: {
-            /** Ai Limit */
-            ai_limit: number;
-            /** Ai Used */
-            ai_used: number;
-            /** Resets At */
-            resets_at: string;
         };
         /** Report */
         Report: {
@@ -695,9 +693,8 @@ export interface components {
 }
 export type AnalysisDone = components['schemas']['AnalysisDone'];
 export type AnalysisIn = components['schemas']['AnalysisIn'];
-export type Byok = components['schemas']['Byok'];
-export type ByokIn = components['schemas']['ByokIn'];
 export type Cost = components['schemas']['Cost'];
+export type Credits = components['schemas']['Credits'];
 export type Error = components['schemas']['Error'];
 export type ErrorBody = components['schemas']['ErrorBody'];
 export type EvidenceItem = components['schemas']['EvidenceItem'];
@@ -716,7 +713,6 @@ export type NeverLanded = components['schemas']['NeverLanded'];
 export type Odds = components['schemas']['Odds'];
 export type PartialStats = components['schemas']['PartialStats'];
 export type Queued = components['schemas']['Queued'];
-export type Quota = components['schemas']['Quota'];
 export type Report = components['schemas']['Report'];
 export type ReportList = components['schemas']['ReportList'];
 export type ReportListItem = components['schemas']['ReportListItem'];
@@ -1044,44 +1040,7 @@ export interface operations {
             };
         };
     };
-    put_byok_v1_me_byok_put: {
-        parameters: {
-            query?: never;
-            header?: {
-                "x-holt-user"?: string | null;
-                "x-holt-client-ip"?: string | null;
-                "x-holt-internal-key"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["ByokIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Me"];
-                };
-            };
-            /** @description Default Response */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
-        };
-    };
-    delete_byok_v1_me_byok_delete: {
+    get_credits_v1_me_credits_get: {
         parameters: {
             query?: never;
             header?: {
@@ -1100,7 +1059,40 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Me"];
+                    "application/json": components["schemas"]["Credits"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    post_claim_v1_me_credits_claim_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Credits"];
                 };
             };
             /** @description Default Response */

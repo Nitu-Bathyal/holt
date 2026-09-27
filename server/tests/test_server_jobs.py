@@ -95,7 +95,7 @@ def test_timed_out_ai_report_is_refunded(make_harness):
     job = h.post("/v1/analyses", {"repo": "octo/one", "mode": "ai"}, user="u1").json()["job_id"]
     assert "took too long" in h.wait(job, timeout=10)["error"]["message"]
     h.engine.gate.set()
-    assert h.get("/v1/me", user="u1").json()["quota"]["ai_used"] == 0
+    assert h.get("/v1/me", user="u1").json()["credits"]["balance"] == 3
 
 
 def test_time_limit_depends_on_the_kind_of_job(make_harness):

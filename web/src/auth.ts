@@ -5,6 +5,7 @@ import Google from "next-auth/providers/google";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { db } from "@/db";
 import { accounts, sessions, users, verificationTokens } from "@/db/schema";
+import { withoutTokens } from "@/lib/oauth-account";
 
 const providers: Provider[] = [];
 if (process.env.AUTH_GITHUB_ID && process.env.AUTH_GITHUB_SECRET) providers.push(GitHub);
@@ -15,13 +16,16 @@ export const oauthProviders = providers.map((p) => (typeof p === "function" ? p(
 /** Development with no OAuth credentials gets a one-click dev sign-in. */
 export const devSignInEnabled = process.env.NODE_ENV === "development" && providers.length === 0;
 
+const adapter = DrizzleAdapter(db, {
+  usersTable: users,
+  accountsTable: accounts,
+  sessionsTable: sessions,
+  verificationTokensTable: verificationTokens,
+});
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: DrizzleAdapter(db, {
-    usersTable: users,
-    accountsTable: accounts,
-    sessionsTable: sessions,
-    verificationTokensTable: verificationTokens,
-  }),
+  // Sign-in stores the provider and account id only; see withoutTokens.
+  adapter: { ...adapter, linkAccount: (account) => adapter.linkAccount!(withoutTokens(account)) },
   providers,
   session: { strategy: "database" },
   trustHost: true,

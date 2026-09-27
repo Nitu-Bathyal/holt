@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ContactEmail, LegalPage } from "@/components/legal-page";
-import { CONTACT_CITY, FREE_AI_QUOTA, PAYMENT_BRAND } from "@/lib/site";
+import { CONTACT_CITY, PAYMENT_BRAND } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Privacy Policy",
@@ -21,7 +21,7 @@ export default function PrivacyPage() {
         <ul>
           <li>Holt reads public GitHub data. It never posts anything and never gets access to your repositories.</li>
           <li>If you sign in, we keep your name, email and profile picture from GitHub or Google, and your report history. Nothing else from either account. See <a href="#google" className="text-link">signing in with Google</a>.</li>
-          <li>If you add your own AI key, it is encrypted and never shown back.</li>
+          <li>We don&rsquo;t store API keys, and we don&rsquo;t keep the access tokens GitHub or Google hand back at sign-in.</li>
           <li>Payments are handled by Razorpay (INR) and Dodo Payments (USD). Card details never reach us.</li>
           <li>One cookie to keep you signed in, one setting for your theme. Visits are counted by our own analytics, which sets no cookie and runs on our server. No ads, no third-party trackers, no selling data.</li>
           <li>Email us and we&rsquo;ll delete your account and everything tied to it.</li>
@@ -46,16 +46,9 @@ export default function PrivacyPage() {
       <h3>If you sign in</h3>
       <ul>
         <li><strong>Your name, email address and profile-picture link</strong> from GitHub or Google, and nothing else from either account. Sections 3 and 4 say exactly what each provider gives us and how to take it back.</li>
-        <li><strong>The sign-in library&rsquo;s records:</strong> the provider&rsquo;s ID for your account and the sign-in token it returns, so it can recognise you next time. Holt doesn&rsquo;t use that token to read or write anything on GitHub or Google.</li>
+        <li><strong>The sign-in library&rsquo;s records:</strong> the provider&rsquo;s ID for your account, so it can recognise you next time. The access tokens GitHub or Google return at sign-in are thrown away, not stored.</li>
         <li><strong>Your analyses and history:</strong> which repositories you checked, when, in which mode, and the resulting reports, so your history page works.</li>
-        <li><strong>Your AI report allowance:</strong> how many of your {FREE_AI_QUOTA} free monthly reports you&rsquo;ve used, and your plan.</li>
-      </ul>
-
-      <h3>If you add your own AI key</h3>
-      <ul>
-        <li>The key is <strong>encrypted at rest with AES-GCM</strong> using a secret that lives only on the server, along with which provider and model you chose.</li>
-        <li>It is decrypted only for the moment it takes to send an AI report request you asked for. It is <strong>never shown back</strong>, not even to you, and not in any email or log.</li>
-        <li>Deleting the key in your settings removes it immediately.</li>
+        <li><strong>Your free AI reports:</strong> how many you have left, when you last claimed one, a record of each one given, used or given back, and your plan.</li>
       </ul>
 
       <h3>If you pay for something</h3>
@@ -103,8 +96,8 @@ export default function PrivacyPage() {
       <h3>Where it&rsquo;s stored and for how long</h3>
       <p>
         Your name, email and picture link are kept in Holt&rsquo;s own database, on the server described in section 8, alongside the sign-in library&rsquo;s
-        record of your Google account ID and the sign-in token Google returned. They are kept <strong>until you delete your account</strong> (see below) and are not
-        copied anywhere else. Holt doesn&rsquo;t use the token to fetch anything further from Google.
+        record of your Google account ID. They are kept <strong>until you delete your account</strong> (see below) and are not
+        copied anywhere else. The access token Google returns at sign-in is not stored, so Holt can&rsquo;t fetch anything further from Google.
       </p>
       <h3 id="protection">How we protect it</h3>
       <p>These are the actual measures in place today, not aspirations. We don&rsquo;t hold any security certification and don&rsquo;t claim one.</p>
@@ -113,7 +106,7 @@ export default function PrivacyPage() {
         <li><strong>The database isn&rsquo;t reachable from the internet.</strong> It runs in a container on a private network on the server, with no public port. Only the app can talk to it, and the app itself is reachable only through the tunnel.</li>
         <li><strong>Access is limited to one person.</strong> The person running Holt is the only one with access to the server, the database and the backups. There is no team, and no third party has an account on the server.</li>
         <li><strong>Secrets are kept out of the code.</strong> Sign-in credentials, database passwords and encryption keys live in files on the server that are outside the source code and readable only by the operator. Holt&rsquo;s code is open source, and no secret is in it.</li>
-        <li><strong>Your own AI key is encrypted</strong> with AES-256-GCM before it&rsquo;s stored, under a key that exists only on the server (see section 2).</li>
+        <li><strong>No keys or tokens to leak.</strong> Holt doesn&rsquo;t store API keys, or the GitHub and Google access tokens from sign-in.</li>
         <li><strong>Backups are nightly and restricted.</strong> A copy of the database is taken every night, stored on the server with permissions that allow only the operator to read it, and deleted after 14 days. So after you delete your account, your details can remain in a backup for up to 14 days and are then gone.</li>
         <li><strong>What we don&rsquo;t claim:</strong> the database files themselves are not separately encrypted at rest beyond the protections above, and we don&rsquo;t promise that no system can ever fail. If you find a weakness, section 11 says how to tell us.</li>
       </ul>
@@ -126,7 +119,7 @@ export default function PrivacyPage() {
         </li>
         <li>
           <strong>Have your data deleted</strong> by emailing <ContactEmail /> from the address on your account. We remove your account, the Google details
-          above, your history and any stored AI key. Revoking access at Google doesn&rsquo;t delete your Holt account by itself, so do both if you want everything gone.
+          above and your history. Revoking access at Google doesn&rsquo;t delete your Holt account by itself, so do both if you want everything gone.
         </li>
       </ul>
       <p>
@@ -181,8 +174,7 @@ export default function PrivacyPage() {
         analysed, plus Holt&rsquo;s own findings. <strong>Nothing about you</strong> (no name, email or account information) is included.
       </p>
       <ul>
-        <li>On the free allowance, requests go through <strong>OpenRouter</strong>, which routes them to the model vendor for the chosen model (currently OpenAI, Google or Anthropic models). OpenRouter&rsquo;s and that vendor&rsquo;s policies apply to those requests.</li>
-        <li>With your own key, requests go to the provider you chose (OpenRouter, OpenAI, Anthropic or Google Gemini) under your agreement with them.</li>
+        <li>Requests go through <strong>OpenRouter</strong>, on Holt&rsquo;s own account, which routes them to the model vendor for the chosen model (currently OpenAI, Google or Anthropic models). OpenRouter&rsquo;s and that vendor&rsquo;s policies apply to those requests.</li>
       </ul>
 
       <h2>8. Who else sees data</h2>
@@ -198,7 +190,7 @@ export default function PrivacyPage() {
 
       <h2>9. How long we keep things</h2>
       <ul>
-        <li>Account details, your history and your encrypted key: until you delete them or ask us to.</li>
+        <li>Account details and your history: until you delete them or ask us to.</li>
         <li>Rate-limit records: up to an hour, in memory.</li>
         <li>The daily request counts and the visit counts: kept to see how Holt is used over time. Neither contains your IP address or anything that identifies you.</li>
         <li>Cached reports: kept so public report pages load fast and so we can see how a project changes over time. They contain public GitHub data, not account data.</li>
@@ -208,8 +200,8 @@ export default function PrivacyPage() {
       <h2>10. Your rights and how to delete your data</h2>
       <p>
         You can ask us to show you what we hold about you, correct it, or delete it. To delete your account, email <ContactEmail /> from
-        the address on your account, and we&rsquo;ll remove your account, history and any stored key. Cached public reports stay, because they
-        contain no account data. You can also remove your stored AI key yourself at any time in your settings.
+        the address on your account, and we&rsquo;ll remove your account and history. Cached public reports stay, because they
+        contain no account data.
       </p>
       <p>
         We follow India&rsquo;s Digital Personal Data Protection Act, 2023. If you&rsquo;re somewhere with other privacy laws, such as the EU or the UK,
@@ -218,7 +210,7 @@ export default function PrivacyPage() {
 
       <h2>11. Security</h2>
       <p>
-        Everything travels over HTTPS. The database has no public port and is reached only through the app. Stored AI keys are encrypted.
+        Everything travels over HTTPS. The database has no public port and is reached only through the app. We store no API keys or sign-in access tokens.
         Access to the server, database and backups is limited to the person running Holt. The full list of measures is under{" "}
         <a href="#protection" className="text-link">how we protect it</a> in section 3; it applies to everything we store, not only Google data.
         No system is perfect, so if you find a weakness, please email us before posting it publicly and we&rsquo;ll fix it fast.

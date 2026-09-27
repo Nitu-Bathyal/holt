@@ -99,7 +99,7 @@ def analyze(
     except ApiError:
         raise
     except Exception as exc:  # noqa: BLE001 -- translated, never swallowed
-        raise translate(exc, repo, byok=getattr(model, "byok", False)) from exc
+        raise translate(exc, repo) from exc
 
     progress(FINAL_STAGE, 0.95)
     cost = None
@@ -116,7 +116,7 @@ def analyze(
     )
 
 
-def translate(exc: Exception, repo: str, byok: bool = False) -> ApiError:
+def translate(exc: Exception, repo: str) -> ApiError:
     """Engine and SDK failures -> the error codes in API.md."""
     if isinstance(exc, RepoNotFound):
         return not_found_repo(repo)
@@ -130,12 +130,6 @@ def translate(exc: Exception, repo: str, byok: bool = False) -> ApiError:
     module = type(exc).__module__ or ""
     if module.startswith(("openai", "anthropic")):
         name = type(exc).__name__
-        if byok and name in ("AuthenticationError", "PermissionDeniedError"):
-            return ApiError(
-                "needs_key",
-                "Your AI provider rejected the API key you saved. Check it in "
-                "your settings, or remove it to use your free reports.",
-            )
         if name == "RateLimitError":
             return ApiError("rate_limited", "The AI model is busy right now. "
                             "Please try again in a few minutes.", retry_after=120)

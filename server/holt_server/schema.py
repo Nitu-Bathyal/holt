@@ -41,8 +41,8 @@ class Model(BaseModel):
 # --- errors ------------------------------------------------------------------------
 
 ErrorCode = Literal["unauthorized", "not_found", "invalid_repo", "invalid_request",
-                    "rate_limited", "quota_exceeded", "needs_key", "upstream", "internal",
-                    "not_implemented"]
+                    "rate_limited", "quota_exceeded", "needs_key", "claim_not_ready",
+                    "ai_unavailable", "upstream", "internal", "not_implemented"]
 
 
 class Error(Model):
@@ -344,25 +344,21 @@ class ReportList(Model):
 
 # --- account ------------------------------------------------------------------------
 
-ByokProvider = Literal["openrouter", "openai", "anthropic", "gemini"]
+class Credits(Model):
+    """Free AI reports: GET /v1/me/credits, and `credits` in GET /v1/me."""
 
-
-class Quota(Model):
-    ai_used: int
-    ai_limit: int
-    resets_at: str
-
-
-class Byok(Model):
-    provider: ByokProvider
-    model: str
-    set: bool
+    balance: int
+    can_claim: bool
+    # When the weekly claim opens; null only before the welcome grant.
+    next_claim_at: str | None
+    claim_every_days: float
+    # False while the server has no model key: AI reports can't run at all.
+    ai_available: bool
 
 
 class Me(Model):
     plan: str
-    quota: Quota
-    byok: Byok | None
+    credits: Credits
 
 
 class HistoryItem(Model):
