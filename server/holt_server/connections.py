@@ -8,8 +8,9 @@ never holds the user's GitHub token.
 Connecting needs an "I'm 18 or older" confirmation, stored with its time. A
 connected user's public contributions may count, anonymously, in repo
 statistics unless they turn on `stats_opt_out`. While connected, the report
-pages they open are recorded in `repo_views`; disconnecting deletes the
-connection and those rows.
+pages they open are recorded in `repo_views`, and their public pull requests
+are fetched for My Contributions (contributions.py); disconnecting deletes the
+connection and all of those rows.
 """
 
 from __future__ import annotations
@@ -24,7 +25,7 @@ from sqlalchemy import delete, select
 from sqlalchemy.dialects import postgresql, sqlite
 from sqlalchemy.exc import IntegrityError
 
-from holt_server import repos, schema
+from holt_server import contributions, repos, schema
 from holt_server.deps import Caller, caller, services, signed_in
 from holt_server.db import GitHubConnection, RepoView, iso, now
 from holt_server.errors import ApiError, github_rate_limited, upstream
@@ -149,7 +150,8 @@ async def connect_github(data: ConnectIn, request: Request,
             # user connected twice at once.
             raise taken() if other is None else ApiError(
                 "internal", "Something went wrong on our side. Try again.") from exc
-        return body(conn)
+    contributions.fetch_soon(svc, user_id, login)
+    return body(conn)
 
 
 @router.patch("/me/github")
@@ -172,8 +174,11 @@ async def disconnect_github(request: Request,
     svc = services(request)
     user_id = signed_in(who)
     async with svc.db.session() as s:
-        await s.execute(delete(RepoView).where(RepoView.user_id == user_id))
+        # The connection first: a pull-request fetch holding its row finishes
+        # before this goes on, so the deletes below also catch what it stored.
         await s.execute(delete(GitHubConnection).where(GitHubConnection.user_id == user_id))
+        await s.execute(delete(RepoView).where(RepoView.user_id == user_id))
+        await contributions.forget(s, user_id)
         await s.commit()
     return body(None)
 
