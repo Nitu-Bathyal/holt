@@ -15,11 +15,11 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from holt.agent import landing, narration, stages
+from holt.agent import landing, landing_detection, narration, stages
 from holt.agent.findings import Finding, Findings
-from holt.agent.signals import MIN_AGE_HOURS, Signals, build_threads, compute
+from holt.agent.signals import MIN_AGE_HOURS, Signals, Thread, build_threads, compute, newcomer_threads
 from holt.agent.verdict import classify as decide
-from holt.agent.verdict import contested_kind, hours_phrase, headline, legacy_trace
+from holt.agent.verdict import Rule, contested_kind, hours_phrase, headline, legacy_trace
 from holt.agent.verify import check_quotes, spoken_words, verify
 from holt.evidence.provider import EvidenceProvider
 from holt.model import ModelClient
@@ -187,6 +187,8 @@ def analyze(
         signals.as_dict(), [*trace_lines, *map(str, rules)], spoken_words(records),
         extra_numbers=(contributor_days,),
     )
+    # After narration, so the prompt the recordings were made with is unchanged.
+    _say_how_merges_landed(rules, threads)
 
     # The evidence list is built from verified findings, not written by the
     # model. Stage E supplies prose; it cannot introduce a citation.
@@ -384,9 +386,17 @@ def analyze_without_model(
     if meta is not None and meta.payload.get("is_archived"):
         findings.add("is_archived", True, (meta.evidence_id,),
                      "GitHub reports this repository as archived")
+    # A mirror or a fork: GitHub's own fields, plus whether anything from a
+    # newcomer landed here (a fork that merges outsiders is its own project).
+    if meta is not None and (
+        elsewhere := landing_detection.elsewhere(meta.payload, signals.outsider_merged)
+    ):
+        findings.add("contribute_elsewhere", elsewhere, (meta.evidence_id,),
+                     "read from GitHub's mirror and fork fields and the description")
 
     report("Applying the rules", 0.9)
     verdict, rules = decide(findings, signals, contributor_days)
+    _say_how_merges_landed(rules, threads)
 
     return Assessment(
         repo=repo,
@@ -416,6 +426,22 @@ def analyze_without_model(
         models=[],
         dropped_claims=0,
     ), _done(report, Trace(signals=signals, rules=rules))
+
+
+# Rules after which how the merges happened is beside the point.
+_NOT_ABOUT_MERGES = {"archived", "elsewhere", "closed_kind", "non_software_kind"}
+
+
+def _say_how_merges_landed(rules: list[str], threads: dict[str, Thread]) -> None:
+    """Add a line saying which merges GitHub shows as closed, and how they landed.
+
+    Counting a pull request GitHub calls "closed" as merged is a claim the
+    reader can check, so it is said next to the rules rather than done quietly.
+    """
+    if any(getattr(r, "code", "") in _NOT_ABOUT_MERGES for r in rules):
+        return
+    if line := landing_detection.landed_sentence(newcomer_threads(threads)):
+        rules.append(Rule(line, code="landed_off_button"))
 
 
 def _done(report: Progress, trace: Trace) -> Trace:
