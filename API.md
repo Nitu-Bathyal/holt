@@ -201,11 +201,18 @@ StarterIssue:
 ```
 
 ### `GET /badge/{owner}/{repo}.svg` (no internal key; public; `Cache-Control: public, max-age=3600, stale-while-revalidate=86400`)
-Shields-style SVG badge showing the rules verdict ("Holt | newcomer-friendly").
-Maintainers embed it in READMEs; it links back to the report page at
-`{HOLT_WEB_URL}/{owner}/{repo}`. Uses the latest 7-day rules report; when
-there is none, or it is over 24h old, it shows what it has ("not checked yet")
-and queues a rules check behind it. Badge-queued checks have their own rate
+Shields-style SVG badge. Maintainers embed it in READMEs; it links back to the
+report page at `{HOLT_WEB_URL}/{owner}/{repo}`. Uses the latest 7-day rules
+report:
+- `viable`: a positive, factual line in green from `stats`, e.g.
+  "Holt | merges outsiders · replies in ~6h" ("merges outsiders" when
+  `outsider_merged` > 0; the reply time when the median first reply is within
+  72h; "worth your time" if neither).
+- any other verdict: neutral grey "Holt | see report", never a red verdict.
+- no report yet: neutral grey "Holt | not checked yet".
+
+When there is no report, or it is over 24h old, it shows what it has and
+queues a rules check behind it. Badge-queued checks have their own rate
 limits (per client IP and in total, separate from user limits), run at most
 one at a time, and wait behind every user request.
 
