@@ -16,7 +16,7 @@ export const metadata: Metadata = {
 const TRACE = [
   { i: "A", name: "classify", copy: "What kind of repository is this?", owner: "model" },
   { i: "B", name: "opportunity", copy: "Is there a real route in for outside work?", owner: "model" },
-  { i: "C", name: "outcomes", copy: "What happened to people who tried?", owner: "model" },
+  { i: "C", name: "outcomes", copy: "What happened to outsiders who tried?", owner: "model" },
   { i: "D", name: "verify", copy: "Open every citation; drop anything that doesn't check out", owner: "no model" },
   { i: "→", name: "verdict.py", copy: "One written rule over the verified evidence", owner: "no model", decision: true },
   { i: "E", name: "narrate", copy: "Explain an answer it cannot change", owner: "model" },
@@ -97,7 +97,8 @@ export default function HowItWorks() {
 
         <Block n="03" label="terminal" title="Prefer the terminal? Same engine.">
           <p className="prose-sans mb-8 max-w-[740px] text-[1.05rem]">
-            The Holt CLI and terminal app run the same rules on your machine with your own GitHub token.
+            The Holt CLI and terminal app run the same rules on your machine with your own GitHub token. Handy if you
+            live in the terminal, or want to check repos from a script.
           </p>
           <div className="mb-10 grid max-w-[760px] grid-cols-[auto_1fr_auto] items-center border border-line-strong bg-panel">
             <span aria-hidden="true" className="pl-4 text-amber">$</span>
