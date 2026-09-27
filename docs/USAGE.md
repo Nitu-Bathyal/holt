@@ -105,6 +105,11 @@ The report opens with one of three headlines:
 The third is a real answer, not a failure. Then:
 
 - **What the evidence shows** — what happened to people who tried before you.
+  "Outside contributors" are everyone who isn't part of the project: not its
+  owners, members or collaborators, and not anyone seen merging, closing or
+  regularly approving other people's pull requests. People who come back with a second pull request still
+  count. It also says how many of them were new to this repo (nothing of theirs
+  merged here yet) and how many of those got merged.
 - **What decided it** — the one rule that produced the verdict. The verdict is
   computed, not written by a model, so it will not move if you re-run it.
 - **What could not be determined** — what Holt looked for and did not find.

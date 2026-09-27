@@ -226,7 +226,8 @@ export async function badge(owner: string, repo: string): Promise<Response> {
     const res = await fetch(`${BASE}/badge/${enc(owner)}/${enc(repo)}.svg`, { next: { revalidate: 3600 } });
     return new Response(res.body, {
       status: res.status,
-      headers: { "Content-Type": "image/svg+xml; charset=utf-8", "Cache-Control": "public, max-age=86400" },
+      // The server's cache policy, so a badge that turns neutral isn't held for a day.
+      headers: { "Content-Type": "image/svg+xml; charset=utf-8", "Cache-Control": res.headers.get("Cache-Control") ?? "public, max-age=3600" },
     });
   } catch {
     return mock.badge("");

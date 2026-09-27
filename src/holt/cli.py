@@ -141,17 +141,23 @@ def model_client(repo: str, args: argparse.Namespace, quiet: bool = False):
 
 
 def stats_from(signals) -> dict | None:
-    """The counts behind a verdict, named as `API.md` names them."""
+    """The counts behind a verdict, named as `API.md` names them.
+
+    Plus the first-timer attempts and merges, which the command line reports
+    and the web API does not carry yet.
+    """
     if signals is None:
         return None
     return {
         "outsider_attempts": signals.outsider_threads,
         "outsider_merged": signals.outsider_merged,
         "distinct_outsiders": signals.distinct_outsider_authors,
-        "first_time_merged_authors": signals.distinct_merged_authors,
+        "first_time_merged_authors": signals.distinct_first_timer_merged_authors,
         "no_reply": signals.outsider_ignored,
         "median_first_response_hours": signals.median_first_response_hours,
         "bot_share": signals.bot_share,
+        "first_timer_attempts": signals.first_timer_threads,
+        "first_timer_merged": signals.first_timer_merged,
     }
 
 
@@ -317,8 +323,8 @@ def cmd_compare(args: argparse.Namespace) -> int:
            line(COMPARE_HEADERS),
            "|" + "|".join("-" * (w + 2) for w in widths) + "|"]  # matches "| cell " padding
     out += [line(row) for row in rows]
-    out += ["\n`outsiders in` counts pull requests merged from people with no prior "
-            "merge, over the number who tried.",
+    out += ["\n`outsiders in` counts pull requests merged from people outside the "
+            "project, over the number they opened.",
             "Run `holt analyze <repo>` for the evidence behind any row."]
     emit_markdown("\n".join(out))
     # Declared `-> int` and every sibling returns one; falling off the end made

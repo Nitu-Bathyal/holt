@@ -270,8 +270,22 @@ def test_badge(h):
     assert len(jobs) == 1 and jobs[0].mode == "rules"
     h.wait(jobs[0].id)
     r = h.client.get("/badge/Pallets/Flask.svg")
-    assert "newcomer-friendly" in r.text and "not newcomer" not in r.text
+    assert "merges outsiders · replies in ~3h" in r.text
     assert "https://githolt.com/pallets/flask\"" in r.text
+
+
+@pytest.mark.parametrize("verdict", ["not_viable", "insufficient_evidence"])
+def test_badge_turns_neutral_when_a_repo_stops_passing(make_harness, verdict):
+    h = make_harness()
+    h.client.get("/badge/octo/one.svg")
+    h.wait(db_rows(h, Job)[0].id)
+    assert "merges outsiders" in h.client.get("/badge/octo/one.svg").text
+    h.engine.verdict = verdict
+    h.wait(h.post("/v1/analyses", {"repo": "octo/one", "refresh": True}).json()["job_id"])
+    r = h.client.get("/badge/octo/one.svg")
+    assert "Holt: see report" in r.text and "merges" not in r.text
+    assert "#1a7f37" not in r.text  # never green, and never a red verdict either
+    assert "not worth" not in r.text.lower() and "enough evidence" not in r.text
 
 
 # --- starter issues and find ---------------------------------------------------------

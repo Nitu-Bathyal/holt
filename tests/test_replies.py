@@ -11,7 +11,7 @@ from datetime import timedelta
 
 import pytest
 
-from holt.agent import replies
+from holt.agent import people, replies
 from holt.agent.signals import Thread, build_threads, compute
 from holt.types import T_CUTOFF, EvidenceRecord
 
@@ -31,6 +31,10 @@ def opened(n, author="newbie", association="FIRST_TIME_CONTRIBUTOR"):
 
 def comment(n, i, offset_h, author, association="NONE", **extra):
     return rec(f"pr:a/b#{n}:comment:{i}", offset_h, author, association, **{"body": "hi", **extra})
+
+
+def team(records):
+    return people.maintainers(records, is_automation=replies.looks_like_automation)
 
 
 def reply_hours(records, n=1):
@@ -120,7 +124,7 @@ def test_a_merge_bot_does_not_make_a_maintainer():
         opened(2, "other"),
         rec("pr:a/b#2:merged", 9, "other", merged_by="pytorchmergebot", merged_by_is_bot=False),
     ]
-    assert replies.maintainers(records) == frozenset()
+    assert team(records) == frozenset()
 
 
 def review(n, i, offset_h, author, state, association="CONTRIBUTOR"):
@@ -131,12 +135,12 @@ def review(n, i, offset_h, author, state, association="CONTRIBUTOR"):
 def test_a_contributor_who_formally_reviews_other_peoples_work_is_a_maintainer(state):
     """Kubernetes approvers and LLVM code owners read as CONTRIBUTOR."""
     records = []
-    for n in range(1, replies.REGULAR_REVIEWER_PRS + 1):
+    for n in range(1, people.REGULAR_REVIEWER_PRS + 1):
         records += [opened(n, f"author{n}"), review(n, 0, n, "approver", state)]
     assert reply_hours(records, 1) == 1.0
 
     fewer = [r for r in records if not r.evidence_id.startswith("pr:a/b#1:review")]
-    assert "approver" not in replies.maintainers(fewer)
+    assert "approver" not in team(fewer)
 
 
 def test_a_helpful_regulars_comments_do_not_make_them_a_maintainer():
@@ -145,7 +149,7 @@ def test_a_helpful_regulars_comments_do_not_make_them_a_maintainer():
     for n in range(1, 6):
         records += [opened(n, f"author{n}"), comment(n, 0, 1, "regular", "CONTRIBUTOR"),
                     review(n, 1, 2, "regular", "COMMENTED")]
-    assert "regular" not in replies.maintainers(records)
+    assert "regular" not in team(records)
     assert reply_hours(records) is None
 
 
@@ -153,11 +157,12 @@ def test_reviewing_your_own_pull_requests_makes_nobody_a_maintainer():
     records = []
     for n in range(1, 5):
         records += [opened(n, "alum", "CONTRIBUTOR"), review(n, 0, 1, "alum", "APPROVED")]
-    assert "alum" not in replies.maintainers(records)
+    assert "alum" not in team(records)
 
 
-def test_maintainers_is_the_one_shared_set():
-    """Association, merging, closing others' work and formal reviewing; never bots."""
+def test_replies_and_outsiders_share_one_team():
+    """Association, merging and closing others' work; never bots, even ones
+    GitHub lists as collaborators. build_threads works it out once, for both."""
     records = [
         opened(1, "owner", "OWNER"),
         opened(2, "newbie"), comment(2, 0, 1, "member", "MEMBER"),
@@ -166,7 +171,8 @@ def test_maintainers_is_the_one_shared_set():
         opened(4, "other2"), rec("pr:a/b#4:closed", 9, "other2", closed_by="triager"),
         opened(5, "legacy-author", None), rec("pr:a/b#5:comment:0", 1, "legacy", None),
     ]
-    assert replies.maintainers(records) == {"owner", "member", "merger", "triager"}
+    assert team(records) == {"owner", "member", "merger", "triager"}
+    assert build_threads(records).team == team(records)
 
 
 def test_many_comments_on_one_pull_request_do_not_make_a_regular():
