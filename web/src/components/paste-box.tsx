@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { track } from "@/lib/analytics";
 import { parseRepoInput } from "@/lib/repo";
 
 const EXAMPLES = ["pallets/flask", "NixOS/nixpkgs", "pytorch/pytorch"];
@@ -20,6 +21,7 @@ export function PasteBox({ autoFocus = false, examples = true, size = "lg" }: { 
     }
     setError("");
     setBusy(true);
+    track("paste-submit", { repo: `${ref.owner}/${ref.repo}` });
     router.push(`/${ref.owner}/${ref.repo}`);
   }
 
