@@ -30,7 +30,7 @@ const SEEDS: Seed[] = [
     hacktoberfest: true,
     stats: {
       outsider_attempts: 64, outsider_merged: 17, distinct_outsiders: 51,
-      first_time_merged_authors: 12, no_reply: 9, median_first_response_hours: 3.2, bot_share: 0.12,
+      first_time_merged_authors: 12, no_reply: 9, median_first_response_hours: 3.2, bot_share: 0.12, still_open: 0, closed_silently: 0
     },
     decided_by: [
       "12 people got their first pull request merged here in the period Holt read.",
@@ -71,7 +71,7 @@ const SEEDS: Seed[] = [
     hacktoberfest: true,
     stats: {
       outsider_attempts: 100, outsider_merged: 15, distinct_outsiders: 72,
-      first_time_merged_authors: 15, no_reply: 63, median_first_response_hours: 0.8, bot_share: 0.085,
+      first_time_merged_authors: 15, no_reply: 63, median_first_response_hours: 0.8, bot_share: 0.085, still_open: 0, closed_silently: 0
     },
     decided_by: [
       "15 people got their first pull request merged here in the period Holt read.",
@@ -115,7 +115,7 @@ const SEEDS: Seed[] = [
     hacktoberfest: false,
     stats: {
       outsider_attempts: 38, outsider_merged: 7, distinct_outsiders: 33,
-      first_time_merged_authors: 6, no_reply: 11, median_first_response_hours: 20, bot_share: 0.05,
+      first_time_merged_authors: 6, no_reply: 11, median_first_response_hours: 20, bot_share: 0.05, still_open: 0, closed_silently: 0
     },
     decided_by: [
       "6 people got their first pull request merged here in the period Holt read.",
@@ -148,7 +148,7 @@ const SEEDS: Seed[] = [
     hacktoberfest: false,
     stats: {
       outsider_attempts: 100, outsider_merged: 3, distinct_outsiders: 88,
-      first_time_merged_authors: 2, no_reply: 71, median_first_response_hours: 190, bot_share: 0.31,
+      first_time_merged_authors: 2, no_reply: 71, median_first_response_hours: 190, bot_share: 0.31, still_open: 0, closed_silently: 0
     },
     decided_by: [
       "71 of 100 outside pull requests drew no reply, and only 3 were merged.",
@@ -183,7 +183,7 @@ const SEEDS: Seed[] = [
     hacktoberfest: false,
     stats: {
       outsider_attempts: 41, outsider_merged: 0, distinct_outsiders: 37,
-      first_time_merged_authors: 0, no_reply: 29, median_first_response_hours: null, bot_share: 0.02,
+      first_time_merged_authors: 0, no_reply: 29, median_first_response_hours: null, bot_share: 0.02, still_open: 0, closed_silently: 0
     },
     decided_by: ["29 of 41 outside pull requests drew no response and none were merged."],
     unknowns: [],
@@ -210,7 +210,7 @@ const SEEDS: Seed[] = [
     hacktoberfest: true,
     stats: {
       outsider_attempts: 12, outsider_merged: 6, distinct_outsiders: 10,
-      first_time_merged_authors: 5, no_reply: 1, median_first_response_hours: 26, bot_share: 0.0,
+      first_time_merged_authors: 5, no_reply: 1, median_first_response_hours: 26, bot_share: 0.0, still_open: 0, closed_silently: 0
     },
     decided_by: ["5 people got their first pull request merged here in the period Holt read."],
     unknowns: ["This is a small project; a few pull requests make up the whole picture."],
@@ -232,7 +232,7 @@ const FIND_ONLY: Seed[] = [
   {
     repo: "excalidraw/excalidraw", verdict: "viable", description: "Virtual whiteboard for sketching hand-drawn like diagrams.",
     language: "TypeScript", stars: 98000, hacktoberfest: true,
-    stats: { outsider_attempts: 58, outsider_merged: 14, distinct_outsiders: 49, first_time_merged_authors: 10, no_reply: 12, median_first_response_hours: 9, bot_share: 0.04 },
+    stats: { outsider_attempts: 58, outsider_merged: 14, distinct_outsiders: 49, first_time_merged_authors: 10, no_reply: 12, median_first_response_hours: 9, bot_share: 0.04, still_open: 0, closed_silently: 0 },
     decided_by: [], unknowns: [], landing: [{ path: "packages/excalidraw", merged: 12, attempted: 44 }], never_landed: [], evidence: [],
     issues: [
       { number: 9721, title: "Tooltip for the eraser tool is cut off on small screens", labels: ["good first issue", "UX"], comments: 0, why: ["Labelled good first issue", "UI fixes from newcomers were merged 6 times recently"] },
@@ -243,7 +243,7 @@ const FIND_ONLY: Seed[] = [
   {
     repo: "charmbracelet/bubbletea", verdict: "viable", description: "A powerful little TUI framework.",
     language: "Go", stars: 31000, hacktoberfest: true,
-    stats: { outsider_attempts: 30, outsider_merged: 9, distinct_outsiders: 26, first_time_merged_authors: 7, no_reply: 6, median_first_response_hours: 14, bot_share: 0.1 },
+    stats: { outsider_attempts: 30, outsider_merged: 9, distinct_outsiders: 26, first_time_merged_authors: 7, no_reply: 6, median_first_response_hours: 14, bot_share: 0.1, still_open: 0, closed_silently: 0 },
     decided_by: [], unknowns: [], landing: [{ path: "examples", merged: 5, attempted: 9 }], never_landed: [], evidence: [],
     issues: [
       { number: 1203, title: "Example: add a spinner with a progress bar", labels: ["good first issue", "examples"], comments: 0, why: ["examples/ is where 5 of 9 outsider PRs were merged"] },
@@ -253,7 +253,7 @@ const FIND_ONLY: Seed[] = [
   {
     repo: "rust-lang/rustlings", verdict: "viable", description: "Small exercises to get you used to reading and writing Rust code.",
     language: "Rust", stars: 57000, hacktoberfest: true,
-    stats: { outsider_attempts: 44, outsider_merged: 15, distinct_outsiders: 40, first_time_merged_authors: 13, no_reply: 5, median_first_response_hours: 6, bot_share: 0.02 },
+    stats: { outsider_attempts: 44, outsider_merged: 15, distinct_outsiders: 40, first_time_merged_authors: 13, no_reply: 5, median_first_response_hours: 6, bot_share: 0.02, still_open: 0, closed_silently: 0 },
     decided_by: [], unknowns: [], landing: [{ path: "exercises", merged: 9, attempted: 20 }], never_landed: [], evidence: [],
     issues: [
       { number: 2150, title: "Hint for `iterators3` mentions a function that was renamed", labels: ["good first issue"], comments: 0, why: ["Labelled good first issue", "Hint fixes are merged almost every time"] },
@@ -264,7 +264,7 @@ const FIND_ONLY: Seed[] = [
   {
     repo: "freeCodeCamp/devdocs", verdict: "viable", description: "API documentation browser.",
     language: "JavaScript", stars: 38000, hacktoberfest: true,
-    stats: { outsider_attempts: 36, outsider_merged: 12, distinct_outsiders: 31, first_time_merged_authors: 9, no_reply: 4, median_first_response_hours: 30, bot_share: 0.06 },
+    stats: { outsider_attempts: 36, outsider_merged: 12, distinct_outsiders: 31, first_time_merged_authors: 9, no_reply: 4, median_first_response_hours: 30, bot_share: 0.06, still_open: 0, closed_silently: 0 },
     decided_by: [], unknowns: [], landing: [{ path: "lib/docs/scrapers", merged: 7, attempted: 15 }], never_landed: [], evidence: [],
     issues: [
       { number: 2311, title: "Update the Vite documentation to v7", labels: ["good first issue", "docs update"], comments: 1, why: ["Scraper updates are the most-merged newcomer change here"] },
@@ -274,7 +274,7 @@ const FIND_ONLY: Seed[] = [
   {
     repo: "go-gitea/gitea", verdict: "viable", description: "Painless self-hosted all-in-one software development service.",
     language: "Go", stars: 49000, hacktoberfest: false,
-    stats: { outsider_attempts: 80, outsider_merged: 21, distinct_outsiders: 60, first_time_merged_authors: 11, no_reply: 14, median_first_response_hours: 11, bot_share: 0.07 },
+    stats: { outsider_attempts: 80, outsider_merged: 21, distinct_outsiders: 60, first_time_merged_authors: 11, no_reply: 14, median_first_response_hours: 11, bot_share: 0.07, still_open: 0, closed_silently: 0 },
     decided_by: [], unknowns: [], landing: [{ path: "templates", merged: 8, attempted: 20 }], never_landed: [], evidence: [],
     issues: [
       { number: 35412, title: "Dark theme: diff line numbers have low contrast", labels: ["good first issue", "topic/ui"], comments: 0, why: ["templates/ is where 8 of 20 outsider PRs were merged"] },
@@ -379,7 +379,7 @@ function generated(repo: string, mode: "rules" | "ai", days: number): Report {
       outsider_attempts: attempts, outsider_merged: merged, distinct_outsiders: Math.max(1, Math.floor(attempts * 0.8)),
       first_time_merged_authors: firstTimers, no_reply: noReply,
       median_first_response_hours: reply == null ? null : Math.round(reply * 10) / 10,
-      bot_share: Math.round(r() * 200) / 1000,
+      bot_share: Math.round(r() * 200) / 1000, still_open: 0, closed_silently: 0
     },
     decided_by:
       verdict === "viable"

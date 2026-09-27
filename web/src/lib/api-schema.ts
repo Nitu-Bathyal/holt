@@ -1291,6 +1291,11 @@ export interface components {
         Stats: {
             /** Bot Share */
             bot_share: number;
+            /**
+             * Closed Silently
+             * @default 0
+             */
+            closed_silently: number;
             /** Distinct Outsiders */
             distinct_outsiders: number;
             /** First Time Merged Authors */
@@ -1303,6 +1308,11 @@ export interface components {
             outsider_attempts: number;
             /** Outsider Merged */
             outsider_merged: number;
+            /**
+             * Still Open
+             * @default 0
+             */
+            still_open: number;
         };
         /** ValidationError */
         ValidationError: {

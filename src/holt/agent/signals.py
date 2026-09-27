@@ -17,9 +17,9 @@ from __future__ import annotations
 import statistics
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 
-from holt.agent import landing_detection
+from holt.agent import landing_detection, rates
 from holt.types import EvidenceRecord
 
 
@@ -36,11 +36,10 @@ _BOT_HINTS = ("dependabot", "renovate", "greenkeeper", "imgbot", "allcontributor
               "codecov", "sonarcloud", "netlify", "vercel", "mergify", "stale")
 
 
-# A pull request opened an hour ago has not been ignored; nobody has had the
-# chance to read it. Without this, a busy repository read at any moment looked
-# hostile, because its newest pull requests -- often most of the sample -- had
-# no reply *yet*. Two days covers a weekend's silence without excusing a week.
-MIN_AGE_HOURS = 48.0
+# A pull request opened an hour ago has not been ignored, or rejected; nobody
+# has had the chance to read it. Open pull requests younger than this are
+# "still open" and leave every rate (see rates.py, which owns the window).
+MIN_AGE_HOURS = rates.SETTLE_HOURS
 
 
 def looks_like_bot(login: str, flagged: bool = False) -> bool:
@@ -71,6 +70,9 @@ class Thread:
     # (a merge bot, an internal sync, Gerrit, a maintainer's push): a VIA key
     # from landing_detection. `merged` is then True as well.
     landed_via: str | None = None
+    # Read at fetch time; absent from captures before evidence v2.
+    draft: bool = False
+    labels: list[str] = field(default_factory=list)
     responses: list[tuple[object, str, str]] = field(default_factory=list)
 
     @property
@@ -84,14 +86,6 @@ class Thread:
     @property
     def engaged(self) -> bool:
         return any(who != self.author for _, who, _ in self.responses)
-
-    def awaiting_reply(self, as_of: datetime | None, min_age_hours: float) -> bool:
-        """Still open, unanswered, and too new for that silence to mean anything."""
-        if as_of is None or min_age_hours <= 0:
-            return False
-        if self.engaged or self.merged or self.closed_unmerged:
-            return False
-        return as_of - self.opened_at < timedelta(hours=min_age_hours)
 
 
 def build_threads(records: Iterable[EvidenceRecord]) -> dict[str, Thread]:
@@ -113,6 +107,8 @@ def build_threads(records: Iterable[EvidenceRecord]) -> dict[str, Thread]:
             changed_files=p.get("changed_files") or 0,
             additions=p.get("additions") or 0,
             deletions=p.get("deletions") or 0,
+            draft=bool(p.get("is_draft")),
+            labels=list(p.get("labels") or []),
         )
 
     for r in records:
@@ -185,19 +181,25 @@ class Signals:
     merged_files_median: float | None = None
     merged_dirs_median: float | None = None
     merged_with_files: int = 0
-    # Outsider attempts too new to judge: unanswered, but opened less than
-    # MIN_AGE_HOURS before the reading. Counted in `outsider_threads` (they are
-    # attempts) and never in `outsider_ignored`.
-    outsider_awaiting_reply: int = 0
-    # How many outsider attempts got any reply. `median_first_response_hours`
-    # is the median over exactly these; the rest never got one, which a median
-    # over replies alone cannot show. Report the two together.
+    # How many decided outsider attempts got any reply.
+    # `median_first_response_hours` is the median over exactly these; the rest
+    # never got one, which a median over replies alone cannot show. Report the
+    # two together.
     outsider_answered: int = 0
+    # Outsider attempts with no outcome yet: open, and younger than the settle
+    # window (rates.py). Counted in `outsider_threads` (they are attempts) and
+    # in no rate. `outsider_ignored` is then only open, settled and unanswered;
+    # closed without a word is `outsider_closed_silently`, which is usually a
+    # maintainer clearing out spam. Drafts and pull requests labelled as spam
+    # are in `outsider_excluded` and nowhere else.
+    outsider_still_open: int = 0
+    outsider_closed_silently: int = 0
+    outsider_excluded: int = 0
 
     @property
     def outsider_judgeable(self) -> int:
-        """Attempts old enough that silence on them means something."""
-        return self.outsider_threads - self.outsider_awaiting_reply
+        """Decided attempts: the denominator of every rate."""
+        return self.outsider_threads - self.outsider_still_open
 
     def as_dict(self) -> dict:
         return {
@@ -214,8 +216,10 @@ class Signals:
             "merged_files_median": self.merged_files_median,
             "merged_dirs_median": self.merged_dirs_median,
             "merged_with_files": self.merged_with_files,
-            "outsider_awaiting_reply": self.outsider_awaiting_reply,
             "outsider_answered": self.outsider_answered,
+            "outsider_still_open": self.outsider_still_open,
+            "outsider_closed_silently": self.outsider_closed_silently,
+            "outsider_excluded": self.outsider_excluded,
         }
 
 
@@ -226,14 +230,14 @@ def compute(
 ) -> Signals:
     """Count what the threads show.
 
-    `as_of` is the moment the evidence is read at. Given one, attempts younger
-    than `min_age_hours` with no reply are "awaiting a reply", not ignored.
-    Without one (or with `min_age_hours=0`) every silent attempt counts, which
-    is how the committed benchmark was computed.
+    `as_of` is the moment the evidence is read at. Given one, open attempts
+    younger than `min_age_hours` are still open and every rate is over the
+    decided rest (rates.py). Without one (or with `min_age_hours=0`) every
+    attempt is decided and every silent one counts as ignored, which is how
+    the committed benchmark was computed.
     """
-    outsiders = newcomer_threads(threads)
-    waiting = [t for t in outsiders if t.awaiting_reply(as_of, min_age_hours)]
-    waiting_keys = {t.key for t in waiting}
+    split = rates.split(newcomer_threads(threads), as_of, min_age_hours)
+    outsiders = split.decided
     merged_threads = [t for t in threads.values() if t.merged]
     # Every merge with a file list, not only the outsiders': what a merged
     # contribution *is* here is a property of the repository, and narrowing it
@@ -247,12 +251,9 @@ def compute(
 
     return Signals(
         total_threads=len(threads),
-        outsider_threads=len(outsiders),
+        outsider_threads=len(outsiders) + split.still_open,
         outsider_merged=sum(1 for t in outsiders if t.merged),
-        outsider_ignored=sum(
-            1 for t in outsiders
-            if not t.engaged and not t.merged and t.key not in waiting_keys
-        ),
+        outsider_ignored=split.ignored,
         median_first_response_hours=round(statistics.median(latencies), 1) if latencies else None,
         bot_share=(bots / len(threads)) if threads else 0.0,
         distinct_outsider_authors=len({t.author for t in outsiders}),
@@ -261,8 +262,12 @@ def compute(
         # with 15 merges and 72 first-time attempters was reported as "15
         # merges from 72 people".
         distinct_merged_authors=len({t.author for t in outsiders if t.merged}),
+        # A pull request landed off the button (an internal sync, Gerrit, a merge
+        # bot) was reviewed where it landed; GitHub just doesn't show it. Without
+        # this, rates over decided pull requests alone called react-native's
+        # imported, reviewed-in-house merges "waved through unread".
         reviewed_share=(
-            sum(1 for t in merged_threads if t.engaged) / len(merged_threads)
+            sum(1 for t in merged_threads if t.engaged or t.landed_via) / len(merged_threads)
             if merged_threads else None
         ),
         merge_rate=(len(outsiders) and sum(1 for t in outsiders if t.merged) / len(outsiders))
@@ -270,6 +275,8 @@ def compute(
         merged_files_median=statistics.median(file_counts) if file_counts else None,
         merged_dirs_median=statistics.median(dir_counts) if dir_counts else None,
         merged_with_files=len(shaped),
-        outsider_awaiting_reply=len(waiting),
         outsider_answered=len(latencies),
+        outsider_still_open=split.still_open,
+        outsider_closed_silently=split.closed_silently,
+        outsider_excluded=split.excluded,
     )

@@ -11,7 +11,7 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from holt.agent import landing, landing_detection, stages
+from holt.agent import landing, landing_detection, rates, stages
 from holt.agent.findings import Finding, Findings
 from holt.agent.signals import MIN_AGE_HOURS, Signals, Thread, build_threads, compute, newcomer_threads
 from holt.agent.verdict import classify as decide
@@ -158,7 +158,8 @@ def analyze(
     # is handed the wording the recordings were made with.
     narrated_signals = {
         k: v for k, v in narrated_signals.items()
-        if k not in ("outsider_awaiting_reply", "outsider_answered")
+        if k not in ("outsider_answered", "outsider_still_open",
+                     "outsider_closed_silently", "outsider_excluded")
     }
     report("Writing the report", 0.85)
     narrated = stages.narrate(
@@ -166,6 +167,7 @@ def analyze(
     )
     # After narration, so the prompt the recordings were made with is unchanged.
     _say_how_merges_landed(rules, threads)
+    _say_what_was_read(rules, records, threads, as_of, _min_age(provider, min_age_hours))
 
     # The evidence list is built from verified findings, not written by the
     # model. Stage E supplies prose; it cannot introduce a citation.
@@ -287,11 +289,12 @@ def analyze_without_model(
     report("Applying the rules", 0.9)
     verdict, rules = decide(findings, signals, contributor_days)
     _say_how_merges_landed(rules, threads)
+    _say_what_was_read(rules, records, threads, as_of, _min_age(provider, min_age_hours))
 
     s = signals.as_dict()
     if signals.outsider_threads:
         summary = (
-            f"{s['outsider_merged']} of {s['outsider_threads']} pull requests from "
+            f"{s['outsider_merged']} of {signals.outsider_judgeable} pull requests from "
             f"newcomers were merged, by {s['distinct_merged_authors']} of the "
             f"{s['distinct_outsider_authors']} people who tried."
         )
@@ -301,10 +304,14 @@ def analyze_without_model(
                 f"back within {hours_phrase(s['median_first_response_hours'])}."
             )
         summary += f" {s['outsider_ignored']} got no reply at all."
-        if s["outsider_awaiting_reply"]:
+        if s["outsider_closed_silently"]:
             summary += (
-                f" {s['outsider_awaiting_reply']} are too new to have had a reply "
-                "yet and weren't counted as ignored."
+                f" {s['outsider_closed_silently']} were closed without a reply, "
+                "which isn't counted as ignored."
+            )
+        if s["outsider_still_open"]:
+            summary += (
+                f" {s['outsider_still_open']} are still open and too new to count."
             )
         summary += " These are counts from the pull request history, not an AI's judgement."
     else:
@@ -312,7 +319,7 @@ def analyze_without_model(
             "Nobody from outside the project opened a pull request in the period "
             "we looked at, so there was nothing to count."
         )
-    deciding = next((r for r in rules if getattr(r, "code", "") != "awaiting_reply"),
+    deciding = next((r for r in rules if getattr(r, "code", "") not in rates.INFO_CODES),
                     rules[0] if rules else "")
 
     return Assessment(
@@ -359,6 +366,30 @@ def _say_how_merges_landed(rules: list[str], threads: dict[str, Thread]) -> None
         return
     if line := landing_detection.landed_sentence(newcomer_threads(threads)):
         rules.append(Rule(line, code="landed_off_button"))
+
+
+def _say_what_was_read(rules: list[str], records: list, threads: dict[str, Thread],
+                       as_of: datetime | None, settle_hours: float) -> None:
+    """Put the dates the sample covers, and a dormancy warning, at the top.
+
+    Only for a reading that knows its moment (live, or a recording of one): the
+    frozen benchmark keeps the trace it was scored with. No dormancy line when
+    the answer is that pull requests aren't the way in at all (archived, a
+    mirror): it would only repeat that.
+    """
+    as_of = as_of or datetime.now(UTC)
+    if not rates.judges_time(as_of, settle_hours):
+        return
+    meta = next((r for r in records if r.evidence_id.endswith(":meta")), None)
+    dormant = None
+    if not any(getattr(r, "code", "") in _NOT_ABOUT_MERGES for r in rules):
+        dormant = rates.dormant_sentence(records, threads, as_of,
+                                         meta.payload if meta else None)
+    lines = [Rule(line, code=code) for line, code in (
+        (rates.period_sentence(threads, as_of), "sample_period"),
+        (dormant, "dormant"),
+    ) if line]
+    rules[:0] = lines
 
 
 def _done(report: Progress, trace: Trace) -> Trace:

@@ -65,8 +65,10 @@ def every_trace():
         {"median_first_response_hours": 400.0},
         {"median_first_response_hours": 0.4},
         {"reviewed_share": 0.1, "merge_rate": 0.9},
-        {"outsider_awaiting_reply": 3},
-        {"outsider_awaiting_reply": 1, "outsider_ignored": 0},
+        {"outsider_still_open": 3},
+        {"outsider_still_open": 1, "outsider_ignored": 0},
+        {"outsider_closed_silently": 1, "outsider_excluded": 1},
+        {"outsider_closed_silently": 4, "outsider_excluded": 2, "outsider_merged": 0},
     ]
     for kind, shape, days in itertools.product(kinds, shapes, (1, 7)):
         f = findings(repo_kind=kind) if kind else Findings()
@@ -94,7 +96,7 @@ def test_every_rule_sentence_reads_as_plain_english():
     assert seen >= {
         "archived", "closed_kind", "non_software_kind", "kind_uncited", "no_attempts",
         "ignored", "merges", "rubber_stamp", "slow", "too_few_attempts", "few_merges",
-        "awaiting_reply", "kind_contested",
+        "still_open", "closed_silently", "excluded", "kind_contested",
     }
 
 

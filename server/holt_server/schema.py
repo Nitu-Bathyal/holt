@@ -62,6 +62,9 @@ class ErrorBody(Model):
 
 
 class Stats(Model):
+    # Decided attempts only (merged, closed, or open past the settle window):
+    # the denominator of every rate here. `still_open` are too new to count;
+    # `closed_silently` were closed with no reply, which is not `no_reply`.
     outsider_attempts: int
     outsider_merged: int
     distinct_outsiders: int
@@ -69,6 +72,8 @@ class Stats(Model):
     no_reply: int
     median_first_response_hours: float | None
     bot_share: float
+    still_open: int = 0
+    closed_silently: int = 0
 
 
 class PartialStats(Model):

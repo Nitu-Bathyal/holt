@@ -300,9 +300,11 @@ class _Serve(EvidenceProvider):
                                   "openssl/openssl", "pallets/flask"])
 def test_v2_fields_only_add_to_what_older_captures_show(slug):
     # Same evidence with and without the v2 additions. The v2 fields (how a
-    # pull request was closed, its labels) can only reveal more landings than
-    # an older capture sees; where nothing landed off the button (flask) the
-    # two read identically, and an older capture still replays.
+    # pull request was closed) can only reveal more landings than an older
+    # capture sees; where nothing landed off the button (flask) the two read
+    # identically, and an older capture still replays. Drafts and labels are
+    # set aside here: they take attempts out of the counts (rates.py), which
+    # test_rates covers.
     as_of = RECORDED_AT
     meta = RECORDED[slug]["meta"]
     v2 = [gql.project_repo_meta(slug, meta), *gql.project_releases(slug, meta),
@@ -312,6 +314,9 @@ def test_v2_fields_only_add_to_what_older_captures_show(slug):
                        {k: v for k, v in r.payload.items() if k not in V2_KEYS})
         for r in v2 if ":reference:" not in r.evidence_id and ":release:" not in r.evidence_id
     ]
+    v2 = [EvidenceRecord(r.evidence_id, r.source, r.url, r.timestamp,
+                         {k: v for k, v in r.payload.items() if k not in ("is_draft", "labels")})
+          for r in v2]
     t2, t1 = build_threads(v2), build_threads(v1)
     assert t2.keys() == t1.keys()
     assert {k for k, t in t1.items() if t.merged} <= {k for k, t in t2.items() if t.merged}
