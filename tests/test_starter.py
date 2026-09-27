@@ -30,9 +30,11 @@ def iso(days_ago: float) -> str:
 
 def issue(number=1, *, title="Fix crash", body="x" * 300, labels=("good first issue",),
           updated=3, created=40, comments=2, assignees=0, closing=(), xref=(),
-          recent=(), repo="o/r", archived=False):
+          recent=(), repo="o/r", archived=False, author=""):
     return {
         "number": number, "title": title, "body": body, "locked": False,
+        # By default each issue has its own author, so helpers never form a farm.
+        "author": None if author is None else {"login": author or f"user{number}"},
         "url": f"https://github.com/{repo}/issues/{number}",
         "createdAt": iso(created), "updatedAt": iso(updated),
         "repository": {"nameWithOwner": repo, "isArchived": archived},
@@ -88,14 +90,17 @@ def scripted(responses, sleeps=None):
     ("first-timers-only", "beginner"), ("Beginner Friendly", "beginner"),
     ("E-easy", "easy"), ("difficulty: easy", "easy"), ("help wanted", "help"),
     ("Hacktoberfest", "hacktoberfest"), ("wontfix", "not_ready"),
-    ("question", "not_ready"),
+    ("question", "not_ready"), ("good first issue (taken)", "taken"),
+    ("status: claimed", "taken"), ("In Progress", "taken"), ("has PR", "taken"),
+    ("🚧 WIP", "taken"),
 ])
 def test_label_variants(label, kind):
     assert kind in starter.label_kinds([label])
 
 
 def test_unrelated_labels_mean_nothing():
-    assert starter.label_kinds(["bug", "hacktoberfest-accepted", "area/cli"]) == set()
+    assert starter.label_kinds(["bug", "hacktoberfest-accepted", "area/cli",
+                                "unassigned", "not taken"]) == set()
 
 
 # --- scoring ---------------------------------------------------------------
@@ -119,6 +124,11 @@ def test_labelled_issue_scores_with_reasons():
     issue(labels=("good first issue", "needs design")),
     issue(labels=(), title="Refactor the scheduler"),
     issue(archived=True),
+    # Taken: React's label, and other ways maintainers say it.
+    issue(labels=("good first issue (taken)",)),
+    issue(labels=("good first issue", "status: in progress")),
+    # Opened more than a year ago, however active since.
+    issue(created=starter.MAX_ISSUE_AGE_DAYS + 1, updated=1),
 ])
 def test_excluded(node):
     assert score(node) is None
@@ -142,15 +152,79 @@ def test_hacktoberfest_mode_weighs_the_label_more():
     assert score(node, hacktoberfest=True)[0] > score(node)[0]
 
 
-def test_fresh_claim_and_long_thread_are_cautions_and_cost_points():
+def test_a_year_old_issue_is_still_listed():
+    assert score(issue(created=starter.MAX_ISSUE_AGE_DAYS - 1)) is not None
+
+
+@pytest.mark.parametrize("comment", [
+    "Hi! Can I work on this?", "I'll take this one", "Please assign me",
+    "I'm working on it, PR soon", "I would like to work on this issue",
+    "I’ll pick this up",
+])
+def test_a_fresh_claim_means_taken(comment):
+    assert score(issue(recent=[(10, "Looks right to me"), (3, comment)])) is None
+
+
+def test_taking_another_look_is_not_a_claim():
+    assert score(issue(recent=[(3, "I'll take another look in a few hours")])) is not None
+
+
+def test_a_claim_handed_back_is_free_again():
+    node = issue(recent=[(20, "can I take this?"),
+                         (5, "Sorry, I'm no longer working on this. Feel free to take it")])
+    assert score(node) is not None
+
+
+def test_an_old_claim_is_a_caution_not_a_penalty():
     plain = score(issue())[0]
-    points, result = score(issue(recent=[(3, "Hi! Can I work on this?")]))
-    assert points < plain
-    assert result.why[-1].startswith("Someone asked to work on this 3 days ago")
-    old_claim = score(issue(recent=[(200, "can i take this")]))[0]
-    assert old_claim == plain
+    points, result = score(issue(recent=[(200, "can i take this")]))
+    assert points == plain
+    assert result.why[-1] == ("Someone asked to work on this 200 days ago; ask whether "
+                              "it is still free before you start")
+
+
+def test_long_thread_is_a_caution_and_costs_points():
+    plain = score(issue())[0]
     points, result = score(issue(comments=30))
     assert points < plain and "Long discussion (30 comments)" in result.why[-1]
+
+
+# --- issue farms -------------------------------------------------------------
+
+
+def test_near_identical_batch_from_one_account_is_dropped():
+    langs = ["Japanese", "Korean", "Italian", "Spanish", "Hindi"]
+    farm = [issue(10 + i, title=f"Add a {lang} idiom", author="farmer",
+                  labels=("hacktoberfest",), created=5 + i * 3)
+            for i, lang in enumerate(langs)]
+    real = issue(1, title="Fix crash when the config file is empty")
+    ranked = starter.rank([*farm, real], AS_OF)
+    assert [i.number for _, i in ranked] == [1]
+    assert starter.farmed_issues(farm) == {10, 11, 12, 13, 14}
+
+
+def test_a_scripted_burst_from_one_account_is_dropped():
+    titles = ["Unit tests download from the Hub", "unsloth loads on seven tasks",
+              "add_new_tokens loads everywhere", "Windows tests still skip"]
+    burst = [issue(20 + i, title=t, author="owner", created=2 + i / 86400 * 3)
+             for i, t in enumerate(titles)]
+    assert starter.farmed_issues(burst) == {20, 21, 22, 23}
+
+
+@pytest.mark.parametrize("nodes", [
+    # Three is a short series, not a farm.
+    [issue(i, title=f"Add a {w} idiom", author="a") for i, w in enumerate("xyz")],
+    # Similar titles from different people.
+    [issue(i, title=f"Add a {w} idiom", author=f"u{i}") for i, w in enumerate("wxyz")],
+    # One maintainer's distinct issues, days apart.
+    [issue(i, title=t, author="m", created=10 + i) for i, t in enumerate(
+        ["Fix crash in parser", "Document the CLI flags", "Typo in README",
+         "Add type hints to utils"])],
+    # No author known.
+    [issue(i, title=f"Add a {w} idiom", author=None) for i, w in enumerate("wxyz")],
+])
+def test_farm_detection_leaves_ordinary_issues_alone(nodes):
+    assert starter.farmed_issues(nodes) == set()
 
 
 LANDING = [Area("docs", 8, 10), Area("src/widgets", 4, 6), Area("src", 9, 20),
@@ -189,12 +263,12 @@ def test_rank_dedupes_sorts_and_limits():
 
 def test_starter_issues_from_recording():
     transport, as_of = replay_transport("repo.json")
-    issues = starter.starter_issues("https://github.com/ManimCommunity/manim", None,
+    issues = starter.starter_issues("https://github.com/beetbox/beets", None,
                                     as_of=as_of, transport=transport)
     assert issues
     assert len({i.number for i in issues}) == len(issues)
     for i in issues:
-        assert i.url.startswith("https://github.com/ManimCommunity/manim/issues/")
+        assert i.url.startswith("https://github.com/beetbox/beets/issues/")
         assert i.why
         assert set(i.as_dict()) == {"number", "title", "url", "labels", "created_at",
                                     "comments", "why"}
@@ -282,6 +356,30 @@ def test_source_queries():
     assert not any("topic:cli" in q and "topic:web" in q for q in repo_qs)
     (only,) = starter.repo_source_queries([], [], True, AS_OF)
     assert only.startswith("topic:hacktoberfest")
+    # Nothing opened over a year ago is asked for.
+    assert all("created:>2025-09-25" in q for q in issue_qs)
+
+
+@pytest.mark.parametrize("created,stars,skipped", [
+    (30, 50, True),      # a month old, 50 stars: no track record yet
+    (30, 5000, False),   # new but already big
+    (400, 50, False),    # small but has been around
+])
+def test_brand_new_tiny_repos_are_not_sourced(created, stars, skipped):
+    node = {"nameWithOwner": "o/r", "isArchived": False, "isFork": False,
+            "stargazerCount": stars, "createdAt": iso(created),
+            "goodFirstIssues": {"totalCount": 5}}
+    issue_hit = {"number": 1, "repository": node}
+
+    def handler(request):
+        doc = json.loads(request.content)["query"]
+        nodes = [issue_hit] if doc == starter.ISSUE_SOURCE else [node]
+        return httpx.Response(200, json={"data": {"search": {"nodes": nodes}}})
+
+    transport = starter.GitHub(token="t", client=httpx.Client(
+        transport=httpx.MockTransport(handler)))
+    got = starter.source_candidates(transport, ["python"], [], False, AS_OF, 10)
+    assert got == ([] if skipped else ["o/r"])
 
 
 # --- errors and recording --------------------------------------------------
@@ -417,10 +515,10 @@ def test_cli_start_single_repo(monkeypatch, capsys):
     real = starter.starter_issues
     monkeypatch.setattr(starter, "starter_issues",
                         lambda *a, **kw: real(*a, **{**kw, "as_of": as_of}))
-    assert cli.main(["start", "ManimCommunity/manim", "--limit", "2"]) == 0
+    assert cli.main(["start", "beetbox/beets", "--limit", "2"]) == 0
     captured = capsys.readouterr()
-    assert captured.out.startswith("# Where to start in ManimCommunity/manim")
-    assert captured.out.count("https://github.com/ManimCommunity/manim/issues/") == 2
+    assert captured.out.startswith("# Where to start in beetbox/beets")
+    assert captured.out.count("https://github.com/beetbox/beets/issues/") == 2
     assert "listing issues only" in captured.err
 
 

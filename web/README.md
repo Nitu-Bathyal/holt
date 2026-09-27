@@ -66,7 +66,7 @@ the real values needs `HOLT_ALLOW_PLACEHOLDER_CONTACT=1`. Run `npm run db:migrat
 
 ```sh
 npm run lint
-npm run typecheck
+npm run typecheck # generates route types first; needs the same env as the build
 npm test          # node --test, no network
 HOLT_ALLOW_PLACEHOLDER_CONTACT=1 npm run build   # or set NEXT_PUBLIC_CONTACT_EMAIL / _CITY
 E2E_BASE_URL=http://localhost:3000 npm run e2e   # smoke: policy pages exist and are in the footer (needs a running app)

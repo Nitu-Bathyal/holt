@@ -99,9 +99,9 @@ function SampleFigure({ sample }: { sample: Sample }) {
               <ul className="space-y-3">
                 {sample.lands.map(([path, m, a]) => (
                   <li key={path}>
-                    <div className="flex justify-between text-[0.78rem]">
-                      <code>{path}</code>
-                      <span className="text-muted">
+                    <div className="flex justify-between gap-3 text-[0.78rem]">
+                      <code className="truncate">{path}</code>
+                      <span className="shrink-0 text-muted">
                         <span className="text-green">{m}</span> of {a} merged
                       </span>
                     </div>

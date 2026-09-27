@@ -1,5 +1,8 @@
 # How Holt is evaluated
 
+> **Historical:** this benchmark was the competition-era evaluation; it is no
+> longer used as a product quality gate.
+
 Holt's product output is a recommendation, so its quality has to be inspectable.
 This document explains how the benchmark pool was built, how ground truth is
 computed, what the result is sensitive to, and what it does not cover. Exact

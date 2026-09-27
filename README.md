@@ -149,16 +149,12 @@ The model never chooses the answer.
 [docs/DESIGN.md](https://github.com/holt-oss/holt/blob/main/docs/DESIGN.md)
 has the argument.
 
-## How well it works, and where it doesn't
+## Where it doesn't work
 
-Holt was tested on repositories it had never seen, with the outcome hidden
-from it. It got **about four in five calls right** (balanced accuracy 0.82). A
-single AI prompt over the same repositories' READMEs and metadata got 0.61.
+Holt is a filter, not an oracle. Know the limits:
 
-That is evidence, not a guarantee. Know the limits:
-
-- **It is a filter, not an oracle.** One call in five is wrong. Open the
-  linked pull requests before you commit a week.
+- **It isn't always right.** Open the linked pull requests before you commit
+  a week; the evidence is there so you can check it yourself.
 - **It reads the past.** Repository cultures change, and a quiet month can
   look worse than it is.
 - **It is about your time, not their quality.** A superb project with a deep
@@ -166,6 +162,8 @@ That is evidence, not a guarantee. Know the limits:
 - **Counts, not conversations.** Without a model, Holt can't tell you what a
   thread said or who was welcoming, only what happened.
 
+Holt started as a benchmarked competition entry; that evaluation is now
+historical research rather than a live product claim.
 [docs/research/EVALUATION.md](https://github.com/holt-oss/holt/blob/main/docs/research/EVALUATION.md)
 has the design and the full numbers, and
 [docs/research/REPRODUCTION.md](https://github.com/holt-oss/holt/blob/main/docs/research/REPRODUCTION.md)
@@ -195,6 +193,21 @@ security reports follow
 > Holt started as the winner of **Most useful real-world workflow** at the
 > micro1 Frontier Engineering Challenge.
 
-## License
+## Licensing
 
-[Apache License 2.0](https://github.com/holt-oss/holt/blob/main/LICENSE).
+Holt uses two licenses, split by directory:
+
+- **The engine, CLI, terminal interface and browser extension**
+  (`src/holt/`, `extension/`, everything else at the repo root) are
+  [Apache License 2.0](https://github.com/holt-oss/holt/blob/main/LICENSE).
+  Install the CLI from PyPI, embed the engine, or fork it under Apache terms.
+- **The web app and its server** (`web/`, `server/`) are
+  [GNU AGPL-3.0](https://github.com/holt-oss/holt/blob/main/web/LICENSE). If
+  you run a modified version of the web app or server as a network service,
+  the AGPL requires you to make your modified source available to the
+  people using it.
+
+Apache-licensed contributions from before the split remain Apache-2.0 and
+are compatible with the AGPL side, so nothing already in the project needed
+anyone's permission to move. If you're contributing new code, see
+[CONTRIBUTING.md](https://github.com/holt-oss/holt/blob/main/CONTRIBUTING.md#licensing).

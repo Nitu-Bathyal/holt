@@ -12,11 +12,11 @@ own words. Please don't post a guessed version of them.
 | pallets/flask | Worth your time (long odds) | 5 of 189 | 100 of 189 | ~30 minutes |
 | psf/requests | Worth your time (long odds) | 13 of 151 | 100 of 151 | ~5 hours |
 
-From the evaluation (see `docs/research/EVALUATION.md` and `docs/research/REPRODUCTION.md`): Holt's
-verdicts agreed with real contributor outcomes it hadn't seen far better than a
-README-only prompt (Matthews correlation 0.63 vs 0.21), and 55 of 55 verdicts
-were identical across three runs. Holt won "Most useful real-world workflow" in
-micro1's Frontier Engineering Challenge.
+Holt's verdicts were identical across three runs on all 55 repositories tested
+(see `docs/research/EVALUATION.md` and `docs/research/REPRODUCTION.md` — that
+evaluation is historical competition research now, not a live product claim).
+Holt won "Most useful real-world workflow" in micro1's Frontier Engineering
+Challenge.
 
 Things to keep true in every post:
 - Holt is free for rules reports, and bringing your own AI key is free. Don't
@@ -41,11 +41,11 @@ Things to keep true in every post:
 > - It's read-only. It never comments or opens PRs for you.
 > - Rules reports are free. Bringing your own AI key is free too.
 >
-> Holt started as my entry to micro1's Frontier Engineering Challenge, where it won "Most useful real-world workflow". In testing, its verdicts matched what actually happened to contributors far better than asking a model to judge from the README.
+> Holt started as my entry to micro1's Frontier Engineering Challenge, where it won "Most useful real-world workflow".
 >
 > Hacktoberfest starts on 1 October. If you're taking part, or you run a college coding club, there's a page of welcoming projects with starter issues by language: https://githolt.com/hacktoberfest
 >
-> It's open source (Apache-2.0). Feedback and contributions are very welcome.
+> It's open source (Apache-2.0 for the engine and CLI, AGPL-3.0 for the web app). Feedback and contributions are very welcome.
 
 ---
 
@@ -86,7 +86,7 @@ github.com/pallets/flask → githolt.com/pallets/flask
 Doing Hacktoberfest? Welcoming projects with starter issues, by language:
 https://githolt.com/hacktoberfest
 
-Open source, Apache-2.0. It won "Most useful real-world workflow" in micro1's Frontier Engineering Challenge. Feedback welcome.
+Open source (Apache-2.0 engine/CLI, AGPL-3.0 web app). It won "Most useful real-world workflow" in micro1's Frontier Engineering Challenge. Feedback welcome.
 
 ---
 
@@ -109,7 +109,7 @@ Open source, Apache-2.0. It won "Most useful real-world workflow" in micro1's Fr
 >
 > The verdict comes from fixed rules, not an LLM. There's an optional AI explanation, but it can't change the verdict. The tool only reads public data and never posts anything.
 >
-> It's free and open source (Apache-2.0): https://githolt.com. There's also a Hacktoberfest page with welcoming repos by language: https://githolt.com/hacktoberfest.
+> It's free and open source (Apache-2.0 engine/CLI, AGPL-3.0 web app): https://githolt.com. There's also a Hacktoberfest page with welcoming repos by language: https://githolt.com/hacktoberfest.
 >
 > I'd really like feedback, especially cases where you think the verdict is wrong for a repo you know well.
 
@@ -138,9 +138,9 @@ Open source, Apache-2.0. It won "Most useful real-world workflow" in micro1's Fr
 > Design choices you may care about:
 > - The verdict ("worth your time", "not worth your time", "not enough evidence") comes from a small written ruleset over verified findings. A model can write an explanation, but it cannot change the verdict, and a claim whose evidence doesn't resolve is dropped.
 > - It is read-only toward GitHub.
-> - We evaluated it against contributor outcomes it hadn't seen: Matthews correlation 0.63 vs 0.21 for a README-plus-metadata prompt, and 55/55 verdicts stable across three runs. Details and a reproduction guide are in the repo.
+> - Verdicts were stable across three runs, 55/55, in a benchmark run as part of the original competition entry (now historical research, not a live claim). Details and a reproduction guide are in the repo.
 >
-> It started as an entry to micro1's Frontier Engineering Challenge ("Most useful real-world workflow") and is now Apache-2.0. There's a CLI (`uv tool install holt-cli`) and a web app: https://githolt.com. On any GitHub URL, swap hub for holt: github.com → githolt.com.
+> It started as an entry to micro1's Frontier Engineering Challenge ("Most useful real-world workflow"). The engine and CLI are Apache-2.0; the web app is AGPL-3.0. There's a CLI (`uv tool install holt-cli`) and a web app: https://githolt.com. On any GitHub URL, swap hub for holt: github.com → githolt.com.
 >
 > I'd especially like to hear about repos where you think it gets the answer wrong.
 

@@ -55,10 +55,27 @@ jobs:
           PYTHONPATH=. uv run holt analyze NixOS/nixpkgs --replay
           PYTHONPATH=. uv run python eval/harness.py --replay --run-tag run1
 
-  # web/src/lib/api-schema.ts is generated from the server's pydantic models
-  # (API.md). A server change that isn't regenerated fails here.
-  api-types:
+  # The server's tests again, on the database production runs. The app's
+  # startup migrates it from empty, so the migrations are exercised too.
+  server-postgres:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: holt
+          POSTGRES_PASSWORD: holt
+          POSTGRES_DB: holt
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U holt -d holt"
+          --health-interval 2s
+          --health-timeout 3s
+          --health-retries 30
+    env:
+      HOLT_TEST_DATABASE_URL: postgresql+asyncpg://holt:holt@127.0.0.1:5432/holt
+      DATABASE_URL: postgresql+asyncpg://holt:holt@127.0.0.1:5432/holt
     steps:
       - uses: actions/checkout@v7.0.1
 
@@ -67,16 +84,14 @@ jobs:
         with:
           enable-cache: true
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-          cache-dependency-path: web/package-lock.json
-
       - name: Install
-        run: |
-          uv sync
-          npm ci --prefix web
+        run: uv sync
 
-      - name: Generated API types are up to date
-        run: server/scripts/api_types.sh --check
+      - name: Migrate an empty database and compare it with the models
+        working-directory: server
+        run: |
+          uv run python -m holt_server.migrate
+          uv run python -m holt_server.migrate check
+
+      - name: Server tests
+        run: uv run pytest -rs server/tests
