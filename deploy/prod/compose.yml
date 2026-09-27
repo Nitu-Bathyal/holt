@@ -59,6 +59,23 @@ services:
     mem_limit: 64m
     restart: "no"
 
+  # One-shot: brings the API's schema up to date (holt_server/migrations)
+  # with the new server image, then exits. deploy.sh runs it before swapping
+  # the containers, so the old release briefly runs on the new schema: a
+  # migration must keep working with the release before it (docs in
+  # server/README.md). A database from before migrations is only stamped.
+  migrate-server:
+    image: ${HOLT_PROD_PROJECT:-holt-prod}-server:${HOLT_TAG:?set by deploy.sh}
+    labels: *prod-label
+    profiles: [migrate]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://holt:${HOLT_DB_PASSWORD}@db:5432/holt
+    command: ["python", "-m", "holt_server.migrate"]
+    depends_on:
+      db: { condition: service_healthy }
+    mem_limit: 256m
+    restart: "no"
+
   server:
     build:
       context: ${HOLT_SRC:?set by deploy.sh}

@@ -22,7 +22,8 @@ curl localhost:20130/health
 ```
 
 `holt-server` reads `server/.env` when started from `server/`, plus the process
-environment (which wins). The schema is created on startup (`create_all`).
+environment (which wins). The schema is brought up to date on startup (see
+[Changing the schema](#changing-the-schema)).
 Stop Postgres with `docker compose -f server/compose.yml down` (add `-v` to
 drop the data).
 
@@ -95,9 +96,43 @@ Per process (fine for one server; revisit with more): rate-limit counters,
 the badge lane's concurrency count and the repo-name cache are in memory. SSE
 fan-out is in memory but falls back to re-reading the jobs table every 15s.
 
-The schema is made with `create_all`, which adds missing tables but never
-alters existing ones. Pre-launch, after a schema change, recreate the dev
-database (`docker compose -f server/compose.yml down -v`).
+## Changing the schema
+
+The tables are defined in `holt_server/db.py` and created and changed by
+Alembic migrations in `holt_server/migrations/versions/` (inside the package,
+so they ship in the server image). `python -m holt_server.migrate` brings
+`$DATABASE_URL` to the latest revision; deploys run it as a one-shot service
+before the new containers start, and the server runs it again on startup (a
+no-op by then). `0001_baseline` is the schema production had when migrations
+started; a database made before that (by `create_all`) is stamped at it, not
+re-created.
+
+To add a migration, from `server/`, with the dev Postgres running:
+
+```sh
+uv run python -m holt_server.migrate                        # dev database to the latest revision
+# edit the models in holt_server/db.py, then:
+uv run alembic revision --autogenerate -m "add feedback table"
+# read and fix the new file in holt_server/migrations/versions/; name the
+# revision id 0002, 0003, ... (--rev-id 0002) so the order is obvious
+uv run python -m holt_server.migrate                        # apply it
+uv run python -m holt_server.migrate check                  # exit 0: models and database agree
+```
+
+Rules:
+
+- **The previous release must keep working on the new schema.** Deploys
+  migrate first and then swap containers, and a rollback does not undo a
+  migration. Add columns as nullable or with a server default; drop or rename
+  in a later release, after nothing reads the old name.
+- Migrations must run on SQLite too (the tests use it). Autogenerate writes
+  column changes as `op.batch_alter_table`, which is a plain `ALTER` on
+  Postgres and a table copy on SQLite; keep it that way in hand-written ones.
+- Never edit a migration that has been deployed; add a new one.
+- `tests/test_server_migrations.py` fails when the models and the migrations
+  disagree, on SQLite locally and on Postgres in CI. To run the server tests
+  on Postgres yourself: `HOLT_TEST_DATABASE_URL=postgresql+asyncpg://holt:holt@127.0.0.1:20131/holt uv run pytest server/tests`
+  (its tables are dropped).
 
 ## Warm cache
 

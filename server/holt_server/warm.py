@@ -388,7 +388,7 @@ def main(argv: list[str] | None = None) -> int:
 
     async def run() -> int:
         svc = Services(get_settings())
-        await svc.db.create_all()
+        await svc.db.migrate()
         if not args.dry_run:
             await svc.runner.start()  # this process works the queue too
         try:
