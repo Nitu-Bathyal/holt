@@ -26,7 +26,7 @@ REPO = "o/r"
 
 def pr(n: int, files: list[str], title: str = "Change", additions: int = 5,
        deletions: int = 0, association: str = "NONE", author: str | None = None,
-       merged: bool = True) -> list[EvidenceRecord]:
+       merged: bool = True, reviewed: bool = False) -> list[EvidenceRecord]:
     key = f"pr:{REPO}#{n}"
     who = author or f"person{n}"
     records = [EvidenceRecord(
@@ -36,6 +36,13 @@ def pr(n: int, files: list[str], title: str = "Change", additions: int = 5,
                  "title": title, "files": files, "changed_files": len(files),
                  "additions": additions, "deletions": deletions},
     )]
+    if reviewed:
+        records.append(EvidenceRecord(
+            evidence_id=f"{key}:comment:1", source="github", url=records[0].url,
+            timestamp=T0 + timedelta(hours=n, minutes=10),
+            payload={"author": "maintainer", "author_association": "MEMBER",
+                     "author_is_bot": False, "body": "Thanks, looks good."},
+        ))
     if merged:
         records.append(EvidenceRecord(
             evidence_id=f"{key}:merged", source="github", url=records[0].url,
@@ -74,20 +81,56 @@ def test_several_manifests_for_one_version_are_one_entry():
     assert shape is not None and shape.shape == rk.DATA and shape.where == "manifests/"
 
 
-@pytest.mark.parametrize("title", ["bump(main/tool{n}): 2.{n}.0", "tool{n} 2.{n}.0",
-                                   "tool{n}: 1.0 -> 2.{n}", "tool{n}: new package",
-                                   "addpkg(main/tool{n})", "Add tool{n} package"])
-def test_one_package_recipe_named_in_the_title_is_a_package_entry(title):
-    records = many(lambda n: pr(n, [f"packages/tool{n}/build.sh"], title.format(n=n)))
+@pytest.mark.parametrize("title", ["tool{n} 2.{n}.0", "tool{n}: update to 2.{n}.0",
+                                   "tool{n} 2.{n}.0 (new cask)", "Add tool{n} cask"])
+def test_one_package_manifest_named_in_the_title_is_a_package_entry(title):
+    # homebrew-cask: a cask is a declarative manifest (version, url, sha256).
+    records = many(lambda n: pr(n, [f"Casks/t/tool{n}.rb"], title.format(n=n)))
     shape = rk.detect(records)
     assert shape is not None
-    assert (shape.kind, shape.shape, shape.where) == ("registry", rk.PACKAGE, "packages/")
-    assert "single package in the packages/ folder" in shape.rule()
+    assert (shape.kind, shape.shape, shape.where) == ("registry", rk.PACKAGE, "Casks/")
+    assert "single package in the Casks/ folder" in shape.rule()
 
 
-def test_a_recipe_change_that_is_not_a_version_or_a_new_package_is_not_an_entry():
-    records = many(lambda n: pr(n, [f"packages/tool{n}/build.sh"], f"fix(main/tool{n}): crash on start"))
-    assert rk.detect(records) is None
+def test_a_manifest_change_that_is_not_a_version_or_a_new_package_is_not_an_entry():
+    records = many(lambda n: pr(n, [f"Casks/t/tool{n}.rb"], f"tool{n}: fix livecheck"))
+    assert rk.read(records) == rk.Reading()
+
+
+# --- package recipes: packaging work, not turned down ------------------------------
+
+
+@pytest.mark.parametrize("files,title", [
+    (["packages/tool{n}/build.sh"], "bump(main/tool{n}): 2.{n}.0"),          # termux
+    (["packages/tool{n}/build.sh", "packages/tool{n}/fix.patch"], "addpkg(main/tool{n})"),
+    (["pkgs/by-name/to/tool{n}/package.nix"], "tool{n}: 1.0 -> 2.{n}"),       # nixpkgs
+    (["Formula/t/tool{n}.rb"], "tool{n} 2.{n}.0"),                              # homebrew-core
+    (["tool{n}/PKGBUILD"], "tool{n}: new package"),                             # AUR-style
+])
+def test_package_recipes_are_packaging_work_not_a_catalogue(files, title):
+    records = many(lambda n: pr(n, [f.format(n=n) for f in files], title.format(n=n)))
+    reading = rk.read(records)
+    assert reading.catalogue is None
+    assert reading.packaging is not None
+    assert reading.packaging.code == "package_updates"
+    assert reading.packaging == rk.PACKAGING_LINE
+
+
+def test_recipes_must_be_most_pull_requests_for_the_line():
+    recipes = [r for n in range(1, 11)
+               for r in pr(n, [f"packages/tool{n}/build.sh"], f"bump(main/tool{n}): 2.{n}.0")]
+    software = [r for n in range(11, 21)
+                for r in pr(n, [f"scripts/build/step{n}.sh", "build-package.sh"], "Speed up builds")]
+    assert rk.read(recipes + software) == rk.Reading()  # 10 of 20 is not most
+
+
+def test_the_packaging_line_never_takes_the_last_place_from_a_turn_down():
+    reading = rk.Reading(packaging=rk.Rule(rk.PACKAGING_LINE, code="package_updates"))
+    turned_down = [rk.Rule("waiting", code="awaiting_reply"), rk.Rule("ignored", code="ignored")]
+    out = rk.explain(turned_down, reading, Verdict.NOT_VIABLE)
+    assert rule_codes(out) == ["awaiting_reply", "package_updates", "ignored"]
+    out = rk.explain([rk.Rule("merges", code="merges")], reading, Verdict.VIABLE)
+    assert rule_codes(out) == ["merges", "package_updates"]
 
 
 def test_a_line_added_to_the_same_markdown_list_is_a_list():
@@ -193,6 +236,18 @@ def test_the_free_report_turns_a_registry_down_and_says_why():
     assert "repo_kind" not in claim.text and "registry" not in claim.text
 
 
+def test_the_free_report_keeps_a_recipe_repository_worth_it_and_says_what_the_work_is():
+    records = many(lambda n: pr(n, [f"pkgs/by-name/to/tool{n}/package.nix"], f"tool{n}: 1.0 -> 2.{n}",
+                                reviewed=True))
+    assessment, trace = analyze_without_model(REPO, ListProvider(records), as_of=T0 + timedelta(days=30))
+    assert assessment.verdict is Verdict.VIABLE
+    assert rule_codes(trace.rules)[-1] == "package_updates"
+    assert trace.rules[-1] == rk.PACKAGING_LINE
+    # The bottom line still gives the reason for the verdict, not the aside.
+    assert assessment.bottom_line.startswith("Worth your time. 12 pull requests")
+    assert assessment.claims == []
+
+
 def test_an_archived_catalogue_is_still_turned_down_for_being_archived():
     records = many(lambda n: pr(n, [f"domains/user{n}.json"]))
     records.append(EvidenceRecord(
@@ -207,12 +262,13 @@ def test_an_archived_catalogue_is_still_turned_down_for_being_archived():
 
 CATALOGUES = {
     "is-a-dev/register", "microsoft/winget-pkgs", "Homebrew/homebrew-cask",
-    "termux/termux-packages", "NixOS/nixpkgs", "hacs/default", "sindresorhus/awesome",
-    "EbookFoundation/free-programming-books", "firstcontributions/first-contributions",
+    "hacs/default", "sindresorhus/awesome", "EbookFoundation/free-programming-books",
+    "firstcontributions/first-contributions",
 }
+PACKAGE_SETS = {"NixOS/nixpkgs", "termux/termux-packages"}
 
 
 def test_on_the_golden_set_the_catalogues_are_flagged_and_nothing_else():
-    flagged = {repo for repo in golden.load_repos()
-               if rk.detect(golden.read_recording(repo)[1]) is not None}
-    assert flagged == CATALOGUES
+    readings = {repo: rk.read(golden.read_recording(repo)[1]) for repo in golden.load_repos()}
+    assert {repo for repo, r in readings.items() if r.catalogue} == CATALOGUES
+    assert {repo for repo, r in readings.items() if r.packaging} == PACKAGE_SETS

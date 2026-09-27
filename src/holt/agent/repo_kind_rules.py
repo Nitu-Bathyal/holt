@@ -16,8 +16,8 @@ is either one catalogue entry or not:
   records...) in one directory, like `domains/alice.json` or winget's three
   manifests for one app version;
 * a package entry: the files of one package, in one directory, under a title
-  that names that package and a version or says it is new, like
-  `bump(main/tgpt): 2.15.0` touching `packages/tgpt/build.sh`;
+  that names that package and a version or says it is new, like `deepchat
+  1.1.2` touching `Casks/d/deepchat.rb`;
 * a list line: a few lines added or fixed in one or two list files, in a place
   at least five outside pull requests changed, like awesome's `readme.md` or
   free-programming-books' `books/` (one list per language). Documentation
@@ -25,9 +25,19 @@ is either one catalogue entry or not:
 
 A repository is a catalogue when at least `CATALOGUE_SHARE` of its outside
 pull requests are entries. Across the golden set (`golden/`) the catalogues sit
-at 0.56 to 1.0 and every software project at 0.13 or below (ollama, whose
+at 0.73 to 1.0 and every software project at 0.12 or below (ollama, whose
 README lists community integrations); the threshold sits in that gap. The
 reason printed to the reader states the count it came from.
+
+Package *recipes* are different, and are not turned down. A pull request to
+nixpkgs or termux-packages that bumps `pkgs/by-name/ba/bacon/package.nix` or
+`packages/tgpt/build.sh` has the same shape as a cask bump, but it edits a build
+script or derivation, often with patches: packaging work that breaks builds when
+it's wrong. Where most outside pull requests are recipe updates, the report
+keeps its usual verdict and adds a line saying so (`Reading.packaging`). What
+separates a recipe from a manifest is the files: build scripts, Nix
+expressions, patches, PKGBUILDs and Homebrew formulae are recipes; a cask, a
+JSON record or a YAML manifest is an entry.
 
 The free report uses this (`pipeline.analyze_without_model`). The AI report
 still takes Classify's word: overriding it changes the narration prompt, and
@@ -50,6 +60,7 @@ from pathlib import PurePosixPath
 from holt.agent.findings import Findings
 from holt.agent.signals import looks_like_bot, pr_key
 from holt.agent.verdict import Rule
+from holt.report import Verdict
 from holt.types import EvidenceRecord
 
 # Insiders are left out: what a catalogue *is* to a newcomer is what newcomers
@@ -61,8 +72,8 @@ INSIDER_ASSOCIATIONS = {"OWNER", "MEMBER", "COLLABORATOR"}
 # homebrew-cask, whose traffic is almost all automation and staff, has 11.
 MIN_ATTEMPTS = 10
 
-# See the module docstring for where this sits: catalogues 0.56-1.0, software
-# at most 0.13 across the golden set.
+# See the module docstring for where this sits: catalogues 0.73-1.0, software
+# at most 0.12 across the golden set.
 CATALOGUE_SHARE = 0.4
 
 # An entry is small. winget's is three manifests; a package with its patches a
@@ -115,7 +126,25 @@ _NEW_ENTRY = re.compile(
     re.I,
 )
 
-DATA, PACKAGE, LIST = "data", "package", "list"
+# What makes a package entry a recipe (packaging work) rather than a manifest.
+RECIPE_NAMES = {"build.sh", "pkgbuild", "apkbuild", "portfile.cmake", "makefile",
+                "cmakelists.txt", "meson.build", "snapcraft.yaml", "rockcraft.yaml"}
+RECIPE_SUFFIXES = {".nix", ".patch", ".diff", ".spec", ".ebuild", ".bb", ".bbappend",
+                   ".mk", ".subpackage.sh"}
+RECIPE_DIRS = {"formula"}  # Homebrew formulae are Ruby recipes; casks are manifests
+
+# Recipe updates must be most outside pull requests before the report says so,
+# because that's the word it uses.
+RECIPE_SHARE = 0.5
+
+PACKAGING_LINE = (
+    "Most pull requests from outside contributors here are package updates; "
+    "that's real maintenance work, but it's different from contributing to the "
+    "software itself."
+)
+
+DATA, PACKAGE, RECIPE, LIST = "data", "package", "recipe", "list"
+ENTRY_SHAPES = {DATA, PACKAGE, LIST}
 
 
 @dataclass(frozen=True, slots=True)
@@ -167,7 +196,7 @@ def _is_project_file(path: str) -> bool:
 
 
 def _is_data(path: str) -> bool:
-    if _is_project_file(path):
+    if _is_project_file(path) or _is_recipe(path):
         return False
     suffix = PurePosixPath(path).suffix.lower()
     return suffix in DATA_SUFFIXES or suffix == ""
@@ -200,6 +229,15 @@ def _list_home(path: str) -> str:
     return path if parent == "." else parent + "/"
 
 
+def _is_recipe(path: str) -> bool:
+    p = PurePosixPath(path)
+    name = p.name.lower()
+    return (name in RECIPE_NAMES
+            or any(name.endswith(suffix) for suffix in RECIPE_SUFFIXES)
+            or (p.suffix.lower() == ".rb"
+                and any(part.lower() in RECIPE_DIRS for part in p.parts[:-1])))
+
+
 def _entry_names(files: tuple[str, ...], directory: str) -> set[str]:
     """What a title would call this entry: the package directory (skipping a
     version directory, as winget's `.../HexPlayer/5.3.0/`) or a file's stem."""
@@ -213,7 +251,8 @@ def _entry_names(files: tuple[str, ...], directory: str) -> set[str]:
 
 
 def entry_shape(attempt: Attempt, list_editors: Counter[str]) -> str | None:
-    """Which kind of catalogue entry this pull request is, or None."""
+    """Which kind of entry this pull request is -- DATA, PACKAGE or LIST, or
+    RECIPE for a package's build files -- or None."""
     files = attempt.files
     if attempt.changed_files > MAX_ENTRY_FILES:
         return None
@@ -227,9 +266,9 @@ def entry_shape(attempt: Attempt, list_editors: Counter[str]) -> str | None:
     if one_directory and directory != ".":
         title = attempt.title
         names_entry = any(n in _norm(title) for n in _entry_names(files, directory))
-        recipe = not any(PurePosixPath(f).suffix.lower() in SOURCE_SUFFIXES for f in files)
-        if recipe and names_entry and (_VERSION.search(title) or _NEW_ENTRY.search(title)):
-            return PACKAGE
+        code = any(PurePosixPath(f).suffix.lower() in SOURCE_SUFFIXES for f in files)
+        if not code and names_entry and (_VERSION.search(title) or _NEW_ENTRY.search(title)):
+            return RECIPE if any(_is_recipe(f) for f in files) else PACKAGE
 
     if (len(files) <= MAX_LIST_FILES and one_directory and all(_is_list(f) for f in files)
             and list_editors[_list_home(files[0])] >= MIN_LIST_EDITORS
@@ -288,18 +327,37 @@ class CatalogueShape:
                 "catalogue entries; this is one of them")
 
 
-def detect(records: Iterable[EvidenceRecord]) -> CatalogueShape | None:
-    """The catalogue case from the evidence, or None if there isn't one."""
+@dataclass(frozen=True, slots=True)
+class Reading:
+    """What the diffs say about the kind of repository."""
+
+    catalogue: CatalogueShape | None = None  # turns the repository down
+    packaging: Rule | None = None  # a line for the reader; decides nothing
+
+
+def read(records: Iterable[EvidenceRecord]) -> Reading:
     attempts = outside_attempts(records)
     if len(attempts) < MIN_ATTEMPTS:
-        return None
+        return Reading()
     list_editors = Counter(home for a in attempts for home in {_list_home(f) for f in a.files})
     shaped = [(a, s) for a in attempts if (s := entry_shape(a, list_editors))]
-    if len(shaped) < CATALOGUE_SHARE * len(attempts):
-        return None
+    entries = [(a, s) for a, s in shaped if s in ENTRY_SHAPES]
+    if len(entries) >= CATALOGUE_SHARE * len(attempts):
+        return Reading(catalogue=_catalogue(entries, len(attempts)))
+    recipes = sum(1 for _, s in shaped if s == RECIPE)
+    if recipes > RECIPE_SHARE * len(attempts):
+        return Reading(packaging=Rule(PACKAGING_LINE, code="package_updates"))
+    return Reading()
 
-    shape = Counter(s for _, s in shaped).most_common(1)[0][0]
-    of_shape = [a for a, s in shaped if s == shape]
+
+def detect(records: Iterable[EvidenceRecord]) -> CatalogueShape | None:
+    """The catalogue case from the evidence, or None if there isn't one."""
+    return read(records).catalogue
+
+
+def _catalogue(entries: list[tuple[Attempt, str]], attempts: int) -> CatalogueShape:
+    shape = Counter(s for _, s in entries).most_common(1)[0][0]
+    of_shape = [a for a, s in entries if s == shape]
     if shape == LIST:
         where = Counter(_list_home(a.files[0]) for a in of_shape).most_common(1)[0][0]
     else:
@@ -315,8 +373,8 @@ def detect(records: Iterable[EvidenceRecord]) -> CatalogueShape | None:
     return CatalogueShape(
         kind=kind,
         shape=shape,
-        entries=len(shaped),
-        attempts=len(attempts),
+        entries=len(entries),
+        attempts=attempts,
         where=where,
         examples=tuple(f"{a.key}:opened" for a in of_shape[:3]),
     )
@@ -329,9 +387,20 @@ def add_finding(findings: Findings, shape: CatalogueShape) -> None:
     findings.add("repo_kind", shape.kind, shape.examples, shape.note())
 
 
-def explain(rules: list[str], shape: CatalogueShape | None) -> list[str]:
-    """Swap the generic "this is a catalogue" sentence for the measured one."""
-    if shape is None:
-        return rules
-    return [shape.rule() if getattr(r, "code", "") == "non_software_kind" else r
-            for r in rules]
+def explain(rules: list[str], reading: Reading, verdict: Verdict) -> list[str]:
+    """Put what the diffs showed into the rule trace.
+
+    A catalogue's measured sentence replaces the generic "this is a catalogue"
+    one. The packaging line goes after the rules, except that it never takes
+    the last place from a rule that turned the repository down: that is where
+    the web reads the reason.
+    """
+    if reading.catalogue is not None:
+        rules = [reading.catalogue.rule() if getattr(r, "code", "") == "non_software_kind" else r
+                 for r in rules]
+    if reading.packaging is not None:
+        if verdict is Verdict.NOT_VIABLE and rules:
+            rules = [*rules[:-1], reading.packaging, rules[-1]]
+        else:
+            rules = [*rules, reading.packaging]
+    return rules

@@ -298,9 +298,11 @@ class _Serve(EvidenceProvider):
 
 @pytest.mark.parametrize("slug", ["pytorch/pytorch", "react/react-native",
                                   "openssl/openssl", "pallets/flask"])
-def test_the_verdict_does_not_read_v2_fields_yet(slug):
-    # Same evidence with and without the v2 additions: identical numbers,
-    # verdict and reasons. The rules start reading them in later tickets.
+def test_v2_fields_only_add_to_what_older_captures_show(slug):
+    # Same evidence with and without the v2 additions. The v2 fields (how a
+    # pull request was closed, its labels) can only reveal more landings than
+    # an older capture sees; where nothing landed off the button (flask) the
+    # two read identically, and an older capture still replays.
     as_of = RECORDED_AT
     meta = RECORDED[slug]["meta"]
     v2 = [gql.project_repo_meta(slug, meta), *gql.project_releases(slug, meta),
@@ -310,13 +312,16 @@ def test_the_verdict_does_not_read_v2_fields_yet(slug):
                        {k: v for k, v in r.payload.items() if k not in V2_KEYS})
         for r in v2 if ":reference:" not in r.evidence_id and ":release:" not in r.evidence_id
     ]
-    s2, s1 = compute(build_threads(v2), as_of), compute(build_threads(v1), as_of)
-    assert s2.as_dict() == s1.as_dict()
-    assert classify(Findings(), s2) == classify(Findings(), s1)
+    t2, t1 = build_threads(v2), build_threads(v1)
+    assert t2.keys() == t1.keys()
+    assert {k for k, t in t1.items() if t.merged} <= {k for k, t in t2.items() if t.merged}
 
     a2, _ = analyze_without_model(slug, _Serve(v2, as_of), as_of=as_of)
     a1, _ = analyze_without_model(slug, _Serve(v1, as_of), as_of=as_of)
-    assert a2 == a1
+    if slug == "pallets/flask":
+        assert compute(t2, as_of).as_dict() == compute(t1, as_of).as_dict()
+        assert classify(Findings(), compute(t2, as_of)) == classify(Findings(), compute(t1, as_of))
+        assert a2 == a1
 
 
 def test_v2_records_survive_a_fixture_round_trip(tmp_path):

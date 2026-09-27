@@ -11,11 +11,11 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from holt.agent import landing, repo_kind_rules, stages
+from holt.agent import landing, landing_detection, repo_kind_rules, stages
 from holt.agent.findings import Finding, Findings
-from holt.agent.signals import MIN_AGE_HOURS, Signals, build_threads, compute
+from holt.agent.signals import MIN_AGE_HOURS, Signals, Thread, build_threads, compute, newcomer_threads
 from holt.agent.verdict import classify as decide
-from holt.agent.verdict import contested_kind, hours_phrase, headline, legacy_trace
+from holt.agent.verdict import Rule, contested_kind, hours_phrase, headline, legacy_trace
 from holt.agent.verify import check_quotes, verify
 from holt.evidence.provider import EvidenceProvider
 from holt.model import ModelClient
@@ -164,6 +164,8 @@ def analyze(
     narrated = stages.narrate(
         repo, verdict.value, legacy_trace(rules), findings, narrated_signals, model
     )
+    # After narration, so the prompt the recordings were made with is unchanged.
+    _say_how_merges_landed(rules, threads)
 
     # The evidence list is built from verified findings, not written by the
     # model. Stage E supplies prose; it cannot introduce a citation.
@@ -274,17 +276,27 @@ def analyze_without_model(
     if meta is not None and meta.payload.get("is_archived"):
         findings.add("is_archived", True, (meta.evidence_id,),
                      "GitHub reports this repository as archived")
+    # A mirror or a fork: GitHub's own fields, plus whether anything from a
+    # newcomer landed here (a fork that merges outsiders is its own project).
+    if meta is not None and (
+        elsewhere := landing_detection.elsewhere(meta.payload, signals.outsider_merged)
+    ):
+        findings.add("contribute_elsewhere", elsewhere, (meta.evidence_id,),
+                     "read from GitHub's mirror and fork fields and the description")
 
     # What Stage A would call a registry or a list, measured from the diffs
     # outside contributors sent instead of asked of a model. The AI report
     # still takes the model's word (see repo_kind_rules).
-    catalogue = repo_kind_rules.detect(records)
-    if catalogue is not None:
-        repo_kind_rules.add_finding(findings, catalogue)
+    kind = repo_kind_rules.read(records)
+    if kind.catalogue is not None:
+        repo_kind_rules.add_finding(findings, kind.catalogue)
 
     report("Applying the rules", 0.9)
     verdict, rules = decide(findings, signals, contributor_days)
-    rules = repo_kind_rules.explain(rules, catalogue)
+    _say_how_merges_landed(rules, threads)
+    # After the line above, which the generic kind rule silences: the measured
+    # sentence replaces it and stays last, where the web reads the reason.
+    rules = repo_kind_rules.explain(rules, kind, verdict)
 
     s = signals.as_dict()
     if signals.outsider_threads:
@@ -310,7 +322,8 @@ def analyze_without_model(
             "Nobody from outside the project opened a pull request in the period "
             "we looked at, so there was nothing to count."
         )
-    deciding = next((r for r in rules if getattr(r, "code", "") != "awaiting_reply"),
+    deciding = next((r for r in rules
+                     if getattr(r, "code", "") not in ("awaiting_reply", "package_updates")),
                     rules[0] if rules else "")
 
     return Assessment(
@@ -343,6 +356,22 @@ def analyze_without_model(
         models=[],
         dropped_claims=0,
     ), _done(report, Trace(signals=signals, rules=rules))
+
+
+# Rules after which how the merges happened is beside the point.
+_NOT_ABOUT_MERGES = {"archived", "elsewhere", "closed_kind", "non_software_kind"}
+
+
+def _say_how_merges_landed(rules: list[str], threads: dict[str, Thread]) -> None:
+    """Add a line saying which merges GitHub shows as closed, and how they landed.
+
+    Counting a pull request GitHub calls "closed" as merged is a claim the
+    reader can check, so it is said next to the rules rather than done quietly.
+    """
+    if any(getattr(r, "code", "") in _NOT_ABOUT_MERGES for r in rules):
+        return
+    if line := landing_detection.landed_sentence(newcomer_threads(threads)):
+        rules.append(Rule(line, code="landed_off_button"))
 
 
 def _done(report: Progress, trace: Trace) -> Trace:

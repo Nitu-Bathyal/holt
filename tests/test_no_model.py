@@ -52,12 +52,12 @@ def test_the_verdict_is_the_same_function_the_full_pipeline_uses(
     meta = next((r for r in records if r.evidence_id.endswith(":meta")), None)
     if meta is not None and meta.payload.get("is_archived"):
         seed.add("is_archived", True, (meta.evidence_id,), "")
-    catalogue = repo_kind_rules.detect(records)
-    if catalogue is not None:
-        repo_kind_rules.add_finding(seed, catalogue)
+    kind = repo_kind_rules.read(records)
+    if kind.catalogue is not None:
+        repo_kind_rules.add_finding(seed, kind.catalogue)
     expected, rules = classify(seed, compute(threads), 7)
     assert assessment.verdict == expected
-    assert assessment.rules == repo_kind_rules.explain(list(rules), catalogue)
+    assert assessment.rules == repo_kind_rules.explain(list(rules), kind, expected)
     assert trace.signals == compute(threads)
 
 
