@@ -9,7 +9,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from holt_server import __version__, connections, credits, errors, feedback
+from holt_server import __version__, connections, credits, errors, feedback, pro
 from holt_server.api import public, router
 from holt_server.services import Services
 from holt_server.settings import Settings, get_settings
@@ -25,6 +25,8 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         if run_jobs:
             await svc.runner.start()
         warming = None
+        # A readiness line in the log; it never holds up startup.
+        pro_check = asyncio.create_task(_log_pro(svc), name="holt-pro-check")
         if run_jobs and svc.settings.warm_interval_hours > 0:
             from holt_server import warm
 
@@ -32,6 +34,8 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         try:
             yield
         finally:
+            pro_check.cancel()
+            await asyncio.gather(pro_check, return_exceptions=True)
             if warming is not None:
                 warming.cancel()
                 await asyncio.gather(warming, return_exceptions=True)
@@ -39,6 +43,8 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
                 await svc.runner.stop()
             await svc.db.dispose()
             svc.http.close()
+            if svc.pro is not None:
+                await svc.pro.aclose()
 
     dev = svc.settings.env == "dev"
     app = FastAPI(title="Holt API", version=__version__, lifespan=lifespan,
@@ -52,6 +58,13 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(feedback.router)
     app.include_router(connections.router)
     return app
+
+
+async def _log_pro(svc: Services) -> None:
+    if svc.pro is None:
+        return
+    ok, line = await pro.check(svc.pro)
+    logging.getLogger("holt_server.pro").log(logging.INFO if ok else logging.WARNING, line)
 
 
 def run() -> None:

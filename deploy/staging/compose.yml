@@ -87,6 +87,10 @@ services:
       HOLT_WEB_URL: https://${STAGING_HOST:-staging.githolt.com}
       GITHUB_TOKENS: ${GITHUB_TOKENS}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      # Paid features (compose.pro.yml). preview.sh sets both, empty when
+      # the service isn't running, which turns paid features off.
+      HOLT_PRO_URL: ${HOLT_PRO_URL:-}
+      HOLT_PRO_KEY: ${HOLT_PRO_KEY:-}
       HOLT_JOB_CONCURRENCY: ${HOLT_JOB_CONCURRENCY:-1}
       # Warm pass (python -m holt_server.warm) fills this cache for a day.
       HOLT_STARTER_CACHE_HOURS: ${HOLT_STARTER_CACHE_HOURS:-24}

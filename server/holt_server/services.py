@@ -9,7 +9,7 @@ from typing import Any
 
 import httpx
 
-from holt_server import engine, llm
+from holt_server import engine, llm, pro
 from holt_server.db import Database, Job
 from holt_server.errors import ApiError
 from holt_server.github import GitHubLookup, TokenPool
@@ -28,6 +28,8 @@ class Services:
         # One connection pool for every GitHub call this process makes.
         self.http = httpx.Client(timeout=30.0)
         self.lookup = GitHubLookup(self.pool, self.http)
+        # Paid features: None when HOLT_PRO_URL is not set.
+        self.pro: pro.ProClient | None = pro.build(settings)
         # Work (new analyses, find) and reads (cache misses on starter issues)
         # draw on separate counters.
         self.limiter = RateLimiter()
@@ -60,6 +62,12 @@ class Services:
         while len(self._canonical) > CANONICAL_CACHE:
             self._canonical.popitem(last=False)
         return name
+
+    def require_pro(self) -> pro.ProClient:
+        """The paid-feature client, or the "not available yet" error."""
+        if self.pro is None:
+            raise pro.not_available()
+        return self.pro
 
     def server_model_available(self) -> bool:
         return bool(self.settings.openrouter_api_key)

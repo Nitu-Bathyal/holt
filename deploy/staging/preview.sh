@@ -5,7 +5,9 @@
 # One run: fetch origin; if main, any open PR labelled `staging`, or any
 # branch in deploy/staging/extra-branches moved, build a preview commit
 # (origin/main merged with each of them, skipping ones that conflict),
-# rebuild the images and restart only the stage-holt-new stack. Then run the
+# rebuild the images and restart only the stage-holt-new stack, plus the
+# paid-features service beside it when ~/projects/holt-pro exists
+# (compose.pro.yml, project stage-holt-pro). Then run the
 # e2e smoke suite once (result on /__build) and prune this stack's dangling
 # images and its own build cache.
 #
@@ -36,6 +38,12 @@ MAX_WAIT="${HOLT_STAGE_MAX_WAIT:-1800}"            # seconds to wait for room, t
 DEPLOY="$SRC/deploy/staging"
 DEFAULT_HOST=staging.githolt.com
 FORCE="${FORCE:-0}"
+# The paid-features service (compose.pro.yml), built from origin/main of the
+# private repository checked out here. Without that checkout, staging runs
+# with paid features off.
+PRO_REPO="${HOLT_PRO_REPO:-$HOME/projects/holt-pro}"
+PRO_SRC="$STATE/pro-src"                           # dedicated clone, detached at origin/main
+PRO_PROJECT=stage-holt-pro
 
 mkdir -p "$STATE/logs"
 log() { printf '%s %s\n' "$(date -u +%FT%TZ)" "$*"; }
@@ -114,7 +122,20 @@ resolve() {
             printf 'branch\t%s\t%s\t\t\t\t%s\n' "$b" "$b" "branch not found on origin or locally" >> "$RUN/skipped.tsv"
         fi
     done < "$RUN/extra"
-    fingerprint="$( { echo "host $STAGING_HOST"; echo "main $main_sha"; printf '%s\n' "${CANDIDATES[@]}" | cut -f1-4; cat "$RUN/skipped.tsv"; } | sha256sum | cut -c1-16)"
+    # The paid-features service: its origin/main, when the checkout exists.
+    # A fetch that fails keeps what was fetched before.
+    pro_sha=""
+    if [[ -d "$PRO_REPO/.git" ]]; then
+        if [[ ! -d "$PRO_SRC/.git" ]]; then
+            git clone -q "$(git -C "$PRO_REPO" remote get-url origin)" "$PRO_SRC" \
+                || log "paid features: couldn't clone $PRO_REPO's origin"
+        fi
+        if [[ -d "$PRO_SRC/.git" ]]; then
+            git -C "$PRO_SRC" fetch -q --prune origin || log "paid features: fetch failed; using the last one"
+            pro_sha="$(git -C "$PRO_SRC" rev-parse -q --verify refs/remotes/origin/main || true)"
+        fi
+    fi
+    fingerprint="$( { echo "host $STAGING_HOST"; echo "main $main_sha"; echo "pro $pro_sha"; printf '%s\n' "${CANDIDATES[@]}" | cut -f1-4; cat "$RUN/skipped.tsv"; } | sha256sum | cut -c1-16)"
 }
 
 declare -a CANDIDATES=()
@@ -307,6 +328,30 @@ for t in ${GITHUB_TOKENS//,/ }; do
     fi
 done
 
+# The paid-features service needs its own key, STAGING_HOLT_PRO_KEY (never
+# production's HOLT_PRO_KEY; the same value is refused), and a holt_pro
+# database in staging's Postgres. Missing either, it stays off: the server
+# gets an empty HOLT_PRO_URL and paid features say "not available yet".
+# HOLT_PRO_* are always exported, so nothing in .env can turn it on instead.
+HOLT_PRO_URL="" HOLT_PRO_KEY=""
+pro_on=0
+if [[ ! -d "$PRO_REPO/.git" ]]; then
+    log "paid features: off (no $PRO_REPO)"
+elif [[ -z "$pro_sha" ]]; then
+    log "paid features: off (no origin/main in $PRO_SRC)"
+else
+    HOLT_PRO_KEY="$(secret STAGING_HOLT_PRO_KEY)"
+    if [[ -z "$HOLT_PRO_KEY" ]]; then
+        log "paid features: off (no STAGING_HOLT_PRO_KEY in $SECRETS)"
+    elif [[ "$HOLT_PRO_KEY" == "$(secret HOLT_PRO_KEY)" ]]; then
+        log "paid features: off (STAGING_HOLT_PRO_KEY is production's key; make a separate one)"
+        HOLT_PRO_KEY=""
+    else
+        pro_on=1
+    fi
+fi
+export HOLT_PRO_URL HOLT_PRO_KEY
+
 # --- build and restart this stack only ------------------------------------------
 write_build_json building "building ${preview_sha:0:7}" "$preview_sha"
 if ! docker buildx inspect "$BUILDER" >/dev/null 2>&1; then
@@ -326,7 +371,43 @@ for svc in server web; do
         fail "$svc image build failed; last lines: $(tail -5 "$blog" | tr '\n' ' ' | cut -c1-600)"
     fi
 done
+
+# The paid-features service: built after the others, one at a time. A failure
+# here leaves paid features off; it never stops the rest of staging.
+pro_compose() {
+    HOLT_PRO_SRC="$PRO_SRC" HOLT_STAGE_NETWORK="${PROJECT}_default" \
+        docker compose -p "$PRO_PROJECT" -f "$DEPLOY/compose.pro.yml" --env-file "$DEPLOY/.env" "$@"
+}
+if (( pro_on )); then
+    git -C "$PRO_SRC" checkout -q -f --detach "$pro_sha"
+    if ! pro_compose build pro >>"$blog" 2>&1; then
+        log "paid features: off (holt-pro ${pro_sha:0:7} image build failed; see $blog)"
+        pro_on=0
+    elif [[ -n "$(compose ps -q db 2>/dev/null)" ]] && [[ "$(compose exec -T db \
+            psql -U holt -d holt -tAc "SELECT 1 FROM pg_database WHERE datname = 'holt_pro'" 2>/dev/null)" != 1 ]]; then
+        # A new database volume gets it from initdb/20-pro-db.sh instead.
+        log "paid features: off (no holt_pro database; create it once, see deploy/README.md)"
+        pro_on=0
+    else
+        HOLT_PRO_URL=http://pro:8000
+    fi
+fi
+
+pro_up() {
+    if pro_compose up -d pro >>"$blog" 2>&1; then
+        log "paid features: on (holt-pro ${pro_sha:0:7} as $PRO_PROJECT)"
+    else
+        log "paid features: holt-pro didn't start; see $blog"
+    fi
+}
+# Before the server when the network is already there, so the server's
+# startup ping finds it; on the very first run the network comes with the stack.
+pro_started=0
+if (( pro_on )) && docker network inspect "${PROJECT}_default" >/dev/null 2>&1; then
+    pro_up; pro_started=1
+fi
 compose up -d --remove-orphans >>"$blog" 2>&1 || fail "compose up failed; see $blog"
+(( pro_on && ! pro_started )) && pro_up
 
 ok=0
 for _ in $(seq 1 60); do

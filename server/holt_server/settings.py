@@ -29,6 +29,10 @@ class Settings(BaseSettings):
 
     github_tokens: str = Field("", alias="GITHUB_TOKENS")
 
+    # The optional internal service for paid features. Empty URL = off.
+    pro_url: str = Field("", alias="HOLT_PRO_URL")
+    pro_key: str = Field("", alias="HOLT_PRO_KEY")
+
     openrouter_api_key: str = Field("", alias="OPENROUTER_API_KEY")
     openrouter_model: str = Field("openai/gpt-5-mini", alias="OPENROUTER_MODEL")
     openrouter_base_url: str = Field("https://openrouter.ai/api/v1", alias="OPENROUTER_BASE_URL")
