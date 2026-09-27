@@ -4,6 +4,7 @@ import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { RouteFallback } from "@/components/motion/route-fallback";
 import { themeScript } from "@/components/theme-toggle";
+import { ANALYTICS } from "@/lib/analytics";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={mono.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        {ANALYTICS && <script defer src={ANALYTICS.src} data-website-id={ANALYTICS.websiteId} />}
       </head>
       {/* Extensions such as Grammarly add attributes to <body> before React
           hydrates. This only silences attribute mismatches on <body> itself. */}

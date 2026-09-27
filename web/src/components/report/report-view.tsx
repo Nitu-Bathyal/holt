@@ -5,6 +5,7 @@ import { odds, ODDS_TONE, shortDate, timeAgo, verdictLine, VERDICT_TONE, type Od
 import { SITE_URL } from "@/lib/site";
 import type { Report } from "@/lib/types";
 import { CatFace } from "../cat-face";
+import { Track } from "../track";
 import { BadgeSnippet } from "./badge-snippet";
 import { EvidenceList } from "./evidence-list";
 import { LandingMap } from "./landing-map";
@@ -98,6 +99,7 @@ export function ReportView({
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-10">
+      <Track event="report-view" data={{ verdict: report.verdict, mode: report.mode, repo }} />
       <div className="min-w-0 space-y-10">
         <VerdictHero report={report} reveal={reveal} />
 
