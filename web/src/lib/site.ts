@@ -1,6 +1,8 @@
 export const SITE_HOST = process.env.NEXT_PUBLIC_SITE_HOST || "localhost:3000";
 export const SITE_URL = `${/^(localhost|127\.|\[::1\])/.test(SITE_HOST) ? "http" : "https"}://${SITE_HOST}`;
-export const FREE_AI_QUOTA = Number(process.env.NEXT_PUBLIC_FREE_AI_QUOTA || 3);
+// Free AI reports: given once at sign-up, then one more to claim every CLAIM_EVERY_DAYS.
+export const WELCOME_AI_CREDITS = Number(process.env.NEXT_PUBLIC_FREE_AI_QUOTA || 3);
+export const CLAIM_EVERY_DAYS = 7;
 export const GITHUB_REPO_URL = "https://github.com/holt-oss/holt";
 
 // Who runs Holt, for the legal pages (/terms, /privacy, /refunds, /contact).
@@ -11,7 +13,7 @@ export const CONTACT_CITY = process.env.NEXT_PUBLIC_CONTACT_CITY || "CONTACT_CIT
 /** The name on card statements and processor receipts (Razorpay, Dodo Payments). */
 export const PAYMENT_BRAND = "Githolt";
 /** Shown as "Last updated" on every legal page. Bump it when any of them changes. */
-export const LEGAL_UPDATED = "26 September 2026";
+export const LEGAL_UPDATED = "27 September 2026";
 export const LEGAL_PAGES = [
   { href: "/terms", label: "terms" },
   { href: "/privacy", label: "privacy" },

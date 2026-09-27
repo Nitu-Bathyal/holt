@@ -71,12 +71,10 @@ def make_settings(tmp_path: Path, **overrides: Any) -> Settings:
         "DATABASE_URL": os.environ.get("HOLT_TEST_DATABASE_URL")
         or f"sqlite+aiosqlite:///{tmp_path / 'holt.db'}",
         "HOLT_INTERNAL_KEY": KEY,
-        "HOLT_SECRET_KEY": "a test passphrase",
         "GITHUB_TOKENS": "tok1,tok2",
         "OPENROUTER_API_KEY": "",
         "HOLT_ANON_RATE_PER_HOUR": 100,
         "HOLT_USER_RATE_PER_HOUR": 100,
-        "HOLT_FREE_AI_LIMIT": 3,
     }
     values.update(overrides)
     return Settings(_env_file=None, **values)

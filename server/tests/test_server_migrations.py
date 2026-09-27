@@ -66,8 +66,17 @@ def test_fresh_database_migrates_to_head_matching_the_models(db):
     assert run(db, revision) == head()
 
 
+def baseline_schema(conn) -> None:
+    """What `create_all` made in production before migrations: the 0001
+    schema with no alembic_version table."""
+    from alembic import command
+
+    command.upgrade(migrate.config(conn), migrate.BASELINE)
+    conn.execute(text("DROP TABLE alembic_version"))
+
+
 def test_create_all_database_is_stamped_and_keeps_its_rows(db):
-    run(db, Base.metadata.create_all)
+    run(db, baseline_schema)
     run(db, lambda c: c.execute(text(
         "INSERT INTO users (id, plan, ai_used, ai_period, created_at) "
         "VALUES ('u1', 'free', 2, '2026-09', CURRENT_TIMESTAMP)")))
@@ -75,6 +84,39 @@ def test_create_all_database_is_stamped_and_keeps_its_rows(db):
     assert run(db, revision) == head()
     assert run(db, lambda c: c.execute(text("SELECT ai_used FROM users")).scalar()) == 2
     assert run(db, migrate.differences) == []
+
+
+def test_ai_credits_migration_deletes_saved_keys_and_keeps_users(db):
+    from alembic import command
+
+    run(db, lambda c: command.upgrade(migrate.config(c), "0001"))
+    run(db, lambda c: c.execute(text(
+        "INSERT INTO users (id, plan, ai_used, ai_period, byok_provider, byok_model, "
+        "byok_cipher, created_at) VALUES "
+        "('keyed', 'free', 1, '2026-09', 'openai', 'gpt-5-mini', 'AQID-sealed', CURRENT_TIMESTAMP), "
+        "('plain', 'pro', 0, '', NULL, NULL, NULL, CURRENT_TIMESTAMP)")))
+    run(db, lambda c: command.upgrade(migrate.config(c), "0002"))
+
+    got = run(db, lambda c: c.execute(text(
+        "SELECT id, plan, byok_provider, byok_model, byok_cipher, ai_credits, "
+        "credits_granted_at, last_claim_at FROM users ORDER BY id")).all())
+    assert [tuple(r) for r in got] == [
+        ("keyed", "free", None, None, None, 0, None, None),
+        ("plain", "pro", None, None, None, 0, None, None),
+    ]
+    # The release before this one still inserts users without the new columns.
+    run(db, lambda c: c.execute(text(
+        "INSERT INTO users (id, plan, ai_used, ai_period, created_at) "
+        "VALUES ('older', 'free', 0, '2026-09', CURRENT_TIMESTAMP)")))
+    assert run(db, lambda c: c.execute(text(
+        "SELECT ai_credits FROM users WHERE id = 'older'")).scalar()) == 0
+    assert run(db, migrate.differences) == []
+
+    run(db, lambda c: command.downgrade(migrate.config(c), "0001"))
+    tables = run(db, lambda c: inspect(c).get_table_names())
+    assert "credit_events" not in tables
+    cols = {col["name"] for col in run(db, lambda c: inspect(c).get_columns("users"))}
+    assert "ai_credits" not in cols and "byok_cipher" in cols
 
 
 def test_partial_schema_without_history_is_refused(db):

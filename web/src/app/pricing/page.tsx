@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { FREE_AI_QUOTA } from "@/lib/site";
+import { CLAIM_EVERY_DAYS, WELCOME_AI_CREDITS } from "@/lib/site";
 import { PageHead } from "@/components/page-head";
 import { PageTransition } from "@/components/motion/page-transition";
 
 export const metadata: Metadata = {
   title: "Pricing",
-  description: "Rules reports are free forever. A few AI reports a month are free too, and bringing your own key is always free.",
+  description: `Rules reports are free forever. Signed-in users get ${WELCOME_AI_CREDITS} free AI reports, and 1 more to claim every week.`,
 };
 
 const PLANS = [
@@ -22,26 +22,22 @@ const PLANS = [
   {
     name: "Free AI",
     price: "$0",
-    tag: `${FREE_AI_QUOTA} AI reports / month`,
+    tag: `${WELCOME_AI_CREDITS} AI reports to start`,
     body: "Sign in and get plain-English explanations on us.",
-    items: [`${FREE_AI_QUOTA} AI reports every month`, "Cited, mentor-style explanation", "Your report history"],
+    items: [
+      `${WELCOME_AI_CREDITS} AI reports when you sign in`,
+      `Claim 1 more every ${CLAIM_EVERY_DAYS} days`,
+      "Cited, mentor-style explanation",
+      "Your report history",
+    ],
     cta: { href: "/signin", label: "sign in" },
     accent: "border-blue",
     featured: true,
   },
-  {
-    name: "Bring your own key",
-    price: "$0",
-    tag: "always free",
-    body: "Use your OpenRouter, Anthropic, OpenAI or Gemini key.",
-    items: ["Unlimited AI reports", "Pick your model", "Pay your provider directly, usually under $0.05 a report"],
-    cta: { href: "/settings", label: "add a key" },
-    accent: "border-green",
-  },
 ];
 
 const SOON = [
-  { name: "Student Pro", body: "More AI reports without managing a key." },
+  { name: "Student Pro", body: "More AI reports, and the pro models." },
   { name: "Clubs & classrooms", body: "Shared quota for a college club or a course." },
 ];
 
@@ -60,7 +56,7 @@ export default function PricingPage() {
       </PageHead>
 
       <div className="wrap py-10 sm:py-14">
-        <ul className="grid gap-4 lg:grid-cols-3">
+        <ul className="grid gap-4 md:grid-cols-2">
           {PLANS.map((p) => (
             <li key={p.name} className={`relative flex flex-col border bg-panel p-6 ${p.accent} ${p.featured ? "shadow-card" : "shadow-soft"}`}>
               {p.featured && <span className="absolute -top-3 left-6 bg-blue px-2 py-0.5 text-[0.7rem] font-semibold text-on-accent">most students start here</span>}

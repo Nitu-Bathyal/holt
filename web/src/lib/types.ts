@@ -11,6 +11,8 @@ export type ApiErrorCode =
   | "rate_limited"
   | "quota_exceeded"
   | "needs_key"
+  | "claim_not_ready"
+  | "ai_unavailable"
   | "upstream"
   | "internal"
   | "not_implemented";
@@ -116,12 +118,21 @@ export interface FindJobStatus {
   error: ApiError | null;
 }
 
-export type ByokProvider = "openrouter" | "openai" | "anthropic" | "gemini";
+/** GET /v1/me/credits, and `credits` in GET /v1/me. */
+export interface Credits {
+  /** Free AI reports left. */
+  balance: number;
+  can_claim: boolean;
+  /** When the next weekly claim opens (ISO); null before the first visit. */
+  next_claim_at: string | null;
+  claim_every_days: number;
+  /** False while the server has no model key: AI reports can't run at all. */
+  ai_available: boolean;
+}
 
 export interface Me {
   plan: string;
-  quota: { ai_used: number; ai_limit: number; resets_at: string };
-  byok: { provider: ByokProvider; model: string; set: boolean } | null;
+  credits: Credits;
 }
 
 /** GET /v1/me/history -> {"items": HistoryItem[]} */

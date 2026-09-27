@@ -1,8 +1,8 @@
 """Configuration, all of it from the environment (or `server/.env`).
 
 Names are the ones in `server/README.md`. Nothing here has a default that is
-unsafe in production except `HOLT_INTERNAL_KEY` and `HOLT_SECRET_KEY`, which
-are empty by default and make the server refuse the requests that need them.
+unsafe in production except `HOLT_INTERNAL_KEY`, which is empty by default and
+makes the server refuse every `/v1` request.
 """
 
 from __future__ import annotations
@@ -22,7 +22,6 @@ class Settings(BaseSettings):
         "postgresql+asyncpg://holt:holt@127.0.0.1:20131/holt", alias="DATABASE_URL"
     )
     internal_key: str = Field("", alias="HOLT_INTERNAL_KEY")
-    secret_key: str = Field("", alias="HOLT_SECRET_KEY")
     # Where the badge links to: `{web_url}/{owner}/{repo}`.
     web_url: str = Field("https://githolt.com", alias="HOLT_WEB_URL")
 
@@ -34,9 +33,10 @@ class Settings(BaseSettings):
 
     job_concurrency: int = Field(2, alias="HOLT_JOB_CONCURRENCY")
     cache_hours: float = Field(24, alias="HOLT_CACHE_HOURS")
-    # How many AI reports a user may run on the server's key per calendar month.
-    free_ai_limit: int = Field(3, alias="HOLT_FREE_AI_LIMIT")
-    plan_ai_limit: int = Field(100, alias="HOLT_PLAN_AI_LIMIT")
+    # Free AI credits: given once to every signed-in user, then one more can
+    # be claimed each time this many days have passed since the last claim.
+    signup_ai_credits: int = Field(3, alias="HOLT_SIGNUP_AI_CREDITS")
+    claim_every_days: float = Field(7, alias="HOLT_CLAIM_EVERY_DAYS")
     # New work (jobs, starter-issue lookups) per hour.
     anon_rate_per_hour: int = Field(10, alias="HOLT_ANON_RATE_PER_HOUR")
     user_rate_per_hour: int = Field(60, alias="HOLT_USER_RATE_PER_HOUR")

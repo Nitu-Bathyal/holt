@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-from holt_server import crypto, engine, repos
+from holt_server import engine, repos
 from holt_server import report as report_mod
 from holt_server.errors import ApiError
 
@@ -212,24 +212,6 @@ def test_repo_rejects(raw):
     with pytest.raises(ApiError) as err:
         repos.normalize(raw)
     assert err.value.code == "invalid_repo"
-
-
-def test_crypto_roundtrip_and_binding():
-    import base64
-    import os
-
-    from cryptography.exceptions import InvalidTag
-
-    for secret in ("a passphrase", base64.b64encode(os.urandom(32)).decode()):
-        token = crypto.encrypt(secret, "sk-live-1", "user-a")
-        assert "sk-live-1" not in token
-        assert crypto.decrypt(secret, token, "user-a") == "sk-live-1"
-        with pytest.raises(InvalidTag):
-            crypto.decrypt(secret, token, "user-b")
-        with pytest.raises(InvalidTag):
-            crypto.decrypt(secret + "x", token, "user-a")
-    with pytest.raises(crypto.SecretKeyMissing):
-        crypto.encrypt("", "k", "u")
 
 
 def test_rate_limiter_window():

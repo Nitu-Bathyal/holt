@@ -16,19 +16,21 @@ handlers, server components) — a BFF. So:
 
 Users, sessions and OAuth (GitHub + Google) live in `web/` (Auth.js). The
 server keeps its own `users` table keyed by the same id, created on first
-sight, holding plan, quota usage and the encrypted BYOK key.
+sight, holding plan and free AI credits. The website doesn't take users' own
+API keys (the CLI does); every AI report runs on the server's key.
 
 All bodies are JSON. Errors: `{"error": {"code": "<code>", "message": "<plain English for a beginner>"}}`
 with codes: `unauthorized`, `not_found` (repo missing or private),
 `invalid_repo`, `rate_limited` (ours or GitHub's; include `retry_after` seconds),
-`quota_exceeded`, `needs_key` (AI report requested with no plan and no BYOK),
+`quota_exceeded` (no AI credits left), `needs_key` (AI report requested without
+signing in), `ai_unavailable` (AI reports are switched off: the server has no
+model key), `claim_not_ready` (a weekly claim before it is due),
 `upstream` (GitHub/model failure), `internal`.
 
 HTTP statuses: `unauthorized` 401, `not_found` 404, `invalid_repo` and
 `invalid_request` (malformed body or query) 400, `rate_limited` 429 (also sent
-as a `Retry-After` header), `quota_exceeded` 402, `needs_key` 403 (also for an
-anonymous AI request, and when a saved BYOK key is rejected by its provider),
-`upstream` 502, `internal` 500, `not_implemented` 501 (starter issues and find,
+as a `Retry-After` header), `quota_exceeded` 402, `needs_key` 403,
+`claim_not_ready` 409, `ai_unavailable` 503, `upstream` 502, `internal` 500, `not_implemented` 501 (starter issues and find,
 until the engine side ships).
 
 ## Rate limits
@@ -98,9 +100,10 @@ Body: `{"repo": "owner/repo", "mode": "rules"|"ai", "days": 7, "refresh": false}
   report exists (same repo/mode/days, younger than 24h) and `refresh` is false.
 - Otherwise `202 {"status":"queued","job_id":"…"}`.
 - `mode:"rules"` is free and allowed anonymously (rate-limited per IP).
-- `mode:"ai"` requires `X-Holt-User`, and either an active plan with quota
-  left (uses the server's OpenRouter key) or a stored BYOK key. Else `needs_key`
-  / `quota_exceeded`.
+- `mode:"ai"` requires `X-Holt-User` (else `needs_key`) and a server model key
+  (else `ai_unavailable`, checked first, so nothing is spent or queued). A new
+  job spends one AI credit (else `quota_exceeded`); a cached report or joining a
+  running job spends none. A job that fails gives its credit back.
 
 ### `GET /v1/analyses/{job_id}` → `{"status":"queued"|"running"|"done"|"error", "stage": "Reading pull requests", "progress": 0.4, "report": Report|null, "error": Error|null}`
 
@@ -163,21 +166,27 @@ limits (per client IP and in total, separate from user limits), run at most
 one at a time, and wait behind every user request.
 
 ### Account
-- `GET /v1/me` → `{"plan": "free"|"…", "quota": {"ai_used": 1, "ai_limit": 3, "resets_at": "…"}, "byok": {"provider": "openrouter"|"openai"|"anthropic"|"gemini", "model": "…", "set": true} | null}`
-- `PUT /v1/me/byok` body `{"provider": "…", "api_key": "…", "model": "…"}` → stored
-  encrypted (AES-GCM, key from env `HOLT_SECRET_KEY`); the key is never returned.
-  Returns the same body as `GET /v1/me`.
-- `DELETE /v1/me/byok` → the `GET /v1/me` body.
+- `GET /v1/me` → `{"plan": "free"|"…", "credits": Credits}`
+- `GET /v1/me/credits` → `Credits`:
+  `{"balance": 3, "can_claim": false, "next_claim_at": "…", "claim_every_days": 7, "ai_available": true}`.
+  `balance` is the free AI reports left. `next_claim_at` is when the weekly claim
+  opens (`can_claim` is true once it has passed). `ai_available` is false while
+  the server has no model key.
+- `POST /v1/me/credits/claim` → `Credits` with one more credit, or 409
+  `claim_not_ready` (the message says the date).
 - `GET /v1/me/history?limit=50` → recent analyses by this user:
   `{"items": [{"job_id", "repo", "mode", "days", "status", "verdict", "headline", "created_at"}]}`
   (`verdict`/`headline` are null until the job is done).
 
-`/v1/me*` without `X-Holt-User` → 401 `unauthorized`. AI reports use the
-user's BYOK key when one is saved (not counted against quota); otherwise the
-server's key, counted per calendar month (UTC). Failed AI jobs are not counted.
+`/v1/me*` without `X-Holt-User` → 401 `unauthorized`. Free AI credits: every
+signed-in user gets `HOLT_SIGNUP_AI_CREDITS` (3) once, the first time the server
+sees them (users from before credits get them on their next request), then can
+claim one more whenever `HOLT_CLAIM_EVERY_DAYS` (7) have passed since the last
+claim; the welcome grant starts that clock. Claims don't accumulate: at most one
+is ever due. Spending, claiming and refunds are atomic on the server.
 
 Plans and payments are not implemented yet; `plan` is set manually in the DB
-for now. Free-tier quota values come from env.
+for now.
 
 ## Public proxy for the browser extension (implemented by `web/`)
 

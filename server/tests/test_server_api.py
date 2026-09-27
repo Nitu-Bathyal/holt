@@ -8,7 +8,7 @@ import sys
 import types
 
 import pytest
-from holt_server.db import Job, User
+from holt_server.db import Job
 from holt_server.errors import ApiError
 from sqlalchemy import select
 
@@ -211,7 +211,7 @@ def test_cache_hits_do_not_count(make_harness):
         assert h.post("/v1/analyses", {"repo": "octo/one"}, ip="9.9.9.9").status_code == 200
 
 
-# --- AI mode, quota and BYOK --------------------------------------------------------
+# --- AI mode (credits have their own file) ------------------------------------------
 
 
 def test_ai_needs_sign_in(h):
@@ -220,69 +220,22 @@ def test_ai_needs_sign_in(h):
     assert r.json()["error"]["code"] == "needs_key"
 
 
-def test_ai_without_server_key_or_byok_needs_key(h):
-    r = h.post("/v1/analyses", {"repo": "pallets/flask", "mode": "ai"}, user="u1")
-    assert r.json()["error"]["code"] == "needs_key"
-
-
-def test_ai_quota(make_harness):
-    h = make_harness(OPENROUTER_API_KEY="sk-or-server", HOLT_FREE_AI_LIMIT=2,
-                     OPENROUTER_MODEL="some/model")
-    for repo in ("octo/one", "octo/two"):
-        job = h.post("/v1/analyses", {"repo": repo, "mode": "ai"}, user="u1").json()["job_id"]
-        assert h.wait(job)["status"] == "done"
-    assert h.model_specs[0].api_key == "sk-or-server"
-    assert h.model_specs[0].model == "some/model"
-    assert h.model_specs[0].provider == "openrouter"
-
-    me = h.get("/v1/me", user="u1").json()
-    assert me["quota"]["ai_used"] == 2 and me["quota"]["ai_limit"] == 2
-    assert me["plan"] == "free" and me["byok"] is None
-
-    r = h.post("/v1/analyses", {"repo": "octo/three", "mode": "ai"}, user="u1")
-    assert r.status_code == 402
-    assert r.json()["error"]["code"] == "quota_exceeded"
-    # Someone else still has theirs, and cached AI reports cost nothing.
+def test_ai_uses_the_server_model(make_harness):
+    h = make_harness(OPENROUTER_API_KEY="sk-or-server", OPENROUTER_MODEL="some/model")
+    job = h.post("/v1/analyses", {"repo": "octo/one", "mode": "ai"}, user="u1").json()["job_id"]
+    assert h.wait(job)["status"] == "done"
+    spec = h.model_specs[0]
+    assert (spec.provider, spec.model, spec.api_key) == ("openrouter", "some/model", "sk-or-server")
+    # A cached AI report costs nothing.
     assert h.post("/v1/analyses", {"repo": "octo/one", "mode": "ai"},
                   user="u1").status_code == 200
 
 
-def test_failed_ai_job_is_refunded(make_harness):
-    h = make_harness(OPENROUTER_API_KEY="sk-or-server")
-    h.engine.error = ApiError("upstream", "model down")
-    job = h.post("/v1/analyses", {"repo": "octo/one", "mode": "ai"}, user="u1").json()["job_id"]
-    assert h.wait(job)["status"] == "error"
-    assert h.get("/v1/me", user="u1").json()["quota"]["ai_used"] == 0
-
-
-def test_byok_roundtrip_and_use(make_harness):
-    h = make_harness(OPENROUTER_API_KEY="sk-or-server")
-    assert h.get("/v1/me").status_code == 401
-
-    r = h.put("/v1/me/byok", {"provider": "anthropic", "api_key": "sk-ant-secret-123"},
-              user="u2")
-    assert r.status_code == 200
-    assert r.json()["byok"] == {"provider": "anthropic", "model": "claude-haiku-4-5",
-                                "set": True}
-    assert "sk-ant-secret-123" not in r.text
-    assert "sk-ant-secret-123" not in h.get("/v1/me", user="u2").text
-
-    user = [u for u in db_rows(h, User) if u.id == "u2"][0]
-    assert user.byok_cipher and "sk-ant-secret-123" not in user.byok_cipher
-
-    job = h.post("/v1/analyses", {"repo": "octo/one", "mode": "ai"}, user="u2").json()["job_id"]
-    assert h.wait(job)["status"] == "done"
-    spec = h.model_specs[-1]
-    assert (spec.provider, spec.api_key, spec.byok) == ("anthropic", "sk-ant-secret-123", True)
-    assert h.get("/v1/me", user="u2").json()["quota"]["ai_used"] == 0
-
-    r = h.delete("/v1/me/byok", user="u2")
-    assert r.status_code == 200 and r.json()["byok"] is None
-
-
-def test_byok_rejects_unknown_provider(h):
-    r = h.put("/v1/me/byok", {"provider": "acme", "api_key": "sk-123456789"}, user="u1")
-    assert r.status_code == 400
+def test_bring_your_own_key_routes_are_gone(h):
+    assert h.put("/v1/me/byok", {"provider": "openai", "api_key": "sk-123456789"},
+                 user="u1").status_code in (404, 405)
+    assert h.delete("/v1/me/byok", user="u1").status_code in (404, 405)
+    assert "byok" not in h.get("/v1/me", user="u1").json()
 
 
 def test_history(h):
@@ -296,12 +249,11 @@ def test_history(h):
 
 def test_secrets_never_stored_on_jobs(make_harness):
     h = make_harness(OPENROUTER_API_KEY="sk-or-server")
-    h.put("/v1/me/byok", {"provider": "openai", "api_key": "sk-openai-xyz-999"}, user="u4")
     job = h.post("/v1/analyses", {"repo": "octo/one", "mode": "ai"}, user="u4").json()["job_id"]
     h.wait(job)
     for row in db_rows(h, Job):
         dumped = json.dumps({"p": row.params, "r": row.result, "e": row.error})
-        assert "sk-openai-xyz-999" not in dumped and "sk-or-server" not in dumped
+        assert "sk-or-server" not in dumped
 
 
 # --- badge --------------------------------------------------------------------------
@@ -416,7 +368,8 @@ def test_concurrent_identical_requests_share_one_job(make_harness):
         assert {r.status_code for r in rs} == {202}
         assert len({r.json()["job_id"] for r in rs}) == 1
         assert len([j for j in db_rows(h, Job) if j.repo == "octo/one"]) == 1
-        assert h.get("/v1/me", user="racer").json()["quota"]["ai_used"] == 1
+        # One job, one credit.
+        assert h.get("/v1/me", user="racer").json()["credits"]["balance"] == 2
     finally:
         h.engine.gate.set()
 
@@ -511,15 +464,6 @@ def test_result_from_a_runner_that_lost_the_job_is_dropped(make_harness):
     h.client.portal.call(runner._finish, job, {"repo": "octo/one"})
     assert db_rows(h, Job)[0].status == "running"
     assert h.get("/v1/reports/octo/one").status_code == 404
-
-
-def test_refund_only_hits_the_month_charged(make_harness):
-    h = make_harness(run_jobs=False, OPENROUTER_API_KEY="sk-or-server")
-    h.post("/v1/analyses", {"repo": "octo/one", "mode": "ai"}, user="m1")
-    job = h.client.portal.call(h.svc.runner._claim)
-    job.params = {"ai_period": "2000-01"}  # charged in some earlier month
-    h.client.portal.call(h.svc.runner._fail, job, ApiError("upstream", "x"))
-    assert h.get("/v1/me", user="m1").json()["quota"]["ai_used"] == 1
 
 
 def test_docs_only_in_dev(make_harness):

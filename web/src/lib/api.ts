@@ -2,7 +2,7 @@
 // internal key must never reach the browser.
 import "server-only";
 import type {
-  AnalysisStart, ApiError, ByokProvider, FindQuery, FindResult, FindStart, HistoryItem, JobStatus, Me, Mode,
+  AnalysisStart, ApiError, Credits, FindQuery, FindResult, FindStart, HistoryItem, JobStatus, Me, Mode,
   Report, Result, StarterIssue,
 } from "./types";
 import { isJobId } from "./ids";
@@ -150,14 +150,9 @@ export function me(userId: string): Promise<Result<Me>> {
   return call("/v1/me", { caller: { userId } });
 }
 
-export function putByok(userId: string, provider: ByokProvider, apiKey: string, model: string): Promise<Result<Me>> {
-  if (MOCK) return mock.putByok(userId, provider, apiKey, model);
-  return call("/v1/me/byok", { method: "PUT", body: JSON.stringify({ provider, api_key: apiKey, model }), caller: { userId } });
-}
-
-export function deleteByok(userId: string): Promise<Result<Me>> {
-  if (MOCK) return mock.deleteByok(userId);
-  return call("/v1/me/byok", { method: "DELETE", caller: { userId } });
+export function claimCredit(userId: string): Promise<Result<Credits>> {
+  if (MOCK) return mock.claimCredit(userId);
+  return call("/v1/me/credits/claim", { method: "POST", caller: { userId } });
 }
 
 export function history(userId: string, limit = 50): Promise<Result<{ items: HistoryItem[] }>> {
