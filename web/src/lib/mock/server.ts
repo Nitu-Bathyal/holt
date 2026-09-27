@@ -6,6 +6,7 @@ import type {
   JobStatus, Me, Mode, Report, Result, StarterIssue,
 } from "../types";
 import { MODELS } from "../models";
+import { verdictView } from "./derived";
 import { canonicalName, isMockNotFound, mockFindPool, mockIssues, mockReport, PRECACHED } from "./fixtures";
 
 const JOB_MS = Number(process.env.MOCK_JOB_MS || 6500);
@@ -71,8 +72,8 @@ function user(id: string) {
         byok: null,
       },
       history: [
-        { job_id: "job_seed_requests", status: "done", repo: "psf/requests", mode: "rules", days: 7, verdict: "viable", headline: "Worth your time", created_at: new Date(Date.now() - 26 * 3_600_000).toISOString() },
-        { job_id: "job_seed_pytorch", status: "done", repo: "pytorch/pytorch", mode: "rules", days: 7, verdict: "not_viable", headline: "Not worth your time", created_at: new Date(Date.now() - 50 * 3_600_000).toISOString() },
+        { job_id: "job_seed_requests", status: "done", repo: "psf/requests", mode: "rules", days: 7, ...verdictView("viable"), verdict: "viable", created_at: new Date(Date.now() - 26 * 3_600_000).toISOString() },
+        { job_id: "job_seed_pytorch", status: "done", repo: "pytorch/pytorch", mode: "rules", days: 7, ...verdictView("not_viable"), verdict: "not_viable", created_at: new Date(Date.now() - 50 * 3_600_000).toISOString() },
       ],
     };
     s.users.set(id, u);
@@ -83,7 +84,7 @@ function user(id: string) {
 function remember(userId: string | undefined, r: Report) {
   if (!userId) return;
   const h = user(userId).history;
-  h.unshift({ job_id: `job_${crypto.randomUUID().slice(0, 12)}`, status: "done", repo: r.repo, mode: r.mode, days: r.days, verdict: r.verdict, headline: r.headline, created_at: new Date().toISOString() });
+  h.unshift({ job_id: `job_${crypto.randomUUID().slice(0, 12)}`, status: "done", repo: r.repo, mode: r.mode, days: r.days, verdict: r.verdict, headline: r.headline, tone: r.tone, created_at: new Date().toISOString() });
   h.splice(30);
 }
 
@@ -260,7 +261,7 @@ function findResults(q: FindQuery): FindResult[] {
     .slice(0, q.limit)
     .map(({ seed, issues }) => ({
       repo: seed.repo,
-      headline: "Worth your time",
+      ...verdictView(seed.verdict),
       verdict: seed.verdict,
       description: seed.description,
       language: seed.language,

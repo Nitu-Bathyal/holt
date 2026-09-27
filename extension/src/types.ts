@@ -3,10 +3,16 @@
 
 export type Verdict = "viable" | "not_viable" | "insufficient_evidence";
 
+/** The verdict's colour, chosen by the server. */
+export type Tone = "good" | "bad" | "warn";
+
 export interface Report {
   repo: string;
   verdict: Verdict;
-  headline?: string;
+  /** The words for the verdict, from the server ("Worth your time"). */
+  headline: string;
+  /** Missing from responses cached before the server sent it. */
+  tone?: Tone;
   stats?: {
     outsider_attempts?: number;
     outsider_merged?: number;
