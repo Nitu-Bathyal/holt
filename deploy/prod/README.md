@@ -16,7 +16,8 @@ is the public route ([TUNNEL.md](TUNNEL.md)). It is built **only from
 | `install.sh` | One-time: the env file plus the nightly backup timer. No deploy timer, on purpose. |
 | `backup.sh` | `pg_dump` of both databases to `~/backups/holt/<stamp>/`, keeps 14 days. |
 | `warm.sh` | Runs `python -m holt_server.warm` detached in the server image (fills the caches), with the same secrets and token as a deploy. |
-| `edge.conf` | nginx: keeps the port across deploys, `/__build`, `www` → apex redirect, SSE-friendly proxy. |
+| `edge.conf` | nginx: keeps the port across deploys, `/__build`, `www` → apex redirect, SSE-friendly proxy, the Umami paths. A deploy puts changes live with a reload ([Edge config](#edge-config)). |
+| `../edge.sh` | Sourced by `deploy.sh` (and staging's `preview.sh`): checks a changed `edge.conf` with `nginx -t` in the running edge and reloads it. |
 | `migrate-web.sh`, `initdb/` | Auth.js tables migration (one-shot `migrate-web` service) and the `holt_web` database. The API's own migrations run in the one-shot `migrate-server` service. |
 | `TUNNEL.md` | Steps for the user to route githolt.com here. |
 | `umami.sh` | One-time: the analytics service (Umami): its database and role, `.env` keys, first start, admin password. See [Analytics](#analytics). |
@@ -25,7 +26,8 @@ is the public route ([TUNNEL.md](TUNNEL.md)). It is built **only from
 State lives in `~/.local/share/holt-prod/` (outside every checkout, so
 removing a worktree can't delete secrets): `.env`, `src/` (a clone at the
 deployed commit), `current` and `previous` (image tags), `build/build.json`
-(served at `/__build`), `logs/`.
+(served at `/__build`), `edge/default.conf` (the edge's live nginx config,
+plus `default.conf.prev`), `logs/`.
 
 ## Environment
 
@@ -90,9 +92,50 @@ What one run does, in order:
    `pallets/flask` is accepted (200/202), within 5 minutes.
 8. On failure: `compose up -d` with the previous tag, checks again, records
    the failure on `/__build`, exits 1. On success: records `current`/`previous`.
-9. Prunes only this stack: untag image tags other than current and previous,
+9. Edge config: when the deployed commit's `edge.conf` differs from the
+   edge's, installs it, runs `nginx -t` in the running edge and reloads
+   (never a restart; the port stays open), then runs the health check again.
+   A rejected or unhealthy config is put back and the run fails loudly
+   (`EDGE CONFIG NOT APPLIED` / `REVERTED`, and on `/__build`); the new
+   release itself stays live. See [Edge config](#edge-config).
+10. Prunes only this stack: untag image tags other than current and previous,
    `docker image prune --filter label=holt.stack=holt-prod`, and the builder's
    cache over 3 GB. Nothing else on the box is touched.
+
+## Edge config
+
+The edge (nginx) reads `~/.local/share/holt-prod/edge/default.conf`, a copy
+of `deploy/prod/edge.conf` at the deployed commit. The whole directory is
+mounted, not the file: a single-file bind mount pins the file's inode, so
+after git replaced `edge.conf` the running edge kept the old one until it
+was recreated, which deploys never do (the Umami paths from #76 answered
+404 after the 28 Sep deploy for that reason).
+
+Each deploy, after the swap and the health check:
+
+- `edge.conf` unchanged: nothing happens (`edge config unchanged` in the log).
+- Changed: the old file is kept as `default.conf.prev`, the new one goes
+  in, `nginx -t` runs inside the running edge, then `nginx -s reload`.
+  A reload is graceful: the port never closes and open requests finish.
+  Then the health check runs again.
+- `nginx -t` fails: the old file goes back (the running nginx never left
+  it), `/__build` records the failure, and the run exits 1 with
+  `EDGE CONFIG NOT APPLIED` and nginx's message. The new release is live;
+  fix `edge.conf` on main and deploy again.
+- The health check fails after the reload: `default.conf.prev` goes back,
+  another reload, and the run exits 1 with `EDGE CONFIG REVERTED`.
+
+On the first deploy that has this, compose sees the edge's new mount and
+recreates the edge once (a second or so without the port); from then on
+the edge is only ever reloaded. That deploy also puts any config the old
+edge missed live, such as the `/stats/` paths.
+
+By hand (the same checks deploy.sh makes):
+
+```sh
+docker exec holt-prod-edge-1 nginx -t
+docker exec holt-prod-edge-1 nginx -s reload
+```
 
 ## Status, logs, helpers
 
@@ -196,6 +239,13 @@ HOLT_PROD_PROJECT=$COMPOSE_PROJECT_NAME HOLT_PROD_HOME=/tmp/rehearsal HOLT_PROD_
 ```
 
 `cx done` takes that project down by name.
+
+The edge step alone needs no images: point `HOLT_PROD_HOME` at a scratch
+directory with a `.env` (the `:?` variables set to anything,
+`HOLT_PROD_PORT=$PORT`) and `src/deploy/prod/edge.conf`, source `edge.sh`,
+define `compose` as `deploy.sh` does, then `edge_seed`, `compose up -d
+--no-deps edge`, edit that `edge.conf` and `edge_apply`, with a `curl` loop
+on the port to show it never drops.
 
 ## Removing it
 

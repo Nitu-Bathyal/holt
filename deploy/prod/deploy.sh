@@ -11,15 +11,19 @@
 # quiet, build the server and web images one at a time (tagged with the
 # commit SHA), run the one-shot web and server migrations, swap the containers behind the
 # edge (its port never moves), health-check on 127.0.0.1, and roll back to
-# the previous tag if that fails. Then prune only this stack's images.
+# the previous tag if that fails. Then, when the commit's edge.conf differs
+# from the edge's, check it with nginx -t in the running edge and reload it
+# (never a restart); a rejected config is put back and the run fails. Then
+# prune only this stack's images.
 #
 # Only the orchestrator runs it, when the user approves a deploy. Nothing
 # runs it on a timer: production never auto-updates.
 #
 # State: ~/.local/share/holt-prod/  .env (make-env.sh), src/ (clone at the
 # deployed commit), current + previous (image tags), build/build.json
-# (served at /__build), logs/. Secrets that must not sit in .env come from
-# ~/.config/holt/secrets.env when it exists (see README.md).
+# (served at /__build), edge/default.conf (the edge's live nginx config, a
+# copy of src/deploy/prod/edge.conf), logs/. Secrets that must not sit in
+# .env come from ~/.config/holt/secrets.env when it exists (see README.md).
 set -euo pipefail
 export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:${PATH:-}"
 
@@ -28,6 +32,8 @@ log() { printf '%s %s\n' "$(date -u +%FT%TZ)" "$*"; }
 die() { log "ERROR: $*"; exit 1; }
 # shellcheck source=env.sh
 . "$here/env.sh"   # STATE, PROJECT, SECRETS, load_prod_env
+# shellcheck source=../edge.sh
+. "$here/../edge.sh"   # edge_seed, edge_apply, edge_revert
 SRC="$STATE/src"
 REPO="${HOLT_REPO:-holt-oss/holt}"
 LABEL="holt.stack=$PROJECT"
@@ -85,6 +91,7 @@ fi
 export HOLT_SRC="$SRC" HOLT_TAG="$sha" HOLT_PROD_HOME="$STATE"
 export COMPOSE_PROJECT_NAME="$PROJECT" HOLT_PROD_PROJECT="$PROJECT" BUILDX_BUILDER="$BUILDER"
 compose() { docker compose -p "$PROJECT" -f "$here/compose.yml" --env-file "$STATE/.env" "$@"; }
+EDGE_CONF="$SRC/deploy/prod/edge.conf"   # the deployed commit's; the edge reads a copy in $STATE/edge
 dlog="$STATE/logs/deploy-$(date -u +%Y%m%dT%H%M%SZ)-$short.log"
 log "log: $dlog"
 
@@ -173,6 +180,10 @@ compose up -d db >>"$dlog" 2>&1
 compose --profile migrate run --rm migrate-web >>"$dlog" 2>&1 || die "web migration failed; see $dlog"
 compose --profile migrate run --rm migrate-server >>"$dlog" 2>&1 || die "server migration failed; see $dlog"
 
+# The edge's config directory must exist before a (re)created edge starts.
+edge_seed "$EDGE_CONF" "$STATE/edge" || die "$EDGE_MSG"
+[[ -n "$EDGE_MSG" ]] && log "$EDGE_MSG"
+
 write_build_json deploying "starting $short"
 log "swapping containers to $short (previous: ${current:0:7})"
 compose up -d --remove-orphans >>"$dlog" 2>&1 || die "compose up failed; see $dlog"
@@ -196,6 +207,23 @@ else
     fi
     write_build_json failed "$short failed its health check (nothing to roll back to)"
     die "$short failed its health check and there is no previous release; see $dlog"
+fi
+
+# --- edge config -------------------------------------------------------------------
+# After the swap, so a failure here leaves the new release live behind the old
+# config. `nginx -s reload` is graceful: the port never closes. The edge only
+# serves /__build and proxies, so a config that passes nginx -t but breaks the
+# site is caught by the same health check, and the previous config goes back.
+if ! edge_apply "$EDGE_CONF" "$STATE/edge"; then
+    write_build_json failed "$short is live, but its edge.conf was rejected; the edge keeps the previous config"
+    die "EDGE CONFIG NOT APPLIED: $EDGE_MSG ($short itself is live)"
+fi
+log "$EDGE_MSG"
+if (( EDGE_CHANGED )) && ! healthy; then
+    edge_revert "$STATE/edge" || true
+    healthy || log "still unhealthy with the previous edge config; see 'compose logs edge'"
+    write_build_json failed "$short is live, but its edge.conf broke the health check; the previous edge config is back"
+    die "EDGE CONFIG REVERTED: the site failed its health check with $short's edge.conf"
 fi
 
 # --- clean up after ourselves only --------------------------------------------------
