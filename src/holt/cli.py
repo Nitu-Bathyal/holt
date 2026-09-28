@@ -10,6 +10,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from holt import baseline, credentials, model, paths, reponame
+from holt.models_help import MODELS_HELP_EPILOG
 from holt.agent import entry, pipeline
 from holt.evidence.fixtures import FixtureProvider
 from holt.evidence.provider import EvidenceProvider
@@ -876,6 +877,8 @@ def main(argv: list[str] | None = None) -> int:
         "models",
         help="set up the AI model that writes the explanation (optional; "
              "Gemini has a free tier)",
+        epilog=MODELS_HELP_EPILOG,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     models_p.add_argument("--provider",
                           help="gemini, openrouter, anthropic, openai, ollama, "
