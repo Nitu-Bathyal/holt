@@ -30,6 +30,14 @@ describe("chipView", () => {
     expect(chipView({ state: "found", data: report({ tone: "purple" as never }) }, flask).tone).toBe("unknown");
   });
 
+  it("says 'updating', never the old verdict, when older rules made the report", () => {
+    const v = chipView({ state: "found", data: report({ outdated: true, verdict: "viable" }) }, flask);
+    expect(v.label).toBe("Holt: updating");
+    expect(v.tone).toBe("unknown");
+    expect(v.stat).toBeNull();
+    expect(chipView({ state: "found", data: report({ outdated: false }) }, flask).label).toBe("Holt: Worth your time");
+  });
+
   it("says 'Check with Holt' when nothing is cached, on errors and without a usable headline", () => {
     expect(chipView({ state: "missing" }, flask).label).toBe("Check with Holt");
     expect(chipView({ state: "error" }, flask).label).toBe("Check with Holt");

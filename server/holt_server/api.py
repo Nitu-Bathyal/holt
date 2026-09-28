@@ -34,6 +34,7 @@ from holt_server.db import (
     Report,
     StarterCache,
     User,
+    current_engine,
     dedupe_key,
     find_key,
     iso,
@@ -120,8 +121,11 @@ async def badge_svg(owner: str, repo: str, request: Request) -> Response:
     svc = services(request)
     name = repos.normalize(f"{owner}/{repo}")
     latest = await latest_report(svc, name, "rules", 7)
-    verdict = latest.report.get("verdict") if latest else None
-    stats = latest.report.get("stats") if latest else None
+    # An outdated report's verdict is never shown: the badge says it is
+    # updating until the refresh queued below lands.
+    updating = latest is not None and latest.outdated
+    verdict = latest.report.get("verdict") if latest and not updating else None
+    stats = latest.report.get("stats") if latest and not updating else None
     shown = latest.repo if latest else name
     stale = latest is None or not is_fresh(svc, latest)
     if stale:
@@ -135,13 +139,15 @@ async def badge_svg(owner: str, repo: str, request: Request) -> Response:
             pass
     link = f"{svc.settings.web_url.rstrip('/')}/{shown}"
     return Response(
-        badge.render(verdict, stats, link),
+        badge.render(verdict, stats, link, updating=updating),
         media_type="image/svg+xml",
-        headers={"Cache-Control": BADGE_CACHE},
+        headers={"Cache-Control": BADGE_UPDATING_CACHE if updating else BADGE_CACHE},
     )
 
 
 BADGE_CACHE = "public, max-age=3600, stale-while-revalidate=86400"
+# Short, so the new verdict replaces "updating" soon after the refresh lands.
+BADGE_UPDATING_CACHE = "public, max-age=300"
 
 
 def badge_client(request: Request) -> str:
@@ -174,7 +180,9 @@ async def latest_report(svc: Services, repo: str, mode: str, days: int) -> Repor
     `report.retime`), so when there is no fresh one for `days`, a fresh one
     made for another budget answers, with its reply-time note redone. It is
     not stored: the next read derives it again, and a real run for `days`
-    wins as soon as one exists.
+    wins as soon as one exists. Only reports from the current engine count
+    as fresh (`Report.outdated`); an outdated one is still returned when
+    nothing fresher exists, and callers decide what to do with it.
     """
     key = repos.key(repo)
     async with svc.db.session() as s:
@@ -188,18 +196,22 @@ async def latest_report(svc: Services, repo: str, mode: str, days: int) -> Repor
         cutoff = now() - timedelta(hours=svc.settings.cache_hours)
         others = (await s.execute(
             select(Report).where(Report.repo_key == key, Report.mode == "rules",
-                                 Report.days != days, Report.created_at >= cutoff)
+                                 Report.days != days, Report.created_at >= cutoff,
+                                 current_engine())
             .order_by(Report.created_at.desc(), Report.id.desc()).limit(5)
         )).scalars().all()
     for other in others:
         if (derived := report_mod.retime(other.report, days)) is not None:
             return Report(id=other.id, repo=other.repo, repo_key=other.repo_key, mode="rules",
-                          days=days, report=derived, created_at=other.created_at)
+                          days=days, report=derived, created_at=other.created_at,
+                          engine_version=other.engine_version)
     return exact
 
 
 def is_fresh(svc: Services, report: Report) -> bool:
-    return now() - utc(report.created_at) < timedelta(hours=svc.settings.cache_hours)
+    """Young enough to serve as the answer, and made by the current engine."""
+    return (not report.outdated
+            and now() - utc(report.created_at) < timedelta(hours=svc.settings.cache_hours))
 
 
 async def active_job(svc: Services, key: str, mode: str, days: int) -> Job | None:
@@ -289,6 +301,7 @@ async def get_report(owner: str, repo: str, request: Request,
         raise ApiError("not_found", f"There's no report for {name} yet.")
     report = schema.Report.model_validate(latest.report)
     report.holt_users = await repo_stats.for_repo(svc, name)
+    report.outdated = latest.outdated
     return report
 
 
@@ -548,7 +561,7 @@ async def cached_find(svc: Services, key: str, limit: int) -> list[dict] | None:
     cutoff = now() - timedelta(hours=svc.settings.find_cache_hours)
     async with svc.db.session() as s:
         row = await s.get(FindCache, key)
-    if row is None or utc(row.created_at) < cutoff:
+    if row is None or utc(row.created_at) < cutoff or row.outdated:
         return None
     computed_for = int((row.params or {}).get("limit") or 0)
     # Enough results, or the search ran out before its own limit (so asking

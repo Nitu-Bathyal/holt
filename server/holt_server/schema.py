@@ -572,6 +572,10 @@ class Report(VerdictView):
     # Filled when the report is served (GET /v1/reports/{owner}/{repo}), never
     # stored with it; null when too few Holt users sent pull requests here.
     holt_users: HoltUsers | None = None
+    # Filled when served by GET /v1/reports/{owner}/{repo}, never stored: true
+    # when an older version of Holt's rules made this report. The web runs a
+    # fresh check instead of showing it (and shows it only if that fails).
+    outdated: bool = False
 
     # The top of the report, in order: `headline` and `verdict_line` (the
     # verdict and its reason), `numbers_line` (what happened, with dates),

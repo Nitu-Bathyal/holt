@@ -1,5 +1,7 @@
 // GET /api/public/report/{owner}/{repo}: the cached rules report, or 404.
-// For the browser extension; never starts an analysis.
+// For the browser extension; never starts an analysis, not even for a report
+// an older engine made (`outdated: true`, which the extension shows as
+// "updating"; the report page re-runs it).
 import { NextResponse } from "next/server";
 import { getReport } from "@/lib/api";
 import { preflight, publicGet } from "@/lib/public-api";

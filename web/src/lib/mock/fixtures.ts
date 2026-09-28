@@ -364,6 +364,7 @@ function fromSeed(seed: Seed, mode: "rules" | "ai", days: number): Report {
     generated_at: hoursAgo(2),
     cost: mode === "ai" ? { model: "openai/gpt-5-mini", input_tokens: 9120, output_tokens: 1480, usd: 0.00524, seconds: 41.3 } : null,
     holt_users: HOLT_USERS[seed.repo] ?? null,
+    outdated: false,
   });
 }
 

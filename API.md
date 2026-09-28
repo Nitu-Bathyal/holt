@@ -135,6 +135,23 @@ are recounted by the daily contributions refresh (and
 recounts that user's repositories at once. Surfaces show them as they come and
 never rank or name anyone.
 
+### Engine version and `outdated`
+
+Every stored report records the engine version that made it
+(`ENGINE_VERSION` in `src/holt/engine_version.py`, bumped whenever the verdict
+rules or the report's shape change; reports from before it was recorded count
+as older). A report from an older version is never a cache hit: `POST
+/v1/analyses` runs a fresh check, finds screen again, and Discover,
+recommendations and My Contributions leave it out until it is redone. The
+same goes for cached `/v1/find` results.
+
+`outdated` (boolean) is filled only by `GET /v1/reports/{owner}/{repo}`, like
+`holt_users`, and is never stored: `true` when an older engine made the report
+returned. That endpoint still returns it (never a 404), so a client can fall
+back to it; the web report page runs a fresh check instead and shows the old
+report only if that check fails. The public extension proxy passes it on
+(see below).
+
 Every evidence item MUST have a clickable `url`.
 
 In `stats`, an outsider is anyone not on the project's team. The team is the
@@ -245,7 +262,8 @@ Body: `{"repo": "owner/repo", "mode": "rules"|"ai", "days": 7, "refresh": false}
   the request is ignored. It is accepted (not a 400) for older clients, and it
   never reaches the engine, the job or the cache key.
 - Returns `200 {"status":"done","report":Report}` immediately when a cached
-  report exists (same repo/mode/days, younger than 24h) and `refresh` is false.
+  report exists (same repo/mode/days, younger than 24h, made by the current
+  engine version) and `refresh` is false.
   For `mode:"rules"`, a report younger than 24h for **another** `days` counts
   too when it is `budget_independent`: it is served for the asked `days` with
   its reply-time note redone, and nothing is read from GitHub.
@@ -277,7 +295,8 @@ The latest 7-day rules report per repository, newest first, for sitemaps:
 ### `GET /v1/reports/{owner}/{repo}?mode=rules|ai&days=7`
 Latest cached report or 404 `not_found`. With `mode=rules` and no fresh
 report for this `days`, a fresh `budget_independent` one made for another
-`days` is served for this one (as for `POST /v1/analyses`). Public via the BFF: no user needed
+`days` is served for this one (as for `POST /v1/analyses`). `outdated: true`
+when an older engine version made it (see "Engine version and `outdated`"). Public via the BFF: no user needed
 (used for shareable pages and OG images), but it still requires the internal
 key like every `/v1` route.
 
@@ -362,9 +381,12 @@ report:
   72h; "worth your time" if neither).
 - any other verdict: neutral grey "Holt | see report", never a red verdict.
 - no report yet: neutral grey "Holt | not checked yet".
+- the report is from an older engine version: neutral grey "Holt | updating",
+  never its old verdict, sent with `Cache-Control: public, max-age=300` so
+  the new verdict shows soon.
 
-When there is no report, or it is over 24h old, it shows what it has and
-queues a rules check behind it. Badge-queued checks have their own rate
+When there is no report, or it is over 24h old or outdated, it shows what it
+has and queues a rules check behind it. Badge-queued checks have their own rate
 limits (per client IP and in total, separate from user limits), run at most
 one at a time, and wait behind every user request.
 
@@ -868,6 +890,10 @@ Proxies `GET /v1/reports/{owner}/{repo}?mode=rules&days=7`.
 - `200` → the Report object (above), `mode: "rules"`. The extension reads only
   `headline`, `tone` and `stats.outsider_attempts` / `stats.outsider_merged`,
   so the proxy may strip `evidence` to keep responses small.
+- `outdated: true` on a `200` means an older engine version made the report.
+  The proxy never starts a check for it; it sends `max-age=300` instead of
+  900, and the extension shows "Holt: updating" (not the old verdict) and
+  links to the report page, which re-runs it.
 - `404` → `{"error": {"code": "not_found", ...}}` when nothing is cached yet
   (or the repo is missing/private). The extension then shows "Check with Holt"
   and links to `/{owner}/{repo}`, whose page starts the analysis.

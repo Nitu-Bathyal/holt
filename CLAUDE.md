@@ -55,6 +55,11 @@ Server: see `server/README.md`. Extension: `cd extension && npm ci && npm test`.
 - Never break the engine's contract: the verdict is computed by rules in
   `agent/verdict.py` from verified findings; the model only interprets and
   explains. Unsupported findings are dropped before the verdict.
+- Bump `ENGINE_VERSION` in `src/holt/engine_version.py` in any PR that changes
+  what a report says for the same evidence (verdict rules, the signals and
+  thresholds they read, or the report's fields and wording). The server then
+  stops serving reports from the old engine; run `warm.sh --stale-only` after
+  deploying it (`deploy/prod/README.md`).
 - Holt is read-only toward GitHub. It never posts, opens PRs, or contacts anyone.
 - User-facing text is plain English for beginners. No internal enum names
   (`not_viable`), no statistics jargon (MCC, p-values) in product output.

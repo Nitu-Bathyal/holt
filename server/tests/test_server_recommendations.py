@@ -9,6 +9,7 @@ from datetime import timedelta
 from conftest import STATS, canned_report
 from holt_server import entitlements, recommendations
 from holt_server.db import (
+    ENGINE_VERSION,
     Contribution,
     FindCache,
     GitHubConnection,
@@ -208,7 +209,8 @@ def test_find_results_fill_in_repos_without_a_report(h):
              "description": "d", "stars": 5, "stats": dict(STATS), "issues": [issue(9)]}
     partial = {"repo": "octo/partial", "verdict": "viable", "language": "Python",
                "stats": {"outsider_attempts": 3}, "issues": []}
-    add(h, profile(), FindCache(key="k", params={}, results=[found, partial]))
+    add(h, profile(), FindCache(key="k", params={"engine_version": ENGINE_VERSION},
+                                results=[found, partial]))
     body = get(h)
     assert names(body) == ["octo/found"]
     assert body["picks"][0]["issues"][0]["number"] == 9
