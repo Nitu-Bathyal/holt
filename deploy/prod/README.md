@@ -159,6 +159,19 @@ deploy/prod/warm.sh --dry-run
 deploy/prod/warm.sh                 # then --status or --logs
 ```
 
+**After a deploy that changes the engine** (`ENGINE_VERSION` in
+`src/holt/engine_version.py` went up), every stored report from the old
+engine is out of date. Nobody is served one: report pages re-run it, the
+badge and the extension say "updating", and Discover and recommendations
+leave it out until it is redone. To redo the seed list's reports straight
+away rather than as people visit, run the stale-only pass once the deploy
+is up:
+
+```sh
+deploy/prod/warm.sh --dry-run --stale-only   # "would analyse …" per outdated seed
+deploy/prod/warm.sh --stale-only             # then --status or --logs
+```
+
 ## Checks after a deploy
 
 ```sh

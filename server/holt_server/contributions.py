@@ -45,6 +45,7 @@ from holt_server.db import (
     GitHubConnection,
     Report,
     RepoView,
+    current_engine,
     iso,
     now,
     utc,
@@ -241,10 +242,11 @@ def after_holt(created: datetime, first_view: datetime | None,
 
 
 async def verdicts(s, keys: set[str]) -> dict[str, schema.RepoVerdict]:
-    """The latest 7-day rules verdict per repository, where one is cached."""
+    """The latest 7-day rules verdict per repository, where one is cached by
+    the current engine."""
     if not keys:
         return {}
-    rules = and_(Report.mode == "rules", Report.days == 7)
+    rules = and_(Report.mode == "rules", Report.days == 7, current_engine())
     latest = (select(Report.repo_key, func.max(Report.created_at).label("at"))
               .where(Report.repo_key.in_(keys), rules)
               .group_by(Report.repo_key).subquery())

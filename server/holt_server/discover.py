@@ -32,7 +32,7 @@ from pydantic import Field
 from sqlalchemy import func, select
 
 from holt_server import repos, schema
-from holt_server.db import RepoMeta, Report, Usage, iso, now, utc
+from holt_server.db import RepoMeta, Report, Usage, current_engine, iso, now, utc
 from holt_server.deps import internal, services
 from holt_server.github import DETAILS_BATCH
 from holt_server.schema import Model, Stats, VerdictView, odds_for, verdict_line
@@ -97,9 +97,10 @@ def _norm(value: str | None) -> str | None:
 
 async def _latest(svc: Services) -> list[tuple]:
     """(repo, report fields..., meta) for the newest 7-day rules report of each repo.
-    Only the fields a card needs come out of the report JSON, not whole bodies."""
+    Only the fields a card needs come out of the report JSON, not whole bodies.
+    Reports from an older engine are left out until the warm pass redoes them."""
     latest = (select(func.max(Report.id).label("id"))
-              .where(Report.mode == "rules", Report.days == DAYS)
+              .where(Report.mode == "rules", Report.days == DAYS, current_engine())
               .group_by(Report.repo_key).subquery())
     async with svc.db.session() as s:
         return (await s.execute(

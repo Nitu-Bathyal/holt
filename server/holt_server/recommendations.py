@@ -6,7 +6,8 @@ GitHub is never called while the page is served:
 
 * **Candidates** are the repositories whose latest 7-day **rules** report says
   "Worth your time" (checked within `REPORT_MAX_DAYS`), plus viable results of
-  recent finds (`find_cache`) Holt has no report for. Maintainers must still
+  recent finds (`find_cache`) Holt has no report for; reports and finds from an
+  older engine version don't count. Maintainers must still
   be answering: a median first reply within `REPLY_MAX_HOURS` and at most
   `SILENT_MAX` of outside pull requests left without one. Archived repos and
   forks are left out, and so is every repository the user already sent a pull
@@ -192,9 +193,9 @@ async def candidates(svc: Services) -> dict[str, Candidate]:
     # Find results fill in repositories Holt has no recent report for.
     since = now() - timedelta(days=FIND_MAX_DAYS)
     async with svc.db.session() as s:
-        finds = (await s.execute(select(FindCache.results, FindCache.created_at)
-                                 .where(FindCache.created_at >= since)
-                                 .order_by(FindCache.created_at.desc()))).all()
+        finds = [(row.results, row.created_at) for row in (await s.execute(
+            select(FindCache).where(FindCache.created_at >= since)
+            .order_by(FindCache.created_at.desc()))).scalars() if not row.outdated]
         metas = {m.repo_key: m for m in (await s.execute(select(RepoMeta))).scalars()}
     for results, created in finds:
         for r in results or []:

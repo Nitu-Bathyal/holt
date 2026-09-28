@@ -16,6 +16,9 @@ export interface Report {
   /** A short count for the chip ("15 of 100 outside PRs merged"); null when
    * nobody outside tried. Missing from responses cached before it existed. */
   stat_line?: string | null;
+  /** True when an older version of Holt's rules made this report; the chip
+   * says "updating" instead of its verdict. Missing from older servers. */
+  outdated?: boolean;
   stats?: {
     outsider_attempts?: number;
     outsider_merged?: number;

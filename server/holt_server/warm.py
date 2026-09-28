@@ -5,6 +5,7 @@ app's default pages make.
     python -m holt_server.warm                 # everything, stopping on GitHub budget
     python -m holt_server.warm --dry-run       # what would run, no GitHub calls
     python -m holt_server.warm --no-find --limit 50
+    python -m holt_server.warm --stale-only    # after a deploy: redo reports from an older engine
 
 Or in the API process on a schedule: HOLT_WARM_INTERVAL_HOURS=6.
 
@@ -14,7 +15,11 @@ How it stays out of the way:
   request runs first, and the runner's badge lane allows one at a time. The
   pass itself waits for each job before queueing the next.
 * Fresh work is skipped: reports under HOLT_WARM_MAX_AGE_HOURS (20), finds
-  and starter issues still inside most of their cache lifetime.
+  and starter issues still inside most of their cache lifetime. A report or
+  find made by an older engine version (holt.engine_version) is never fresh.
+  `--stale-only` does just those: every seed whose latest report is from an
+  older engine, however young, and nothing else. Run it after a deploy that
+  bumps ENGINE_VERSION.
 * Repository details (discover.py) are read for every reported repo at once,
   a hundred per GraphQL query (about a point each), once a day.
 * Before each step it checks the GitHub GraphQL points left on every token
@@ -167,15 +172,26 @@ class Warmer:
 
     # --- freshness ----------------------------------------------------------
 
-    async def report_is_fresh(self, repo: str) -> bool:
-        cutoff = now() - timedelta(hours=self.svc.settings.warm_max_age_hours)
+    async def latest_report(self, repo: str) -> Report | None:
+        """The seed's newest 7-day rules report: its time and engine version only."""
         async with self.svc.db.session() as s:
-            created = (await s.execute(
-                select(Report.created_at).where(
+            row = (await s.execute(
+                select(Report.created_at, Report.engine_version).where(
                     Report.repo_key == repos.key(repo), Report.mode == "rules",
                     Report.days == DAYS)
-                .order_by(Report.created_at.desc()).limit(1))).scalar_one_or_none()
-        return created is not None and utc(created) >= cutoff
+                .order_by(Report.created_at.desc(), Report.id.desc()).limit(1)
+            )).first()
+        return Report(created_at=row[0], engine_version=row[1]) if row else None
+
+    async def report_is_fresh(self, repo: str) -> bool:
+        cutoff = now() - timedelta(hours=self.svc.settings.warm_max_age_hours)
+        latest = await self.latest_report(repo)
+        return latest is not None and not latest.outdated and utc(latest.created_at) >= cutoff
+
+    async def report_is_outdated(self, repo: str) -> bool:
+        """There is a report, and an older engine made it."""
+        latest = await self.latest_report(repo)
+        return latest is not None and latest.outdated
 
     async def starter_is_fresh(self, repo: str) -> bool:
         ttl = timedelta(hours=self.svc.settings.starter_cache_hours * REFRESH_AFTER)
@@ -187,7 +203,7 @@ class Warmer:
         ttl = timedelta(hours=self.svc.settings.find_cache_hours * REFRESH_AFTER)
         async with self.svc.db.session() as s:
             row = await s.get(FindCache, profile.key)
-        return row is not None and utc(row.created_at) >= now() - ttl
+        return row is not None and not row.outdated and utc(row.created_at) >= now() - ttl
 
     # --- jobs ---------------------------------------------------------------
 
@@ -243,8 +259,10 @@ class Warmer:
 
     # --- the three passes ---------------------------------------------------
 
-    async def warm_report(self, repo: str) -> None:
-        if await self.report_is_fresh(repo):
+    async def warm_report(self, repo: str, stale_only: bool = False) -> None:
+        skip = (not await self.report_is_outdated(repo) if stale_only
+                else await self.report_is_fresh(repo))
+        if skip:
             self.result.reports_fresh += 1
             return
         if self.dry_run:
@@ -345,13 +363,17 @@ class Warmer:
 
     async def run(self, seeds: list[str], *, reports: bool = True, starter: bool = True,
                   meta: bool = True, finds: bool = True,
-                  max_profiles: int | None = None) -> Result:
+                  max_profiles: int | None = None, stale_only: bool = False) -> Result:
+        """`stale_only`: only re-run seeds whose report an older engine made;
+        the other passes are skipped."""
+        if stale_only:
+            starter = meta = finds = False
         try:
             # Reports first: finds screen repositories through the report
             # cache, so a warm report cache makes every search cheaper.
             for repo in seeds:
                 if reports:
-                    await self.warm_report(repo)
+                    await self.warm_report(repo, stale_only)
                 if starter:
                     await self.warm_starter(repo)
             if meta:
@@ -413,6 +435,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--profiles", type=int, help="only the first N find profiles")
     parser.add_argument("--dry-run", action="store_true",
                         help="list what would run; no GitHub calls, no jobs")
+    parser.add_argument("--stale-only", action="store_true",
+                        help="only re-run seeds whose report an older engine version "
+                             "made, however young (after a deploy); nothing else")
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(message)s")
 
@@ -432,7 +457,8 @@ def main(argv: list[str] | None = None) -> int:
                                      reports=not args.no_reports,
                                      starter=not args.no_starter, meta=not args.no_meta,
                                      finds=not args.no_find,
-                                     max_profiles=args.profiles)
+                                     max_profiles=args.profiles,
+                                     stale_only=args.stale_only)
             if result is None:
                 return 1
             print(result.summary())

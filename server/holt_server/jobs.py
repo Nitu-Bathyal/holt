@@ -40,7 +40,16 @@ from typing import TYPE_CHECKING, Any
 from sqlalchemy import delete, select, update
 
 from holt_server import entitlements, starter
-from holt_server.db import BADGE_PRIORITY, FindCache, Job, Report, find_key, now
+from holt_server.db import (
+    BADGE_PRIORITY,
+    ENGINE_VERSION,
+    FindCache,
+    Job,
+    Report,
+    current_engine,
+    find_key,
+    now,
+)
 from holt_server.errors import ApiError
 from holt_server.github import JobStopped, job_stop
 
@@ -438,7 +447,7 @@ class JobRunner:
                 return
             if job.kind == "analysis":
                 s.add(Report(repo=job.repo, repo_key=job.repo_key, mode=job.mode,
-                             days=job.days, report=result))
+                             days=job.days, report=result, engine_version=ENGINE_VERSION))
             elif job.kind == "find":
                 await store_find(s, job.params or {}, job.days, result)
             elif job.kind == "playbook":
@@ -477,13 +486,14 @@ def _aware(when: datetime) -> datetime:
 
 
 async def fresh_rules_report(svc, repo: str, days: int) -> dict[str, Any] | None:
-    """The newest rules report for `repo`, if younger than the report cache."""
+    """The newest rules report for `repo`, if younger than the report cache
+    and made by the current engine."""
     cutoff = now() - timedelta(hours=svc.settings.cache_hours)
     async with svc.db.session() as s:
         return (await s.execute(
             select(Report.report).where(Report.repo_key == repo.lower(),
                                         Report.mode == "rules", Report.days == days,
-                                        Report.created_at >= cutoff)
+                                        Report.created_at >= cutoff, current_engine())
             .order_by(Report.created_at.desc(), Report.id.desc()).limit(1)
         )).scalar_one_or_none()
 
@@ -493,7 +503,7 @@ async def store_find(s, params: dict[str, Any], days: int, result: dict[str, Any
     key = find_key(params.get("languages") or [], params.get("topics") or [],
                    bool(params.get("hacktoberfest")), days)
     await s.execute(delete(FindCache).where(FindCache.key == key))
-    s.add(FindCache(key=key, params={**params, "days": days},
+    s.add(FindCache(key=key, params={**params, "days": days, "engine_version": ENGINE_VERSION},
                     results=list((result or {}).get("results") or [])))
 
 

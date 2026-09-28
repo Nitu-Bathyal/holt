@@ -2373,6 +2373,11 @@ export interface components {
             /** Numbers Line */
             readonly numbers_line: string;
             readonly odds: components["schemas"]["Odds"] | null;
+            /**
+             * Outdated
+             * @default false
+             */
+            outdated: boolean;
             /** Repo */
             repo: string;
             /** Rule Codes */

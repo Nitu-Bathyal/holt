@@ -157,7 +157,11 @@ export default async function RepoPage({ params, searchParams }: Props) {
         {/* Switching between the free and AI tabs crossfades the report, not the page. */}
         <ViewTransition key={mode} name="report-body" share="swap" enter="swap" exit="swap" default="none">
           <div>
-            {report.ok ? (
+            {report.ok && report.data.outdated && mode === "rules" ? (
+              // Made by an older version of the rules: check again, with the
+              // normal progress, and fall back to it only if that fails.
+              <AnalysisRunner repo={report.data.repo} mode={mode} days={days} signedIn={signedIn} fallback={report.data} />
+            ) : report.ok ? (
               <ReportView
                 report={report.data}
                 signedIn={signedIn}

@@ -39,7 +39,8 @@ def check_report_shape(report: dict, mode: str) -> None:
             "decided_by", "unknowns", "landing", "never_landed", "evidence",
             "evidence_until", "generated_at", "cost", "rule_codes", "tone",
             "verdict_line", "odds", "sample", "asks", "numbers_line", "first_timer_line",
-            "next_step", "stat_line", "counted", "holt_users", "budget_independent"}
+            "next_step", "stat_line", "counted", "holt_users", "budget_independent",
+            "outdated"}
     assert set(report) == keys
     # The committed fixtures are a frozen capture read with the benchmark's
     # rules, where the budget can move the verdict: never served for another

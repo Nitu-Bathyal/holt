@@ -34,8 +34,9 @@ export async function publicGet<T>(req: Request, bucket: string, load: (ip: stri
   } else {
     const r = await load(ip);
     res = r.ok ? NextResponse.json(r.data) : NextResponse.json({ error: r.error }, { status: r.status });
-    // 15 min on 200, 5 min on 404 so a new analysis shows up soon.
-    res.headers.set("Cache-Control", r.ok ? "public, max-age=900" : r.status === 404 ? "public, max-age=300" : "no-store");
+    // 15 min on 200, 5 min on 404 or an outdated report so a new analysis shows up soon.
+    const outdated = r.ok && (r.data as { outdated?: unknown } | null)?.outdated === true;
+    res.headers.set("Cache-Control", r.ok && !outdated ? "public, max-age=900" : r.ok || r.status === 404 ? "public, max-age=300" : "no-store");
   }
   cors(res.headers);
   return res;

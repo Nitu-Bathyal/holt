@@ -194,6 +194,7 @@
   "asks": [],
   "budget_independent": false,
   "holt_users": null,
+  "outdated": false,
   "headline": "Worth your time",
   "tone": "good",
   "verdict_line": "Outside contributors do get merged here, but about half get no reply, so choose your first change carefully.",

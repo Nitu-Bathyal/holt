@@ -20,6 +20,8 @@ POSITIVE_COLOR = "#1a7f37"
 NEUTRAL_COLOR = "#57606a"
 NEUTRAL = "see report"
 UNCHECKED = "not checked yet"
+# The latest report is from an older engine; a fresh one is on its way.
+UPDATING = "updating"
 
 # Only a quick first reply is worth putting on the badge; a slow one is still
 # in the report.
@@ -54,8 +56,11 @@ def short_hours(hours: float) -> str:
     return f"~{round(hours / 24)}d"
 
 
-def message(verdict: str | None, stats: dict[str, Any] | None) -> tuple[str, str]:
+def message(verdict: str | None, stats: dict[str, Any] | None,
+            updating: bool = False) -> tuple[str, str]:
     """The badge's right half and its colour, from the latest rules report."""
+    if updating:
+        return UPDATING, NEUTRAL_COLOR
     if verdict is None:
         return UNCHECKED, NEUTRAL_COLOR
     if verdict != "viable":
@@ -70,8 +75,9 @@ def message(verdict: str | None, stats: dict[str, Any] | None) -> tuple[str, str
     return " · ".join(parts) or "worth your time", POSITIVE_COLOR
 
 
-def render(verdict: str | None, stats: dict[str, Any] | None, link: str) -> str:
-    msg, color = message(verdict, stats)
+def render(verdict: str | None, stats: dict[str, Any] | None, link: str,
+           updating: bool = False) -> str:
+    msg, color = message(verdict, stats, updating)
     lw = text_width(LABEL) + 12
     mw = text_width(msg) + 12
     total = lw + mw

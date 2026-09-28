@@ -21,6 +21,16 @@ export function chipView(s: ChipState, r: Repo): ChipView {
   if (s.state === "loading") {
     return { tone: "unknown", label: "Holt", stat: "checking…", title: `Looking up ${name} on Holt` };
   }
+  // An older version of Holt's rules made this report: its verdict may be out
+  // of date, so it isn't shown. The report page checks again.
+  if (s.state === "found" && s.data.outdated === true) {
+    return {
+      tone: "unknown",
+      label: "Holt: updating",
+      stat: null,
+      title: `Holt's rules were updated. Click to check ${name} again.`,
+    };
+  }
   // The server words and colours the verdict; the chip only shows it. Anything
   // that isn't a short headline is treated as no answer.
   const headline = s.state === "found" ? s.data.headline : undefined;

@@ -48,12 +48,17 @@ interface State {
   users: Map<string, { me: Me; history: HistoryItem[] }>;
 }
 
+/** Always outdated, and its fresh check always fails (the report page's fallback). */
+const OUTDATED = "mock/outdated";
+
 // globalThis so route handlers and pages share one state in dev.
 const g = globalThis as unknown as { holtMock?: State };
 function state(): State {
   if (!g.holtMock) {
     const cache = new Map<string, Report>();
     for (const repo of PRECACHED) cache.set(key(repo, "rules", 7), mockReport(repo, "rules", 7));
+    // A report from older rules whose fresh check fails: the page falls back to it.
+    cache.set(key(OUTDATED, "rules", 7), { ...mockReport(OUTDATED, "rules", 7), outdated: true });
     g.holtMock = { cache, jobs: new Map(), findJobs: new Map(), users: new Map() };
   }
   return g.holtMock;
@@ -122,7 +127,8 @@ export async function startAnalysis(
   }
   const s = state();
   const cached = s.cache.get(key(repo, mode, days));
-  if (cached && !refresh) {
+  if (repo === OUTDATED) return err(502, "upstream", "GitHub didn't answer in time. Try again in a minute.");
+  if (cached && !refresh && !cached.outdated) {
     remember(userId, cached);
     return { ok: true, data: { status: "done", report: cached } };
   }

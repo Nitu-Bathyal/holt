@@ -28,6 +28,8 @@ from sqlalchemy import (
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from holt.engine_version import ENGINE_VERSION
+
 
 def now() -> datetime:
     return datetime.now(UTC)
@@ -348,8 +350,23 @@ class Report(Base):
     days: Mapped[int] = mapped_column(Integer)
     report: Mapped[dict] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    # The engine's ENGINE_VERSION when the report was made. NULL (reports from
+    # before the column) counts as older than every version.
+    engine_version: Mapped[int | None] = mapped_column(Integer, nullable=True,
+                                                       default=lambda: ENGINE_VERSION)
 
     __table_args__ = (Index("ix_reports_lookup", "repo_key", "mode", "days", "created_at"),)
+
+    @property
+    def outdated(self) -> bool:
+        """Made by an older engine: its verdict or shape may be out of date,
+        so no cache serves it as an answer."""
+        return self.engine_version is None or self.engine_version < ENGINE_VERSION
+
+
+def current_engine():
+    """SQL filter: reports made by this engine version (or a newer one)."""
+    return Report.engine_version >= ENGINE_VERSION
 
 
 class Database:
@@ -390,6 +407,13 @@ class FindCache(Base):
     params: Mapped[dict] = mapped_column(JSON)
     results: Mapped[list] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+    @property
+    def outdated(self) -> bool:
+        """Screened by an older engine (`params.engine_version`, missing on
+        results stored before it was recorded): not served, searched again."""
+        version = (self.params or {}).get("engine_version")
+        return not isinstance(version, int) or version < ENGINE_VERSION
 
 
 def find_key(languages: list[str], topics: list[str], hacktoberfest: bool, days: int) -> str:

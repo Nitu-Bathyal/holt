@@ -136,6 +136,12 @@ These invariants are load-bearing rather than stylistic:
   enter the agent path.
 - Replayed and synthetic results identify themselves in their own output.
 - A skipped test is not a passing test. Use `pytest -rs` and report skips.
+- A change to what a report says for the same evidence (the verdict rules, the
+  signals and thresholds they read, or the report's fields and wording) bumps
+  `ENGINE_VERSION` in `src/holt/engine_version.py` by one. The web app keeps
+  every report it has made and serves it for a day; the version is how it knows
+  a stored report came from older rules and must be checked again. Refactors
+  that leave every report the same don't bump it.
 
 ## Fixtures and recordings
 
