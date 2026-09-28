@@ -20,6 +20,10 @@
 # all come from it. It lives in deploy/staging/.env (make-env.sh writes it);
 # an exported STAGING_HOST wins for that run.
 #
+# The edge reads its nginx config from ~/.local/share/holt-staging/edge/, a
+# copy of the preview's edge.conf: when that changes, it is checked with
+# nginx -t in the running edge and reloaded (deploy/edge.sh), never restarted.
+#
 # Serialised with flock: a run that finds another in progress exits.
 # Waits for the 1-minute load < 6 and MemAvailable > 3 GB before building.
 set -euo pipefail
@@ -47,6 +51,11 @@ PRO_PROJECT=stage-holt-pro
 
 mkdir -p "$STATE/logs"
 log() { printf '%s %s\n' "$(date -u +%FT%TZ)" "$*"; }
+# edge_seed / edge_apply: next to the timer's copy (install.sh), or in the repo.
+here="$(cd "$(dirname "$0")" && pwd)"
+if [[ -f "$here/edge.sh" ]]; then . "$here/edge.sh"; else . "$here/../edge.sh"; fi
+EDGE_DIR="$STATE/edge"
+export HOLT_STAGE_EDGE_DIR="$EDGE_DIR"
 
 exec 9>"$STATE/lock"
 if ! flock -n 9; then log "another run is in progress; skipping"; exit 0; fi
@@ -406,6 +415,9 @@ pro_started=0
 if (( pro_on )) && docker network inspect "${PROJECT}_default" >/dev/null 2>&1; then
     pro_up; pro_started=1
 fi
+# The edge's config directory must exist before a (re)created edge starts.
+edge_seed "$DEPLOY/edge.conf" "$EDGE_DIR" || fail "$EDGE_MSG"
+[[ -n "$EDGE_MSG" ]] && log "$EDGE_MSG"
 compose up -d --remove-orphans >>"$blog" 2>&1 || fail "compose up failed; see $blog"
 (( pro_on && ! pro_started )) && pro_up
 
@@ -416,6 +428,10 @@ for _ in $(seq 1 60); do
     sleep 5
 done
 (( ok )) || fail "the site did not answer 200 within 5 minutes (last status $code); see $blog"
+
+# A changed edge.conf: nginx -t in the running edge, then a graceful reload.
+edge_apply "$DEPLOY/edge.conf" "$EDGE_DIR" || fail "EDGE CONFIG NOT APPLIED (the preview itself is up): $EDGE_MSG"
+log "$EDGE_MSG"
 
 rm -f "$STATE/smoke.json"   # belongs to the previous build
 write_build_json live "live" "$preview_sha"

@@ -9,7 +9,8 @@ app and API server.
 | `web/Dockerfile` | Web app (`web/`). Next.js standalone output when `web/next.config` sets `output: "standalone"`, otherwise `next start` with production `node_modules`. Build context: `web/`. |
 | `staging/compose.yml` | The staging stack, compose project `stage-holt-new`: Postgres, one-shot web and server migrations, server, web, and a small nginx `edge` that serves `/__build` and proxies everything else to web. Only `edge` publishes a port, on `127.0.0.1:9110`. Every URL in it comes from `STAGING_HOST`. |
 | `staging/preview.sh` | One update: build `origin/main` + every open PR labelled `staging` + `staging/extra-branches`, restart the stack. |
-| `staging/install.sh` | One-time setup: the timer's copy of `preview.sh` and the systemd `--user` timer (every 3 minutes). It does not touch the public route. |
+| `staging/install.sh` | One-time setup: the timer's copy of `preview.sh` (and `edge.sh`) and the systemd `--user` timer (every 3 minutes). It does not touch the public route. |
+| `edge.sh` | Sourced by `prod/deploy.sh` and `staging/preview.sh`: when `edge.conf` changed, checks it with `nginx -t` in the running edge and reloads it (the port stays open); a rejected config is put back and the run fails. |
 | `staging/compose.pro.yml` | The optional paid-features service beside staging, compose project `stage-holt-pro`, joined to the staging network as `pro`, no published port. `preview.sh` runs it; see "Paid features". |
 | `staging/make-env.sh` | Writes `staging/.env` (gitignored): random keys, `gh auth token` (overridden on each run, see "The GitHub token"), `STAGING_HOST`. |
 | `prod/` | Production, https://githolt.com: compose project `holt-prod` on `127.0.0.1:8310` behind a Cloudflare tunnel, built only from `origin/main` by `prod/deploy.sh` (never on a timer), nightly backups. See [`prod/README.md`](prod/README.md) and [`prod/TUNNEL.md`](prod/TUNNEL.md). |
@@ -215,7 +216,15 @@ To take it away: remove `STAGING_HOLT_PRO_KEY`, run `preview.sh` with
   the secrets and `STAGING_HOST`, `logs/` keeps the last 10 build logs,
   `fingerprint` is what was last built.
 - The timer runs `~/.local/share/holt-staging/bin/preview.sh` (a copy, so a
-  PR can't change the loop; re-run `install.sh` after editing it).
+  PR can't change the loop; re-run `install.sh` after editing it or
+  `deploy/edge.sh`).
+- The edge reads its nginx config from `~/.local/share/holt-staging/edge/`
+  (`HOLT_STAGE_EDGE_DIR`), a copy of the preview's `staging/edge.conf`.
+  When that changes, `preview.sh` runs `nginx -t` in the running edge and
+  reloads it; a rejected config is put back and the run fails
+  (`EDGE CONFIG NOT APPLIED` on `/__build`). A timer copy from before this
+  stops at `compose up` with "set by preview.sh; re-run
+  deploy/staging/install.sh", leaving the running stack as it was.
 - A run does nothing unless main, a labelled PR, an extra branch or
   `STAGING_HOST` moved.
 - Builds never overlap (`flock`), and wait until the 1-minute load is under

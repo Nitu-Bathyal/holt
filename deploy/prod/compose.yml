@@ -151,13 +151,17 @@ services:
 
   # Front door: keeps the published port across deploys (web is recreated
   # behind it), serves /__build, redirects www to the apex, proxies the rest.
+  # Its config is a directory: deploy.sh copies edge.conf into
+  # $HOLT_PROD_HOME/edge/default.conf, checks it with nginx -t and reloads,
+  # so config changes go live without restarting the edge. (A single-file
+  # mount of ./edge.conf kept the old file after git replaced it.)
   edge:
     image: nginx:1.27-alpine
     labels: *prod-label
     ports:
       - "127.0.0.1:${HOLT_PROD_PORT:-8310}:8080"
     volumes:
-      - ./edge.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${HOLT_PROD_HOME:?set by deploy.sh}/edge:/etc/nginx/conf.d:ro
       - ${HOLT_PROD_HOME:?set by deploy.sh}/build:/srv/build:ro
     depends_on: [web]
     mem_limit: 32m

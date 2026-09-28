@@ -3,8 +3,9 @@
 #   deploy/staging/install.sh           install + start the 3-minute timer
 #   deploy/staging/install.sh --no-timer  install only (run preview.sh by hand)
 #
-# - copies preview.sh to ~/.local/share/holt-staging/bin/ (the timer runs that
-#   copy, so a PR can't change the loop; re-run install.sh to update it)
+# - copies preview.sh and ../edge.sh to ~/.local/share/holt-staging/bin/ (the
+#   timer runs that copy, so a PR can't change the loop; re-run install.sh to
+#   update it)
 # - writes the systemd --user units holt-stage.service / holt-stage.timer
 # It does not route the site: https://$STAGING_HOST (default
 # staging.githolt.com) reaches the stack's port through a Cloudflare tunnel,
@@ -19,6 +20,7 @@ UNITS="$HOME/.config/systemd/user"
 
 mkdir -p "$STATE/bin" "$UNITS"
 install -m 755 "$here/preview.sh" "$STATE/bin/preview.sh"
+install -m 644 "$here/../edge.sh" "$STATE/bin/edge.sh"
 
 cat > "$UNITS/holt-stage.service" <<UNIT
 [Unit]

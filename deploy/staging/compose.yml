@@ -145,13 +145,20 @@ services:
     restart: unless-stopped
 
   # Front door: serves /__build (what's live) and proxies the rest to web.
+  # Its config is a directory: preview.sh copies edge.conf into
+  # $HOLT_STAGE_EDGE_DIR/default.conf (~/.local/share/holt-staging/edge),
+  # checks it with nginx -t and reloads, so config changes go live without
+  # restarting the edge. (A single-file mount of ./edge.conf kept the old
+  # file after git replaced it.) Required, so a timer copy of preview.sh
+  # from before this change stops at `compose up` instead of starting an
+  # edge with no config: re-run install.sh.
   edge:
     image: nginx:1.27-alpine
     labels: *stage-label
     ports:
       - "127.0.0.1:${HOLT_STAGE_PORT:-9110}:8080"
     volumes:
-      - ./edge.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${HOLT_STAGE_EDGE_DIR:?set by preview.sh; re-run deploy/staging/install.sh}:/etc/nginx/conf.d:ro
       - ./build:/srv/build:ro
     depends_on: [web]
     mem_limit: 32m
