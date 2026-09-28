@@ -185,8 +185,12 @@ What one run does, in order:
    deploying by hand never make compose recreate the db. (The first deploy
    with this recreates the db once, a few seconds, because the mount moves
    from the checkout it was started from.)
-7. Health check: `/` answers 200 and `POST /api/analyses` for
-   `pallets/flask` is accepted (200/202), within 5 minutes.
+7. Health check: `/` answers 200 and `GET /api/public/report/pallets/flask`
+   (the extension's read-only proxy: open to signed-out callers, never starts
+   an analysis) answers 200 or 404 ("no report yet"), within 5 minutes. A 502
+   there means web can't reach the server. (It no longer POSTs
+   `/api/analyses`: since registered-users gating that answers 401 when
+   signed out.)
 8. On failure: the same swap back to the previous tag **with the previous
    release's own `compose.yml`** (kept in `releases/<sha>/` for the live and
    the previous release, or taken from that commit in git), so a commit that
@@ -369,7 +373,7 @@ curl -s $H/robots.txt                                # Allow: / … Sitemap: htt
 curl -s $H/sitemap.xml | head -5
 curl -sI $H/hacktoberfest | head -1
 curl -sI -H 'Host: www.githolt.com' $H/ | grep -i location     # https://githolt.com/
-curl -s -XPOST $H/api/analyses -H 'content-type: application/json' -d '{"repo":"pallets/flask"}'
+curl -s -o /dev/null -w '%{http_code}\n' $H/api/public/report/pallets/flask   # 200 (or 404: no report yet)
 cd e2e && BASE_URL=$H npx playwright test --workers=1     # plain http on the port; Chromium refuses a Host override
 cd e2e && BASE_URL=https://githolt.com npx playwright test --workers=1   # once the tunnel is up
 ```
@@ -388,8 +392,8 @@ HOLT_PROD_PROJECT=$COMPOSE_PROJECT_NAME HOLT_PROD_HOME=/tmp/rehearsal HOLT_PROD_
 To watch a swap under load, deploy once, then add an empty commit to the
 rehearsal's origin, tag the same images with its SHA (so nothing is
 built), and deploy again with a loop of requests running against
-`127.0.0.1:$PORT`: every answer should be a 200/202 (or a 429 from the rate
-limit), never a 502 or the updating page.
+`127.0.0.1:$PORT`: every answer should be what it was before the swap (a 200, or a 429 from
+the rate limit), never a 502 or the updating page.
 
 The follower on top: the same three variables, plus a fake origin (a bare
 repository whose `main` you move), a stand-in for `gh` that prints the
