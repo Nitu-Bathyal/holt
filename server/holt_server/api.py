@@ -20,6 +20,7 @@ from holt_server import (
     badge,
     budget,
     credits,
+    discover,
     entitlements,
     repo_stats,
     repos,
@@ -564,13 +565,14 @@ async def cached_find(svc: Services, key: str, limit: int) -> list[dict] | None:
     cutoff = now() - timedelta(hours=svc.settings.find_cache_hours)
     async with svc.db.session() as s:
         row = await s.get(FindCache, key)
-    if row is None or utc(row.created_at) < cutoff or row.outdated:
-        return None
-    computed_for = int((row.params or {}).get("limit") or 0)
-    # Enough results, or the search ran out before its own limit (so asking
-    # for more would find nothing new).
-    if computed_for >= limit or len(row.results) < computed_for:
-        return row.results[:limit]
+        if row is None or utc(row.created_at) < cutoff or row.outdated:
+            return None
+        computed_for = int((row.params or {}).get("limit") or 0)
+        # Enough results, or the search ran out before its own limit (so asking
+        # for more would find nothing new).
+        if computed_for >= limit or len(row.results) < computed_for:
+            # Details the warm pass fetched since the search ran show up too.
+            return await discover.with_meta(s, row.results[:limit])
     return None
 
 

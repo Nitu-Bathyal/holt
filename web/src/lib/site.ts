@@ -42,6 +42,16 @@ export function hacktoberfest(now = new Date()): { live: boolean; text: string; 
   return null;
 }
 
+/**
+ * The "Hacktoberfest only" switch on /find for `now`: shown during the
+ * countdown and in October, but on by default only while Hacktoberfest is on
+ * (1 to 31 October). Null when it is hidden (and so off).
+ */
+export function hacktoberfestSwitch(now = new Date()): { on: boolean; note: string } | null {
+  const season = hacktoberfest(now);
+  return season ? { on: season.live, note: season.short } : null;
+}
+
 /** True from 1 November (UTC) of `year`. */
 export function hacktoberfestOver(year: number, now = new Date()): boolean {
   return now.getTime() >= Date.UTC(year, 10, 1);

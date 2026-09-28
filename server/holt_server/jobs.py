@@ -444,10 +444,13 @@ class JobRunner:
 
     async def _finish(self, job: Job, result: dict[str, Any]) -> None:
         # Here, not at the top: these import the API module, which imports this one.
-        from holt_server import playbook, preflight
+        from holt_server import discover, playbook, preflight
 
         cost = self._ai_cost(job, result)
         async with self.services.db.session() as s:
+            if job.kind == "find":
+                result = {**result, "results": await discover.with_meta(
+                    s, list(result.get("results") or []))}
             done = await s.execute(self._mine(job.id).values(
                 status="done", stage="Done", progress=1.0, result=result,
                 finished_at=now()))

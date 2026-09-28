@@ -9,7 +9,7 @@ import { getProfile } from "@/lib/api";
 import { cachedFind } from "@/lib/find-cached";
 import { findQuery, PICKS_COOKIE, resolvePicks } from "@/lib/find-picks";
 import { caller, currentUser } from "@/lib/session";
-import { hacktoberfest } from "@/lib/site";
+import { hacktoberfestSwitch } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Find a project",
@@ -24,10 +24,10 @@ export default async function FindPage({ searchParams }: PageProps<"/find">) {
   const [sp, user, jar] = await Promise.all([searchParams, currentUser(), cookies()]);
   const profileR = user ? await getProfile(user.id) : null;
   const profile = profileR?.ok ? profileR.data.profile : null;
-  const season = hacktoberfest();
-  const { picks, source } = resolvePicks({ params: sp, cookie: jar.get(PICKS_COOKIE)?.value, profile, hfWindow: Boolean(season), hfOn: Boolean(season) });
+  // An explicit choice (URL, last picks) wins; otherwise the switch starts on only in October.
+  const hf = hacktoberfestSwitch();
+  const { picks, source } = resolvePicks({ params: sp, cookie: jar.get(PICKS_COOKIE)?.value, profile, hfWindow: Boolean(hf), hfOn: hf?.on ?? false });
   const result = await cachedFind(findQuery(picks), await caller(user));
-  const hf = season ? { on: true, note: season.short } : null;
 
   return (
     <PageTransition>

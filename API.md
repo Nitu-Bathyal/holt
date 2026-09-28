@@ -313,7 +313,10 @@ Body: `{"languages": ["python"], "topics": [], "days": 7, "hacktoberfest": true,
 Returns `{"results": [ { "repo": "owner/repo", "headline": "…", "tone": "good", "verdict": "…",
 "description": "string | null", "language": "string | null", "stars": 123 | null,
 "stats": {…subset}, "issues": [StarterIssue] } ]}` (`description`, `language`
-and `stars` are null when the finder did not supply them; `stats` leaves out
+and `stars` come from `repo_meta`, the same details Discover shows, read when
+the search finishes and again each time a cached search is served; no GitHub
+call. They are null for a repo the warm pass hasn't read yet, and the warm
+pass reads every repo in a search from the last day. `stats` leaves out
 counts it doesn't have rather than sending null), only repos whose rules
 verdict is `viable`, ordered by starter-issue quality.
 
