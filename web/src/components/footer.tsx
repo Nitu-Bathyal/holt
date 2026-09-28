@@ -8,13 +8,14 @@
 // - The sign-off is a terminal line, `$ git commit --to-the-right-repo`. It
 //   waves once as the footer comes into view (letters bob, none is ever
 //   hidden) and again on hover; the cursor after it blinks.
-// - The last action is the URL trick as a form: githolt.com/owner/repo.
+// - On the landing page only, the last action: the URL trick as a form
+//   (githolt.com/owner/repo) and find a project. Other pages have their own.
 // - "Recently checked" loads only when the footer is near, from a cached
 //   route, and sits last so it never pushes anything down when it arrives.
 // Everything is in the server HTML, links included; motion is CSS
 // (globals.css, .ft-*) and never runs under reduced motion.
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/analytics";
 import { inputMood, type CatMood } from "@/lib/cat";
@@ -28,6 +29,9 @@ const SIGN_OFF = "git commit --to-the-right-repo";
 
 export function Footer() {
   const router = useRouter();
+  // The landing page is "/" (signed in, "/?landing=1"); every other page
+  // already has its own action, so only the landing ends on the form.
+  const onLanding = usePathname() === "/";
   const root = useRef<HTMLElement>(null);
   const cat = useRef<HTMLButtonElement>(null);
   const frame = useRef(0);
@@ -151,59 +155,65 @@ export function Footer() {
             })}
           </span>
         </p>
-        <p className="mt-4 max-w-[560px] font-sans text-[1.05rem] text-muted">
-          Paste a repo. You&apos;ll know before you write a line of code.
-        </p>
+        {onLanding && (
+          <p className="mt-4 max-w-[560px] font-sans text-[1.05rem] text-muted">
+            Paste a repo. You&apos;ll know before you write a line of code.
+          </p>
+        )}
 
-        {/* The URL trick as a form. */}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            go();
-          }}
-          className="mt-10 grid max-w-[820px] grid-cols-[auto_minmax(0,1fr)_auto] items-stretch border border-line-strong bg-bg transition-colors focus-within:border-blue"
-        >
-          <label htmlFor="footer-repo" className="flex items-center pl-4 text-[0.95rem] text-faint sm:text-[1.05rem]">
-            <span className="sr-only">Repo to check: </span>
-            <span aria-hidden="true">{SITE_HOST}/</span>
-          </label>
-          <input
-            id="footer-repo"
-            value={value}
-            onChange={(e) => {
-              setValue(e.target.value);
-              if (error) setError("");
-            }}
-            onFocus={() => setFocused(true)}
-            onBlur={() => setFocused(false)}
-            autoComplete="off"
-            autoCapitalize="none"
-            autoCorrect="off"
-            spellCheck={false}
-            enterKeyHint="go"
-            placeholder="owner/repo"
-            aria-invalid={Boolean(error)}
-            aria-describedby={error ? "footer-repo-error" : undefined}
-            className="h-14 min-w-0 bg-transparent px-0.5 text-[0.95rem] text-ink outline-none placeholder:text-faint sm:text-[1.05rem]"
-          />
-          <button
-            type="submit"
-            disabled={busy}
-            {...react("celebrating")}
-            className="border-l border-line-strong px-4 font-semibold text-blue transition-colors hover:bg-blue hover:text-on-accent sm:px-6"
-          >
-            {busy ? "checking…" : "check →"}
-          </button>
-        </form>
-        <p id="footer-repo-error" role={error ? "alert" : undefined} className="mt-2 min-h-6 font-sans text-[0.9rem] text-orange">
-          {error}
-        </p>
-        <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
-          <span className="font-sans text-[0.95rem] text-muted">No repo yet?</span>
-          <Link href="/find" {...react("celebrating")} className="bracket-link bracket-link--orange">
-            [ find a project → ]
-          </Link>
-        </p>
+        {onLanding && (
+          <>
+            {/* The URL trick as a form. */}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                go();
+              }}
+              className="mt-10 grid max-w-[820px] grid-cols-[auto_minmax(0,1fr)_auto] items-stretch border border-line-strong bg-bg transition-colors focus-within:border-blue"
+            >
+              <label htmlFor="footer-repo" className="flex items-center pl-4 text-[0.95rem] text-faint sm:text-[1.05rem]">
+                <span className="sr-only">Repo to check: </span>
+                <span aria-hidden="true">{SITE_HOST}/</span>
+              </label>
+              <input
+                id="footer-repo"
+                value={value}
+                onChange={(e) => {
+                  setValue(e.target.value);
+                  if (error) setError("");
+                }}
+                onFocus={() => setFocused(true)}
+                onBlur={() => setFocused(false)}
+                autoComplete="off"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                enterKeyHint="go"
+                placeholder="owner/repo"
+                aria-invalid={Boolean(error)}
+                aria-describedby={error ? "footer-repo-error" : undefined}
+                className="h-14 min-w-0 bg-transparent px-0.5 text-[0.95rem] text-ink outline-none placeholder:text-faint sm:text-[1.05rem]"
+              />
+              <button
+                type="submit"
+                disabled={busy}
+                {...react("celebrating")}
+                className="border-l border-line-strong px-4 font-semibold text-blue transition-colors hover:bg-blue hover:text-on-accent sm:px-6"
+              >
+                {busy ? "checking…" : "check →"}
+              </button>
+            </form>
+            <p id="footer-repo-error" role={error ? "alert" : undefined} className="mt-2 min-h-6 font-sans text-[0.9rem] text-orange">
+              {error}
+            </p>
+            <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
+              <span className="font-sans text-[0.95rem] text-muted">No repo yet?</span>
+              <Link href="/find" {...react("celebrating")} className="bracket-link bracket-link--orange">
+                [ find a project → ]
+              </Link>
+            </p>
+          </>
+        )}
 
         <nav aria-label="Footer" className="mt-14 grid grid-cols-2 gap-8 text-[0.88rem] sm:grid-cols-3">
           <Group title="product">
