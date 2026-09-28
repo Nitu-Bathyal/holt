@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { HOME_REDIRECT_CACHE, afterSignIn, fastestReplies, landingRedirect, nextStep, replyLine, setupLeft, setupSteps, showProfilePrompt, type HomeState } from "./home.ts";
+import { HOME_REDIRECT_CACHE, afterSignIn, fastestReplies, groupPulls, landingRedirect, nextStep, outsidePulls, pullCountLine, replyLine, setupLeft, setupSteps, showProfilePrompt, type HomeState } from "./home.ts";
 import type { ContributionPR, DiscoverRepo } from "./types";
 
 test("sign-in without somewhere to go back to lands on the home", () => {
@@ -91,4 +91,30 @@ test("fastest replies: only repos worth your time with a measured reply, quickes
 test("reply line in plain words", () => {
   assert.equal(replyLine(null), null);
   assert.equal(replyLine(3), "Outsiders usually get a reply in 3 hours.");
+});
+
+const pull = (repo: string, number: number, state: ContributionPR["state"], created: string): ContributionPR => ({
+  repo, number, state, title: `PR ${number}`, url: `https://github.com/${repo}/pull/${number}`, draft: false,
+  created_at: created, closed_at: null, merged_at: state === "merged" ? created : null, verdict: null, found_via_holt: false,
+});
+
+test("pull requests to your own repos are left out, whatever the case", () => {
+  const all = [pull("Octo/tool", 1, "merged", "2026-09-01"), pull("pallets/flask", 2, "open", "2026-09-02")];
+  assert.deepEqual(outsidePulls(all, "octo").map((p) => p.number), [2]);
+  assert.equal(outsidePulls(all, null).length, 2);
+});
+
+test("pull requests group by repo: waiting ones first, then the newest", () => {
+  const groups = groupPulls([
+    pull("a/old", 1, "merged", "2026-09-01"),
+    pull("b/busy", 2, "merged", "2026-09-10"),
+    pull("B/Busy", 3, "merged", "2026-09-12"),
+    pull("c/waiting", 4, "open", "2026-08-01"),
+    pull("b/busy", 5, "closed", "2026-09-05"),
+  ]);
+  assert.deepEqual(groups.map((g) => g.repo), ["c/waiting", "B/Busy", "a/old"]);
+  const busy = groups[1];
+  assert.deepEqual(busy.pulls.map((p) => p.number), [3, 2, 5]);
+  assert.equal(pullCountLine(busy), "3 pull requests: 2 merged, 1 closed, not merged");
+  assert.equal(pullCountLine(groups[0]), "1 pull request: 1 waiting");
 });

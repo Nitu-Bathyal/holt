@@ -296,6 +296,18 @@ export function savedRepos(userId: string): Promise<Result<SavedList>> {
   return call("/v1/me/saved", { caller: { userId } });
 }
 
+/**
+ * Which repos a list's save buttons show as saved: one request for the whole
+ * page, however many cards. Null when signed out (the buttons then offer
+ * sign-in). If the list can't be read, nothing shows as saved; saving again is
+ * harmless.
+ */
+export async function savedNames(userId: string | null | undefined): Promise<string[] | null> {
+  if (!userId) return null;
+  const r = await savedRepos(userId);
+  return r.ok ? r.data.saved.map((i) => i.repo) : [];
+}
+
 export async function savedState(userId: string, repo: string): Promise<Result<SavedState>> {
   if (!repoOk(repo)) return BAD_REPO;
   if (MOCK) return mock.savedState(userId, repo);

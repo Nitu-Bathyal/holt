@@ -1,5 +1,7 @@
 // A themed row on the signed-in home: a title and repos that scroll sideways.
-// RepoTile is a stand-in until the find page's compact repo card lands on main.
+// Repos use the compact repo card (RepoRows in repo-card/repo-grid.tsx) and a
+// repo's pull requests stack into one card (pull-stack.tsx). A tile is for a
+// repo Holt has no card for: an older check, or a saved repo with no report.
 import Link from "next/link";
 import type { Tone } from "@/lib/types";
 import { VerdictPill } from "../report/verdict-pill";
@@ -9,8 +11,6 @@ export interface Tile {
   key: string;
   repo: string;
   href: string;
-  /** Replaces "owner/name" as the title, e.g. "pallets/flask#5432". */
-  title?: string;
   verdict: { headline: string; tone: Tone } | null;
   line: string | null;
   meta?: string | null;
@@ -33,21 +33,22 @@ export function Shelf({ title, more, note, children }: { title: string; more?: {
   );
 }
 
-export function RepoTile({ t }: { t: Tile }) {
+export function RepoTile({ t, actions }: { t: Tile; actions?: React.ReactNode }) {
   const [owner, name] = t.repo.split("/");
   return (
-    <li className="flex w-[16.5rem] shrink-0 snap-start flex-col border border-line-strong bg-panel p-4 shadow-soft sm:w-72">
+    <li className="flex w-[17.5rem] shrink-0 snap-start flex-col border border-line-strong bg-panel p-4 shadow-soft sm:w-[19rem]">
       <Link href={t.href} className="font-semibold tracking-tight [overflow-wrap:anywhere] hover:text-blue">
-        {t.title ?? (
-          <>
-            <span className="text-muted">{owner}/</span>
-            {name}
-          </>
-        )}
+        <span className="text-muted">{owner}/</span>
+        {name}
       </Link>
       {t.verdict && <VerdictPill headline={t.verdict.headline} tone={t.verdict.tone} className="mt-2 self-start" />}
       {t.line && <p className="mt-2 line-clamp-3 font-sans text-[0.85rem] leading-snug text-muted">{t.line}</p>}
-      {t.meta && <p className="mt-auto pt-3 text-[0.72rem] text-faint">{t.meta}</p>}
+      {(t.meta || actions) && (
+        <div className="mt-auto flex flex-wrap items-center justify-between gap-x-3 gap-y-2 pt-3">
+          {t.meta && <p className="text-[0.72rem] text-faint">{t.meta}</p>}
+          {actions && <span className="ml-auto">{actions}</span>}
+        </div>
+      )}
     </li>
   );
 }

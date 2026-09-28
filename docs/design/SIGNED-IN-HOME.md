@@ -82,8 +82,9 @@ Top to bottom (phone order; desktop puts 1 and 2 side by side):
 3. **Get set up**, until every step is done: sign in (already ticked), check
    a repo, finish your profile, connect GitHub (optional).
 4. **Themed rows**, each scrolling sideways. A row with nothing in it is
-   hidden, not shown empty. They'll use the find page's new compact card
-   once it's on main; until then a stand-in tile.
+   hidden, not shown empty. Repos use the find page's compact card, with a
+   save button and the same focus view; a repo's pull requests stack into one
+   card that opens into the full list.
 5. **AI reports**: "3 free AI reports left", with a link to claim the weekly
    one when it's due. Hidden when AI is switched off.
 
@@ -150,15 +151,21 @@ something to browse.
 next-step card, paste box, setup steps, and the six rows that need no server
 work (picked for you, recent checks, your pull requests, welcoming repos in
 your first two profile languages, fastest replies, trending), plus the credits
-line; logo and menu edits. Rows use a stand-in tile
-(`components/home/shelf.tsx`) until the find page's compact card is on main.
+line; logo and menu edits. Rows used a stand-in tile at first.
+
+**Then:** the rows switched to the compact repo card (`RepoRows` in
+`components/repo-card/repo-grid.tsx`), each with a save button, and one focus
+view for the page whose previous and next stay in the row. A Saved row joined
+after "Your pull requests". Pull requests group by repo into one stacked card
+(`components/home/pull-stack.tsx`), repos with one still waiting first; ones
+to the user's own account are left out. A recent check keeps a small tile
+when nothing else on the page has its numbers.
 
 The Hacktoberfest row is built against PR #125's
 `GET /v1/discover?hacktoberfest=true` and shows only when the response echoes
 `hacktoberfest: true`, so it stays hidden until #125 is on main.
 
-**Later:** Saved (after
-save-a-repo merges), quick wins (server), the header "sign in" link returning
+**Later:** quick wins (server), the header "sign in" link returning
 you to the page you were on, `/connect` copy, sign-in page copy that names
 what you get, umami events for next-step clicks.
 

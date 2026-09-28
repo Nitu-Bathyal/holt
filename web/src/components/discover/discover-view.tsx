@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { discover } from "@/lib/api";
+import { discover, savedNames } from "@/lib/api";
 import { boardHref, boardIntro, boardTitle, emptyText, SORTS } from "@/lib/discover";
 import { fromDiscover, langColor } from "@/lib/repo-card";
+import { currentUser } from "@/lib/session";
 import type { DiscoverSort } from "@/lib/types";
 import { CatFace } from "../cat-face";
 import { ErrorPanel } from "../error-panel";
@@ -12,7 +13,8 @@ import { RepoGrid } from "../repo-card/repo-grid";
 
 /** /discover and /discover/<language>: one board as a grid of cards, with its order and language chips on top. */
 export async function DiscoverView({ sort, language, topic }: { sort: DiscoverSort; language: string | null; topic: string | null }) {
-  const result = await discover(sort, language, topic);
+  const user = await currentUser();
+  const [result, saved] = await Promise.all([discover(sort, language, topic), savedNames(user?.id)]);
   const here = boardHref({ sort, language, topic });
   const data = result.ok ? result.data : null;
 
@@ -80,7 +82,7 @@ export async function DiscoverView({ sort, language, topic }: { sort: DiscoverSo
             {!result.ok ? (
               <ErrorPanel error={result.error} retryHref={here} />
             ) : data!.repos.length ? (
-              <RepoGrid repos={data!.repos.map(fromDiscover)} topicBase={boardHref({ sort, language })} />
+              <RepoGrid repos={data!.repos.map(fromDiscover)} topicBase={boardHref({ sort, language })} saved={saved} />
             ) : (
               <div className="border border-dashed border-line-strong p-8 text-center">
                 <CatFace mood="thinking" className="text-[1.6rem]" />

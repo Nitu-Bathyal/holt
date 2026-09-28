@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { SAVE_PARAM, signInToSave, wantsSave, withoutSave } from "./saved.ts";
+import { SAVE_PARAM, savedSet, signInToSave, wantsSave, withoutSave, withSaved } from "./saved.ts";
 
 const back = (href: string) => new URL(href, "https://holt.test").searchParams.get("callbackUrl");
 
@@ -28,4 +28,14 @@ test("a page asks to save only the repo it names, whatever the casing", () => {
 test("the request is dropped from the address once handled", () => {
   assert.equal(withoutSave("/pallets/flask", "?save=pallets%2Fflask"), "/pallets/flask");
   assert.equal(withoutSave("/pallets/flask", "?days=3&save=pallets%2Fflask"), "/pallets/flask?days=3");
+});
+
+test("the saved set ignores case, and changes return a new set", () => {
+  const s = savedSet(["Pallets/Flask"]);
+  assert.ok(s.has("pallets/flask"));
+  const added = withSaved(s, "Octo/Cat", true);
+  assert.notEqual(added, s);
+  assert.ok(added.has("octo/cat") && !s.has("octo/cat"));
+  const removed = withSaved(added, "PALLETS/flask", false);
+  assert.ok(!removed.has("pallets/flask") && added.has("pallets/flask"));
 });

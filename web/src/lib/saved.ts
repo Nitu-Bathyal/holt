@@ -25,3 +25,16 @@ export function withoutSave(pathname: string, search: string): string {
   const rest = q.toString();
   return rest ? `${pathname}?${rest}` : pathname;
 }
+
+/** Saved repos as a lookup set. GitHub names are case-insensitive, so keys are lower-cased. */
+export function savedSet(repos: Iterable<string>): Set<string> {
+  return new Set([...repos].map((r) => r.toLowerCase()));
+}
+
+/** The set with `repo` saved or unsaved: a new set, so React sees the change. */
+export function withSaved(set: ReadonlySet<string>, repo: string, saved: boolean): Set<string> {
+  const next = new Set(set);
+  if (saved) next.add(repo.toLowerCase());
+  else next.delete(repo.toLowerCase());
+  return next;
+}

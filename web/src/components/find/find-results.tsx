@@ -4,7 +4,7 @@ import { CatFace } from "../cat-face";
 import { RepoGrid } from "../repo-card/repo-grid";
 
 /** Find results as compact cards; each opens into the focus view with its starter issues. */
-export function FindResults({ results, days }: { results: FindResult[]; days: number }) {
+export function FindResults({ results, days, saved }: { results: FindResult[]; days: number; saved?: string[] | null }) {
   if (!results.length) {
     return (
       <div className="border border-dashed border-line-strong p-8 text-center">
@@ -14,5 +14,5 @@ export function FindResults({ results, days }: { results: FindResult[]; days: nu
       </div>
     );
   }
-  return <RepoGrid repos={results.map(fromFind)} days={days} />;
+  return <RepoGrid repos={results.map(fromFind)} days={days} saved={saved} />;
 }

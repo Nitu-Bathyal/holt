@@ -119,3 +119,49 @@ export function fastestReplies(repos: DiscoverRepo[], limit = 10): DiscoverRepo[
 export function replyLine(hours: number | null | undefined): string | null {
   return hours == null ? null : `Outsiders usually get a reply in ${humanHours(hours)}.`;
 }
+
+/** One repo's pull requests on the home's row: newest first, with counts by state. */
+export interface PullGroup {
+  repo: string;
+  pulls: ContributionPR[];
+  open: number;
+  merged: number;
+  closed: number;
+}
+
+/**
+ * Pull requests to other people's projects. The server already leaves out the
+ * user's own repositories; this is the same rule, in case a login changed.
+ * It can't see org membership (the data doesn't carry it).
+ */
+export function outsidePulls(pulls: ContributionPR[], login: string | null | undefined): ContributionPR[] {
+  const me = (login ?? "").toLowerCase();
+  return me ? pulls.filter((p) => p.repo.split("/")[0].toLowerCase() !== me) : pulls;
+}
+
+const newest = (a: ContributionPR, b: ContributionPR) => b.created_at.localeCompare(a.created_at);
+
+/** Pull requests by repo, one group each: repos with one still waiting first, then the most recent. */
+export function groupPulls(pulls: ContributionPR[]): PullGroup[] {
+  const by = new Map<string, ContributionPR[]>();
+  for (const p of pulls) {
+    const k = p.repo.toLowerCase();
+    by.set(k, [...(by.get(k) ?? []), p]);
+  }
+  const groups = [...by.values()].map((ps): PullGroup => {
+    const sorted = [...ps].sort(newest);
+    const n = (s: ContributionPR["state"]) => ps.filter((p) => p.state === s).length;
+    return { repo: sorted[0].repo, pulls: sorted, open: n("open"), merged: n("merged"), closed: n("closed") };
+  });
+  return groups.sort((a, b) => Number(b.open > 0) - Number(a.open > 0) || newest(a.pulls[0], b.pulls[0]));
+}
+
+/** "5 pull requests: 4 merged, 1 waiting". */
+export function pullCountLine(g: PullGroup): string {
+  const parts = [
+    g.merged ? `${g.merged} merged` : null,
+    g.open ? `${g.open} waiting` : null,
+    g.closed ? `${g.closed} closed, not merged` : null,
+  ].filter(Boolean);
+  return `${g.pulls.length} pull request${g.pulls.length === 1 ? "" : "s"}: ${parts.join(", ")}`;
+}
