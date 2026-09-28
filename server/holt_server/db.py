@@ -173,7 +173,7 @@ class Job(Base):
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True,
                                     default=lambda: uuid.uuid4().hex)
-    kind: Mapped[str] = mapped_column(String(20), default="analysis")  # analysis | find
+    kind: Mapped[str] = mapped_column(String(20), default="analysis")  # analysis | find | preflight
     repo: Mapped[str | None] = mapped_column(String(200), nullable=True)
     repo_key: Mapped[str | None] = mapped_column(String(200), nullable=True)
     mode: Mapped[str] = mapped_column(String(10), default="rules")
@@ -472,3 +472,25 @@ class RepoUserStats(Base):
     closed: Mapped[int] = mapped_column(Integer)
     waiting: Mapped[int] = mapped_column(Integer)
     computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class Preflight(Base):
+    """A finished PR pre-flight check (preflight.py): one per user, target
+    (`pr:12` or `branch:...`) and head commit, replaced when that commit is
+    checked again."""
+
+    __tablename__ = "preflights"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(200))
+    repo_key: Mapped[str] = mapped_column(String(200))
+    repo: Mapped[str] = mapped_column(String(200))
+    target: Mapped[str] = mapped_column(String(300))
+    head_sha: Mapped[str] = mapped_column(String(64))
+    result: Mapped[dict] = mapped_column(JSON)
+    job_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+    __table_args__ = (
+        Index("ix_preflights_target", "user_id", "repo_key", "target", "created_at"),
+    )

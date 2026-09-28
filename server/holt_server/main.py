@@ -19,6 +19,7 @@ from holt_server import (
     entitlements,
     errors,
     feedback,
+    preflight,
     pro,
     profiles,
 )
@@ -79,6 +80,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(contributions.router)
     app.include_router(discover.router)
     app.include_router(profiles.router)
+    app.include_router(preflight.router)
     return app
 
 

@@ -279,6 +279,9 @@ class JobRunner:
         return s.job_timeout_ai if job.mode == "ai" else s.job_timeout_rules
 
     async def _run(self, job: Job, lane: str = USER_LANE) -> None:
+        # Here, not at the top: preflight.py imports the API module, which imports this one.
+        from holt_server import preflight
+
         loop = asyncio.get_running_loop()
         self.hub.publish(job.id, "stage", {"stage": "Starting", "progress": 0.01})
         started = time.monotonic()
@@ -303,6 +306,10 @@ class JobRunner:
             try:
                 if job.kind == "find":
                     result = await self._in_thread(stop, limit, self._find_sync, job, emit, loop)
+                elif job.kind == "preflight":
+                    # An HTTP call to the paid-features service: no thread needed.
+                    result = await self._in_loop(stop, limit, preflight.run(
+                        self.services, job, emit))
                 else:
                     # The key is only ever held in memory: the jobs table records
                     # where it came from, not what it is.
@@ -352,6 +359,14 @@ class JobRunner:
             work.add_done_callback(lambda f: f.cancelled() or f.exception())
             raise JobTimedOut
         return work.result()
+
+    async def _in_loop(self, stop: threading.Event, limit: float, work) -> Any:
+        """Await `work` for at most `limit` seconds; past it, cancel it."""
+        try:
+            return await asyncio.wait_for(work, limit)
+        except TimeoutError:
+            stop.set()
+            raise JobTimedOut from None
 
     def _analysis_sync(self, job: Job, spec, emit) -> dict[str, Any]:
         svc = self.services
@@ -405,6 +420,9 @@ class JobRunner:
         self.hub.publish(job_id, "stage", {"stage": stage, "progress": progress})
 
     async def _finish(self, job: Job, result: dict[str, Any]) -> None:
+        # Here, not at the top: preflight.py imports the API module, which imports this one.
+        from holt_server import preflight
+
         async with self.services.db.session() as s:
             done = await s.execute(self._mine(job.id).values(
                 status="done", stage="Done", progress=1.0, result=result,
@@ -417,6 +435,8 @@ class JobRunner:
                              days=job.days, report=result))
             elif job.kind == "find":
                 await store_find(s, job.params or {}, job.days, result)
+            elif job.kind == "preflight":
+                await preflight.store(s, job, result)
             await s.commit()
         self.hub.publish(job.id, "done", done_payload(job.kind, result))
 
@@ -467,4 +487,6 @@ async def store_find(s, params: dict[str, Any], days: int, result: dict[str, Any
 def done_payload(kind: str, result: dict[str, Any] | None) -> dict[str, Any]:
     if kind == "find":
         return dict(result or {"results": []})
+    if kind == "preflight":
+        return {"preflight": result}
     return {"report": result}
