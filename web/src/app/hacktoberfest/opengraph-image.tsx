@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { SITE_HOST } from "@/lib/site";
 
-export const alt = "Hacktoberfest: repos that will actually review your pull request, from Holt";
+export const alt = "Hacktoberfest 2026: contributions that actually land, in repos that merge outside work. From Holt";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
@@ -21,11 +21,11 @@ export default async function Image() {
           </div>
           <div style={{ display: "flex", flexDirection: "column", marginTop: 56, fontSize: 70, fontWeight: 700, letterSpacing: -4, lineHeight: 1.08, color: "#e7e5dc" }}>
             <span style={{ color: "#ee925d", fontSize: 40, letterSpacing: -1 }}>Hacktoberfest 2026</span>
-            <span style={{ marginTop: 12 }}>Repos that will actually</span>
-            <span>review your pull request.</span>
+            <span style={{ marginTop: 12 }}>Contributions that</span>
+            <span>actually land.</span>
           </div>
           <div style={{ display: "flex", marginTop: "auto", justifyContent: "space-between", fontSize: 26, color: "#a3a39b" }}>
-            <span>Starter issues by language. Free.</span>
+            <span>Repos that merge outside work, by language. Free.</span>
             <span style={{ color: "#69c7a6" }}>{SITE_HOST}/hacktoberfest</span>
           </div>
         </div>

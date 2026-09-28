@@ -32,12 +32,14 @@ with codes: `unauthorized`, `not_found` (repo missing or private),
 `needs_plan` (the feature comes only with a paid plan), `needs_key` (AI report requested without
 signing in), `ai_unavailable` (AI reports are switched off: the server has no
 model key), `claim_not_ready` (a weekly claim before it is due),
+`payments_off` (credit packs aren't on sale), `payment_unconfirmed` (a
+payment's signature didn't check out; nothing was credited),
 `upstream` (GitHub/model failure), `internal`.
 
 HTTP statuses: `unauthorized` 401, `not_found` 404, `invalid_repo` and
 `invalid_request` (malformed body or query) 400, `rate_limited` 429 (also sent
 as a `Retry-After` header), `quota_exceeded` 402, `needs_plan` 402, `needs_key` 403,
-`claim_not_ready` 409, `ai_unavailable` 503, `upstream` 502, `internal` 500, `not_implemented` 501 (starter issues and find,
+`claim_not_ready` 409, `payments_off` 403, `payment_unconfirmed` 400, `ai_unavailable` 503, `upstream` 502, `internal` 500, `not_implemented` 501 (starter issues and find,
 until the engine side ships).
 
 ## Rate limits
@@ -70,7 +72,12 @@ responses. The server also accepts and normalises full URLs
   "verdict": "viable" | "not_viable" | "insufficient_evidence",
   "headline": "Worth your time" | "Not worth your time" | "Not enough evidence",
   "tone": "good" | "bad" | "warn",    // the verdict's colour
-  "verdict_line": "string",           // one plain sentence under the headline
+  "verdict_line": "string",           // line 1: the reason for the verdict, one sentence
+  "numbers_line": "string",           // line 2: what happened to outside contributors, with dates
+  "first_timer_line": "string | null", // "9 people got their first pull request merged here."
+  "next_step": "string",              // line 3: what to do next
+  "stat_line": "string | null",       // short count for the extension chip: "22 of 120 outside PRs merged"
+  "counted": [ { "topic": "What we read", "text": "The newest 200 pull requests on GitHub, opened 3 Jun – 26 Sep 2026." } ],
   "odds": { "level": "good" | "fair" | "long", "tone": "good" | "warn" | "bad",
             "text": "most outside pull requests get a reply, and plenty get merged" } | null,
   "bottom_line": "string | null",     // ai mode: at most two model-written sentences, the lead of the AI explanation
@@ -92,6 +99,10 @@ responses. The server also accepts and normalises full URLs
   ],
   "evidence_until": "2026-06-01T00:00:00Z", // or null
   "generated_at": "2026-09-25T12:00:00Z",
+  "sample": { "pull_requests": 200, "first_opened": "2026-06-03T10:00:00Z",
+              "last_opened": "2026-09-26T09:00:00Z", "team_pull_requests": 40,
+              "team_people": 9, "bot_pull_requests": 12 } | null,
+  "asks": [ { "code": "cla" | "dco" | "issue_first", "url": "https://github.com/…" } ],
   "cost": { "model": "…", "input_tokens": 9000, "output_tokens": 6000,
             "usd": 0.0123, "seconds": 48.2 }, // ai only, else null
   "holt_users": { "people": 9, "pull_requests": 12, "merged": 7, "closed": 2,
@@ -143,9 +154,21 @@ was computed from. `no_reply` is open, past the window, with no reply.
 no reply, usually maintainers clearing out spam; not in `no_reply`) are shown
 beside them; both are 0 on reports cached before they existed. Drafts and pull
 requests labelled as spam or invalid are in no count.
+`landing` and `never_landed` count the same decided pull requests, so every
+number on a report is over one set.
 
-`headline`, `tone`, `verdict_line` and `odds` are derived by the server from
-`verdict`, `stats` and `decided_by`/`rule_codes`, every time a report is
+`sample` is what the counts were read from: every pull request read, when the
+oldest and newest were opened, and how many came from the team or from bots
+(left out of every count). Null on reports cached before it existed. `asks` is
+what the project asks of a contributor, where Holt could read it: `cla` (a CLA
+bot commented on outside pull requests), `dco` or `issue_first` (CONTRIBUTING
+says so in as many words). `url` is where it was read. An empty list means
+nothing was found, not that nothing is asked. Neither affects the verdict.
+
+`headline`, `tone`, `verdict_line`, `numbers_line`, `first_timer_line`,
+`next_step`, `stat_line`, `counted` and `odds` are derived by the server from
+`verdict`, `stats`, `sample`, `landing`, `asks` and
+`decided_by`/`rule_codes`, every time a report is
 served (so cached reports pick up wording changes). Every surface (web, OG
 images, the extension) shows these fields and never works them out itself, so
 they cannot disagree with each other or with the verdict:
@@ -155,6 +178,22 @@ they cannot disagree with each other or with the verdict:
 - `verdict_line` never oversells: "Worth your time" with a low merge rate or
   many unanswered pull requests says so. Under "Not worth your time" it states
   the rule that decided it.
+- The top of a report is three lines, in order: `headline` + `verdict_line`
+  (the verdict and one reason, without the counts), `numbers_line` (the
+  counts with the dates they cover, e.g. "Of 120 pull requests from outside
+  contributors (3 Jun – 26 Sep 2026), 22 were merged (18%). When a maintainer
+  replied, it was typically within 6 hours. 25% got no reply at all."), and
+  `next_step` (where outside work lands, what the project asks, or where to go
+  instead). `first_timer_line` is null when nobody outside tried.
+- The rule that decided the verdict is the last `decided_by` line whose code
+  is not informational (`awaiting_reply`, `landed_off_button`,
+  `package_updates`, `kind_contested`, `kind_uncited`, `sample_period`,
+  `dormant`, `excluded`, `still_open`, `closed_silently`).
+- `counted` is "How this was counted": the sample and its dates, the team and
+  how it was worked out, bots, each informational `decided_by` line, the
+  rules that decided, and the fixed rule itself. Topics are plain English and
+  may change; render them as given.
+- `stat_line` is null when nobody outside tried. The extension chip shows it.
 - `odds` is non-null only when the verdict is `viable` (and anyone tried): the
   worse of the merge rate (good ≥ 12%, fair ≥ 5%) and the no-reply rate (good
   ≤ 25%, fair ≤ 50%); its `text` names the weak part. The other verdicts are
@@ -344,7 +383,7 @@ is ever due. Spending, claiming and refunds are atomic on the server.
 
 Payments are off: nothing is on sale and every price is still to be decided.
 What exists is the model they plug into, all on the server, never taken from
-the client:
+the client, and a checkout for credit packs that stays switched off (below):
 
 - **Features** (`ai_report`, `playbook`, `preflight`, `guidance`,
   `recommendations`) and what one use costs in credits, **plans** (`free`,
@@ -361,6 +400,51 @@ the client:
   says). Every change is a ledger row saying which pool.
 - Admins change credits and plans with a CLI (`python -m holt_server.credits`,
   server/README.md), not over HTTP.
+
+#### Credit packs (checkout)
+
+Razorpay, INR, one-time payments. **Switched off** unless the server has
+`HOLT_PAYMENTS_ENABLED=1` and its Razorpay keys, and a pack in the catalogue
+has `on_sale: true` and an INR price. While off, `GET /v1/packs` offers
+nothing and `POST /v1/me/orders` answers 403 `payments_off`. The price,
+the credits and the expiry always come from the server's catalogue.
+
+- `GET /v1/packs` (internal key; no user needed) → `{"on_sale": false, "packs": [Pack]}`,
+  `Pack`: `{"id": "credits_10", "name": "10 credits", "credits": 10, "expires_days": null, "amount": 49900, "currency": "INR"}`
+  (`amount` in paise). `on_sale` is false and `packs` empty while payments are off.
+- `POST /v1/me/orders {"pack": "credits_10"}` → `Checkout`:
+  `{"order_id", "provider": "razorpay", "key_id", "provider_order_id", "amount", "currency", "name", "description", "pack", "credits"}`,
+  everything Razorpay Checkout needs (`key_id` is the public key id). Any other
+  field in the body is ignored. 400 `invalid_request` for a pack not on sale,
+  403 `payments_off`, 502 `upstream` when Razorpay fails. Counts against the
+  user's hourly work limit.
+- `POST /v1/me/orders/confirm {"razorpay_order_id", "razorpay_payment_id", "razorpay_signature"}`
+  (exactly what Checkout's success handler receives) → `{"order": Order, "credits": Credits}`.
+  The server checks the signature, then asks Razorpay for the payment, and
+  credits the pack only when the payment is captured (it captures an
+  authorized one) for the order's exact amount and currency. `order.status`
+  is `paid`, or still `created` while Razorpay is processing (the webhook
+  finishes it; poll `GET /v1/me/orders`), or `held` when the amount didn't
+  match (nothing credited; a person checks it). 400 `payment_unconfirmed` for
+  a bad signature, 404 for an order that isn't this user's. Safe to repeat.
+- `GET /v1/me/orders?limit=50` → `{"orders": [Order]}`, newest first, the
+  purchase history. `Order`: `{"id", "pack", "name", "credits", "amount", "currency", "status", "created_at", "paid_at"}`,
+  `status` one of `paid`, `failed` (the payment was declined), `held`.
+  Checkouts that were opened and never paid are left out.
+- `POST /v1/payments/razorpay/webhook` (internal key; no user). `web/` serves
+  Razorpay's webhook URL (`/api/payments/razorpay/webhook`) and forwards the
+  request body byte for byte with its `X-Razorpay-Signature` header. The
+  server verifies that signature (`RAZORPAY_WEBHOOK_SECRET`) before reading the
+  body: 400 `payment_unconfirmed` if it doesn't match. Signed events answer 200
+  `{"ok": true, "result": "paid"|"already_paid"|"held"|"failed"|"pending"|"unknown_order"|"ignored"}`
+  (the result is for logs). Handled: `payment.authorized` (captured),
+  `payment.captured` and `order.paid` (credited), `payment.failed`.
+
+A pack is credited once per order, whichever of the confirm call and the
+webhooks arrives first, however often they repeat: marking the order paid and
+adding its credits happen in one transaction, and a payment id can pay only
+one order. With payments switched off, orders that already exist are still
+confirmed, so someone who paid just before the switch gets their credits.
 
 ### Admin (read-only)
 

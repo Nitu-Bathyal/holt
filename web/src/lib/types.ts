@@ -8,6 +8,7 @@ export type Stats = S.Stats;
 export type LandingPath = S.LandingPath;
 export type EvidenceItem = S.EvidenceItem;
 export type Odds = S.Odds;
+export type Counted = S.Counted;
 export type StarterIssue = S.StarterIssue;
 export type FindResult = S.FindResult;
 // The web always sends every field; the server has defaults for them.
@@ -35,6 +36,17 @@ export type Verdict = Report["verdict"];
 export type Tone = Report["tone"];
 export type ApiErrorCode = ApiError["code"];
 export type Credits = S.Credits;
+export type Pack = S.PackOffer;
+export type Packs = S.Packs;
+export type Checkout = S.Checkout;
+export type Order = S.Order;
+export type OrderConfirmed = S.OrderConfirmed;
+/** What Razorpay Checkout hands the page after a successful payment. */
+export interface RazorpaySuccess {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
+}
 
 export type Access = S.Access;
 export type Preflight = S.Preflight;

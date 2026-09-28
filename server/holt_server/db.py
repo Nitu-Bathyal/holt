@@ -138,6 +138,45 @@ class CreditLot(Base):
     __table_args__ = (Index("ix_credit_lots_user", "user_id", "remaining"),)
 
 
+class Order(Base):
+    """One credit-pack checkout (payments.py). What it costs and what it buys
+    are copied from the pricing file when it is created, so a price change
+    never alters an order already open. Only a verified payment moves it to
+    `paid`, once, in the same transaction that adds its `CreditLot`.
+
+    status: `created` (checkout opened), `paid`, `failed` (the last attempt
+    was declined; another attempt on the same order can still pay it), `held`
+    (a payment that didn't match the order: nothing credited, a person looks).
+    """
+
+    __tablename__ = "orders"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True,
+                                    default=lambda: uuid.uuid4().hex)
+    user_id: Mapped[str] = mapped_column(String(200))
+    pack_id: Mapped[str] = mapped_column(String(40))
+    credits: Mapped[int] = mapped_column(Integer)
+    # Days the credits last once paid; NULL: they never expire.
+    expires_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Minor units (paise).
+    amount: Mapped[int] = mapped_column(Integer)
+    currency: Mapped[str] = mapped_column(String(3))
+    provider: Mapped[str] = mapped_column(String(20))
+    provider_order_id: Mapped[str] = mapped_column(String(100), unique=True)
+    # The payment that paid it: one payment can never pay two orders.
+    provider_payment_id: Mapped[str | None] = mapped_column(String(100), nullable=True,
+                                                            unique=True)
+    status: Mapped[str] = mapped_column(String(10), default="created")
+    # Why it failed or was held, for people.
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    lot_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    paid_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+    __table_args__ = (Index("ix_orders_user", "user_id", "created_at"),)
+
+
 class PlanEvent(Base):
     """Every change to `User.plan` / `plan_expires_at`, and why."""
 
