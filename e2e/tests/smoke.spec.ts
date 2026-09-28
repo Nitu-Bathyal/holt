@@ -21,7 +21,8 @@ test("landing: pasting a GitHub URL ends on the report with a verdict", async ({
   await page.goto("/");
   const box = page.getByLabel("GitHub repository or URL");
   await box.fill("https://github.com/pallets/flask");
-  await page.getByRole("button", { name: /check this repo/i }).click();
+  // The landing page has a second paste box at the bottom; click the one we filled.
+  await page.locator("form").filter({ has: box }).getByRole("button", { name: /check this repo/i }).click();
   await expect(page).toHaveURL(/\/pallets\/flask$/);
   // A cached report renders at once; otherwise the rules check runs first.
   await expect(page.getByText(VERDICT).first()).toBeVisible({ timeout: 180_000 });

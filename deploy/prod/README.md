@@ -52,6 +52,7 @@ lines, `chmod 600`), read by `deploy.sh` and `warm.sh` on every run (`env.sh`) a
 | `GITHUB_OAUTH_ID`, `GITHUB_OAUTH_SECRET` | `AUTH_GITHUB_ID/SECRET` | GitHub sign-in shows "isn't set up here" |
 | `GOOGLE_OAUTH_ID`, `GOOGLE_OAUTH_SECRET` | `AUTH_GOOGLE_ID/SECRET` | Google sign-in shows "isn't set up here" |
 | `OPENROUTER_API_KEY` | the same | AI reports answer `needs_key`; BYOK still works |
+| `HOLT_PROD_AI_BUDGET_USD`, `HOLT_PROD_AI_BUDGET_OWNER_OK` | `HOLT_AI_BUDGET_USD`, `HOLT_AI_BUDGET_OWNER_OK` | AI is off (budget 0), whatever key is set. A budget without `HOLT_PROD_AI_BUDGET_OWNER_OK=1` stops the deploy, and the server ignores one without `HOLT_AI_BUDGET_OWNER_OK`. `HOLT_AI_BUDGET_USD` itself (staging's) is never read here. See `server/README.md`, "AI budget" |
 | `GITHUB_TOKENS` | the same | falls back to `gh auth token`; with neither, the run stops (the server would have no API budget and a warm pass would end at "points left 0") |
 | `CONTACT_EMAIL`, `CONTACT_CITY` | `NEXT_PUBLIC_CONTACT_EMAIL/CITY` (build arg and env) | **the deploy stops**: the policy pages must not show placeholders |
 

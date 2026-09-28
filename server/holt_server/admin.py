@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import func, select
 
-from holt_server import credits, entitlements, pricing, schema
+from holt_server import budget, credits, entitlements, pricing, schema
 from holt_server.db import CreditEvent, CreditLot, PlanEvent, PlanUsage, User, iso, now
 from holt_server.deps import Caller, caller, services
 from holt_server.errors import ApiError
@@ -110,3 +110,13 @@ async def get_user(user_id: str, request: Request,
 async def get_pricing(request: Request) -> pricing.Catalogue:
     """The features, plans and packs this server loaded (prices in minor units)."""
     return entitlements.catalogue(services(request))
+
+
+@router.get("/ai-spend")
+async def get_ai_spend(request: Request) -> schema.AdminAiSpend:
+    """What AI has cost here so far, against `HOLT_AI_BUDGET_USD` (budget.py)."""
+    spend = await budget.spend(services(request))
+    return schema.AdminAiSpend(
+        budget_usd=spend.budget_usd, spent_usd=round(spend.spent_usd, 6),
+        held_usd=round(spend.committed_usd - spend.spent_usd, 6), runs=spend.runs,
+        running=spend.running, line=spend.line)

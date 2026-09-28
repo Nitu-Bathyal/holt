@@ -288,8 +288,27 @@ To take it away: remove `STAGING_HOLT_PRO_KEY`, run `preview.sh` with
   production uses. Besides those two, only the `STAGING_*` keys above are
   taken from it. Without the contact details the build fails on purpose
   rather than showing the placeholders.
-- AI reports answer "needs a key" until `OPENROUTER_API_KEY` is set in
-  `.env` (then `FORCE=1 preview.sh`).
+- AI runs on `OPENAI_API_KEY` from the same file (OpenAI's API,
+  `gpt-5-mini`), for the server's AI reports and the paid-features service's
+  playbooks and pre-flight summaries, under **one hard budget of $1.00 for
+  both** (`STAGING_AI_BUDGET_USD` in `preview.sh`). The server holds the
+  budget (`server/README.md`, "AI budget"): the service is only reached
+  through the server's jobs, and each job holds its most possible cost
+  before it is queued, so the two together can't pass $1.00. Once it is used
+  up every AI request says so and nothing is charged. Without the key AI is
+  off. See how much is left, and give testers credits, from the server
+  container:
+
+  ```sh
+  docker exec stage-holt-new-server-1 python -m holt_server.budget
+  # AI spend: $0.23 of $1.00
+  docker exec stage-holt-new-server-1 python -m holt_server.credits grant \
+      --user <id> --credits 5 --reason "trying AI on staging"
+  ```
+
+  A user's id is the one Auth.js gives them (`/v1/admin/users` lists the
+  newest, for ids in `HOLT_ADMIN_USERS`). `/v1/admin/ai-spend` answers the
+  same as the first command.
 
 ### Commands
 

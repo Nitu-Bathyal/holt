@@ -86,7 +86,12 @@ services:
       HOLT_SECRET_KEY: ${HOLT_SECRET_KEY:?run make-env.sh}
       HOLT_WEB_URL: https://${STAGING_HOST:-staging.githolt.com}
       GITHUB_TOKENS: ${GITHUB_TOKENS}
+      # AI (preview.sh sets these from OPENAI_API_KEY): the model, and the
+      # hard budget for all AI on staging, holt-pro's included. 0 = AI off.
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-5-mini}
+      HOLT_AI_BUDGET_USD: ${HOLT_AI_BUDGET_USD:-0}
       # Paid features (compose.pro.yml). preview.sh sets both, empty when
       # the service isn't running, which turns paid features off.
       HOLT_PRO_URL: ${HOLT_PRO_URL:-}
