@@ -91,6 +91,7 @@ def test_no_budget_means_ai_is_off_and_costs_nothing(make_harness):
     before = balance(h, "u1")
     r = ai(h, "octo/one", "u1")
     assert r.status_code == 503 and r.json()["error"]["code"] == "ai_unavailable"
+    assert "reason" not in r.json()["error"]  # off, not used up
     assert balance(h, "u1") == before
     assert h.get("/v1/me/credits", user="u1").json()["ai_available"] is False
 
@@ -127,6 +128,7 @@ def test_runs_past_the_budget_are_refused_before_any_credit_moves(make_harness):
     body = third.json()["error"]
     assert body["code"] == "ai_unavailable" and "budget" in body["message"]
     assert "Nothing was charged" in body["message"]
+    assert body["reason"] == "ai_budget_used_up"  # the web's "AI is paused" heading
     assert balance(h, "u3") == before
     assert committed(h) == pytest.approx(0.20)
     h.engine.gate.set()

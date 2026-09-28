@@ -1325,6 +1325,8 @@ export interface components {
             code: "unauthorized" | "not_found" | "invalid_repo" | "invalid_request" | "rate_limited" | "quota_exceeded" | "needs_plan" | "needs_key" | "claim_not_ready" | "ai_unavailable" | "upstream" | "internal" | "not_implemented" | "payments_off" | "payment_unconfirmed" | "already_subscribed";
             /** Message */
             message: string;
+            /** Reason */
+            reason?: "ai_budget_used_up" | null;
             /** Retry After */
             retry_after?: number | null;
         };

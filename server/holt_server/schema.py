@@ -56,12 +56,15 @@ ErrorCode = Literal["unauthorized", "not_found", "invalid_repo", "invalid_reques
 
 
 class Error(Model):
-    # `retry_after` is left out, not null, unless it applies (errors.py).
+    # `retry_after` and `reason` are left out, not null, unless they apply (errors.py).
     model_config = ConfigDict(json_schema_serialization_defaults_required=False)
 
     code: ErrorCode
     message: str
     retry_after: int | None = None
+    # `ai_budget_used_up`: an `ai_unavailable` because this environment's AI
+    # budget is spent, not because AI is switched off.
+    reason: Literal["ai_budget_used_up"] | None = None
 
 
 class ErrorBody(Model):

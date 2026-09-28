@@ -99,7 +99,8 @@ def switched_off() -> ApiError:
 def used_up() -> ApiError:
     return ApiError("ai_unavailable", "The AI budget for this environment is used up, "
                     "so AI features are paused. Nothing was charged. The free quick "
-                    "report still has the full verdict and evidence.")
+                    "report still has the full verdict and evidence.",
+                    reason="ai_budget_used_up")
 
 
 async def reserve(s: AsyncSession, settings: Settings, job_id: str, kind: str, *,

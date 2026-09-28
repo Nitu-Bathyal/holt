@@ -31,8 +31,8 @@ with codes: `unauthorized`, `not_found` (repo missing or private),
 `quota_exceeded` (not enough credits, or a plan's monthly allowance is used up),
 `needs_plan` (the feature comes only with a paid plan), `needs_key` (AI report requested without
 signing in), `ai_unavailable` (AI is switched off: the server has no
-model key or no AI budget, or the environment's AI budget is used up; nothing
-is charged), `claim_not_ready` (a weekly claim before it is due),
+model key or no AI budget, or the environment's AI budget is used up, which
+also sends `"reason": "ai_budget_used_up"`; nothing is charged), `claim_not_ready` (a weekly claim before it is due),
 `payments_off` (credit packs or plans aren't on sale), `payment_unconfirmed` (a
 payment's signature didn't check out; nothing was credited),
 `already_subscribed` (the user already has a paid plan),
