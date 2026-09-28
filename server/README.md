@@ -57,7 +57,7 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | OpenAI-compatible endpoint. |
 | `HOLT_JOB_CONCURRENCY` | `2` | User lane: people's analyses and finds running at once in this process. Each holds a thread and some memory. |
 | `HOLT_JOB_TIMEOUT_RULES` | `180` | Seconds a rules report may run before it is stopped and fails with a plain "took too long" error. |
-| `HOLT_JOB_TIMEOUT_AI` | `480` | The same, for AI reports (refunded when stopped). |
+| `HOLT_JOB_TIMEOUT_AI` | `480` | The same, for AI reports and PR pre-flight checks (refunded when stopped). |
 | `HOLT_JOB_TIMEOUT_FIND` | `300` | The same, for `/v1/find`. |
 | `HOLT_CACHE_HOURS` | `24` | How long a finished report is served instead of re-running. |
 | `HOLT_SIGNUP_AI_CREDITS` | `3` | Free AI reports every signed-in user gets once, on their first visit. |
@@ -103,6 +103,7 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `holt_server/starter.py` | Lazy adapter over `holt.starter`; the endpoints return 501 until that module exists. |
 | `holt_server/pro.py` | Client for the optional paid-features service (`HOLT_PRO_URL`): the key header, 2 s connect / 10 s read timeouts, one retry on a failed connection or a 503, and its error envelope turned into this API's errors with plain messages. `Services.pro` is None when it is off, and `Services.require_pro()` then answers 501 "not available yet". |
 | `holt_server/playbook.py` | The paid playbook: the teaser and unlock routes, charging (`entitlements.charge`) with a per-user unlock, the `playbook` job that calls the service, the per-repo cache, and refunds for everyone waiting on a job that fails. |
+| `holt_server/preflight.py` | PR pre-flight: the state and start routes, charging (`entitlements.charge`, feature `preflight`) in the transaction that queues the `preflight` job, the job that calls the service, and results kept per user, target and head commit (a re-check of the same commit is refunded). A failed job is refunded by `refund_job`. |
 | `holt_server/badge.py` | The README badge SVG. |
 | `holt_server/discover.py` | `GET /v1/discover` and the "most welcoming <language> repos" boards, from the latest rules report per repo (never the model), plus `repo_meta`: language, stars, topics and description, which the warm pass reads a hundred repos per GraphQL query. |
 

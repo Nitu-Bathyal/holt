@@ -461,6 +461,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/preflight": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Preflight */
+        post: operations["start_preflight_v1_me_preflight_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/profile": {
         parameters: {
             query?: never;
@@ -679,6 +696,57 @@ export interface paths {
         };
         /** Get Playbook */
         get: operations["get_playbook_v1_playbook__owner___repo__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/preflight": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Preflight */
+        get: operations["get_preflight_v1_preflight_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/preflight-jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Preflight Job */
+        get: operations["get_preflight_job_v1_preflight_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/preflight-jobs/{job_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Preflight Job Events */
+        get: operations["preflight_job_events_v1_preflight_jobs__job_id__events_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -1860,6 +1928,224 @@ export interface components {
              */
             key: "must_do" | "size_and_scope" | "reviewers" | "closing_reasons" | "checklist";
         };
+        /**
+         * Preflight
+         * @description One pre-flight check of a pull request or branch. There is no overall verdict.
+         */
+        Preflight: {
+            /** Archived */
+            archived: boolean;
+            /** Checked At */
+            checked_at: string;
+            /** Checks */
+            checks: components["schemas"]["PreflightCheck"][];
+            counts: components["schemas"]["PreflightCounts"];
+            /**
+             * Free Recheck
+             * @default false
+             */
+            free_recheck: boolean;
+            /** Note */
+            note: string | null;
+            /** Repo */
+            repo: string;
+            similar: components["schemas"]["PreflightSimilar"] | null;
+            summary: components["schemas"]["PreflightSummary"] | null;
+            target: components["schemas"]["PreflightTarget"];
+            /** Window Days */
+            window_days: number | null;
+        };
+        /** PreflightCheck */
+        PreflightCheck: {
+            /** Id */
+            id: string;
+            /** Links */
+            links: string[];
+            quote: components["schemas"]["PreflightQuote"] | null;
+            /** Statement */
+            statement: string;
+            /** Title */
+            title: string;
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "ok" | "worth_fixing" | "unknown";
+        };
+        /** PreflightCounts */
+        PreflightCounts: {
+            /** Ok */
+            ok: number;
+            /** Unknown */
+            unknown: number;
+            /** Worth Fixing */
+            worth_fixing: number;
+        };
+        /**
+         * PreflightFor
+         * @description The pull request or branch a request named, as parsed.
+         */
+        PreflightFor: {
+            /** Base */
+            base: string | null;
+            /** Branch */
+            branch: string | null;
+            /** Number */
+            number: number | null;
+            /** Repo */
+            repo: string;
+        };
+        /** PreflightIn */
+        PreflightIn: {
+            /** Base */
+            base?: string | null;
+            /** Branch */
+            branch?: string | null;
+            /** Pr Url */
+            pr_url?: string | null;
+            /** Repo */
+            repo?: string | null;
+            /**
+             * Summary
+             * @default false
+             */
+            summary: boolean;
+        };
+        /** PreflightJob */
+        PreflightJob: {
+            /** Job Id */
+            job_id: string;
+            /** Progress */
+            progress: number;
+            /** Stage */
+            stage: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "done" | "error";
+        };
+        /** PreflightJobStatus */
+        PreflightJobStatus: {
+            error: components["schemas"]["Error"] | null;
+            preflight: components["schemas"]["Preflight"] | null;
+            /** Progress */
+            progress: number;
+            /** Stage */
+            stage: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "done" | "error";
+        };
+        /**
+         * PreflightQuote
+         * @description The contributing guide's own line on a check's topic.
+         */
+        PreflightQuote: {
+            /** Path */
+            path: string | null;
+            /** Text */
+            text: string;
+            /** Url */
+            url: string | null;
+        };
+        /** PreflightSentence */
+        PreflightSentence: {
+            /** Checks */
+            checks: string[];
+            /** Text */
+            text: string;
+        };
+        /**
+         * PreflightSimilar
+         * @description The merged pull request most like this one (same files, then folders).
+         */
+        PreflightSimilar: {
+            /** Author */
+            author: string | null;
+            /** Files */
+            files: number | null;
+            /** Lines */
+            lines: number | null;
+            /** Number */
+            number: number | null;
+            /** Outside */
+            outside: boolean;
+            /** Title */
+            title: string;
+            /** Touched Tests */
+            touched_tests: boolean | null;
+            /** Url */
+            url: string;
+            /** Why */
+            why: string;
+        };
+        /**
+         * PreflightState
+         * @description GET /v1/preflight.
+         */
+        PreflightState: {
+            access: components["schemas"]["Access"] | null;
+            /** Available */
+            available: boolean;
+            job: components["schemas"]["PreflightJob"] | null;
+            /** On Sale */
+            on_sale: boolean;
+            result: components["schemas"]["Preflight"] | null;
+            target: components["schemas"]["PreflightFor"] | null;
+        };
+        /**
+         * PreflightSummary
+         * @description A short model-written summary, checked against the checks. No verdict.
+         */
+        PreflightSummary: {
+            /** Model */
+            model: string | null;
+            /** Sentences */
+            sentences: components["schemas"]["PreflightSentence"][];
+        };
+        /**
+         * PreflightTarget
+         * @description What was checked. For a branch, `number`, `state` and `outside` are
+         *     null and `url` is GitHub's compare page.
+         */
+        PreflightTarget: {
+            /** Additions */
+            additions: number | null;
+            /** Author */
+            author: string | null;
+            /** Base */
+            base: string | null;
+            /** Deletions */
+            deletions: number | null;
+            /** Draft */
+            draft: boolean;
+            /** Files */
+            files: number | null;
+            /** Head */
+            head: string | null;
+            /** Head Sha */
+            head_sha: string;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "pull_request" | "branch";
+            /** Lines */
+            lines: number | null;
+            /** Number */
+            number: number | null;
+            /** Outside */
+            outside: boolean | null;
+            /** State */
+            state: string | null;
+            /** Title */
+            title: string | null;
+            /** Url */
+            url: string;
+        };
         /** Price */
         Price: {
             /** Inr Paise */
@@ -2403,6 +2689,19 @@ export type PlaybookSource = components['schemas']['PlaybookSource'];
 export type PlaybookState = components['schemas']['PlaybookState'];
 export type PlaybookTeaser = components['schemas']['PlaybookTeaser'];
 export type PlaybookTeaserSection = components['schemas']['PlaybookTeaserSection'];
+export type Preflight = components['schemas']['Preflight'];
+export type PreflightCheck = components['schemas']['PreflightCheck'];
+export type PreflightCounts = components['schemas']['PreflightCounts'];
+export type PreflightFor = components['schemas']['PreflightFor'];
+export type PreflightIn = components['schemas']['PreflightIn'];
+export type PreflightJob = components['schemas']['PreflightJob'];
+export type PreflightJobStatus = components['schemas']['PreflightJobStatus'];
+export type PreflightQuote = components['schemas']['PreflightQuote'];
+export type PreflightSentence = components['schemas']['PreflightSentence'];
+export type PreflightSimilar = components['schemas']['PreflightSimilar'];
+export type PreflightState = components['schemas']['PreflightState'];
+export type PreflightSummary = components['schemas']['PreflightSummary'];
+export type PreflightTarget = components['schemas']['PreflightTarget'];
 export type Price = components['schemas']['Price'];
 export type ProfileIn = components['schemas']['ProfileIn'];
 export type ProfileOut = components['schemas']['ProfileOut'];
@@ -3455,6 +3754,43 @@ export interface operations {
             };
         };
     };
+    start_preflight_v1_me_preflight_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PreflightIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Queued"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     get_profile_v1_me_profile_get: {
         parameters: {
             query?: never;
@@ -3955,6 +4291,110 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["PlaybookState"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_preflight_v1_preflight_get: {
+        parameters: {
+            query?: {
+                pr?: string | null;
+                repo?: string | null;
+                branch?: string | null;
+                base?: string | null;
+            };
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreflightState"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_preflight_job_v1_preflight_jobs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-internal-key"?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PreflightJobStatus"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    preflight_job_events_v1_preflight_jobs__job_id__events_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-internal-key"?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
                 };
             };
             /** @description Default Response */

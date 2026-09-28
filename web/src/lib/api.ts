@@ -4,8 +4,8 @@ import "server-only";
 import { cache } from "react";
 import type {
   AnalysisStart, ApiError, Checkout, Contributions, Credits, DiscoverOut, DiscoverSort, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection,
-  HistoryItem, JobStatus, Me, Mode, MySubscription, Order, OrderConfirmed, Packs, Plans, PlaybookStart, PlaybookState, ProfileOut, ProfilePrefs,
-  RazorpaySubscriptionSuccess, RazorpaySuccess, Recommendations, Report, Result, StarterIssue, SubscriptionCheckout, SubscriptionConfirmed,
+  HistoryItem, JobStatus, Me, Mode, MySubscription, Order, OrderConfirmed, Packs, Plans, PlaybookStart, PlaybookState, PreflightStart, PreflightState,
+  ProfileOut, ProfilePrefs, RazorpaySubscriptionSuccess, RazorpaySuccess, Recommendations, Report, Result, StarterIssue, SubscriptionCheckout, SubscriptionConfirmed,
 } from "./types";
 import type { FeedbackInput } from "./feedback";
 import { isJobId } from "./ids";
@@ -90,9 +90,9 @@ export async function jobStatus(jobId: string): Promise<Result<JobStatus>> {
   return call(`/v1/analyses/${enc(jobId)}`);
 }
 
-export type JobKind = "analyses" | "find" | "playbook-jobs";
+export type JobKind = "analyses" | "find" | "playbook-jobs" | "preflight-jobs";
 
-/** Raw upstream SSE response for a job (analyses, find or a playbook). */
+/** Raw upstream SSE response for a job (analyses, find, a playbook or a PR pre-flight check). */
 export async function jobEvents(kind: JobKind, jobId: string, signal: AbortSignal): Promise<Response> {
   if (!isJobId(jobId)) {
     return new Response(`event: error\ndata: ${JSON.stringify({ error: BAD_JOB.error })}\n\n`, { status: 400, headers: { "Content-Type": "text/event-stream" } });
@@ -176,6 +176,32 @@ export async function unlockPlaybook(repo: string, userId: string): Promise<Resu
   if (!repoOk(repo)) return BAD_REPO;
   if (MOCK) return mock.unlockPlaybook(repo, userId);
   return call(`/v1/me/playbook/${repoPath(repo)}`, { method: "POST", caller: { userId } });
+}
+
+/** What to pre-flight: a pull request link, or a repository and a branch (API.md, PR pre-flight). */
+export interface PreflightQuery {
+  pr?: string | null;
+  repo?: string | null;
+  branch?: string | null;
+  base?: string | null;
+}
+
+/** PR pre-flight (API.md): whether it's on, what it costs this user, and their latest check of `q`. */
+export async function preflightState(q: PreflightQuery, caller: Caller): Promise<Result<PreflightState>> {
+  if (MOCK) return mock.preflightState(q, caller.userId ?? undefined);
+  const params = new URLSearchParams();
+  for (const k of ["pr", "repo", "branch", "base"] as const) {
+    const v = q[k]?.trim();
+    if (v) params.set(k, v.slice(0, 500));
+  }
+  const qs = params.toString();
+  return call(`/v1/preflight${qs ? `?${qs}` : ""}`, { caller });
+}
+
+/** Start a pre-flight check. The server checks and charges the user; the browser decides nothing about the price. */
+export async function startPreflight(body: { pr_url?: string; repo?: string; branch?: string; base?: string; summary: boolean }, caller: Caller): Promise<Result<PreflightStart>> {
+  if (MOCK) return mock.startPreflight(body, caller.userId ?? "");
+  return call("/v1/me/preflight", { method: "POST", body: JSON.stringify(body), caller });
 }
 
 /** "Was this verdict right?" (API.md, Feedback). One answer per person per report version. */

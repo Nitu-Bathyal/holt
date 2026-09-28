@@ -33,6 +33,10 @@ READ_TIMEOUT_S = 10.0
 PLAYBOOK_TIMEOUT_S = 300.0
 # How far back the playbook reads pull requests (the service's default).
 PLAYBOOK_DAYS = 365
+# POST /v1/preflight may read GitHub and then wait on a model (CONTRACT.md).
+PREFLIGHT_TIMEOUT_S = 300.0
+# The evidence window pre-flight compares with (the service's default).
+PREFLIGHT_DAYS = 365
 RETRY_DELAY_S = 0.5
 
 UNAVAILABLE = "This feature is unavailable right now. Please try again later."
@@ -106,6 +110,18 @@ class ProClient:
                                 json={"repo": repo, "days": days, "refresh": False},
                                 user_id=user_id, request_id=request_id,
                                 timeout=PLAYBOOK_TIMEOUT_S)
+
+    async def preflight(self, target: dict[str, str], *, days: int = PREFLIGHT_DAYS,
+                        summary: bool = False, user_id: str | None = None,
+                        request_id: str | None = None) -> dict[str, Any]:
+        """The pre-flight checks for one pull request (`{"pr": ...}`) or branch
+        (`{"repo", "branch", "base"?}`), as the service sends them. Can be slow
+        (evidence cache miss, summary): call it from a job."""
+        return await self._call("POST", "/v1/preflight",
+                                json={**target, "days": days, "summary": summary,
+                                      "refresh": False},
+                                user_id=user_id, request_id=request_id,
+                                timeout=PREFLIGHT_TIMEOUT_S)
 
     async def ready(self) -> Readiness:
         """The service's own health check. Never raises."""

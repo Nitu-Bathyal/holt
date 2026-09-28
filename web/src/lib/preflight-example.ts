@@ -1,0 +1,86 @@
+// A made-up pre-flight result, shown to everyone on /preflight so people can
+// see what a check gives before paying for one. The repository and people are
+// fictional; the page shows it unlinked and labelled as an example. The mock
+// API (MOCK_API=1) serves it for any target too.
+import type { Preflight } from "./types";
+
+export const EXAMPLE_PREFLIGHT: Preflight = {
+  repo: "example-org/tiny-cli",
+  checked_at: "2026-09-28T07:00:00+00:00",
+  window_days: 365,
+  archived: false,
+  note: null,
+  target: {
+    kind: "pull_request",
+    number: 412,
+    url: "https://github.com/example-org/tiny-cli/pull/412",
+    title: "Add a `--quiet` flag to `tiny sync`",
+    author: "first-timer",
+    outside: true,
+    state: "open",
+    draft: false,
+    head: "first-timer:quiet-flag",
+    base: "main",
+    head_sha: "3f9a2c1",
+    additions: 86,
+    deletions: 4,
+    lines: 90,
+    files: 3,
+  },
+  checks: [
+    {
+      id: "ci",
+      title: "Automated checks",
+      verdict: "worth_fixing",
+      statement: "The `lint` check failed. It passed on all 48 merged pull requests.",
+      links: [],
+      quote: null,
+    },
+    {
+      id: "tests",
+      title: "Tests",
+      verdict: "worth_fixing",
+      statement: "This changes code but no tests. 41 of 48 merged pull requests that changed code also changed tests.",
+      links: ["https://github.com/example-org/tiny-cli/pull/398", "https://github.com/example-org/tiny-cli/pull/387"],
+      quote: { text: "Every change in behaviour needs a test in `tests/`.", path: "CONTRIBUTING.md", url: "https://github.com/example-org/tiny-cli/blob/HEAD/CONTRIBUTING.md#L22" },
+    },
+    {
+      id: "size",
+      title: "Size",
+      verdict: "ok",
+      statement: "90 changed lines. 3 in 4 merged pull requests stayed under 140.",
+      links: [],
+      quote: null,
+    },
+    {
+      id: "issue",
+      title: "Linked issue",
+      verdict: "ok",
+      statement: "This pull request links issue #377.",
+      links: [],
+      quote: null,
+    },
+    {
+      id: "changelog",
+      title: "Changelog",
+      verdict: "unknown",
+      statement: "We couldn't tell whether this needs a changelog entry: only some merged pull requests that changed code added one.",
+      links: [],
+      quote: null,
+    },
+  ],
+  counts: { ok: 2, worth_fixing: 2, unknown: 1 },
+  similar: {
+    number: 398,
+    url: "https://github.com/example-org/tiny-cli/pull/398",
+    title: "Add a `--verbose` flag to `tiny sync`",
+    author: "another-newcomer",
+    outside: true,
+    lines: 72,
+    files: 3,
+    touched_tests: true,
+    why: "It changed 2 of the same files: `src/sync.py` and `docs/cli.md`.",
+  },
+  summary: null,
+  free_recheck: false,
+};
