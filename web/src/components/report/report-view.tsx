@@ -11,6 +11,7 @@ import { badgeOffered } from "@/lib/badge";
 import { BadgeSnippet } from "./badge-snippet";
 import { EvidenceList } from "./evidence-list";
 import { HoltUsersLine } from "./holt-users-line";
+import { PreflightLink } from "../preflight/preflight-link";
 import { LandingMap } from "./landing-map";
 import { ShareBar } from "./share-bar";
 import { StatsGrid } from "./stats-grid";
@@ -135,6 +136,8 @@ export function ReportView({
         <Section n="01" id="issues" title={viable ? "Your first contribution" : "Starter issues"} note="open and unclaimed, best first" reveal={reveal ? 180 : undefined}>
           {issues}
         </Section>
+
+        {!example && <PreflightLink repo={repo} />}
 
         <Section n="02" id="numbers" title="What happened to outside contributors">
           <StatsGrid stats={report.stats} reveal={reveal} />

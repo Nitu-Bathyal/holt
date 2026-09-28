@@ -36,6 +36,14 @@ export type Tone = Report["tone"];
 export type ApiErrorCode = ApiError["code"];
 export type Credits = S.Credits;
 
+export type Access = S.Access;
+export type Preflight = S.Preflight;
+export type PreflightCheck = S.PreflightCheck;
+export type PreflightState = S.PreflightState;
+export type PreflightVerdict = S.PreflightCheck["verdict"];
+export type PreflightFor = S.PreflightFor;
+export type PreflightStart = S.Queued;
+
 export type AnalysisStart = S.AnalysisDone | S.Queued;
 export type FindStart = S.FindDone | S.Queued;
 
