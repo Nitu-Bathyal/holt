@@ -13,7 +13,7 @@ export interface Provider {
   action: (() => Promise<void>) | null;
 }
 
-const BASE = "flex min-h-13 w-full items-center justify-center gap-3 border px-4 text-[1rem] font-semibold";
+const BASE = "flex min-h-13 w-full items-center justify-center gap-3 border px-4 text-[0.95rem] font-semibold";
 // GitHub is where Holt's audience already lives, so it gets the filled button.
 const LOOK: Record<string, string> = {
   github: "border-ink bg-ink text-bg hover:not-disabled:bg-ink/85",

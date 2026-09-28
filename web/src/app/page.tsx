@@ -1,14 +1,23 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CatFace } from "@/components/cat-face";
+import { CopyButton } from "@/components/copy-button";
 import { HacktoberfestPill } from "@/components/hacktoberfest-pill";
 import { CatCompanion } from "@/components/motion/cat-companion";
+import { SwapHost } from "@/components/motion/swap-host";
+import { ScrollMarquee } from "@/components/motion/scroll-marquee";
 import { PasteBox } from "@/components/paste-box";
 import { UrlTrick } from "@/components/url-trick";
 import { LiveSample } from "@/components/sample-report";
 import { SampleReportSkeleton } from "@/components/sample-report-skeleton";
 import { SkeletonReveal } from "@/components/motion/reveal";
-import { EXAMPLE_PATH } from "@/lib/example-report";
+import { EXAMPLE_PATH, EXAMPLE_REPORT } from "@/lib/example-report";
+import { humanHours } from "@/lib/format";
+import { buildReplay } from "@/lib/landing-replay";
+import { Answers } from "@/components/landing/answers";
+import { CheckReplay } from "@/components/landing/check-replay";
+import { People, type Person } from "@/components/landing/people";
+import { Receipts } from "@/components/landing/receipts";
+import { Words } from "@/components/landing/words";
 import { currentUser } from "@/lib/session";
 import { GITHUB_REPO_URL, SITE_HOST, WELCOME_AI_CREDITS, hacktoberfest } from "@/lib/site";
 import { PageTransition } from "@/components/motion/page-transition";
@@ -19,9 +28,57 @@ export const metadata: Metadata = {
   alternates: { canonical: "/" },
 };
 
-/** One calm column per section. */
-function Column({ children }: { children: React.ReactNode }) {
-  return <div className="wrap">{children}</div>;
+// "02 see the answer": the section's number and name, above its headline (the
+// side rail it replaces left the left third of every pane empty).
+function Kicker({ n, label, className = "" }: { n: string; label: string; className?: string }) {
+  return (
+    <p className={`ls-kicker ${className}`} data-reveal>
+      <span className="text-blue">{n}</span> {label}
+    </p>
+  );
+}
+
+function Grid({ children }: { children: React.ReactNode }) {
+  // landing-wide: the measure and type grow with the screen (globals.css).
+  return <div className="wrap landing-wide">{children}</div>;
+}
+
+const REPLAY = buildReplay(EXAMPLE_REPORT);
+
+// Section 03's people. Their examples are the example report's real numbers.
+function people(): Person[] {
+  const r = EXAMPLE_REPORT;
+  const s = r.stats;
+  const top = r.landing[0];
+  return [
+    {
+      key: "first",
+      who: "a student with a free weekend",
+      title: "Your first PR",
+      body: "Skip the repos where outside PRs sit in silence. Start where someone answers.",
+      mood: "startled",
+      hover: "celebrating",
+      example: { repo: r.repo, fact: `${s.first_time_merged_authors} people got their first PR merged` },
+    },
+    {
+      key: "next",
+      who: "a regular, looking for a new home",
+      title: "Your next project",
+      body: "Spend your evenings where outside work gets merged, and see which folders it lands in.",
+      mood: "determined",
+      hover: "adoring",
+      example: { repo: r.repo, fact: top ? `${top.merged} of ${top.attempted} merged in ${top.path}` : `${s.outsider_merged} of ${s.outsider_attempts} outside PRs merged` },
+    },
+    {
+      key: "upstream",
+      who: "a developer with a bug at work",
+      title: "A fix you need upstream",
+      body: "Find out if they take outside patches before you tell your team it'll land by Friday.",
+      mood: "thinking",
+      hover: "determined",
+      example: { repo: r.repo, fact: `a first reply typically took ${humanHours(s.median_first_response_hours)}` },
+    },
+  ];
 }
 
 // Section 06's call to action. Signed-in people already have their free AI
@@ -29,48 +86,72 @@ function Column({ children }: { children: React.ReactNode }) {
 async function AiReportsCta() {
   if (await currentUser()) {
     return (
-      <Link href="/me/history" className="bracket-link">Your reports →</Link>
+      <Link href="/me/history" className="bracket-link">[ your reports → ]</Link>
     );
   }
   return (
     <>
-      <Link href="/signin" className="bracket-link">Sign in for {WELCOME_AI_CREDITS} free AI reports →</Link>
-      <Link href={EXAMPLE_PATH} className="text-link inline-flex min-h-11 items-center text-[0.875rem]">Read an example first</Link>
+      <Link href="/signin" className="bracket-link">[ sign in for {WELCOME_AI_CREDITS} free AI reports → ]</Link>
+      <Link href={EXAMPLE_PATH} className="text-link inline-flex min-h-11 items-center text-[0.89rem]">[ read an example first ]</Link>
     </>
   );
 }
 
-export default function Home() {
+export default async function Home() {
   const hf = hacktoberfest();
+  // Signed out, the paste boxes go through sign-in (see lib/gate.ts).
+  const signedIn = Boolean(await currentUser());
   return (
     <PageTransition>
       <>
-        {/* Start here: one question, one box. */}
-        <section data-hero data-cat-section="ready" className="pane relative overflow-hidden">
+        {/* 01 — start here */}
+        <section data-hero data-cat-section="ready" className="pane relative overflow-hidden border-b border-line low:pt-5 short:pt-3">
+          <div aria-hidden="true" className="hero-backdrop" />
           <CatCompanion />
-          <Column>
-            <div className="relative z-10 max-w-[760px]">
-              {hf && (
-                <div className="fade-up mb-6" style={{ ["--d" as string]: ".1s" }}>
-                  <HacktoberfestPill year={hf.year} short={hf.short} />
-                </div>
-              )}
-              <h1 className="display mb-5 text-[clamp(2.25rem,7vw,3.5rem)] short:text-[2.25rem]">
-                <span className="headline-line"><span>Will this repo</span></span>
-                <span className="headline-line"><span className="text-orange">actually merge your PR?</span></span>
-              </h1>
-              <p className="fade-up mb-8 max-w-[560px] text-[1.125rem] leading-relaxed text-muted" style={{ ["--d" as string]: ".3s" }}>
-                Paste a repo. Holt checks whether people outside the project get replies and get merged.
-              </p>
-              <div className="fade-up max-w-[680px]" style={{ ["--d" as string]: ".38s" }}>
-                <PasteBox />
+          <Grid>
+            <div className="relative z-10 min-w-0">
+              <div className="fade-up mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 low:mb-3 short:mb-2" style={{ ["--d" as string]: ".1s" }}>
+                <p className="ls-kicker text-muted">
+                  <span className="text-blue">01</span> holt / free / for your first PR or your fiftieth
+                </p>
+                {hf && <HacktoberfestPill year={hf.year} short={hf.short} />}
               </div>
-              <p className="fade-up mt-5 text-[1rem] text-muted" style={{ ["--d" as string]: ".42s" }}>
-                No repo in mind?{" "}
-                <Link href="/find" prefetch className="text-link">Find a project</Link>
-              </p>
+              {/* Sized by the screen; the sub-line moves beside the headline where both fit. */}
+              <div className="hero-lede">
+                <h1 className="display hero-h1">
+                  <span className="headline-line"><span>Will this repo</span></span>
+                  <span className="headline-line"><span className="text-orange"><span className="marker">actually merge</span></span></span>
+                  <span className="headline-line"><span className="text-orange">your PR?</span></span>
+                </h1>
+                <p className="prose-sans fade-up hero-sub" style={{ ["--d" as string]: ".3s" }}>
+                  Paste a repo. Holt checks what happened to the outsiders who tried before you: did anyone reply, and
+                  did anything get merged?
+                </p>
+              </div>
+              <div className="fade-up hero-act" style={{ ["--d" as string]: ".38s" }}>
+                <PasteBox signedIn={signedIn} />
+              </div>
+              <div className="fade-up hero-foot" style={{ ["--d" as string]: ".42s" }}>
+                <p className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                  <span className="font-sans text-muted">No repo in mind?</span>
+                  <Link href="/find" className="bracket-link bracket-link--orange min-h-11 px-3 text-center sm:min-h-12 sm:px-5">
+                    [ find a project&nbsp;→&nbsp;]
+                  </Link>
+                </p>
+                <p className="font-sans text-faint">
+                  Already on GitHub? Swap <strong className="text-muted">hub</strong> for <strong className="text-muted">holt</strong>:{" "}
+                  <SwapHost />
+                </p>
+              </div>
+              <div className="fade-up mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 low:mt-4" style={{ ["--d" as string]: ".5s" }}>
+                <span className="award-badge">
+                  <span>micro1 winner</span>
+                  <span>Most useful real-world workflow</span>
+                </span>
+                <span className="text-[0.75rem] text-faint">Frontier Engineering Challenge</span>
+              </div>
             </div>
-          </Column>
+          </Grid>
         </section>
 
         {/* After sign-in: the profile card, for people who haven't saved or skipped it. */}
@@ -78,102 +159,138 @@ export default function Home() {
           <ProfileOnboarding back="/" className="wrap py-8" />
         </Suspense>
 
-        {/* See the answer */}
-        <section data-cat-section="startled" className="pane">
-          <Column>
-            <h2 className="h2 mb-4 max-w-[680px]" data-reveal>The answer, with receipts.</h2>
-            <p className="mb-12 max-w-[560px] text-[1.125rem] text-muted" data-reveal>
-              Every claim links to the GitHub thread it came from.
-            </p>
+        {/* 02 — see the answer: a check replayed, then the real thing */}
+        <section id="answer" data-cat-section="startled" className="pane scroll-mt-[61px]">
+          <Grid>
+            <Kicker n="02" label="see the answer" />
+            <div className="ls-split">
+              <div>
+                <h2 className="h2 mb-6">
+                  <Words text="Watch Holt check a repo." />
+                </h2>
+                <p className="prose-sans mb-8 max-w-[34ch]" data-reveal>
+                  It reads what happened to the last few months of outside pull requests, then applies the same written
+                  rules to every repo. On the web or in your terminal: same check, same answer.
+                </p>
+                <p className="prose-sans max-w-[34ch]" data-reveal>
+                  Every claim in a report links to the GitHub thread it came from. Check our work.
+                </p>
+              </div>
+              <div className="min-w-0" data-reveal>
+                <CheckReplay replay={REPLAY} />
+              </div>
+            </div>
+            <h3 className="ls-subhead mb-6 mt-16" data-reveal>
+              The answer, with receipts: a real report, today.
+            </h3>
             <SkeletonReveal fallback={<SampleReportSkeleton />}>
               <LiveSample />
             </SkeletonReveal>
-          </Column>
+          </Grid>
         </section>
 
-        {/* Who it's for */}
-        <section data-cat-section="thinking" className="pane bg-section-alt">
-          <Column>
-            <h2 className="h2 mb-12 max-w-[680px]" data-reveal>Don&apos;t write your PR into the void.</h2>
-            <ul className="grid gap-10 md:grid-cols-3 md:gap-12">
-              {[
-                { title: "Your first PR", body: "Start where someone answers." },
-                { title: "Your next project", body: "See where outside work gets merged." },
-                { title: "A fix you need upstream", body: "Know if they take outside patches before you promise a date." },
-              ].map((a) => (
-                <li key={a.title} data-reveal>
-                  <p className="font-serif text-[1.375rem] font-semibold">{a.title}</p>
-                  <p className="mt-2 text-[1.125rem] leading-relaxed text-muted">{a.body}</p>
-                </li>
-              ))}
-            </ul>
-          </Column>
+        {/* 03 — who it's for */}
+        <section data-cat-section="thinking" className="pane border-t border-line bg-section-alt">
+          <Grid>
+            <Kicker n="03" label="who it's for" />
+            <h2 className="h2 ls-h2-wide mb-[clamp(1.5rem,5svh,3.5rem)]">
+              <Words text="Don't write your PR into the void." quiet={["void"]} />
+            </h2>
+            <People people={people()} />
+          </Grid>
         </section>
 
-        {/* The URL trick */}
-        <section data-cat-section="determined" className="pane">
-          <Column>
-            <h2 className="h2 mb-4 max-w-[680px]" data-reveal>Already on GitHub? Swap hub for holt.</h2>
-            <p className="mb-10 max-w-[560px] text-[1.125rem] text-muted" data-reveal>
-              Change <code className="text-ink">github.com</code> to <code className="text-ink">{SITE_HOST}</code> in any repo link.
+        {/* 04 — the URL trick */}
+        <section data-cat-section="determined" className="pane border-t border-line">
+          <Grid>
+            <Kicker n="04" label="the url trick" />
+            <h2 className="h2 mb-6">
+              <Words text="Already on GitHub? Swap hub for holt." />
+            </h2>
+            <p className="prose-sans mb-10 max-w-[740px]" data-reveal>
+              Change <code className="font-mono text-ink">github.com</code> to{" "}
+              <code className="font-mono text-ink">{SITE_HOST}</code> in any repo link and hit enter. Works on your
+              phone too.
             </p>
-            <UrlTrick />
-          </Column>
+            <div className="ls-split ls-split--even">
+              <div className="min-w-0" data-reveal>
+                <SwapHost path="/pallets/flask" big />
+              </div>
+              <UrlTrick />
+            </div>
+          </Grid>
         </section>
 
-        {/* Three answers */}
-        <section data-cat-section="celebrating" className="pane bg-section-alt">
-          <Column>
-            <h2 className="h2 mb-4 max-w-[680px]" data-reveal>Three possible answers.</h2>
-            <p className="mb-12 max-w-[560px] text-[1.125rem] text-muted" data-reveal>
-              The same written rules judge every repo. <Link href="/how-it-works" className="text-link">How it decides</Link>
+        {/* 05 — what it checks */}
+        <section id="what-it-checks" data-cat-section="heartbroken" className="pane scroll-mt-[61px] border-t border-line bg-section-alt">
+          <Grid>
+            <Kicker n="05" label="what it checks" />
+            <h2 className="h2 mb-6">
+              <Words text="Stars won't tell you who gets merged." />
+            </h2>
+            <p className="prose-sans mb-12 max-w-[740px]" data-reveal>
+              So Holt skips them and reads what happened to the outsiders who tried.
             </p>
-            <ul className="grid gap-10 md:grid-cols-3 md:gap-12">
-              {[
-                { mood: "celebrating" as const, title: "Worth your time", tone: "text-green", body: "Outsiders get replies and get merged." },
-                { mood: "heartbroken" as const, title: "Not worth your time", tone: "text-orange", body: "Outside PRs mostly go unanswered." },
-                { mood: "thinking" as const, title: "Not enough evidence", tone: "text-amber", body: "Too few people tried recently to say." },
-              ].map((v) => (
-                <li key={v.title} data-reveal>
-                  <CatFace mood={v.mood} className="text-[1.375rem]" />
-                  <p className={`mt-4 font-serif text-[1.375rem] font-semibold ${v.tone}`}>{v.title}</p>
-                  <p className="mt-2 text-[1.125rem] leading-relaxed text-muted">{v.body}</p>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-12 flex flex-wrap items-center gap-x-6 gap-y-3" data-reveal>
+            <Receipts />
+            <p className="mt-6 text-[0.9rem] text-faint" data-reveal>
+              <span className="text-blue">evidence:</span> both say &ldquo;closed&rdquo; on GitHub. Only one is good news.
+            </p>
+            <div className="mt-10 flex flex-wrap items-center gap-x-4 gap-y-2" data-reveal>
+              <span className="font-sans text-[0.95rem] text-muted">Rather browse a ranked list?</span>
+              <Link href="/discover" className="bracket-link">[ discover repos → ]</Link>
+            </div>
+          </Grid>
+        </section>
+
+        {/* 06 — three answers */}
+        <section id="verdicts" data-cat-section="celebrating" className="pane scroll-mt-[61px] border-t border-line">
+          <Grid>
+            <Kicker n="06" label="three answers" />
+            <h2 className="h2 mb-4">
+              <Words text="Three possible answers. No hedging." />
+            </h2>
+            <p className="prose-sans max-w-[70ch]" data-reveal>
+              The same written rules judge every repo. An AI can explain the evidence to you. It can&apos;t change the
+              answer.{" "}
+              <Link href="/how-it-works" className="text-link font-mono text-[0.9em]">[ how it decides ]</Link>
+            </p>
+            <Answers />
+            <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3" data-reveal>
+              <span className="w-full font-sans text-[0.95rem] text-muted">Want the evidence explained in plain English, with citations?</span>
               <Suspense fallback={null}>
                 <AiReportsCta />
               </Suspense>
             </div>
-          </Column>
+          </Grid>
         </section>
 
-        {/* Open source */}
-        <section data-cat-section="adoring" className="pane">
-          <Column>
-            <h2 className="h2 mb-4 max-w-[680px]" data-reveal>Open source. We merge outsiders too.</h2>
-            <p className="mb-10 max-w-[560px] text-[1.125rem] text-muted" data-reveal>
-              From a docs typo to the verdict rules, there&apos;s room at every level.
-            </p>
-            <div className="flex flex-wrap items-center gap-x-7 gap-y-4" data-reveal>
-              <a className="bracket-link" href={`${GITHUB_REPO_URL}/blob/main/CONTRIBUTING.md`}>Start contributing →</a>
-              <a className="text-link inline-flex min-h-11 items-center" href={GITHUB_REPO_URL}>Star it on GitHub</a>
-            </div>
-            <p className="mt-12 text-[0.875rem] text-faint" data-reveal>
-              Winner, most useful real-world workflow · micro1 Frontier Engineering Challenge
-            </p>
-          </Column>
-        </section>
-
-        {/* Your turn: no scrolling to a dead end */}
-        <section data-cat-section="ready" className="pane bg-section-alt">
-          <Column>
-            <h2 className="h2 mb-8 max-w-[680px]" data-reveal>Got a repo in mind?</h2>
-            <div className="max-w-[680px]" data-reveal>
-              <PasteBox id="repo-input-end" label="Repo to check" examples={false} />
-            </div>
-          </Column>
+        {/* 07 — open source */}
+        <section id="open-source" data-cat-section="adoring" className="pane scroll-mt-[61px] relative overflow-clip border-t border-line bg-panel">
+          <ScrollMarquee text="OPEN / SOURCE / OPEN / SOURCE / OPEN / SOURCE / OPEN / SOURCE / OPEN / SOURCE /" />
+          <div className="relative">
+            <Grid>
+              <Kicker n="07" label="open source" />
+              <h2 className="h2 mb-6">
+                <Words text="Open source. We merge outsiders too." />
+              </h2>
+              <p className="prose-sans mb-8 max-w-[740px]" data-reveal>
+                Fix a typo in the docs or rework the verdict rules. There&apos;s room at every level. Prefer the
+                terminal? Holt runs there too.
+              </p>
+              <div className="ls-install grid max-w-[760px] grid-cols-[auto_1fr_auto] items-center border border-line-strong bg-bg" data-reveal>
+                <span aria-hidden="true" className="pl-4 text-amber">$</span>
+                <code className="min-w-0 overflow-x-auto whitespace-nowrap px-2 py-4 text-[0.8rem] sm:px-3 sm:text-[0.95rem]">
+                  uv tool install holt-cli<span aria-hidden="true" className="ls-caret" />
+                </code>
+                <CopyButton text="uv tool install holt-cli" className="self-stretch border-l border-line-strong px-3 text-[0.89rem] text-muted sm:px-4 transition-colors hover:bg-green hover:text-on-accent" />
+              </div>
+              <div className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-4" data-reveal>
+                <a className="bracket-link" href={`${GITHUB_REPO_URL}/blob/main/CONTRIBUTING.md`}>[ start contributing → ]</a>
+                <a className="text-link inline-flex min-h-11 items-center text-[0.89rem]" href={GITHUB_REPO_URL}>[ star it on GitHub ]</a>
+                <span className="text-[0.82rem] text-faint">Apache-2.0</span>
+              </div>
+            </Grid>
+          </div>
         </section>
       </>
     </PageTransition>

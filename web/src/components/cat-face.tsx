@@ -16,7 +16,7 @@ export function CatFace({ mood = "ready", className = "", blink = false, perk = 
       rest
     );
   return (
-    <span className={`cat-face font-cat ${TONE_TEXT[c.tone]} ${className}`} aria-hidden="true">
+    <span className={`cat-face ${TONE_TEXT[c.tone]} ${className}`} aria-hidden="true">
       <span>(=</span>
       <span className="cat-ear">{c.ears[0]}</span>
       <span className="cat-eye" style={eye}>{alt(c.eyes[0], "^")}</span>

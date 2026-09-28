@@ -12,15 +12,15 @@ export function LandingMap({ landing, neverLanded }: { landing: Report["landing"
         <ul className="space-y-4" aria-label="Folders where outside pull requests were merged">
           {landing.map((l) => (
             <li key={l.path}>
-              <div className="flex items-baseline justify-between gap-4 text-[0.875rem]">
+              <div className="flex items-baseline justify-between gap-4 text-[0.89rem]">
                 <code className="truncate text-ink">{areaLabel(l)}</code>
-                <span className="shrink-0 text-muted">
+                <span className="shrink-0 font-sans text-muted">
                   <strong className="font-semibold text-green">{l.merged}</strong> of {l.attempted} merged
                 </span>
               </div>
-              <div className="relative mt-2 h-2 overflow-hidden rounded-full bg-panel-2" aria-hidden="true">
-                <span className="meter absolute inset-y-0 left-0 rounded-full bg-line-strong" style={{ width: `${(l.attempted / max) * 100}%`, height: "100%" }} />
-                <span className="absolute inset-y-0 left-0 rounded-full bg-green" style={{ width: `${(l.merged / max) * 100}%`, animation: "grow .9s cubic-bezier(.16,1,.3,1) both", transformOrigin: "left" }} />
+              <div className="relative mt-2 h-2.5 bg-panel-2" aria-hidden="true">
+                <span className="meter absolute inset-y-0 left-0 bg-line-strong" style={{ width: `${(l.attempted / max) * 100}%`, height: "100%" }} />
+                <span className="absolute inset-y-0 left-0 bg-green" style={{ width: `${(l.merged / max) * 100}%`, animation: "grow .9s cubic-bezier(.16,1,.3,1) both", transformOrigin: "left" }} />
               </div>
             </li>
           ))}
@@ -28,10 +28,10 @@ export function LandingMap({ landing, neverLanded }: { landing: Report["landing"
       )}
       {neverLanded.length > 0 && (
         <div>
-          <p className="mb-2 text-[0.875rem] text-muted">Nothing from outside contributors merged yet in</p>
+          <p className="mb-2 text-[0.8rem] uppercase tracking-[0.08em] text-faint">Nothing from outsiders merged yet in</p>
           <ul className="flex flex-wrap gap-2">
             {neverLanded.map((l) => (
-              <li key={l.path} className="inline-flex items-center gap-2 rounded-full border border-line bg-panel px-3 py-1 text-[0.875rem]">
+              <li key={l.path} className="chip border-orange/40">
                 <code className="text-ink">{areaLabel(l)}</code>
                 <span className="text-muted">{l.attempted} tried</span>
               </li>

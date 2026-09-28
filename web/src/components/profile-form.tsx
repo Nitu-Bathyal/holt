@@ -5,10 +5,10 @@ import { CONTRIBUTIONS, LANGS, LEVELS, TIME } from "@/lib/profile";
 import type { ProfilePrefs } from "@/lib/types";
 
 const CHIP =
-  "chip min-h-11 cursor-pointer select-none px-4 text-[0.875rem] transition-colors hover:border-blue has-[:checked]:border-blue has-[:checked]:bg-blue has-[:checked]:text-on-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-blue";
+  "chip min-h-11 cursor-pointer select-none px-4 text-[0.89rem] transition-colors hover:border-blue has-[:checked]:border-blue has-[:checked]:bg-blue has-[:checked]:text-on-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-blue";
 const BOX =
-  "flex min-h-12 cursor-pointer items-center justify-center border border-line-strong px-3 text-center text-[0.875rem] transition-colors hover:border-blue has-[:checked]:border-green has-[:checked]:bg-green has-[:checked]:font-semibold has-[:checked]:text-on-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-blue";
-const LEGEND = "mb-3 text-[0.875rem] text-faint";
+  "flex min-h-12 cursor-pointer items-center justify-center border border-line-strong px-3 text-center text-[0.9rem] transition-colors hover:border-blue has-[:checked]:border-green has-[:checked]:bg-green has-[:checked]:font-semibold has-[:checked]:text-on-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-blue";
+const LEGEND = "mb-3 text-[0.85rem] uppercase tracking-[0.08em] text-faint";
 
 export function ProfileForm({
   prefs,
@@ -74,7 +74,7 @@ export function ProfileForm({
             </label>
           ))}
         </div>
-        <p className="mt-2 font-sans text-[0.875rem] text-faint">Issues like these come first. Pick none for no preference.</p>
+        <p className="mt-2 font-sans text-[0.88rem] text-faint">Issues like these come first. Pick none for no preference.</p>
       </fieldset>
 
       <fieldset>
@@ -84,7 +84,7 @@ export function ProfileForm({
             <label key={l.id} className={`${BOX} flex-col !items-start gap-1 py-3 text-left`}>
               <input type="radio" name="level" value={l.id} defaultChecked={level === l.id} className="sr-only" />
               <span className="font-semibold">{l.label}</span>
-              <span className="font-sans text-[0.875rem] text-muted">{l.hint}</span>
+              <span className="font-sans text-[0.87rem] text-muted">{l.hint}</span>
             </label>
           ))}
         </div>
@@ -98,17 +98,17 @@ export function ProfileForm({
           defaultValue={(prefs?.topics ?? []).join(", ")}
           placeholder="e.g. web, cli, machine-learning"
           maxLength={300}
-          className="min-h-11 w-full border border-line-strong bg-bg px-3 font-sans text-[1rem] outline-none focus-visible:border-blue"
+          className="min-h-11 w-full border border-line-strong bg-bg px-3 font-sans text-[0.95rem] outline-none focus-visible:border-blue"
         />
-        <span className="mt-2 block font-sans text-[0.875rem] text-faint">GitHub topics, comma-separated. Each one narrows the search a lot. Leave it empty to see more.</span>
+        <span className="mt-2 block font-sans text-[0.88rem] text-faint">GitHub topics, comma-separated. Each one narrows the search a lot. Leave it empty to see more.</span>
       </label>
 
       {!adultConfirmed && (
-        <label className="flex min-h-11 cursor-pointer items-start gap-3 text-[1rem]">
+        <label className="flex min-h-11 cursor-pointer items-start gap-3 text-[0.95rem]">
           <input type="checkbox" name="adult" required className="mt-1 size-4 accent-blue" />
           <span>
             <strong>I&apos;m 18 or older</strong>
-            <span className="block text-[0.875rem] text-muted">Profiles are for adults. Everything else on Holt works without one.</span>
+            <span className="block text-[0.89rem] text-muted">Profiles are for adults. Everything else on Holt works without one.</span>
           </span>
         </label>
       )}

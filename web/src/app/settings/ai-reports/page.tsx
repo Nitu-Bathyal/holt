@@ -10,7 +10,7 @@ import { AI_SETTINGS } from "@/lib/settings";
 import { WELCOME_AI_CREDITS } from "@/lib/site";
 import { Notice, SectionHead } from "@/components/settings/section-head";
 
-export const metadata: Metadata = { title: "AI reports and plan | Settings", robots: { index: false } };
+export const metadata: Metadata = { title: "AI reports and plan · Settings", robots: { index: false } };
 
 async function claim() {
   "use server";
@@ -31,7 +31,7 @@ async function cancelPlan() {
   redirect(r.ok ? `${AI_SETTINGS}?cancelled=1#plan` : `${AI_SETTINGS}?error=cancel#plan`);
 }
 
-const H3 = "text-[1.125rem] font-semibold tracking-tight";
+const H3 = "text-[1.1rem] font-semibold tracking-tight";
 
 export default async function AiReportSettings({ searchParams }: PageProps<"/settings/ai-reports">) {
   const user = await currentUser();
@@ -65,25 +65,25 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
       </SectionHead>
 
       {notice && <Notice tone={notice.tone}>{notice.text}</Notice>}
-      {!account.ok && <p role="alert" className="mb-6 border border-orange/50 px-4 py-3 font-sans text-[0.875rem] text-orange">{account.error.message}</p>}
+      {!account.ok && <p role="alert" className="mb-6 border border-orange/50 px-4 py-3 font-sans text-[0.9rem] text-orange">{account.error.message}</p>}
 
       {m && c && (
         <div className="grid gap-px border border-line bg-line shadow-soft sm:grid-cols-2">
           <div className="bg-panel p-5">
-            <p className="text-[0.875rem] text-faint">{c.purchased > 0 ? "Credits left" : "Free AI reports left"}</p>
-            <p className="mt-1 text-[1.75rem] font-semibold leading-tight">{c.balance}</p>
-            {c.purchased > 0 && <p className="mt-1 text-[0.875rem] text-muted">{c.free} free, {c.purchased} bought</p>}
+            <p className="text-[0.87rem] text-faint">{c.purchased > 0 ? "Credits left" : "Free AI reports left"}</p>
+            <p className="mt-1 text-[1.6rem] font-semibold leading-tight">{c.balance}</p>
+            {c.purchased > 0 && <p className="mt-1 text-[0.87rem] text-muted">{c.free} free, {c.purchased} bought</p>}
           </div>
           <div className="bg-panel p-5">
-            <p className="text-[0.875rem] text-faint">This week&apos;s free one</p>
+            <p className="text-[0.87rem] text-faint">This week&apos;s free one</p>
             {c.can_claim ? (
               <form action={claim} className="mt-2">
                 <button type="submit" className="btn-primary">claim 1 free AI report</button>
               </form>
             ) : (
               <>
-                <p className="mt-1 text-[1.75rem] font-semibold leading-tight">{nextClaim || "soon"}</p>
-                <p className="mt-1 text-[0.875rem] text-muted">when you can claim the next one</p>
+                <p className="mt-1 text-[1.6rem] font-semibold leading-tight">{nextClaim || "soon"}</p>
+                <p className="mt-1 text-[0.87rem] text-muted">when you can claim the next one</p>
               </>
             )}
           </div>
@@ -91,14 +91,14 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
       )}
 
       {c && !c.ai_available && (
-        <p className="mt-4 border border-line-strong px-4 py-3 font-sans text-[0.875rem] text-muted">
+        <p className="mt-4 border border-line-strong px-4 py-3 font-sans text-[0.9rem] text-muted">
           AI reports aren&apos;t switched on yet. Your free reports will be waiting when they are.
         </p>
       )}
 
-      <details className="mt-4 font-sans text-[0.875rem]">
+      <details className="mt-4 font-sans text-[0.9rem]">
         <summary className="inline-flex min-h-11 cursor-pointer items-center text-muted hover:text-ink">How free AI reports work</summary>
-        <ul className="prose-sans list-disc space-y-1 pb-2 pl-5 text-[0.875rem]">
+        <ul className="prose-sans list-disc space-y-1 pb-2 pl-5 text-[0.9rem]">
           <li>You get {WELCOME_AI_CREDITS} when you first sign in.</li>
           <li>Claim 1 more here every {c?.claim_every_days ?? 7} days. Missed weeks don&apos;t stack.</li>
           <li>A failed AI report doesn&apos;t use one up.</li>
@@ -108,22 +108,22 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
       <div id="plan" className="mt-8 scroll-mt-24 border-t border-line pt-6">
         <h3 className={H3}>Your plan</h3>
         {!sub ? (
-          <p className="prose-sans mt-2 text-[1rem]">
+          <p className="prose-sans mt-2 text-[0.95rem]">
             Free.{" "}
             {plansOnSale ? <Link href="/pricing#plans" className="text-link">See paid plans</Link> : <Link href="/pricing" className="text-link">See pricing</Link>}.
           </p>
         ) : (
           <>
             <p className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span className="text-[1rem] font-semibold">{sub.name}</span>
+              <span className="text-[1.05rem] font-semibold">{sub.name}</span>
               <span className="text-muted">{formatPrice(sub.amount, sub.currency)} a month</span>
               <span className={`chip ${sub.status === "active" && !sub.cancel_at_period_end ? "border-green/60 text-green" : sub.status === "pending" ? "border-orange/60 text-orange" : "border-line-strong text-muted"}`}>
                 {subscriptionLabel(sub)}
               </span>
             </p>
-            <p className="prose-sans mt-2 text-[1rem]">{subscriptionLine(sub, m?.plan_expires_at ?? null)}</p>
+            <p className="prose-sans mt-2 text-[0.95rem]">{subscriptionLine(sub, m?.plan_expires_at ?? null)}</p>
             {canCancel(sub) && (
-              <details className="mt-4 font-sans text-[0.875rem]">
+              <details className="mt-4 font-sans text-[0.9rem]">
                 <summary className="inline-flex min-h-11 cursor-pointer items-center text-muted hover:text-ink">Cancel plan</summary>
                 <div className="mt-1 border border-line p-4">
                   <p>
@@ -141,10 +141,10 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
         )}
         {charges.length > 0 && (
           <>
-            <h4 className="mt-6 text-[0.875rem] text-faint">Payments</h4>
+            <h4 className="mt-6 text-[0.89rem] text-faint">Payments</h4>
             <ul className="mt-2 divide-y divide-line border-y border-line">
               {charges.map((ch) => (
-                <li key={ch.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-[0.875rem]">
+                <li key={ch.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-[0.9rem]">
                   <span className="min-w-0">
                     <span className="font-semibold">{formatPrice(ch.amount, ch.currency)}</span>
                     <span className="text-muted"> · {shortDate(ch.paid_at)}</span>
@@ -165,13 +165,13 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
         <div id="purchases" className="mt-8 scroll-mt-24 border-t border-line pt-6">
           <h3 className={H3}>Purchases</h3>
           {purchases.length === 0 ? (
-            <p className="prose-sans mt-2 text-[1rem]">
+            <p className="prose-sans mt-2 text-[0.95rem]">
               Nothing bought yet. <Link href="/pricing#packs" className="text-link">See credit packs</Link>.
             </p>
           ) : (
             <ul className="mt-3 divide-y divide-line border-y border-line">
               {purchases.map((o) => (
-                <li key={o.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-[0.875rem]">
+                <li key={o.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-[0.9rem]">
                   <span className="min-w-0">
                     <span className="font-semibold">{o.name}</span>
                     <span className="text-muted"> · {formatPrice(o.amount, o.currency)} · {shortDate(o.paid_at ?? o.created_at)}</span>
@@ -184,7 +184,7 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
             </ul>
           )}
           {onSale && purchases.length > 0 && (
-            <p className="mt-4 text-[0.875rem]"><Link href="/pricing#packs" className="text-link">Buy more credits →</Link></p>
+            <p className="mt-4 text-[0.89rem]"><Link href="/pricing#packs" className="text-link">Buy more credits →</Link></p>
           )}
         </div>
       )}

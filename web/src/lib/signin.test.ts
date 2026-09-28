@@ -14,9 +14,9 @@ test("the codes Auth.js sends to the sign-in page each get their own plain messa
   assert.equal(signInNotice("AccountNotLinked"), signInNotice("OAuthAccountNotLinked"));
   assert.match(signInNotice("AccessDenied")!.title, /cancelled/);
   assert.match(signInNotice("OAuthCallbackError")!.title, /didn't finish/);
-  assert.match(signInNotice("MissingCSRF")!.body, /Reload/);
+  assert.match(signInNotice("MissingCSRF")!.body ?? "", /Reload/);
   assert.match(signInNotice("Verification")!.title, /expired/);
-  assert.match(signInNotice("Configuration")!.body, /not something you did/);
+  assert.match(signInNotice("Configuration")!.body ?? "", /not something you did/);
 });
 
 test("old Auth.js v4 names still read well", () => {
@@ -27,6 +27,7 @@ test("old Auth.js v4 names still read well", () => {
 
 test("being sent here to sign in is a nudge, not an error", () => {
   assert.equal(signInNotice("SessionRequired")!.tone, "info");
+  assert.equal(signInNotice("SessionRequired")!.body, undefined, "the title says it all");
   assert.equal(signInNotice("AccessDenied")!.tone, "error");
 });
 
@@ -34,7 +35,7 @@ test("unknown or odd values get the general message, never the raw code", () => 
   for (const code of ["Nope", "toString", "__proto__", "<script>"]) {
     const n = signInNotice(code)!;
     assert.equal(n.title, "Sign-in didn't work", code);
-    assert.ok(!n.body.includes(code));
+    assert.ok(!n.body?.includes(code));
   }
   assert.equal(signInNotice(["AccessDenied", "Configuration"])!.title, "Sign-in was cancelled");
 });

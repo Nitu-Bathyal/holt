@@ -16,7 +16,7 @@ import { PageTransition } from "@/components/motion/page-transition";
 const YEAR = 2026;
 
 export const metadata: Metadata = {
-  title: { absolute: `Hacktoberfest ${YEAR}: contributions that actually land | Holt` },
+  title: { absolute: `Hacktoberfest ${YEAR}: contributions that actually land · Holt` },
   description:
     "Open-source projects that reply to and merge outside contributors, with specific issues by language, and five tips so your pull request gets reviewed.",
   alternates: { canonical: "/hacktoberfest" },
@@ -79,7 +79,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
             style={{ backgroundImage: "repeating-linear-gradient(135deg, var(--hf) 0 2px, transparent 2px 14px)" }}
           />
           <div className="wrap relative py-10 sm:py-14">
-            <div className="mb-6 flex flex-wrap items-center gap-2 text-[0.8125rem]">
+            <div className="mb-6 flex flex-wrap items-center gap-2 text-[0.8rem] uppercase tracking-[0.08em]">
               <span className="rounded-full bg-hf px-3 py-1 font-semibold text-bg">limited-time event</span>
               <span className="rounded-full border border-hf-line px-3 py-1 text-hf">Hacktoberfest {YEAR} · 1–31 October</span>
               {hf && (
@@ -90,7 +90,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
               )}
             </div>
             {ended && (
-              <p role="status" className="mb-6 max-w-2xl border border-hf-line bg-panel px-4 py-3 font-sans text-[0.875rem] text-muted">
+              <p role="status" className="mb-6 max-w-2xl border border-hf-line bg-panel px-4 py-3 font-sans text-[0.92rem] text-muted">
                 Hacktoberfest {YEAR} has ended. The projects below still merge outside work, and{" "}
                 <Link href="/find" className="text-link">/find</Link> works all year.
               </p>
@@ -98,13 +98,13 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
             <h1 className="display max-w-4xl text-[clamp(2rem,6.5vw,3.6rem)]">
               This October, make contributions <span className="text-hf">that actually land.</span>
             </h1>
-            <p className="prose-sans mt-5 max-w-2xl text-[1rem]">
+            <p className="prose-sans mt-5 max-w-2xl text-[1.05rem]">
               Hacktoberfest no longer counts pull requests, so aim for work that gets merged. Every project below is
               tagged for Hacktoberfest and merges outside contributors&apos; work, with open issues you could pick up today.
             </p>
-            <p className="mt-3 text-[0.875rem] text-faint">This page is for October. Outside Hacktoberfest, use <Link href="/find" className="text-link">find a project</Link>.</p>
+            <p className="mt-3 text-[0.85rem] text-faint">This page is for October. Outside Hacktoberfest, use <Link href="/find" className="text-link">find a project</Link>.</p>
             <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
-              <a href="#tips" className="bracket-link bracket-link--hf px-3 text-center text-[0.8125rem] sm:px-4 sm:text-[0.875rem]">5 tips so your PR gets reviewed</a>
+              <a href="#tips" className="bracket-link bracket-link--hf px-3 text-center text-[0.83rem] sm:px-4 sm:text-[0.88rem]">[ 5 tips so your PR gets reviewed ]</a>
               <ShareBar url={`${SITE_URL}/hacktoberfest`} text={`Contributing this October? These repos actually merge outsiders' pull requests:`} />
             </div>
           </div>
@@ -113,10 +113,10 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
         <div className="wrap py-10 sm:py-12">
           <ProfileOnboarding back="/hacktoberfest" className="mb-8" />
           {sp.profile === "saved" && (
-            <p role="status" className="mb-6 border border-green/50 bg-green/10 px-4 py-3 font-sans text-[0.875rem] text-green">Profile saved. The projects below use it.</p>
+            <p role="status" className="mb-6 border border-green/50 bg-green/10 px-4 py-3 font-sans text-[0.9rem] text-green">Profile saved. The projects below use it.</p>
           )}
           {profile && (
-            <p className="mb-6 font-sans text-[0.875rem] text-muted">
+            <p className="mb-6 font-sans text-[0.9rem] text-muted">
               Using your profile: {describe(profile)}. <Link href="/settings/profile" className="text-link">edit</Link>
             </p>
           )}
@@ -128,7 +128,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
                     href={l.id === "all" ? (profile ? "/hacktoberfest?lang=all" : "/hacktoberfest") : `/hacktoberfest?lang=${l.id}`}
                     scroll={false}
                     aria-current={l.id === tab.id ? "page" : undefined}
-                    className={`chip min-h-11 whitespace-nowrap px-4 text-[0.875rem] transition-colors ${l.id === tab.id ? "border-hf bg-hf text-bg" : "hover:border-hf hover:text-ink"}`}
+                    className={`chip min-h-11 whitespace-nowrap px-4 text-[0.89rem] transition-colors ${l.id === tab.id ? "border-hf bg-hf text-bg" : "hover:border-hf hover:text-ink"}`}
                   >
                     {l.label}
                     {l.id !== "all" && <span className="sr-only"> projects</span>}
@@ -156,7 +156,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
               <ol className="mt-8 space-y-6">
                 {STEPS.map(([title, body], i) => (
                   <li key={title} className="grid grid-cols-[2.5rem_1fr] gap-3">
-                    <span className="text-[1.375rem] font-semibold text-orange">{String(i + 1).padStart(2, "0")}</span>
+                    <span className="text-[1.4rem] font-semibold text-orange">{String(i + 1).padStart(2, "0")}</span>
                     <div>
                       <p className="font-semibold">{title}</p>
                       <p className="mt-1 font-sans text-muted">{body}</p>
@@ -164,7 +164,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
                   </li>
                 ))}
               </ol>
-              <p className="mt-6 font-sans text-[0.875rem] text-faint">
+              <p className="mt-6 font-sans text-[0.9rem] text-faint">
                 Holt isn&apos;t affiliated with Hacktoberfest. For this year&apos;s events, see{" "}
                 <a className="text-link" href="https://hacktoberfest.com" target="_blank" rel="noopener noreferrer">hacktoberfest.com ↗</a>.
               </p>
@@ -187,10 +187,10 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
 
         <section className="py-14 text-center">
           <div className="wrap max-w-2xl">
-            <CatFace mood="adoring" className="text-[1.75rem]" />
-            <p className="mt-4 text-[1.375rem] font-semibold tracking-tight">Already have a repo in mind?</p>
+            <CatFace mood="adoring" className="text-[1.8rem]" />
+            <p className="mt-4 text-[1.3rem] font-semibold tracking-tight">Already have a repo in mind?</p>
             <p className="mt-2 font-sans text-muted">Check whether it merges outside work before you spend your October on it.</p>
-            <Link href="/" className="bracket-link mt-6">Check any repo →</Link>
+            <Link href="/" className="bracket-link mt-6">[ check any repo → ]</Link>
           </div>
         </section>
       </>

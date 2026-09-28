@@ -17,15 +17,24 @@ function watchErrors(page: Page) {
   return errors;
 }
 
-test("landing: pasting a GitHub URL ends on the report with a verdict", async ({ page }) => {
+test("landing: pasting an example's GitHub URL ends on the report with a verdict", async ({ page }) => {
   await page.goto("/");
   const box = page.getByLabel("GitHub repository or URL");
+  // pallets/flask is one of the examples (web/src/lib/examples.ts), readable signed out.
   await box.fill("https://github.com/pallets/flask");
   // The landing page has a second paste box at the bottom; click the one we filled.
-  await page.locator("form").filter({ has: box }).getByRole("button", { name: /check this repo/i }).click();
+  await page.locator("form").filter({ has: box }).getByRole("button", { name: /check/i }).click();
   await expect(page).toHaveURL(/\/pallets\/flask$/);
   // A cached report renders at once; otherwise the rules check runs first.
   await expect(page.getByText(VERDICT).first()).toBeVisible({ timeout: 180_000 });
+});
+
+test("landing, signed out: pasting any other repo goes to sign-in, then back to its report", async ({ page }) => {
+  await page.goto("/");
+  const box = page.getByLabel("GitHub repository or URL");
+  await box.fill("octocat/Hello-World");
+  await page.locator("form").filter({ has: box }).getByRole("button", { name: /sign in to check/i }).click();
+  await expect(page).toHaveURL(/\/signin\?callbackUrl=%2Foctocat%2FHello-World$/);
 });
 
 test("URL trick: /github.com/owner/repo redirects to the report", async ({ page, request }) => {
@@ -37,8 +46,9 @@ test("URL trick: /github.com/owner/repo redirects to the report", async ({ page,
   await expect(page).toHaveURL(/\/pallets\/flask$/);
 });
 
-test("find: Python + Hacktoberfest lists a repo with an issue link", async ({ page }) => {
-  await page.goto("/find?go=1&lang=python&hacktoberfest=1&days=7");
+test("find, signed out: the default search lists a repo with an issue link", async ({ page }) => {
+  // Signed out, /find shows the shared default search; other filters ask for sign-in.
+  await page.goto("/find");
   const results = page.getByRole("region", { name: "Results" });
   const issue = results.locator('a[href^="https://github.com/"][href*="/issues/"]').first();
   const failure = results.getByRole("alert");

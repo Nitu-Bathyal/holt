@@ -5,12 +5,13 @@ import { CatFace } from "@/components/cat-face";
 import { PrList } from "@/components/contributions/pr-list";
 import { RefreshButton } from "@/components/contributions/refresh-button";
 import { ErrorPanel } from "@/components/error-panel";
-import { PageHead } from "@/components/page-head";
+import { AppPageHeader } from "@/components/shell/app-page";
 import { PageTransition } from "@/components/motion/page-transition";
 import { ForYouCard } from "@/components/recommendations/for-you-card";
 import { contributions, recommendations } from "@/lib/api";
 import { foundViaHoltLine, landedLine, landedPct } from "@/lib/contributions";
 import { timeAgo } from "@/lib/format";
+import { outsidePulls } from "@/lib/home";
 import { currentUser } from "@/lib/session";
 import { refresh } from "./actions";
 
@@ -26,9 +27,9 @@ const NOTICES: Record<string, { tone: string; text: string }> = {
 function Tile({ label, value, note }: { label: string; value: string; note?: string | null }) {
   return (
     <div className="bg-panel p-4 sm:p-5">
-      <p className="text-[0.8125rem] text-faint">{label}</p>
-      <p className="mt-1 text-[1.375rem] font-semibold">{value}</p>
-      {note && <p className="mt-1 text-[0.8125rem] text-faint">{note}</p>}
+      <p className="text-[0.8rem] uppercase tracking-[0.08em] text-faint">{label}</p>
+      <p className="mt-1 text-[1.5rem] font-semibold">{value}</p>
+      {note && <p className="mt-1 text-[0.82rem] text-faint">{note}</p>}
     </div>
   );
 }
@@ -47,25 +48,15 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
   return (
     <PageTransition>
       <>
-      <PageHead narrow>
-        <p className="rail mb-4 flex gap-2">
-          <strong className="m-0">contributions</strong>
-          <span>{d ? `@${d.login}` : user.name || user.email}</span>
-        </p>
-        <h1 className="display text-[clamp(2rem,6vw,3rem)]">Your pull requests</h1>
-        <p className="prose-sans mt-3 max-w-xl text-muted">
-          Your public pull requests to other people&apos;s repos from the last 12 months, with Holt&apos;s verdict on each repo.
-        </p>
-      </PageHead>
-      <div className="wrap max-w-3xl pb-14 pt-2 sm:pb-16">
-        {notice && d && <p role="status" className={`mt-6 border px-4 py-3 font-sans text-[0.875rem] ${notice.tone}`}>{notice.text}</p>}
+      <div className="wrap max-w-3xl pb-14 sm:pb-16">
+        <AppPageHeader title="Your pull requests" lead={<>Your public PRs to other people&apos;s repos from the last 12 months, with Holt&apos;s verdict on each repo.{d && <span className="text-faint"> As @{d.login}.</span>}</>} />
+        {notice && d && <p role="status" className={`mt-6 border px-4 py-3 font-sans text-[0.9rem] ${notice.tone}`}>{notice.text}</p>}
 
         {notConnected ? (
           <div className="mt-8 border border-dashed border-line-strong p-8 text-center">
-            <CatFace mood="thinking" className="text-[1.75rem]" />
+            <CatFace mood="thinking" className="text-[1.6rem]" />
             <p className="prose-sans mx-auto mt-4 max-w-md text-muted">
-              Connect your GitHub account to see your pull requests here, each with Holt&apos;s verdict on the repo. It&apos;s free, and Holt
-              only reads public data.
+              Connect your GitHub account to see your pull requests here, each with Holt&apos;s verdict on the repo.
             </p>
             <Link href="/connect" className="btn-primary mt-6 inline-flex">connect GitHub</Link>
           </div>
@@ -79,11 +70,11 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
               <Tile label="Still waiting" value={String(d.summary.waiting)} note="open, no decision yet" />
               <Tile label="Landed" value={pct == null ? "–" : `${pct}%`} note={landedLine(d.summary) ?? "nothing decided yet"} />
             </section>
-            {via && <p className="prose-sans mt-4 text-[0.875rem] text-blue">{via}</p>}
+            {via && <p className="prose-sans mt-4 text-[0.9rem] text-blue">{via}</p>}
             {picks.ok && <ForYouCard data={picks.data} />}
 
             <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-[0.8125rem] text-faint">
+              <p className="text-[0.82rem] text-faint">
                 Checked GitHub <time dateTime={d.fetched_at}>{timeAgo(d.fetched_at)}</time>. We check again every day.
               </p>
               <RefreshButton action={refresh} nextRefreshAt={d.next_refresh_at} />
@@ -92,18 +83,18 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
             <div className="mt-4">
               {d.pull_requests.length === 0 ? (
                 <div className="border border-dashed border-line-strong p-8 text-center">
-                  <CatFace mood="startled" className="text-[1.75rem]" />
+                  <CatFace mood="startled" className="text-[1.6rem]" />
                   <p className="prose-sans mx-auto mt-4 max-w-md text-muted">
                     No public pull requests to other people&apos;s repos in the last 12 months. Holt can help you pick a first one.
                   </p>
-                  <Link href="/find" className="bracket-link mt-6">Find a project →</Link>
+                  <Link href="/find" className="bracket-link mt-6">[ find a project → ]</Link>
                 </div>
               ) : (
-                <PrList prs={d.pull_requests} />
+                <PrList prs={outsidePulls(d.pull_requests, d.login)} />
               )}
             </div>
 
-            <p className="mt-6 font-sans text-[0.875rem] text-faint">
+            <p className="mt-6 font-sans text-[0.87rem] text-faint">
               &ldquo;Found via Holt&rdquo; marks a pull request you opened within 30 days of checking that repo here while connected.
               The verdict is Holt&apos;s latest check of each repo; no verdict yet means nobody has checked it.
               Pull requests to your own repos are left out. <Link href="/settings/accounts" className="text-link">GitHub settings</Link>

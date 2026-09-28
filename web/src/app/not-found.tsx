@@ -2,22 +2,24 @@ import type { Metadata } from "next";
 import { CatFace } from "@/components/cat-face";
 import { PasteBox } from "@/components/paste-box";
 import { PageTransition } from "@/components/motion/page-transition";
+import { currentUser } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "Page not found",
 };
 
-export default function NotFound() {
+export default async function NotFound() {
+  const signedIn = Boolean(await currentUser());
   return (
     <PageTransition>
       <div className="wrap max-w-2xl py-20">
-        <CatFace mood="startled" className="text-[2.25rem]" />
-        <h1 className="display mt-6 text-[2.25rem]">Nothing here.</h1>
+        <CatFace mood="startled" className="text-[2rem]" />
+        <h1 className="display mt-6 text-[2.4rem]">Nothing here.</h1>
         <p className="prose-sans mt-3">
           Looking for a repo? It might be private, renamed or misspelled. Try it again.
         </p>
         <div className="mt-8">
-          <PasteBox size="md" />
+          <PasteBox size="md" signedIn={signedIn} />
         </div>
       </div>
     </PageTransition>

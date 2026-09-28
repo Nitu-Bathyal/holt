@@ -76,7 +76,7 @@ test("/privacy has the Google sign-in section and how it is protected", async ()
 test("/signin links the terms and the privacy policy under the buttons", async () => {
   const { status, html } = await page("/signin");
   assert.equal(status, 200);
-  assert.match(html, /By signing in you agree to the/);
+  assert.match(html, /By continuing you agree to the/);
   assert.match(html, /href="\/terms"/);
   assert.match(html, /href="\/privacy#google"/);
 });

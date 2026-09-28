@@ -87,8 +87,7 @@ export function SaveButton({ repo, saved: initial, onChange, compact = false, cl
       aria-label={`${saved ? "Saved" : "Save"} ${repo} for later`}
       onClick={() => (signedIn ? send(!saved) : setAsking((a) => !a))}
       data-umami-event={signedIn ? (saved ? "unsave-repo" : "save-repo") : "save-repo-signed-out"}
-      data-save
-      className={`inline-flex min-h-11 items-center gap-2 border px-3 text-[0.875rem] transition-colors ${
+      className={`inline-flex min-h-11 items-center gap-2 border px-3 text-[0.87rem] transition-colors ${
         saved ? "border-blue bg-blue/10 text-blue" : "border-line-strong bg-panel text-muted hover:border-ink hover:text-ink"
       }`}
     >
@@ -110,11 +109,11 @@ export function SaveButton({ repo, saved: initial, onChange, compact = false, cl
     <span className={`inline-flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 ${className}`}>
       {button}
       {fresh && !error && !compact && (
-        <Link href="/me/saved" className="hidden text-[0.8125rem] text-faint hover:text-blue sm:inline">
+        <Link href="/me/saved" className="hidden text-[0.82rem] text-faint hover:text-blue sm:inline">
           see your saved repos
         </Link>
       )}
-      <span role="status" className={error ? "basis-full text-[0.8125rem] text-orange" : "sr-only"}>
+      <span role="status" className={error ? "basis-full text-[0.82rem] text-orange" : "sr-only"}>
         {error || (fresh ? `${repo} saved` : "")}
       </span>
     </span>
@@ -172,15 +171,15 @@ function SignInPrompt({ repo, onClose }: { repo: string; onClose: () => void }) 
       style={place}
       className="fixed z-50 border border-line-strong bg-panel p-4 text-left shadow-card"
     >
-      <p id={titleId} className="text-[0.875rem] font-semibold">Keep this one for later</p>
-      <p className="mt-1.5 font-sans text-[0.875rem] leading-snug text-muted">
-        Sign in with GitHub or Google and {repo} goes on your saved list, ready when you have time. It&apos;s free.
+      <p id={titleId} className="text-[0.92rem] font-semibold">Keep this one for later</p>
+      <p className="mt-1.5 font-sans text-[0.89rem] leading-snug text-muted">
+        Sign in to save {repo}.
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
         <Link ref={first} href={signInToSave(pathname, search, repo)} prefetch={false} className="btn-primary bg-blue" data-umami-event="save-repo-sign-in">
           sign in to save
         </Link>
-        <button type="button" onClick={onClose} className="min-h-11 text-[0.875rem] text-faint hover:text-ink">
+        <button type="button" onClick={onClose} className="min-h-11 text-[0.87rem] text-faint hover:text-ink">
           not now
         </button>
       </div>

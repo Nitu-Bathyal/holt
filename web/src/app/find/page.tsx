@@ -7,7 +7,7 @@ import { PageHead } from "@/components/page-head";
 import { ProfileOnboarding } from "@/components/profile-onboarding";
 import { getProfile, savedNames } from "@/lib/api";
 import { cachedFind } from "@/lib/find-cached";
-import { findQuery, PICKS_COOKIE, resolvePicks } from "@/lib/find-picks";
+import { defaultPicks, findQuery, PICKS_COOKIE, resolvePicks } from "@/lib/find-picks";
 import { caller, currentUser } from "@/lib/session";
 import { hacktoberfestSwitch } from "@/lib/site";
 
@@ -27,24 +27,27 @@ export default async function FindPage({ searchParams }: PageProps<"/find">) {
   // An explicit choice (URL, last picks) wins; otherwise the switch starts on only in October.
   const hf = hacktoberfestSwitch();
   const { picks, source } = resolvePicks({ params: sp, cookie: jar.get(PICKS_COOKIE)?.value, profile, hfWindow: Boolean(hf), hfOn: hf?.on ?? false });
-  const result = await cachedFind(findQuery(picks), await caller(user));
+  // Signed out, the page shows the default search, which every visitor shares
+  // (so it's almost always cached); other picks ask for sign-in (FindView).
+  const searched = user ? picks : { ...defaultPicks(hf?.on ?? false), level: picks.level, types: picks.types };
+  const result = await cachedFind(findQuery(searched), await caller(user));
 
   return (
     <PageTransition>
       <>
         <PageHead compact>
           <h1 className="text-[clamp(1.45rem,3.4vw,2.1rem)] font-semibold leading-tight tracking-tight">Find a project that will merge your work</h1>
-          <p className="mt-2 hidden max-w-2xl font-sans text-[1rem] text-muted sm:block">
+          <p className="mt-2 hidden max-w-2xl font-sans text-[0.95rem] text-muted sm:block">
             Every repo here replies to outsiders and merges their PRs. Each has issues you could take today.
           </p>
           {sp.profile === "saved" && (
-            <p role="status" className="mt-4 border border-green/50 bg-green/10 px-4 py-2.5 font-sans text-[0.875rem] text-green">
+            <p role="status" className="mt-4 border border-green/50 bg-green/10 px-4 py-2.5 font-sans text-[0.9rem] text-green">
               Profile saved. This search uses it; change it any time in <Link href="/settings/profile" className="underline">settings</Link>.
             </p>
           )}
         </PageHead>
         <div className="wrap py-5 sm:py-6">
-          <FindView initialPicks={picks} initial={result} source={source} hf={hf} saved={saved} />
+          <FindView initialPicks={picks} searched={searched} initial={result} source={source} hf={hf} saved={saved} signedIn={Boolean(user)} />
           <ProfileOnboarding back="/find" className="mt-10" />
         </div>
       </>

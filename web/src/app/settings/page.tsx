@@ -40,8 +40,8 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
           <li key={s.id}>
             <Link href={s.href} className="group flex items-center gap-4 py-4 transition-colors hover:bg-panel-2 sm:px-3">
               <span className="min-w-0 flex-1">
-                <span className="block text-[1rem] font-semibold group-hover:text-blue">{s.title}</span>
-                <span className="mt-1 block font-sans text-[0.875rem] text-muted">{status[s.id] ?? s.blurb}</span>
+                <span className="block text-[1.05rem] font-semibold group-hover:text-blue">{s.title}</span>
+                <span className="mt-1 block font-sans text-[0.9rem] text-muted">{status[s.id] ?? s.blurb}</span>
               </span>
               <span aria-hidden="true" className="text-faint group-hover:text-blue">›</span>
             </Link>

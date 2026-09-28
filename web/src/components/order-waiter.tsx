@@ -42,12 +42,12 @@ export function OrderWaiter({ orderId }: { orderId: string }) {
   }, [orderId, router]);
 
   return slow ? (
-    <p className="prose-sans mt-4 text-[1rem]">
+    <p className="prose-sans mt-4 text-[0.95rem]">
       This is taking longer than usual. You can leave this page: your credits will appear in Settings as soon as Razorpay confirms the
       payment. If it doesn&apos;t go through, you won&apos;t be charged.
     </p>
   ) : (
-    <p className="mt-4 flex items-center gap-2 text-[0.875rem] text-muted" role="status">
+    <p className="mt-4 flex items-center gap-2 text-[0.9rem] text-muted" role="status">
       <span aria-hidden="true" className="inline-block h-2 w-2 animate-pulse rounded-full bg-amber" /> Waiting for Razorpay to confirm…
     </p>
   );

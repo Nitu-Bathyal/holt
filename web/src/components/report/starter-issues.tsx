@@ -4,25 +4,25 @@ import { SkeletonCard, SkeletonRegion } from "../skeleton";
 
 export function StarterIssueCard({ issue, compact = false }: { issue: StarterIssue; compact?: boolean }) {
   return (
-    <li className="card-hover group relative rounded-2xl border border-line bg-panel p-5 shadow-soft sm:p-6">
-      <div className="flex flex-wrap items-center gap-2 text-[0.875rem] text-faint">
-        <span className="font-medium text-blue">#{issue.number}</span>
+    <li className="card-hover group relative border border-line bg-panel p-4 shadow-soft sm:p-5">
+      <div className="flex flex-wrap items-center gap-2 text-[0.8rem] text-faint">
+        <span className="text-blue">#{issue.number}</span>
         {issue.labels.slice(0, 3).map((l) => (
-          <span key={l} className="rounded-full bg-panel-2 px-2.5 py-0.5 text-[0.8125rem] text-muted">{l}</span>
+          <span key={l} className="chip min-h-0 py-0.5">{l}</span>
         ))}
         <span className="ml-auto">
           {issue.comments} comment{issue.comments === 1 ? "" : "s"}
           {issue.created_at && <> · {timeAgo(issue.created_at)}</>}
         </span>
       </div>
-      <h3 className="mt-3 text-[1.125rem] font-semibold leading-snug text-ink">
+      <h3 className="mt-2 font-sans text-[1rem] font-semibold leading-snug text-ink">
         <a href={issue.url} target="_blank" rel="noopener noreferrer" data-umami-event="starter-issue-click" className="after:absolute after:inset-0 group-hover:text-blue">
           {issue.title}
           <span className="sr-only"> (opens GitHub)</span>
         </a>
       </h3>
       {!compact && issue.why.length > 0 && (
-        <ul className="mt-2.5 space-y-1 text-[1rem] text-muted">
+        <ul className="mt-2 space-y-0.5 font-sans text-[0.89rem] text-muted">
           {issue.why.map((w) => (
             <li key={w} className="flex gap-2">
               <span aria-hidden="true" className="text-faint">·</span>
@@ -31,8 +31,8 @@ export function StarterIssueCard({ issue, compact = false }: { issue: StarterIss
           ))}
         </ul>
       )}
-      <p className="mt-4 flex gap-2 rounded-xl bg-bg px-3.5 py-2.5 text-[1rem] text-ink">
-        <span aria-hidden="true" className="text-green">→</span>
+      <p className="mt-3 flex gap-2 border-t border-dashed border-line pt-3 text-[0.87rem] text-green">
+        <span aria-hidden="true">→</span>
         <span>
           <span className="sr-only">What to do next: </span>
           {nextStep(issue)}
@@ -71,7 +71,7 @@ export function StarterIssues({ issues, repo }: { issues: IssuesState; repo: str
   return (
     <ul className="grid gap-3 md:grid-cols-2">
       {issues.map((i) => (
-        <StarterIssueCard key={i.number} issue={i} compact />
+        <StarterIssueCard key={i.number} issue={i} />
       ))}
     </ul>
   );

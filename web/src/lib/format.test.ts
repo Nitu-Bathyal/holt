@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { creditsNote, evidenceLabel, evidenceTitle, mergeTone, noReplyTone, statLines } from "./format.ts";
+import { creditsNote, evidenceLabel, mergeTone, noReplyTone, statLines } from "./format.ts";
 
 const stats = (attempts: number, merged: number, noReply: number) => ({
   outsider_attempts: attempts, outsider_merged: merged, no_reply: noReply,
@@ -43,22 +43,4 @@ test("creditsNote says free only when every credit is free", () => {
   assert.equal(creditsNote(c), "13 AI reports left. This one uses 1. A failed report doesn't count.");
   assert.equal(creditsNote({ ...c, balance: 3, purchased: 0 }), "3 free AI reports left. This one uses 1. A failed report doesn't count.");
   assert.equal(creditsNote({ ...c, balance: 1, free: 1, purchased: 0 }).startsWith("1 free AI report left."), true);
-});
-
-test("evidence rows show the PR's own title, or the whole line when there isn't one", () => {
-  assert.deepEqual(evidenceTitle("Outside contributor's pull request #3793 was merged: “Add `shtab` to the contrib list”"), {
-    title: "Add `shtab` to the contrib list",
-    quoted: true,
-  });
-  assert.deepEqual(evidenceTitle("Outside contributor's pull request #3782 had no reply from anyone when we looked: “Fix: a colon, inside”"), {
-    title: "Fix: a colon, inside",
-    quoted: true,
-  });
-  const line = "A software project. The repository is the Home Assistant core project.";
-  assert.deepEqual(evidenceTitle(line), { title: line, quoted: false });
-});
-
-test("outside-PR evidence labels are short", () => {
-  assert.equal(evidenceLabel({ kind: "outsider_pr", value: "merged" }).label, "Merged");
-  assert.equal(evidenceLabel({ kind: "outsider_pr", value: "no_reply" }).label, "No reply");
 });

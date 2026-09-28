@@ -6,8 +6,9 @@ Puts a small Holt chip next to the repository name on github.com:
 - **Holt: Not worth your time** / **Holt: Not enough evidence**
 - **Check with Holt** when Holt has no report for the repo yet
 
-Clicking the chip opens the full report at `https://<HOLT_HOST>/<owner>/<repo>`
-(for a repo with no report, that page starts the analysis). On a repo's issue
+Clicking the chip opens the report at `https://<HOLT_HOST>/<owner>/<repo>`
+(signed in, the full report, and for a repo with no report that page starts
+the analysis; signed out, the verdict and a sign-in step for the rest). On a repo's issue
 list (`/issues`, `/contribute`), issues that Holt ranks as good first picks get
 a small **Holt pick** mark; hover it to see why.
 

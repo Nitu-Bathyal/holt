@@ -8,7 +8,7 @@ import { ACCOUNT_SETTINGS } from "@/lib/settings";
 import { GitHubConnectionCard } from "@/components/connect-github-card";
 import { Notice, SectionHead } from "@/components/settings/section-head";
 
-export const metadata: Metadata = { title: "Connected accounts | Settings", robots: { index: false } };
+export const metadata: Metadata = { title: "Connected accounts · Settings", robots: { index: false } };
 
 const PROVIDER_NAME: Record<string, string> = { github: "GitHub", google: "Google" };
 
@@ -45,9 +45,9 @@ export default async function AccountSettings({ searchParams }: PageProps<"/sett
       )}
       {notice === "error" && <Notice tone="bad">That didn&apos;t work. Try again in a minute.</Notice>}
 
-      <h3 className="text-[1.125rem] font-semibold tracking-tight">Signing in</h3>
+      <h3 className="text-[1.1rem] font-semibold tracking-tight">Signing in</h3>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border border-line-strong bg-panel p-4 shadow-soft">
-        <div className="min-w-0 text-[0.875rem]">
+        <div className="min-w-0 text-[0.9rem]">
           <p className="font-semibold [overflow-wrap:anywhere]">{user.email || user.name}</p>
           <p className="mt-1 text-muted">{via ? `You sign in with ${via}.` : "Signed in."}</p>
         </div>
@@ -56,12 +56,12 @@ export default async function AccountSettings({ searchParams }: PageProps<"/sett
         </form>
       </div>
 
-      <h3 id="github" className="mt-8 scroll-mt-24 text-[1.125rem] font-semibold tracking-tight">GitHub</h3>
+      <h3 id="github" className="mt-8 scroll-mt-24 text-[1.1rem] font-semibold tracking-tight">GitHub</h3>
       <div className="mt-3">
         {gh.ok ? (
           <GitHubConnectionCard acct={acct} />
         ) : (
-          <p role="alert" className="border border-orange/50 px-4 py-3 font-sans text-[0.875rem] text-orange">{gh.error.message}</p>
+          <p role="alert" className="border border-orange/50 px-4 py-3 font-sans text-[0.9rem] text-orange">{gh.error.message}</p>
         )}
       </div>
     </section>

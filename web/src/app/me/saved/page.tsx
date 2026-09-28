@@ -3,8 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CatFace } from "@/components/cat-face";
 import { ErrorPanel } from "@/components/error-panel";
-import { PageHead } from "@/components/page-head";
 import { PageTransition } from "@/components/motion/page-transition";
+import { AppPageHeader } from "@/components/shell/app-page";
 import { RepoGrid } from "@/components/repo-card/repo-grid";
 import { SaveButton } from "@/components/save-button";
 import { savedRepos } from "@/lib/api";
@@ -26,31 +26,27 @@ export default async function SavedPage() {
   return (
     <PageTransition>
       <>
-      <PageHead>
-        <p className="rail mb-4 flex gap-2"><strong className="m-0">saved</strong><span>{user.name || user.email}</span></p>
-        <h1 className="display text-[clamp(2rem,6vw,3rem)]">Repos you saved</h1>
-        <p className="prose-sans mt-3 max-w-2xl">
-          Your shortlist for when you have time. Each verdict is from the latest free report, so it&apos;s current, not what it said the day you saved it.
-        </p>
-      </PageHead>
-      <div className="wrap py-10 sm:py-12">
+      <div className="wrap">
+      <AppPageHeader title="Saved repos" lead="Your shortlist. Each verdict is from the latest free report, not the day you saved it." />
+      </div>
+      <div className="wrap pb-14">
         {!r.ok ? (
           <ErrorPanel error={r.error} retryHref="/me/saved" />
         ) : items.length === 0 ? (
           <div className="mx-auto max-w-3xl border border-dashed border-line-strong p-8 text-center">
-            <CatFace mood="thinking" className="text-[1.75rem]" />
+            <CatFace mood="thinking" className="text-[1.6rem]" />
             <p className="mt-4 font-sans text-muted">
               Nothing saved yet. Press <span className="text-ink">save</span> on any report to keep that repo here.
             </p>
-            <Link href="/discover" className="bracket-link mt-6">Browse checked repos</Link>
+            <Link href="/discover" className="bracket-link mt-6">[ browse checked repos ]</Link>
           </div>
         ) : (
           <div className="space-y-10">
             {cards.length > 0 && <RepoGrid repos={cards.map(fromDiscover)} topicBase="/discover" saved={items.map((i) => i.repo)} fadeUnsaved />}
             {unchecked.length > 0 && (
               <section aria-labelledby="unchecked">
-                <h2 id="unchecked" className="text-[1rem] font-semibold tracking-tight">Not checked recently</h2>
-                <p className="mt-1 font-sans text-[0.875rem] text-muted">Holt has no current report for these. Open one to check it now; it takes about a minute.</p>
+                <h2 id="unchecked" className="text-[1.05rem] font-semibold tracking-tight">Not checked recently</h2>
+                <p className="mt-1 font-sans text-[0.9rem] text-muted">Holt has no current report for these. Open one to check it now; it takes about a minute.</p>
                 <ul className="mt-4 divide-y divide-line border border-line-strong bg-panel shadow-soft">
                   {unchecked.map((i) => {
                     const [owner, name] = i.repo.split("/");
@@ -61,9 +57,9 @@ export default async function SavedPage() {
                             <span className="text-muted">{owner}/</span>
                             {name}
                           </Link>
-                          <p className="text-[0.8125rem] text-faint">saved <time dateTime={i.saved_at}>{timeAgo(i.saved_at)}</time></p>
+                          <p className="text-[0.82rem] text-faint">saved <time dateTime={i.saved_at}>{timeAgo(i.saved_at)}</time></p>
                         </div>
-                        <Link href={`/${i.repo}`} className="text-[0.875rem] text-green hover:underline">Check it</Link>
+                        <Link href={`/${i.repo}`} className="text-[0.87rem] text-green hover:underline">[ check it ]</Link>
                         <SaveButton repo={i.repo} saved />
                       </li>
                     );
@@ -71,7 +67,7 @@ export default async function SavedPage() {
                 </ul>
               </section>
             )}
-            <p className="text-[0.8125rem] text-faint">
+            <p className="text-[0.82rem] text-faint">
               {items.length} of {r.data.max_saved} saved. Press saved on a card to remove it; it leaves this list when you come back.
             </p>
           </div>

@@ -8,6 +8,8 @@ import { compareHref as href, EXAMPLE_POOL, leaders, MAX, parseList, SUGGESTIONS
 import type { Report } from "@/lib/types";
 import { PageHead } from "@/components/page-head";
 import { PageTransition } from "@/components/motion/page-transition";
+import { SignInToCheck } from "@/components/sign-in-to-check";
+import { currentUser } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "Compare repositories",
@@ -23,7 +25,7 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
   const all = [...repos, ...extra.filter((e) => !repos.some((r) => r.toLowerCase() === e.toLowerCase()))].slice(0, MAX);
   // Keep the URL shareable: fold ?add= into ?repos=.
   if (sp.add !== undefined) redirect(href(all));
-  const reports = await Promise.all(all.map((r) => getReport(r)));
+  const [reports, user] = await Promise.all([Promise.all(all.map((r) => getReport(r))), currentUser()]);
 
   // Nothing picked yet: an example from reports already cached (reading the
   // cache costs nothing and starts no checks), so the page shows an answer.
@@ -42,7 +44,7 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
       <>
       <PageHead compact>
         <h1 className="text-[clamp(1.45rem,3.4vw,2.1rem)] font-semibold leading-tight tracking-tight">Which one will review your pull request?</h1>
-        <p className="mt-2 hidden max-w-2xl font-sans text-[1rem] text-muted sm:block">Up to {MAX} repos. Same rules, same numbers.</p>
+        <p className="mt-2 hidden max-w-2xl font-sans text-[0.95rem] text-muted sm:block">Up to {MAX} repos. Same rules, same numbers.</p>
 
         <form action="/compare" method="get" className="mt-5 grid max-w-2xl grid-cols-[1fr_auto] border border-line-strong bg-panel shadow-soft focus-within:border-blue">
           <input type="hidden" name="repos" value={all.join(",")} />
@@ -61,7 +63,7 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
           <button type="submit" disabled={all.length >= MAX} className="btn-primary m-1 min-h-10">{all.length ? "add" : "compare"}</button>
         </form>
         {!all.length && (
-          <p className="mt-3 flex flex-wrap items-center gap-2 text-[0.875rem] text-faint">
+          <p className="mt-3 flex flex-wrap items-center gap-2 text-[0.85rem] text-faint">
             <span>or try</span>
             {SUGGESTIONS.map((s) => (
               <Link key={s.label} href={href(s.repos)} className="border border-line-strong px-2.5 py-1 text-muted hover:border-blue hover:text-ink">
@@ -74,7 +76,7 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
 
       <div className="wrap py-6 sm:py-8">
         {shown.length > 0 && (
-          <p className="mb-4 text-[0.875rem] text-faint">
+          <p className="mb-4 text-[0.87rem] text-faint">
             {all.length
               ? <>▲ marks the best of these on each number.{all.length < MAX && " Add another above."}</>
               : <>Example: <Link href={href(list)} className="text-link">{short(list)}</Link>. ▲ marks the best of these on each number.</>}
@@ -90,8 +92,11 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
               const name = r.ok ? r.data.repo : repo;
               return (
                 <CompareShell key={repo} repo={name} removeHref={href(list.filter((x) => x !== repo))}>
-                  {r.ok ? <CompareBody report={r.data} leads={leadsFor(i)} /> : r.error.code === "not_found" ? <CompareLive repo={repo} /> : (
-                    <p className="p-4 font-sans text-[0.875rem] text-orange">{r.error.message}</p>
+                  {r.ok ? <CompareBody report={r.data} leads={leadsFor(i)} /> : r.error.code === "not_found" ? (
+                    // Cached reports compare for anyone; a new check needs an account.
+                    user ? <CompareLive repo={repo} /> : <SignInToCheck back={href(list)} />
+                  ) : (
+                    <p className="p-4 font-sans text-[0.9rem] text-orange">{r.error.message}</p>
                   )}
                 </CompareShell>
               );

@@ -1,10 +1,13 @@
 // Friendly progress copy. Server stage strings are plain English already;
 // these add a line of context for someone waiting on a phone.
 const FRIENDLY: [RegExp, string, string][] = [
-  [/queue/i, "Getting in line", "Someone else's report is running. Yours is next."],
+  [/^starting/i, "Starting", "Warming up."],
+  [/queue|waiting|in line/i, "Getting in line", "Someone else's report is running. Yours is next."],
   [/fetch|pull request/i, "Fetching pull requests", "The last few months of PRs from people outside the team."],
+  [/count/i, "Counting replies and merges", "Who got an answer, who got merged, and how long it took."],
   [/thread|read/i, "Reading threads", "Who replied, how fast, and what happened to each PR."],
   [/check|verif|evidence/i, "Checking evidence", "Every claim has to link to a real GitHub page, or it's dropped."],
+  [/rules/i, "Applying the rules", "The same written rules as every other repo."],
   [/writ|report|verdict/i, "Writing the report", "The same written rules as every other repo."],
 ];
 
@@ -17,4 +20,30 @@ export function friendlyStage(stage: string | undefined): { title: string; detai
   return { title: stage, detail: "" };
 }
 
-export const STAGE_ORDER = ["Fetching pull requests", "Reading threads", "Checking evidence", "Writing the report"];
+/** One line of the live progress log: a stage, and when it started (seconds in). */
+export interface LogLine {
+  title: string;
+  detail: string;
+  at: number;
+}
+
+/**
+ * The progress log after a stage event, printed like a terminal: a new stage
+ * adds a line, the same stage (a new place in the queue) rewrites its detail,
+ * and a stage already passed never prints again (the server can say
+ * "Starting" after the page has already said "Getting in line"). Returns the
+ * same array when nothing changed.
+ */
+export function logStage(log: LogLine[], stage: string | undefined, at: number): LogLine[] {
+  const f = friendlyStage(stage);
+  const last = log.at(-1);
+  if (last?.title === f.title) return last.detail === f.detail ? log : [...log.slice(0, -1), { ...last, detail: f.detail }];
+  if (log.some((l) => l.title === f.title)) return log;
+  return [...log, { ...f, at }];
+}
+
+/** "4s", "1m 05s": how long a stage took. */
+export function stageTime(seconds: number): string {
+  const s = Math.max(0, Math.round(seconds));
+  return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`;
+}

@@ -165,16 +165,6 @@ const FIELD_LABELS: Record<string, string> = {
   contribute_elsewhere: "Where to contribute",
 };
 
-/** "Merged after review" for an engine outcome value. */
-export function outcomeLabel(value: string): string {
-  return OUTCOME_LABELS[value] ?? humanize(value);
-}
-
-/** "Contributor guide" for an engine field. */
-export function fieldLabel(kind: string): string {
-  return FIELD_LABELS[kind] ?? humanize(kind);
-}
-
 /**
  * Label and tone for an evidence item. Rules mode lists newcomer PRs as
  * kind "outsider_pr" (value "merged" | "no_reply"); AI mode uses "outcome"
@@ -184,16 +174,10 @@ export function evidenceLabel(e: { kind: string; value: string | null }): { labe
   const value = e.value ?? "";
   const bad = NEGATIVE.test(value);
   if (e.kind === "outsider_pr") {
-    return { label: e.value === "merged" ? "Merged" : e.value === "no_reply" ? "No reply" : humanize(value), bad };
+    return { label: e.value === "merged" ? "Newcomer PR merged" : e.value === "no_reply" ? "Newcomer PR, no reply" : `Newcomer PR: ${humanize(value).toLowerCase()}`, bad };
   }
   if (e.kind === "outcome") return { label: OUTCOME_LABELS[value] ?? humanize(value), bad };
   return { label: FIELD_LABELS[e.kind] ?? humanize(e.kind), bad };
-}
-
-/** The PR's own title when the line is "…pull request #123 was merged: “Title”", else the whole line. */
-export function evidenceTitle(text: string): { title: string; quoted: boolean } {
-  const m = /#\d+[^:“]*:\s*“(.+)”\s*$/.exec(text);
-  return m ? { title: m[1], quoted: true } : { title: text, quoted: false };
 }
 
 /** "#526518" or a short id for an evidence link. */

@@ -30,6 +30,12 @@ export function pauseSmoothScroll(on: boolean) {
   else lenis?.start();
 }
 
+/** Back to the top of the page: a Lenis glide where it runs, otherwise native (instant under reduced motion). */
+export function scrollToTop() {
+  if (lenis) return lenis.scrollTo(0);
+  window.scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+}
+
 export function SmoothScroll() {
   const pathname = usePathname();
 

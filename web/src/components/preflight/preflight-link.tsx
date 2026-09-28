@@ -24,7 +24,7 @@ export function PreflightLink({ repo }: { repo: string }) {
   if (!on) return null;
   return (
     <div className="flex flex-wrap items-center justify-between gap-3 border border-dashed border-line-strong p-4" data-preflight-link>
-      <p className="font-sans text-[1rem] text-muted">
+      <p className="font-sans text-[0.95rem] text-muted">
         Opened a PR here, or about to?{" "}
         <Link href={preflightHref({ repo })} prefetch={false} className="text-link">Check your PR against this repo →</Link>
       </p>

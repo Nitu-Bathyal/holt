@@ -7,6 +7,7 @@ import { PageTransition } from "@/components/motion/page-transition";
 import { TONE_MOOD } from "@/components/report/tone";
 import { VerdictPill } from "@/components/report/verdict-pill";
 import { EXAMPLE_PATH, EXAMPLE_REPORT, exampleRecordedOn } from "@/lib/example-report";
+import { EXAMPLES_PATH } from "@/lib/examples";
 import { humanHours } from "@/lib/format";
 import { afterSignIn } from "@/lib/home";
 import { currentUser } from "@/lib/session";
@@ -63,8 +64,8 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
         <div aria-hidden="true" className="hero-backdrop" />
         <div className="wrap relative grid min-h-[78dvh] items-center gap-14 py-10 sm:py-16 lg:grid-cols-[minmax(0,27rem)_minmax(0,1fr)] lg:gap-20">
           <section aria-labelledby="signin-title" className="mx-auto w-full max-w-md border border-line-strong bg-panel p-6 shadow-card sm:p-9 lg:mx-0">
-            <CatFace mood={notice?.tone === "error" ? "startled" : "adoring"} blink={!notice} className="text-[1.75rem]" />
-            <h1 id="signin-title" className="display mt-5 text-[2.25rem] sm:text-[3rem]">
+            <CatFace mood={notice?.tone === "error" ? "startled" : "adoring"} blink={!notice} className="text-[1.7rem]" />
+            <h1 id="signin-title" className="display mt-5 text-[2.3rem] sm:text-[2.7rem]">
               Sign in to Holt
             </h1>
             <p className="prose-sans mt-3 text-[1rem]">
@@ -76,8 +77,8 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
                 role={notice.tone === "error" ? "alert" : "status"}
                 className={`mt-6 border-l-2 px-4 py-3 font-sans ${notice.tone === "error" ? "border-orange bg-orange/10" : "border-blue bg-blue/10"}`}
               >
-                <p className={`text-[1rem] font-semibold ${notice.tone === "error" ? "text-orange" : "text-blue"}`}>{notice.title}</p>
-                <p className="mt-1 text-[0.875rem] leading-relaxed text-muted">{notice.body}</p>
+                <p className={`text-[0.95rem] font-semibold ${notice.tone === "error" ? "text-orange" : "text-blue"}`}>{notice.title}</p>
+                {notice.body && <p className="mt-1 text-[0.9rem] leading-relaxed text-muted">{notice.body}</p>}
               </div>
             )}
 
@@ -87,18 +88,18 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
 
             {devSignInEnabled && (
               <form action="/api/dev-signin" method="post" className="mt-6 border border-amber/50 bg-amber/10 p-4">
-                <p className="text-[0.875rem] font-semibold text-amber">Development only</p>
-                <p className="mt-1 font-sans text-[0.875rem] text-muted">No OAuth app is configured, so you can sign in as a local test user.</p>
+                <p className="text-[0.85rem] font-semibold text-amber">Development only</p>
+                <p className="mt-1 font-sans text-[0.9rem] text-muted">No OAuth app is configured, so you can sign in as a local test user.</p>
                 <input type="hidden" name="callbackUrl" value={callbackUrl} />
                 <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
                   <label htmlFor="dev-name" className="sr-only">Test user name</label>
-                  <input id="dev-name" name="name" defaultValue="Dev Student" className="h-11 min-w-0 border border-line-strong bg-bg px-3 text-[0.875rem] outline-none focus:border-blue" />
+                  <input id="dev-name" name="name" defaultValue="Dev Student" className="h-11 min-w-0 border border-line-strong bg-bg px-3 text-[0.9rem] outline-none focus:border-blue" />
                   <button type="submit" className="btn-primary min-h-11 bg-amber">dev sign-in</button>
                 </div>
               </form>
             )}
 
-            <div className="mt-7 space-y-2 border-t border-line pt-5 font-sans text-[0.875rem] leading-relaxed text-muted">
+            <div className="mt-7 space-y-2 border-t border-line pt-5 font-sans text-[0.88rem] leading-relaxed text-muted">
               <p className="flex gap-2.5">
                 <LockIcon />
                 <span>
@@ -111,8 +112,8 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
               </p>
             </div>
 
-            <p className="mt-6 font-sans text-[0.875rem] text-muted">
-              Only checking a repo? <Link href="/" className="text-link">That never needs an account</Link>.
+            <p className="mt-6 font-sans text-[0.9rem] text-muted">
+              Just curious? <Link href={EXAMPLES_PATH} className="text-link">Try an example report →</Link>
             </p>
           </section>
 
@@ -136,29 +137,29 @@ function ExampleReport() {
       {/* A second sheet behind the report, so it reads as one of a pile you'll keep. */}
       <div aria-hidden="true" className="absolute inset-0 translate-x-3 translate-y-3 border border-line bg-panel-2" />
       <div className="relative border border-line-strong bg-panel shadow-card">
-        <div className="flex min-h-10 items-center justify-between border-b border-line px-5 text-[0.8125rem] text-faint">
+        <div className="flex min-h-10 items-center justify-between border-b border-line px-5 text-[0.8rem] text-faint">
           <span>{r.repo}</span>
           <span>example AI report</span>
         </div>
         <div className="p-7">
           <div className="flex items-center justify-between">
             <VerdictPill headline={r.headline} tone={r.tone} />
-            <CatFace mood={TONE_MOOD[r.tone]} className="text-[1.125rem]" />
+            <CatFace mood={TONE_MOOD[r.tone]} className="text-[1.2rem]" />
           </div>
-          <blockquote className="mt-5 border-l-2 border-blue pl-4 font-sans text-[1rem] leading-relaxed text-ink">
+          <blockquote className="mt-5 border-l-2 border-blue pl-4 font-sans text-[1.05rem] leading-relaxed text-ink">
             {r.verdict_line}
           </blockquote>
           <ul className="mt-6 grid grid-cols-3 gap-px border border-line bg-line">
             {stats.map(([big, label]) => (
               <li key={label} className="bg-panel p-3">
-                <p className="text-[1.125rem] font-semibold tracking-tight">{big}</p>
-                <p className="font-sans text-[0.8125rem] leading-snug text-muted">{label}</p>
+                <p className="text-[1.1rem] font-semibold tracking-tight">{big}</p>
+                <p className="font-sans text-[0.82rem] leading-snug text-muted">{label}</p>
               </li>
             ))}
           </ul>
         </div>
       </div>
-      <figcaption className="mt-7 font-sans text-[0.875rem] text-muted">
+      <figcaption className="mt-7 font-sans text-[0.88rem] text-muted">
         The rules pick the verdict. The AI report explains it in plain words, with links to the PRs behind it.{" "}
         <Link href={EXAMPLE_PATH} className="text-link">Read the full example</Link> (recorded {exampleRecordedOn()}).
       </figcaption>

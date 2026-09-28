@@ -178,7 +178,7 @@ test.describe("menus", () => {
 
     await button.click();
     await expect.poll(open).toBe(true);
-    await expect(menu.getByRole("link", { name: "compare" })).toBeVisible();
+    await expect(menu.getByRole("link", { name: "the verdicts" })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect.poll(open).toBe(false);
 

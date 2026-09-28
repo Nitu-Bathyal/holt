@@ -7,8 +7,8 @@ export function ErrorPanel({ error, repo, onRetry, retryHref }: { error: ApiErro
   const account = error.code === "quota_exceeded" || error.code === "ai_unavailable";
   return (
     <div role="alert" className="border border-line-strong bg-panel p-6 shadow-soft sm:p-8">
-      <CatFace mood={account ? "determined" : "startled"} className="text-[1.75rem]" />
-      <h2 className="mt-4 text-[1.375rem] font-semibold tracking-tight">{errorHeading(error)}</h2>
+      <CatFace mood={account ? "determined" : "startled"} className="text-[1.6rem]" />
+      <h2 className="mt-4 text-[1.4rem] font-semibold tracking-tight">{errorHeading(error)}</h2>
       <p className="mt-2 max-w-xl font-sans text-muted">
         {error.message}
         {error.code === "rate_limited" && error.retry_after ? ` Try again in about ${Math.ceil(error.retry_after / 60)} minute${error.retry_after > 60 ? "s" : ""}.` : ""}

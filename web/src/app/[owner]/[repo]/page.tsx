@@ -7,12 +7,15 @@ import { ErrorPanel } from "@/components/error-panel";
 import { AiStart } from "@/components/report/ai-start";
 import { AnalysisRunner } from "@/components/report/analysis-runner";
 import { BudgetPicker } from "@/components/report/budget-picker";
+import { ReportTeaser } from "@/components/report/report-teaser";
 import { ReportView } from "@/components/report/report-view";
 import { StarterIssues, StarterIssuesSkeleton } from "@/components/report/starter-issues";
 import { LinkHint } from "@/components/motion/link-hint";
 import { SkeletonReveal } from "@/components/motion/reveal";
 import { getReport, me, recordView, savedState, starterIssues } from "@/lib/api";
 import { budgetFrom, reportHref } from "@/lib/budget";
+import { EXAMPLES_PATH } from "@/lib/examples";
+import { reportAccess, signInHref } from "@/lib/gate";
 import { isValidRepo } from "@/lib/repo";
 import { caller, currentUser, type SessionUser } from "@/lib/session";
 import { humanHours } from "@/lib/format";
@@ -20,7 +23,6 @@ import { SITE_URL } from "@/lib/site";
 import type { Credits, Mode, Report } from "@/lib/types";
 import { PageTransition } from "@/components/motion/page-transition";
 import { SaveButton } from "@/components/save-button";
-import { ReportDoc } from "@/components/report/report-doc";
 
 type Props = PageProps<"/[owner]/[repo]">;
 
@@ -42,7 +44,7 @@ function describe(report: Report | null, name: string): string {
   return `${report.headline}. ${s.outsider_merged} of ${s.outsider_attempts} outside PRs got merged${reply}. See the evidence and starter issues.`;
 }
 
-const titleFor = (name: string) => `${name}: Worth your time? | Holt`;
+const titleFor = (name: string) => `${name}: Worth your time? · Holt`;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { owner, repo } = await params;
@@ -85,7 +87,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
   const name = `${owner}/${repo}`;
   const user = await currentUser();
   const signedIn = Boolean(user);
-  if (mode === "ai" && !signedIn) redirect(`/signin?callbackUrl=${encodeURIComponent(`/${name}?mode=ai`)}`);
+  if (mode === "ai" && !signedIn) redirect(signInHref(`/${name}?mode=ai`));
 
   // Only the report (and, signed in, whether it's saved: one database read)
   // blocks the page; starter issues (a live GitHub call) stream in.
@@ -103,10 +105,16 @@ export default async function RepoPage({ params, searchParams }: Props) {
   // For Connect GitHub users' "opened a PR after checking it on Holt" (the server ignores the rest).
   if (user && report.ok) after(() => recordView(user.id, report.data.repo));
   const [dOwner, dRepo] = display.split("/");
+  // Signed out: the examples in full, every other repo as a teaser, and never a
+  // new check (a repo with no report yet gets a teaser that offers one).
+  const access = reportAccess(display, signedIn);
+  const teaser = !signedIn && (report.ok ? access === "teaser" : report.error.code === "not_found");
 
   return (
     <PageTransition>
-      <ReportDoc className="relative">
+      <div className="relative">
+      {/* The same backdrop as the landing hero, behind the repo header and verdict. */}
+      <div aria-hidden="true" className="hero-backdrop bottom-auto h-[560px] [mask-image:linear-gradient(#000_55%,transparent)]" />
       <div className="wrap relative py-8 sm:py-12">
         {mode === "rules" && <JsonLd report={report.ok ? report.data : null} name={display} />}
         <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3">
@@ -119,54 +127,60 @@ export default async function RepoPage({ params, searchParams }: Props) {
             // Decorative and small: don't compete with the CSS and fonts the verdict needs.
             fetchPriority="low"
             decoding="async"
-            className="size-11 rounded-xl border border-line bg-panel-2"
+            className="size-10 rounded-md border border-line-strong bg-panel-2"
           />
           <div className="min-w-0 flex-1">
-            <p className="text-[1.125rem] font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-[1.375rem]">
+            <p className="text-[1.05rem] font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-[1.25rem]">
               <span className="text-muted">{dOwner}/</span>
               {dRepo}
             </p>
-            <a href={`https://github.com/${display}`} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center truncate text-[0.8125rem] text-faint hover:text-blue sm:block sm:min-h-0">
+            <a href={`https://github.com/${display}`} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center truncate text-[0.82rem] text-faint hover:text-blue sm:block sm:min-h-0">
               github.com/{display} ↗
             </a>
           </div>
           {/* A failed lookup shows "save"; saving again is harmless. Keyed so
               moving to another repo's report starts from that repo's state. */}
           <SaveButton key={display} repo={display} saved={user ? Boolean(saved?.ok && saved.data.saved) : null} />
-          <nav aria-label="Report type" className="relative grid w-full grid-cols-2 overflow-hidden rounded-full border border-line bg-panel p-1 text-center text-[0.875rem] shadow-soft sm:w-auto">
+          <nav aria-label="Report type" className="relative grid w-full grid-cols-2 border border-line-strong text-center text-[0.85rem] sm:w-auto">
             {/* One pill under both tabs; it slides to the current one. */}
-            <span aria-hidden="true" className={`tab-pill absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-full ${mode === "ai" ? "translate-x-full bg-ink" : "bg-ink"}`} />
+            <span aria-hidden="true" className={`tab-pill absolute inset-y-0 left-0 w-1/2 ${mode === "ai" ? "translate-x-full bg-blue" : "bg-ink"}`} />
             {/* No prefetch: one tab is this page, the other is sign-in for most visitors. */}
             <Link
               href={reportHref(display, days)}
               prefetch={false}
               aria-current={mode === "rules" ? "page" : undefined}
-              className={`relative inline-flex min-h-10 items-center justify-center rounded-full px-4 font-medium transition-colors ${mode === "rules" ? "text-bg" : "text-muted hover:text-ink"}`}
+              className={`relative inline-flex min-h-11 items-center justify-center px-3 transition-colors ${mode === "rules" ? "text-bg" : "text-muted hover:text-ink"}`}
             >
-              Free report
+              free report
               <LinkHint />
             </Link>
             <Link
               href={signedIn ? `/${display}?mode=ai` : `/signin?callbackUrl=${encodeURIComponent(`/${display}?mode=ai`)}`}
               prefetch={false}
               aria-current={mode === "ai" ? "page" : undefined}
-              className={`relative inline-flex min-h-10 items-center justify-center rounded-full px-4 font-medium transition-colors ${mode === "ai" ? "text-bg" : "text-muted hover:text-ink"}`}
+              className={`relative inline-flex min-h-11 items-center justify-center px-3 transition-colors ${mode === "ai" ? "text-on-accent" : "text-muted hover:text-ink"}`}
             >
-              AI report
+              AI report ✦
               <LinkHint />
             </Link>
           </nav>
         </div>
 
-        {/* Free report only: on the AI tab another budget would be another paid run. */}
-        {mode === "rules" && <BudgetPicker repo={display} days={days} />}
+        {!signedIn && access === "full" && report.ok && <ExampleNote />}
+
+        {/* Free report only: on the AI tab another budget would be another paid run.
+            Signed in only: another budget is another check. */}
+        {mode === "rules" && signedIn && <BudgetPicker repo={display} days={days} />}
 
         {/* Switching between the free and AI tabs crossfades the report, not the page. */}
         <ViewTransition key={mode} name="report-body" share="swap" enter="swap" exit="swap" default="none">
           <div>
-            {report.ok && report.data.outdated && mode === "rules" ? (
+            {teaser ? (
+              <ReportTeaser repo={display} report={report.ok ? report.data : null} back={reportHref(display, days)} />
+            ) : report.ok && report.data.outdated && mode === "rules" && signedIn ? (
               // Made by an older version of the rules: check again, with the
-              // normal progress, and fall back to it only if that fails.
+              // normal progress, and fall back to it only if that fails. (Signed
+              // out, an example shows as it is: a re-check needs an account.)
               <AnalysisRunner repo={report.data.repo} mode={mode} days={days} signedIn={signedIn} fallback={report.data} />
             ) : report.ok ? (
               <ReportView
@@ -190,8 +204,22 @@ export default async function RepoPage({ params, searchParams }: Props) {
           </div>
         </ViewTransition>
       </div>
-      </ReportDoc>
+      </div>
     </PageTransition>
+  );
+}
+
+/** Above an example report, for signed-out visitors: what this is, and the way to their own. */
+function ExampleNote() {
+  return (
+    <p className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 border border-line-strong bg-panel-2 px-4 py-3 font-sans text-[0.9rem] text-muted" data-example-note>
+      <span className="border border-blue px-2 py-0.5 font-mono text-[0.78rem] uppercase tracking-[0.08em] text-blue">Example report</span>
+      <span className="min-w-0 flex-1">Sign in to check any repo you like.</span>
+      <span className="flex flex-wrap gap-x-4">
+        <Link href="/signin" prefetch={false} className="text-link">sign in</Link>
+        <Link href={EXAMPLES_PATH} className="text-link">more examples</Link>
+      </span>
+    </p>
   );
 }
 

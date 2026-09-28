@@ -30,7 +30,7 @@ export function AnalysisRunner({ repo, mode, days, signedIn, fallback }: { repo:
   if (showFallback)
     return (
       <div>
-        <p role="status" className="mb-6 border border-line-strong bg-panel-2 px-4 py-3 text-[0.875rem] text-muted">
+        <p role="status" className="mb-6 border border-line-strong bg-panel-2 px-4 py-3 text-[0.89rem] text-muted">
           Holt&rsquo;s rules changed and the re-check didn&rsquo;t finish, so this is the earlier result.{" "}
           <button type="button" onClick={retry} className="underline hover:text-ink">
             Try again
@@ -43,7 +43,7 @@ export function AnalysisRunner({ repo, mode, days, signedIn, fallback }: { repo:
   if (state.phase === "done")
     return (
       <ViewTransition enter="sk-in" default="none">
-        <ReportView report={state.report} issues={<StarterIssues issues={issues} repo={state.report.repo} />} signedIn={signedIn} reveal />
+        <ReportView report={state.report} issues={<StarterIssues issues={issues} repo={state.report.repo} />} signedIn={signedIn} reveal land={state.fresh} />
       </ViewTransition>
     );
   return (

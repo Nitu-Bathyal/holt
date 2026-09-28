@@ -7,12 +7,12 @@ import { CONTRIBUTIONS, LANGS, LEVELS, TIME, topics as topicsOf } from "@/lib/pr
 // Every choice is one tap and applies at once; the rare ones sit behind "More".
 const TIME_SHORT: Record<number, string> = { 1: "evening", 3: "weekend", 7: "week", 30: "month" };
 
-const seg = "flex min-h-10 items-center justify-center border px-3 text-[0.875rem] transition-colors focus-visible:outline-2 focus-visible:outline-blue";
+const seg = "flex min-h-10 items-center justify-center border px-3 text-[0.88rem] transition-colors focus-visible:outline-2 focus-visible:outline-blue";
 const segOn = "border-green bg-green font-semibold text-on-accent";
 const segOff = "border-line-strong text-muted hover:border-blue hover:text-ink";
 const chipOn = "border-blue bg-blue text-on-accent";
 const chipOff = "border-line-strong text-muted hover:border-blue hover:text-ink";
-const chip = "inline-flex min-h-10 shrink-0 select-none items-center border px-3.5 text-[0.875rem] transition-colors focus-visible:outline-2 focus-visible:outline-blue";
+const chip = "inline-flex min-h-10 shrink-0 select-none items-center border px-3.5 text-[0.88rem] transition-colors focus-visible:outline-2 focus-visible:outline-blue";
 
 export function FindFilters({ picks, onChange, hf }: { picks: Picks; onChange: (p: Picks) => void; hf: { note: string } | null }) {
   const extras = extraCount(picks);
@@ -58,7 +58,7 @@ export function FindFilters({ picks, onChange, hf }: { picks: Picks; onChange: (
 
       <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line px-3 py-3 sm:px-4">
         <div role="radiogroup" aria-label="Time you have" className="flex w-full items-center gap-2 sm:w-auto">
-          <span className="shrink-0 text-[0.875rem] text-faint">Time</span>
+          <span className="shrink-0 text-[0.87rem] text-faint">Time</span>
           <div className="grid flex-1 grid-cols-4 sm:flex">
             {TIME.map((t, i) => {
               const on = picks.days === t.days;
@@ -80,7 +80,7 @@ export function FindFilters({ picks, onChange, hf }: { picks: Picks; onChange: (
         </div>
 
         {hf && (
-          <button type="button" role="switch" aria-checked={picks.hf} onClick={() => set({ hf: !picks.hf })} className="group flex min-h-10 items-center gap-2.5 text-left text-[0.875rem]">
+          <button type="button" role="switch" aria-checked={picks.hf} onClick={() => set({ hf: !picks.hf })} className="group flex min-h-10 items-center gap-2.5 text-left text-[0.88rem]">
             <span
               aria-hidden="true"
               className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors after:absolute after:left-0.5 after:top-0.5 after:size-4.5 after:rounded-full after:transition-transform group-focus-visible:outline-2 group-focus-visible:outline-blue ${picks.hf ? "border-hf bg-hf-bg after:translate-x-5 after:bg-hf" : "border-line-strong bg-panel-2 after:bg-faint"}`}
@@ -96,9 +96,9 @@ export function FindFilters({ picks, onChange, hf }: { picks: Picks; onChange: (
           aria-expanded={more}
           aria-controls={panelId}
           onClick={() => setMore(!more)}
-          className="ml-auto flex min-h-10 items-center gap-1.5 text-[0.875rem] text-muted hover:text-ink"
+          className="ml-auto flex min-h-10 items-center gap-1.5 text-[0.88rem] text-muted hover:text-ink"
         >
-          More filters{extras > 0 && <span className="rounded-full bg-blue px-1.5 text-[0.8125rem] text-on-accent">{extras}</span>}
+          More filters{extras > 0 && <span className="rounded-full bg-blue px-1.5 text-[0.78rem] text-on-accent">{extras}</span>}
           <span aria-hidden="true" className={`transition-transform ${more ? "rotate-180" : ""}`}>▾</span>
         </button>
       </div>
@@ -106,7 +106,7 @@ export function FindFilters({ picks, onChange, hf }: { picks: Picks; onChange: (
       {more && (
         <div id={panelId} className="grid gap-5 border-t border-line p-3 sm:grid-cols-[auto_1fr] sm:gap-x-8 sm:p-4">
           <div role="radiogroup" aria-label="Your experience">
-            <p className="mb-2 text-[0.875rem] text-faint">Your experience</p>
+            <p className="mb-2 text-[0.87rem] text-faint">Your experience</p>
             <div className="flex">
               {LEVELS.map((l, i) => {
                 const on = picks.level === l.id;
@@ -117,10 +117,10 @@ export function FindFilters({ picks, onChange, hf }: { picks: Picks; onChange: (
                 );
               })}
             </div>
-            <p className="mt-1.5 font-sans text-[0.875rem] text-faint">{LEVELS.find((l) => l.id === picks.level)?.hint}</p>
+            <p className="mt-1.5 font-sans text-[0.85rem] text-faint">{LEVELS.find((l) => l.id === picks.level)?.hint}</p>
           </div>
           <div role="group" aria-label="What you'd like to work on">
-            <p className="mb-2 text-[0.875rem] text-faint">Work on <span className="font-sans">(these issues come first)</span></p>
+            <p className="mb-2 text-[0.87rem] text-faint">Work on <span className="font-sans">(these issues come first)</span></p>
             <div className="flex flex-wrap gap-2">
               {CONTRIBUTIONS.map((c) => {
                 const on = picks.types.includes(c.id);
@@ -139,7 +139,7 @@ export function FindFilters({ picks, onChange, hf }: { picks: Picks; onChange: (
               applyTopics();
             }}
           >
-            <label htmlFor={`${panelId}-topics`} className="mb-2 block text-[0.875rem] text-faint">
+            <label htmlFor={`${panelId}-topics`} className="mb-2 block text-[0.87rem] text-faint">
               Topics <span className="font-sans">(GitHub topics, separated by commas)</span>
             </label>
             <div className="flex gap-2">
@@ -152,7 +152,7 @@ export function FindFilters({ picks, onChange, hf }: { picks: Picks; onChange: (
                 placeholder="e.g. web, cli, machine-learning"
                 maxLength={300}
                 enterKeyHint="search"
-                className="min-h-10 min-w-0 flex-1 border border-line-strong bg-bg px-3 font-sans text-[0.875rem] outline-none focus-visible:border-blue"
+                className="min-h-10 min-w-0 flex-1 border border-line-strong bg-bg px-3 font-sans text-[0.9rem] outline-none focus-visible:border-blue"
               />
               <button type="submit" className="btn-ghost min-h-10">apply</button>
             </div>

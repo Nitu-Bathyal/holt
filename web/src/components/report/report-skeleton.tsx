@@ -7,7 +7,8 @@ import { StarterIssuesSkeleton } from "./starter-issues";
 function SectionSkeleton({ children, title = "14rem" }: { children: React.ReactNode; title?: string }) {
   return (
     <div className="border-t border-line pt-8">
-      <div className="mb-5 flex h-[2.475rem] items-center gap-x-4 sm:h-[2.805rem]">
+      <div className="mb-5 flex h-[2.0625rem] items-center gap-x-4 sm:h-[2.31rem]">
+        <Skeleton className="h-3 w-5" />
         <Skeleton className="h-5 max-w-[70%]" style={{ width: title }} />
       </div>
       {children}
@@ -33,74 +34,60 @@ export function StatsGridSkeleton({ tiles = 6 }: { tiles?: number }) {
 /** The verdict card and the sections under it. */
 export function ReportBodySkeleton() {
   return (
-    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-14">
-      <div className="min-w-0 space-y-14">
-        <div className="rounded-2xl border border-line bg-panel shadow-card">
-          <div className="p-6 sm:p-9">
-            {/* The headline (two lines on phones, one on wide screens) and the cat. */}
-            <div className="flex items-start justify-between gap-4">
-              <span className="block flex-1">
-                <span className="flex h-[2.54rem] items-center sm:h-[3.56rem]">
-                  <Skeleton className="h-[1.8rem] w-[85%] sm:h-[2.8rem] sm:w-[60%]" />
-                </span>
-                <span className="flex h-[2.5rem] items-center sm:hidden">
-                  <Skeleton className="h-[1.8rem] w-[45%]" />
-                </span>
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-10">
+      <div className="min-w-0 space-y-10">
+        <div className="relative overflow-hidden border border-line-strong bg-panel shadow-card">
+          <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-line-strong" />
+          <div className="p-5 pl-6 sm:p-8 sm:pl-10">
+            <div className="flex h-[1.5rem] items-center justify-between gap-4">
+              <Skeleton className="h-3 w-64 max-w-[70%]" />
+              <Skeleton className="h-4 w-14" />
+            </div>
+            {/* The headline: two lines on phones, one on wide screens. */}
+            <span className="mt-4 block">
+              <span className="flex h-[2.7rem] items-center sm:h-[4.16rem]">
+                <Skeleton className="h-[1.9rem] w-[85%] sm:h-[3rem] sm:w-[60%]" />
               </span>
-              <Skeleton className="mt-3 h-4 w-14" />
-            </div>
-            <SkeletonText lines={2} lineHeight="1.78rem" bar="0.95rem" last="70%" className="mt-3 max-w-2xl" />
-            <div className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4">
-              {Array.from({ length: 4 }, (_, i) => (
-                <div key={i} className={i > 0 ? "sm:border-l sm:border-line sm:pl-6" : ""}>
-                  <span className="flex h-[1.6rem] items-center">
-                    <Skeleton className="h-5 w-16" />
-                  </span>
-                  <span className="mt-1 flex h-[1.49rem] items-center">
-                    <Skeleton className="h-2.5 w-24" />
-                  </span>
-                </div>
-              ))}
-            </div>
-            <div className="mt-8 rounded-xl bg-bg px-4 py-3.5 sm:px-5">
-              <SkeletonText lines={2} lineHeight="1.68rem" bar="0.85rem" last="60%" />
-            </div>
-            <span className="mt-6 flex h-[1.4rem] items-center">
-              <Skeleton className="h-2.5 w-80 max-w-[85%]" />
+              <span className="flex h-[2.7rem] items-center sm:hidden">
+                <Skeleton className="h-[1.9rem] w-[45%]" />
+              </span>
             </span>
-            <span className="mt-2 flex h-[44px] items-center">
-              <Skeleton className="h-2.5 w-28" />
+            <SkeletonText lines={2} lineHeight="1.706rem" bar="0.95rem" last="70%" className="mt-4 max-w-2xl" />
+            <span className="mt-3 flex h-[1.353rem] items-center">
+              <Skeleton className="h-3 w-72 max-w-[80%]" />
+            </span>
+            <span className="mt-4 flex h-[1.221rem] items-center">
+              <Skeleton className="h-2.5 w-96 max-w-[90%]" />
             </span>
           </div>
+        </div>
+
+        <div className="flex gap-2 lg:hidden">
+          <Skeleton className="h-11 w-24" />
+          <Skeleton className="h-11 w-11" />
+          <Skeleton className="h-11 w-11" />
         </div>
 
         <SectionSkeleton>
           <StarterIssuesSkeleton />
         </SectionSkeleton>
 
-        <SectionSkeleton title="18rem">
-          <div aria-hidden="true" className="space-y-4">
-            {Array.from({ length: 3 }, (_, i) => (
-              <div key={i}>
-                <Skeleton className="h-3 w-40" />
-                <Skeleton className="mt-2 h-2.5 w-full" />
-              </div>
-            ))}
-          </div>
+        <SectionSkeleton title="20rem">
+          <StatsGridSkeleton />
         </SectionSkeleton>
       </div>
 
       <div className="hidden lg:block">
-        <div className="space-y-6">
-          <Skeleton className="h-[21rem] w-full" />
-          <div>
-            <Skeleton className="mb-2 h-3 w-16" />
+        <div className="space-y-4">
+          <div className="panel p-4">
+            <Skeleton className="mb-3 h-3 w-36" />
             <div className="flex gap-2">
               <Skeleton className="h-11 w-24" />
               <Skeleton className="h-11 w-11" />
               <Skeleton className="h-11 w-11" />
             </div>
           </div>
+          <Skeleton className="h-44 w-full" />
           <Skeleton className="h-28 w-full" />
         </div>
       </div>
@@ -121,7 +108,7 @@ export function ReportHeaderSkeleton() {
           <Skeleton className="h-2.5 w-52" />
         </span>
       </div>
-      <div aria-hidden="true" className="grid w-full grid-cols-2 border border-line-strong text-center text-[0.875rem] text-faint sm:w-auto">
+      <div aria-hidden="true" className="grid w-full grid-cols-2 border border-line-strong text-center text-[0.85rem] text-faint sm:w-auto">
         <span className="inline-flex min-h-11 items-center justify-center px-3">free report</span>
         <span className="inline-flex min-h-11 items-center justify-center px-3">AI report ✦</span>
       </div>

@@ -116,7 +116,7 @@ function Feedback({ storageKey: key, report }: { storageKey: string; report: Pic
         onClick={() => choose(vote)}
         aria-pressed={on}
         disabled={busy}
-        className={`inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-[0.875rem] transition-colors disabled:opacity-60 ${
+        className={`inline-flex min-h-11 items-center gap-2 border px-4 text-[0.89rem] transition-colors disabled:opacity-60 ${
           on ? (vote === "up" ? "border-green bg-green/10 text-green" : "border-orange bg-orange/10 text-orange") : "border-line-strong text-muted hover:border-ink hover:text-ink"
         }`}
       >
@@ -127,13 +127,13 @@ function Feedback({ storageKey: key, report }: { storageKey: string; report: Pic
   };
 
   return (
-    <section aria-labelledby={`${reasonId}-q`} className="rounded-2xl border border-line bg-panel p-5 sm:p-6">
+    <section aria-labelledby={`${reasonId}-q`} className="border border-dashed border-line-strong p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
-          <h2 id={`${reasonId}-q`} className="text-[1rem] font-semibold">
+          <h2 id={`${reasonId}-q`} className="text-[0.98rem] font-semibold tracking-tight">
             Was this verdict right?
           </h2>
-          <p className="mt-1 text-[1rem] text-muted">If you know this project, tell us. It helps us get verdicts right.</p>
+          <p className="mt-1 font-sans text-[0.89rem] text-muted">Know this project? Tell us. It helps us get verdicts right.</p>
         </div>
         <div className="flex gap-2">
           {btn("up", "Yes")}
@@ -143,7 +143,7 @@ function Feedback({ storageKey: key, report }: { storageKey: string; report: Pic
 
       {saved && editing && (
         <form onSubmit={submitReason} className="mt-4">
-          <label htmlFor={reasonId} className="block font-sans text-[0.875rem] text-muted">
+          <label htmlFor={reasonId} className="block font-sans text-[0.89rem] text-muted">
             Thanks! Want to say why? <span className="text-faint">(optional)</span>
           </label>
           <textarea
@@ -153,20 +153,20 @@ function Feedback({ storageKey: key, report }: { storageKey: string; report: Pic
             maxLength={REASON_MAX}
             rows={2}
             placeholder={saved.vote === "up" ? "e.g. I had a first PR merged here within a week" : "e.g. They do merge outside work, just slowly"}
-            className="mt-2 block w-full resize-y border border-line-strong bg-panel px-3 py-2 font-sans text-[1rem] text-ink placeholder:text-faint focus:border-blue focus:outline-none"
+            className="mt-2 block w-full resize-y border border-line-strong bg-panel px-3 py-2 font-sans text-[0.95rem] text-ink placeholder:text-faint focus:border-blue focus:outline-none"
           />
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <button type="submit" disabled={busy || (!draft.trim() && !saved.reason)} className="btn-ghost disabled:opacity-60">
               {busy ? "sending…" : "send"}
             </button>
-            <button type="button" onClick={() => setEditing(false)} className="text-[0.875rem] text-faint hover:text-ink">
+            <button type="button" onClick={() => setEditing(false)} className="text-[0.87rem] text-faint hover:text-ink">
               skip
             </button>
           </div>
         </form>
       )}
 
-      <p className="mt-3 font-sans text-[0.875rem] empty:mt-0" aria-live="polite">
+      <p className="mt-3 font-sans text-[0.88rem] empty:mt-0" aria-live="polite">
         {status === "error" ? (
           <span className="text-orange">{error}</span>
         ) : saved && !editing ? (

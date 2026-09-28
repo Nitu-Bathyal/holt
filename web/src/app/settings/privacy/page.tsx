@@ -9,9 +9,9 @@ import { StatsSwitch } from "@/components/connect-github-card";
 import { ContactEmail } from "@/components/legal-page";
 import { Notice, SectionHead } from "@/components/settings/section-head";
 
-export const metadata: Metadata = { title: "Privacy and data | Settings", robots: { index: false } };
+export const metadata: Metadata = { title: "Privacy and data · Settings", robots: { index: false } };
 
-const H3 = "text-[1.125rem] font-semibold tracking-tight";
+const H3 = "text-[1.1rem] font-semibold tracking-tight";
 
 export default async function PrivacySettings({ searchParams }: PageProps<"/settings/privacy">) {
   const user = await currentUser();
@@ -39,7 +39,7 @@ export default async function PrivacySettings({ searchParams }: PageProps<"/sett
         {acct ? (
           <StatsSwitch acct={acct} />
         ) : (
-          <p className="font-sans text-[0.875rem] text-muted">
+          <p className="font-sans text-[0.9rem] text-muted">
             Only counts once you <Link href={ACCOUNT_SETTINGS} className="text-link">connect GitHub</Link>. Nothing of yours is in any statistics now.
           </p>
         )}
@@ -47,7 +47,7 @@ export default async function PrivacySettings({ searchParams }: PageProps<"/sett
 
       <h3 className={`${H3} mt-8`}>Your profile</h3>
       <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border border-line-strong bg-panel p-4 shadow-soft">
-        <p className="min-w-0 flex-1 basis-56 font-sans text-[0.875rem] text-muted">
+        <p className="min-w-0 flex-1 basis-56 font-sans text-[0.9rem] text-muted">
           {p ? "Your languages, time, experience and topics. Deleting it doesn't touch your history." : <>No profile saved. <Link href={PROFILE_SETTINGS} className="text-link">Set one up</Link> for picks.</>}
         </p>
         {p && (
@@ -58,7 +58,7 @@ export default async function PrivacySettings({ searchParams }: PageProps<"/sett
       </div>
 
       <h3 className={`${H3} mt-8`}>Your account</h3>
-      <p className="prose-sans mt-2 text-[0.875rem]">
+      <p className="prose-sans mt-2 text-[0.92rem]">
         To delete your account and everything tied to it, or to get a copy of what we hold, email <ContactEmail /> from the address you sign in with.
       </p>
     </section>
