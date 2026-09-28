@@ -105,8 +105,16 @@ def hp(make_harness, fake):
     return with_pro(make_harness(HOLT_PRO_URL=URL, HOLT_PRO_KEY=KEY), fake)
 
 
+def call(h, fn, *args, **kw):
+    """Run `fn` on the app's event loop (Postgres connections belong to it)."""
+    async def go():
+        return await fn(*args, **kw)
+
+    return h.client.portal.call(go)
+
+
 def gift(h, user: str, n: int = 1) -> None:
-    asyncio.run(credits.grant(h.svc, user, n, pool="purchased", reason="test", actor="test"))
+    call(h, credits.grant, h.svc, user, n, pool="purchased", reason="test", actor="test")
 
 
 def purchased(h, user: str) -> int:
@@ -118,7 +126,7 @@ def rows(h, model, *where):
         async with h.svc.db.session() as s:
             return (await s.execute(select(model).where(*where))).scalars().all()
 
-    return asyncio.run(q())
+    return h.client.portal.call(q)
 
 
 def state(h, user: str | None = None, **q) -> dict:
