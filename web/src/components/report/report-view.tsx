@@ -2,6 +2,7 @@
 // runner (report that just finished streaming), so no server-only imports.
 import Link from "next/link";
 import { shortDate, timeAgo } from "@/lib/format";
+import { EXAMPLE_PATH } from "@/lib/example-report";
 import { SITE_URL } from "@/lib/site";
 import type { Report } from "@/lib/types";
 import { CatFace } from "../cat-face";
@@ -147,6 +148,7 @@ export function ReportView({
   issues,
   signedIn,
   reveal,
+  example,
 }: {
   report: Report;
   /** The starter-issues block: streamed by the server page, fetched by the runner. */
@@ -154,15 +156,17 @@ export function ReportView({
   signedIn: boolean;
   /** The report just arrived on this page: step its parts in. A server-rendered report doesn't wait. */
   reveal?: boolean;
+  /** A recorded example (/example-ai-report): shares its own link, and takes no votes, badge or view count. */
+  example?: boolean;
 }) {
   const repo = report.repo;
-  const url = `${SITE_URL}/${repo}`;
-  const shareText = `${repo} on Holt: ${report.headline}.`;
+  const url = example ? `${SITE_URL}${EXAMPLE_PATH}` : `${SITE_URL}/${repo}`;
+  const shareText = example ? `An example AI report on Holt, for ${repo}.` : `${repo} on Holt: ${report.headline}.`;
   const viable = report.verdict === "viable";
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-10">
-      <Track event="report-view" data={{ verdict: report.verdict, mode: report.mode, repo }} />
+      {!example && <Track event="report-view" data={{ verdict: report.verdict, mode: report.mode, repo }} />}
       <div className="min-w-0 space-y-10">
         <VerdictHero report={report} reveal={reveal} />
 
@@ -205,7 +209,7 @@ export function ReportView({
           <LandingMap landing={report.landing} neverLanded={report.never_landed} />
         </Section>
 
-        <VerdictFeedback report={report} />
+        {!example && <VerdictFeedback report={report} />}
 
         <Section n="04" id="evidence" title="The evidence" note="every claim links to GitHub" reveal={reveal ? 280 : undefined}>
           <EvidenceList evidence={report.evidence} />
@@ -213,7 +217,7 @@ export function ReportView({
 
         <div className="lg:hidden space-y-4">
           {report.mode === "rules" && <UpgradeCard repo={repo} signedIn={signedIn} />}
-          <BadgeSnippet repo={repo} offered={badgeOffered(report)} />
+          {!example && <BadgeSnippet repo={repo} offered={badgeOffered(report)} />}
         </div>
       </div>
 
@@ -224,10 +228,12 @@ export function ReportView({
             <ShareBar url={url} text={shareText} />
           </div>
           {report.mode === "rules" && <UpgradeCard repo={repo} signedIn={signedIn} />}
-          <BadgeSnippet repo={repo} offered={badgeOffered(report)} />
-          <Link href={`/compare?repos=${repo}`} className="block text-[0.8rem] text-muted hover:text-ink">
-            [ compare with another repo → ]
-          </Link>
+          {!example && <BadgeSnippet repo={repo} offered={badgeOffered(report)} />}
+          {!example && (
+            <Link href={`/compare?repos=${repo}`} className="block text-[0.8rem] text-muted hover:text-ink">
+              [ compare with another repo → ]
+            </Link>
+          )}
         </div>
       </aside>
     </div>
