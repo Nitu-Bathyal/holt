@@ -260,6 +260,38 @@ StarterIssue:
 issue is sent, so cached issues have them too. The web uses them with a
 profile (see Profile); they never change a verdict or which repos are listed.
 
+### `GET /v1/discover?sort=welcoming|stars|trending&language=python&topic=cli&limit=24`
+Browse the repositories Holt has checked, built only from each repo's latest
+7-day **rules** report (never the model) and ranking repositories, never
+people. Reads only the database: no GitHub call and no rate limit.
+
+- `sort=welcoming` (default; the "Most welcoming <language> repos" boards):
+  only repos whose verdict is `viable`, best odds first (good, fair, long),
+  then the share of outside pull requests merged (a small sample is pulled
+  toward a typical share, so 6 of 8 doesn't outrank 60 of 105), the median
+  reply time and how many outsiders tried.
+- `sort=stars`: GitHub stars, every verdict.
+- `sort=trending`: people who asked for the repo's report on Holt in the last
+  7 days (each person counted once per UTC day), only repos with at least
+  `trending_min` (5).
+- `language` and `topic` filter case-insensitively (`c++`, `Python`). `limit`
+  1–100, default 24.
+
+```jsonc
+{ "sort": "welcoming", "language": "Python", "topic": null, "trending_min": 5,
+  "repos": [ { "repo": "owner/repo", "verdict": "viable", "headline": "Worth your time",
+    "tone": "good", "reason": "…the report's verdict_line…", "stats": Stats,
+    "description": "…"|null, "language": "Python"|null, "stars": 123|null,
+    "topics": ["cli"], "pushed_at": "…"|null,
+    "checked_this_week": 12|null,     // null below trending_min
+    "generated_at": "…" } ],
+  "languages": [ { "name": "Python", "repos": 40 } ] }  // filter chips, most repos first
+```
+
+`description`, `language`, `stars`, `topics` and `pushed_at` come from
+`repo_meta`, which the warm pass fills from GitHub (one GraphQL query per
+hundred repositories, re-read daily); they are null or empty until then.
+
 ### `GET /badge/{owner}/{repo}.svg` (no internal key; public; `Cache-Control: public, max-age=3600, stale-while-revalidate=86400`)
 Shields-style SVG badge. Maintainers embed it in READMEs; it links back to the
 report page at `{HOLT_WEB_URL}/{owner}/{repo}`. Uses the latest 7-day rules
