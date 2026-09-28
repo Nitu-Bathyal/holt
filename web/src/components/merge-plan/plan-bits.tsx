@@ -36,29 +36,27 @@ export function PrLinks({ links, max = 6 }: { links: string[]; max?: number }) {
   );
 }
 
-/** "why · seen in 38 of 50": opens to the counted statement and the pull requests behind it. */
-export function Why({ sources }: { sources: PlanSource[] }) {
-  if (sources.length === 0) return null;
-  const first = sources.find((s) => s.seen != null && s.of != null);
+/**
+ * A claim's sources, always in view: each count with its own pull requests,
+ * "38 of 50 PRs #3876 #3866 +5 more". `linksOnly` drops the counts where the
+ * number is already on screen (the "what gets merged" tiles).
+ */
+export function Sources({ sources, className = "", linksOnly = false }: { sources: PlanSource[]; className?: string; linksOnly?: boolean }) {
+  const parts = sources.filter((s) => s.links.length > 0 || (!linksOnly && s.seen != null && s.of != null));
+  if (parts.length === 0) return null;
   return (
-    <details className="group text-[0.85rem]">
-      <summary className="inline-flex min-h-9 cursor-pointer list-none items-center gap-1.5 text-faint hover:text-ink [&::-webkit-details-marker]:hidden">
-        <span aria-hidden="true" className="inline-block transition-transform group-open:rotate-90">›</span>
-        why{first && <span className="tabular-nums"> · {first.seen} of {first.of}</span>}
-      </summary>
-      <ul className="mt-2 space-y-3 border-l border-line-strong pl-3">
-        {sources.map((s, i) => (
-          <li key={i}>
-            <p className="font-sans text-[0.9rem] leading-relaxed text-muted">{s.statement}</p>
-            {s.links.length > 0 && (
-              <p className="mt-1">
-                <PrLinks links={s.links} />
-              </p>
-            )}
-          </li>
-        ))}
-      </ul>
-    </details>
+    <div className={`flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[0.82rem] text-faint ${className}`}>
+      {parts.map((s, i) => (
+        <p key={i} className="flex flex-wrap items-baseline gap-x-2.5" title={s.statement}>
+          {!linksOnly && s.seen != null && s.of != null && (
+            <span className="tabular-nums">
+              {s.seen} of {s.of} PRs
+            </span>
+          )}
+          <PrLinks links={s.links} max={linksOnly ? 3 : 4} />
+        </p>
+      ))}
+    </div>
   );
 }
 

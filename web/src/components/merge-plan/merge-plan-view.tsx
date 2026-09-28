@@ -6,7 +6,7 @@ import Link from "next/link";
 import { TONE } from "@/components/report/tone";
 import { VerdictPill } from "@/components/report/verdict-pill";
 import { citedLinks, type MergePlan, type PlanClosing } from "@/lib/merge-plan";
-import { Meter, PlanText, PrLinks, Why } from "./plan-bits";
+import { Meter, PlanText, PrLinks, Sources } from "./plan-bits";
 import { PlanSteps } from "./plan-steps";
 
 const SECTIONS = [
@@ -30,12 +30,11 @@ export function MergePlanView({ plan, locked = false }: { plan: MergePlan; locke
 
         <section aria-labelledby="the-call" className="mt-9">
           <h2 id="the-call" className="sr-only">The call</h2>
-          <p className="text-[1.55rem] font-semibold leading-[1.18] tracking-[-0.035em] text-ink [text-wrap:balance] sm:max-w-[40ch] sm:text-[2.05rem]">
+          <p className="text-[0.8rem] uppercase tracking-[0.08em] text-faint">The call</p>
+          <p className="mt-2 max-w-[38ch] font-sans text-[1.45rem] font-semibold leading-[1.3] tracking-[-0.01em] text-ink [text-wrap:balance] sm:text-[1.8rem]">
             <PlanText text={plan.call.text} />
           </p>
-          <div className="mt-3">
-            <Why sources={plan.call.sources} />
-          </div>
+          <Sources sources={plan.call.sources} className="mt-3" />
         </section>
 
         <PlanSection id="first-pr" title="Your first pull request">
@@ -62,9 +61,7 @@ export function MergePlanView({ plan, locked = false }: { plan: MergePlan; locke
                         <Meter seen={f.seen} of={f.of} label={`${f.seen} of ${f.of}`} />
                       </div>
                     )}
-                    <div className="mt-1">
-                      <Why sources={f.sources} />
-                    </div>
+                    <Sources sources={f.sources} linksOnly className="mt-3" />
                   </li>
                 ))}
               </ul>
@@ -85,7 +82,7 @@ export function MergePlanView({ plan, locked = false }: { plan: MergePlan; locke
                 {plan.reviewers.people.map((p) => (
                   <li key={p.login} className="grid grid-cols-[minmax(0,1fr)_4.5rem] items-center gap-x-4 gap-y-1.5 sm:grid-cols-[12rem_minmax(0,1fr)_4.5rem]">
                     <div className="col-span-2 min-w-0 sm:col-span-1">
-                      <a href={`https://github.com/${p.login}`} target="_blank" rel="noopener noreferrer" className="block truncate font-semibold text-ink hover:text-blue">
+                      <a href={`https://github.com/${p.login}`} target="_blank" rel="noopener noreferrer" className="block truncate font-sans font-semibold text-ink hover:text-blue">
                         @{p.login}
                       </a>
                       {p.areas.length > 0 && <p className="truncate text-[0.82rem] text-faint">{p.areas.join(", ")}</p>}
@@ -97,9 +94,7 @@ export function MergePlanView({ plan, locked = false }: { plan: MergePlan; locke
                   </li>
                 ))}
               </ul>
-              <div className="mt-3">
-                <Why sources={plan.reviewers.sources} />
-              </div>
+              <Sources sources={plan.reviewers.sources} className="mt-4" />
             </PlanSection>
 
             <PlanSection id="how" title="How this was made">
@@ -146,20 +141,23 @@ export function MergePlanView({ plan, locked = false }: { plan: MergePlan; locke
 function PlanHeader({ plan }: { plan: MergePlan }) {
   const [owner, name] = plan.repo.split("/");
   return (
-    <header className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3 border-b border-ink pb-4">
-      <div className="min-w-0">
-        <p className="flex items-center gap-2.5 text-[0.8rem] uppercase tracking-[0.1em] text-muted">
-          <span className="bg-ink px-1.5 py-0.5 font-semibold tracking-[0.14em] text-bg">Pro</span>
-          AI report · merge plan
-        </p>
-        <h1 className="mt-3 text-[1.5rem] font-semibold tracking-[-0.03em] [overflow-wrap:anywhere] sm:text-[1.9rem]">
+    <header className="border-b border-ink pb-5">
+      <p className="flex items-center gap-2.5 text-[0.8rem] uppercase tracking-[0.1em] text-muted">
+        <span className="bg-ink px-1.5 py-0.5 font-semibold tracking-[0.14em] text-bg">Pro</span>
+        Merge plan
+      </p>
+      <div className="mt-3 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
+        <h1 className="text-[1.6rem] font-semibold tracking-[-0.03em] [overflow-wrap:anywhere] sm:text-[2rem]">
           <span className="text-muted">{owner}/</span>
           {name}
         </h1>
+        <a href={`https://github.com/${plan.repo}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center text-[0.85rem] text-faint hover:text-blue">
+          github.com/{plan.repo} ↗
+        </a>
       </div>
-      <a href={`https://github.com/${plan.repo}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-11 items-center text-[0.85rem] text-faint hover:text-blue">
-        github.com/{plan.repo} ↗
-      </a>
+      <p className="mt-2 font-sans text-[0.92rem] text-muted">
+        Built from {plan.sample.merged} merged and {plan.sample.closed} closed pull requests since {dateLabel(plan.window.since)} · written {dateLabel(plan.generated_at)}
+      </p>
     </header>
   );
 }
@@ -207,7 +205,7 @@ function ClosingReason({ c }: { c: PlanClosing }) {
   return (
     <div>
       <div className="flex items-baseline justify-between gap-4">
-        <p className="text-[1.08rem] font-semibold tracking-tight text-ink">{c.reason}</p>
+        <p className="font-sans text-[1.08rem] font-semibold text-ink">{c.reason}</p>
         <p className="shrink-0 text-[0.9rem] tabular-nums text-orange">
           {c.seen} <span className="text-faint">of {c.of}</span>
         </p>
