@@ -19,7 +19,7 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Holt — check whether a repo actually merges outsiders' PRs",
+    default: "Holt — will this repo merge your PR?",
     template: "%s · Holt",
   },
   description:
