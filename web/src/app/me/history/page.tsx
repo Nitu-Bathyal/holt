@@ -3,14 +3,14 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CatFace } from "@/components/cat-face";
 import { ErrorPanel } from "@/components/error-panel";
-import { VerdictPill } from "@/components/report/verdict-pill";
-import { history } from "@/lib/api";
-import { timeAgo } from "@/lib/format";
-import { currentUser } from "@/lib/session";
-import { PageHead } from "@/components/page-head";
+import { CheckedList } from "@/components/home/checked-list";
 import { PageTransition } from "@/components/motion/page-transition";
+import { AppPageHeader } from "@/components/shell/app-page";
+import { history } from "@/lib/api";
+import { currentUser } from "@/lib/session";
+import { CHECK_HREF } from "@/lib/shell";
 
-export const metadata: Metadata = { title: "Your history", robots: { index: false } };
+export const metadata: Metadata = { title: "Repos you checked", robots: { index: false } };
 
 export default async function HistoryPage() {
   const user = await currentUser();
@@ -19,51 +19,20 @@ export default async function HistoryPage() {
 
   return (
     <PageTransition>
-      <>
-      <PageHead narrow>
-        <p className="rail mb-4 flex gap-2"><strong className="m-0">history</strong><span>{user.name || user.email}</span></p>
-        <h1 className="display text-[clamp(2rem,6vw,3rem)]">Repos you&apos;ve checked</h1>
-      </PageHead>
-      <div className="wrap max-w-3xl py-10 sm:py-12">
-        <div>
-          {!r.ok ? (
-            <ErrorPanel error={r.error} retryHref="/me/history" />
-          ) : r.data.items.length === 0 ? (
-            <div className="border border-dashed border-line-strong p-8 text-center">
-              <CatFace mood="startled" className="text-[1.6rem]" />
-              <p className="mt-4 font-sans text-muted">Nothing yet. Reports you run while signed in show up here.</p>
-              <Link href="/" className="bracket-link mt-6">[ check a repo → ]</Link>
-            </div>
-          ) : (
-            <ul className="border border-line-strong bg-panel px-3 shadow-soft sm:px-4">
-              {r.data.items.map((h) => (
-                <li key={h.job_id} className="border-b border-line last:border-b-0">
-                  <Link
-                    href={`/${h.repo}${h.mode === "ai" ? "?mode=ai" : ""}`}
-                    className="grid grid-cols-[1fr_auto] items-center gap-x-4 gap-y-2 px-1 py-4 transition-colors hover:bg-panel-2 sm:grid-cols-[1fr_auto_auto]"
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate font-semibold">{h.repo}</span>
-                      <span className="text-[0.82rem] text-faint">
-                        {h.mode === "ai" ? "AI report" : "free report"} · <time dateTime={h.created_at}>{timeAgo(h.created_at)}</time>
-                      </span>
-                    </span>
-                    {h.headline && h.tone ? (
-                      <VerdictPill headline={h.headline} tone={h.tone} className="justify-self-end" />
-                    ) : (
-                      <span className={`justify-self-end text-[0.82rem] ${h.status === "error" ? "text-orange" : "text-faint"}`}>
-                        {h.status === "error" ? "didn't finish" : "still running"}
-                      </span>
-                    )}
-                    <span aria-hidden="true" className="hidden text-faint sm:inline">→</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+      <div className="wrap max-w-3xl pb-14">
+        <AppPageHeader title="Repos you checked" lead="Every report you ran while signed in, AI reports included." />
+        {!r.ok ? (
+          <ErrorPanel error={r.error} retryHref="/me/history" />
+        ) : r.data.items.length === 0 ? (
+          <div className="border border-dashed border-line-strong p-8 text-center">
+            <CatFace mood="startled" className="text-[1.6rem]" />
+            <p className="mt-4 font-sans text-muted">Nothing yet. Reports you run while signed in show up here.</p>
+            <Link href={CHECK_HREF} className="bracket-link mt-6">[ check a repo → ]</Link>
+          </div>
+        ) : (
+          <CheckedList items={r.data.items} />
+        )}
       </div>
-      </>
     </PageTransition>
   );
 }

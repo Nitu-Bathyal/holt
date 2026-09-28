@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { HOME_REDIRECT_CACHE, afterSignIn, fastestReplies, groupPulls, landingRedirect, nextStep, outsidePulls, pullCountLine, replyLine, setupLeft, setupSteps, showProfilePrompt, type HomeState } from "./home.ts";
-import type { ContributionPR, DiscoverRepo } from "./types";
+import { HOME_REDIRECT_CACHE, afterSignIn, dismissedNudges, groupPulls, homeKind, homeNudge, landingRedirect, outsidePulls, primaryAction, pullCountLine, statusLine } from "./home.ts";
+import type { ContributionPR } from "./types";
 
 test("sign-in without somewhere to go back to lands on the home", () => {
   assert.equal(afterSignIn(undefined), "/me");
@@ -41,56 +41,43 @@ test("the redirect from / is never cached for anyone else", () => {
   assert.ok(!parts.some((p) => p === "public" || p.startsWith("s-maxage") || p.startsWith("max-age")));
 });
 
-test("the profile prompt shows until it's saved or skipped", () => {
-  assert.equal(showProfilePrompt({ hasProfile: false, skipped: false }), true);
-  assert.equal(showProfilePrompt({ hasProfile: false, skipped: true }), false);
-  assert.equal(showProfilePrompt({ hasProfile: true, skipped: false }), false);
+test("new until there's something to come back to: a check, a saved repo or a pull request", () => {
+  assert.equal(homeKind({ checked: 0, saved: 0, pulls: 0 }), "new");
+  assert.equal(homeKind({ checked: 1, saved: 0, pulls: 0 }), "returning");
+  assert.equal(homeKind({ checked: 0, saved: 2, pulls: 0 }), "returning");
+  assert.equal(homeKind({ checked: 0, saved: 0, pulls: 1 }), "returning");
+});
+
+test("one primary action: new asks for the profile, then finds a project; returning checks a repo", () => {
+  assert.equal(primaryAction("new", { hasProfile: false, skipped: false }), "profile");
+  assert.equal(primaryAction("new", { hasProfile: false, skipped: true }), "find");
+  assert.equal(primaryAction("new", { hasProfile: true, skipped: false }), "find");
   // Server couldn't say: don't ask.
-  assert.equal(showProfilePrompt({ hasProfile: null, skipped: false }), false);
+  assert.equal(primaryAction("new", { hasProfile: null, skipped: false }), "find");
+  for (const hasProfile of [false, true, null]) assert.equal(primaryAction("returning", { hasProfile, skipped: false }), "check");
 });
 
-const pr = (repo: string, created_at: string) => ({ repo, created_at, state: "open" }) as ContributionPR;
-const fresh: HomeState = { checked: 0, hasProfile: false, connected: false, waiting: [], topPick: null };
-const ago = () => "3 days ago";
-
-test("setup steps: signing in is already done, the rest follow the account", () => {
-  const day1 = setupSteps(fresh);
-  assert.deepEqual(day1.map((s) => [s.id, s.done]), [["signin", true], ["check", false], ["profile", false], ["github", false]]);
-  assert.equal(setupLeft(day1), 3);
-  assert.equal(setupLeft(setupSteps({ ...fresh, checked: 2, hasProfile: true, connected: true })), 0);
-  // Unknown profile doesn't nag.
-  assert.equal(setupSteps({ ...fresh, hasProfile: null }).find((s) => s.id === "profile")!.done, true);
+test("at most one nudge: the profile first, then GitHub, never repeating the primary action", () => {
+  const base = { primary: "check" as const, hasProfile: false, connected: false, dismissed: [] as string[] };
+  assert.equal(homeNudge(base), "profile");
+  assert.equal(homeNudge({ ...base, primary: "profile" }), "github");
+  assert.equal(homeNudge({ ...base, hasProfile: true }), "github");
+  assert.equal(homeNudge({ ...base, hasProfile: null }), "github");
+  assert.equal(homeNudge({ ...base, dismissed: ["profile"] }), "github");
+  assert.equal(homeNudge({ ...base, hasProfile: true, connected: true }), null);
+  assert.equal(homeNudge({ ...base, dismissed: ["profile", "github"] }), null);
 });
 
-test("next step: first check, then a waiting pull request, then the profile, then a pick", () => {
-  assert.equal(nextStep(fresh, ago).href, "#check");
-  // Even with a waiting PR, a first check comes first.
-  assert.equal(nextStep({ ...fresh, waiting: [pr("a/b", "x")] }, ago).href, "#check");
-
-  const checked = { ...fresh, checked: 1 };
-  const waiting = nextStep({ ...checked, waiting: [pr("pallets/flask", "x"), pr("a/b", "y")] }, ago);
-  assert.equal(waiting.href, "/pallets/flask");
-  assert.match(waiting.title, /pallets\/flask is still waiting/);
-  assert.match(waiting.body, /3 days ago/);
-
-  assert.equal(nextStep(checked, ago).href, "/settings/profile");
-  assert.equal(nextStep({ ...checked, hasProfile: true, topPick: { repo: "o/r", reason: "Why." } }, ago).href, "/o/r");
-  assert.equal(nextStep({ ...checked, hasProfile: true }, ago).href, "/find");
-  assert.equal(nextStep({ ...checked, hasProfile: null }, ago).href, "/find");
+test("dismissed nudges come from their cookie, and only known ones", () => {
+  assert.deepEqual(dismissedNudges(undefined), []);
+  assert.deepEqual(dismissedNudges("github,profile,evil"), ["github", "profile"]);
 });
 
-const repo = (name: string, verdict: string, hours: number | null) =>
-  ({ repo: name, verdict, stats: { median_first_response_hours: hours } }) as unknown as DiscoverRepo;
-
-test("fastest replies: only repos worth your time with a measured reply, quickest first", () => {
-  const out = fastestReplies([repo("a/slow", "viable", 30), repo("b/none", "viable", null), repo("c/fast", "viable", 0.5), repo("d/no", "not_viable", 0.1)]);
-  assert.deepEqual(out.map((r) => r.repo), ["c/fast", "a/slow"]);
-  assert.equal(fastestReplies([repo("a/a", "viable", 1), repo("b/b", "viable", 2)], 1).length, 1);
-});
-
-test("reply line in plain words", () => {
-  assert.equal(replyLine(null), null);
-  assert.equal(replyLine(3), "Outsiders usually get a reply in 3 hours.");
+test("the status line: waiting PRs and AI reports left, in plain words", () => {
+  assert.equal(statusLine({ waiting: 1, credits: { balance: 3, ai_available: true } }), "1 PR waiting for a reply · 3 AI reports left");
+  assert.equal(statusLine({ waiting: 2, credits: { balance: 1, ai_available: false } }), "2 PRs waiting for a reply");
+  assert.equal(statusLine({ waiting: 0, credits: { balance: 1, ai_available: true } }), "1 AI report left");
+  assert.equal(statusLine({ waiting: 0, credits: null }), "");
 });
 
 const pull = (repo: string, number: number, state: ContributionPR["state"], created: string): ContributionPR => ({
