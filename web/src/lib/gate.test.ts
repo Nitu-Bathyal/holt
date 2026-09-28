@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { test } from "node:test";
 import { EXAMPLES, isExample } from "./examples.ts";
 import { findGate, pasteHref, reportAccess, signInHref, startGate } from "./gate.ts";
+import { afterSignIn } from "./home.ts";
 
 const back = (href: string) => new URL(href, "https://holt.test").searchParams.get("callbackUrl");
 
@@ -38,6 +39,11 @@ test("sign-in links come back to the page they left", () => {
 
 test("signed out: pasting a repo goes to sign-in, then straight to its report", () => {
   assert.equal(back(pasteHref("octo/project", false)), "/octo/project");
+});
+
+test("after sign-in, /signin sends people on to the report or search they asked for", () => {
+  assert.equal(afterSignIn(back(pasteHref("octo/project", false))), "/octo/project");
+  assert.equal(afterSignIn(back(signInHref("/find?lang=rust&days=7"))), "/find?lang=rust&days=7");
 });
 
 test("signed out: pasting an example opens it directly", () => {
