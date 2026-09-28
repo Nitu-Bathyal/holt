@@ -170,11 +170,13 @@ healthy() {   # the site answers on 127.0.0.1 within $HEALTH_WAIT seconds
     while (( SECONDS < deadline )); do
         code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.0.1:$port/" || true)"
         if [[ "$code" == 200 ]]; then
-            # The API behind it too: an anonymous rules request must be accepted or served.
-            code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 -X POST \
-                    -H 'content-type: application/json' -d '{"repo":"pallets/flask"}' \
-                    "http://127.0.0.1:$port/api/analyses" || true)"
-            [[ "$code" == 200 || "$code" == 202 ]] && return 0
+            # The API behind it too, through the extension's read-only proxy, which
+            # stays open to signed-out callers and never starts an analysis: a cached
+            # report (200) or the server's "no report yet" (404) proves web -> server
+            # works; 502 is the server unreachable, 401 a bad internal key.
+            code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
+                    "http://127.0.0.1:$port/api/public/report/pallets/flask" || true)"
+            [[ "$code" == 200 || "$code" == 404 ]] && return 0
         fi
         sleep 5
     done
