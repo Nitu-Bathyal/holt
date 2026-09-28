@@ -60,6 +60,7 @@ export async function Header() {
               <div id="account-menu" popover="auto" className="menu w-56 text-[0.82rem]">
                 <p className="truncate px-3 py-2 text-faint">{user.name || user.email}</p>
                 <Link href="/for-you" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">picked for you</Link>
+                <Link href="/me/saved" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">saved repos</Link>
                 <Link href="/me/history" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">your history</Link>
                 <Link href="/me/contributions" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">your contributions</Link>
                 <Link href="/settings" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">settings</Link>
