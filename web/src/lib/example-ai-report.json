@@ -177,6 +177,7 @@
     "usd": 0.01229,
     "seconds": null
   },
+  "holt_users": null,
   "headline": "Worth your time",
   "tone": "good",
   "verdict_line": "Outside contributors do get merged here (28 of 119 recently), but about half get no reply, so start with one of the starter issues below.",
