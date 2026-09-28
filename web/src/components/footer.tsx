@@ -19,6 +19,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/analytics";
 import { inputMood, type CatMood } from "@/lib/cat";
+import { pasteHref } from "@/lib/gate";
 import { timeAgo } from "@/lib/format";
 import { checkedLabel, type RecentChecks } from "@/lib/recent-checks";
 import { parseRepoInput } from "@/lib/repo";
@@ -27,7 +28,7 @@ import { ReactiveCat } from "./reactive-cat";
 
 const SIGN_OFF = "git commit --to-the-right-repo";
 
-export function Footer() {
+export function Footer({ signedIn = false }: { signedIn?: boolean }) {
   const router = useRouter();
   // The landing page is "/" (signed in, "/?landing=1"); every other page
   // already has its own action, so only the landing ends on the form.
@@ -105,8 +106,10 @@ export function Footer() {
     }
     setError("");
     setBusy(true);
-    track("paste-submit", { repo: `${ref.owner}/${ref.repo}`, from: "footer" });
-    router.push(`/${ref.owner}/${ref.repo}`);
+    const repo = `${ref.owner}/${ref.repo}`;
+    // Like the paste box: signed out, through sign-in (examples need none).
+    track("paste-submit", { repo, signedIn: signedIn ? "yes" : "no", from: "footer" });
+    router.push(pasteHref(repo, signedIn));
   };
 
   const react = (m: CatMood) => ({
@@ -200,7 +203,7 @@ export function Footer() {
                 {...react("celebrating")}
                 className="border-l border-line-strong px-4 font-semibold text-blue transition-colors hover:bg-blue hover:text-on-accent sm:px-6"
               >
-                {busy ? "checking…" : "check →"}
+                {busy ? "opening…" : signedIn ? "check →" : "sign in to check →"}
               </button>
             </form>
             <p id="footer-repo-error" role={error ? "alert" : undefined} className="mt-2 min-h-6 font-sans text-[0.9rem] text-orange">
