@@ -29,22 +29,26 @@
     {
       "path": "homeassistant/components",
       "merged": 26,
-      "attempted": 104
+      "attempted": 104,
+      "is_file": false
     },
     {
       "path": "tests/components",
       "merged": 16,
-      "attempted": 84
+      "attempted": 84,
+      "is_file": false
     },
     {
       "path": "(root)",
       "merged": 5,
-      "attempted": 26
+      "attempted": 26,
+      "is_file": false
     },
     {
       "path": "homeassistant/brands",
       "merged": 1,
-      "attempted": 2
+      "attempted": 2,
+      "is_file": false
     }
   ],
   "never_landed": [],
@@ -199,7 +203,7 @@
   "counted": [
     {
       "topic": "What we read",
-      "text": "The newest 200 pull requests on GitHub, opened 27 May – 31 May 2026."
+      "text": "200 pull requests on GitHub, opened 27 May – 31 May 2026."
     },
     {
       "topic": "The team and outside contributors",
@@ -215,7 +219,7 @@
     },
     {
       "topic": "The rule",
-      "text": "“Worth your time” needs at least 2 merged pull requests from outside contributors and a typical first reply within your 7-day budget, with people actually reviewing what gets merged. “Not worth your time” is an archived repository, a mirror, a catalogue of entries, merges nobody reviews, or outside pull requests that are almost all ignored. Anything in between is “Not enough evidence”. These rules are fixed; no AI chooses the verdict."
+      "text": "“Worth your time” needs at least 2 merged pull requests from at least 2 different outside contributors, at least 5% of outside pull requests merged, and a typical first reply within your 7-day budget, with people actually reviewing what gets merged. Only pull requests opened at least 14 days ago count, so each has had time for an answer. “Not worth your time” is an archived repository, a mirror, a project with nothing merged or pushed in 90 days, a catalogue of entries, merges nobody reviews, fewer than 1 in 20 outside pull requests merged, or outside pull requests that are almost all ignored. Anything in between is “Not enough evidence”. These rules are fixed; no AI chooses the verdict."
     }
   ],
   "odds": {
