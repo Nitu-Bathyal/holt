@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { devSignInEnabled, oauthProviders, signIn } from "@/auth";
 import { CatFace } from "@/components/cat-face";
 import { EXAMPLE_PATH } from "@/lib/example-report";
-import { safeCallback } from "@/lib/safe-url";
+import { afterSignIn } from "@/lib/home";
 import { currentUser } from "@/lib/session";
 import { WELCOME_AI_CREDITS } from "@/lib/site";
 import { PageTransition } from "@/components/motion/page-transition";
@@ -29,7 +29,8 @@ const ICONS: Record<string, React.ReactNode> = {
 
 export default async function SignInPage({ searchParams }: PageProps<"/signin">) {
   const sp = await searchParams;
-  const callbackUrl = safeCallback(sp.callbackUrl);
+  // Back to where you signed in from, else your home (/me).
+  const callbackUrl = afterSignIn(sp.callbackUrl);
   if (await currentUser()) redirect(callbackUrl);
   const configured = new Set(oauthProviders.map((p) => p.id));
 

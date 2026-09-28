@@ -8,7 +8,7 @@ import { findHref, fromForm, SKIP_COOKIE } from "@/lib/profile";
 import { currentUser } from "@/lib/session";
 
 // Only our own pages, so a crafted form can't send people elsewhere.
-const PAGES = ["/", "/find", "/hacktoberfest", "/settings"];
+const PAGES = ["/", "/me", "/find", "/hacktoberfest", "/settings"];
 function back(form: FormData): string {
   const v = String(form.get("back") ?? "");
   return PAGES.includes(v) ? v : "/settings";

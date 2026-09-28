@@ -158,11 +158,12 @@ export async function find(q: FindQuery, caller: Caller): Promise<Result<FindSta
 }
 
 /** Checked repos, filtered and ranked from rules verdicts (API.md, GET /v1/discover). Reads only the database. */
-export const discover = cache(async (sort: DiscoverSort, language: string | null, topic: string | null, limit = 30): Promise<Result<DiscoverOut>> => {
-  if (MOCK) return mock.discover(sort, language, topic, limit);
+export const discover = cache(async (sort: DiscoverSort, language: string | null, topic: string | null, limit = 30, hacktoberfest = false): Promise<Result<DiscoverOut>> => {
+  if (MOCK) return mock.discover(sort, language, topic, limit, hacktoberfest);
   const q = new URLSearchParams({ sort, limit: String(limit) });
   if (language) q.set("language", language);
   if (topic) q.set("topic", topic);
+  if (hacktoberfest) q.set("hacktoberfest", "true");
   return call(`/v1/discover?${q}`);
 });
 

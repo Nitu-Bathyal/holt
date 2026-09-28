@@ -154,6 +154,76 @@ def test_limit_and_bad_sort(h):
     assert h.get("/v1/discover", params={"sort": "people"}).status_code == 400
 
 
+# --- the Hacktoberfest filter -----------------------------------------------------
+
+
+def hacktoberfest_repos(h):
+    add(h,
+        report("octo/hf-great", outsider_merged=12, no_reply=1),
+        report("octo/hf-fair", outsider_merged=2, no_reply=2),
+        report("octo/hf-closed", "not_viable", outsider_merged=0),
+        report("octo/hf-unsure", "insufficient_evidence"),
+        report("octo/hf-archived", outsider_merged=12, no_reply=1),
+        report("octo/plain", outsider_merged=12, no_reply=1),
+        report("octo/unread"),
+        meta("octo/hf-great", "Python", stars=50, topics=["cli", "hacktoberfest"]),
+        meta("octo/hf-fair", "Go", stars=900, topics=["HacktoberFest"]),
+        meta("octo/hf-closed", "Python", stars=5000, topics=["hacktoberfest"]),
+        meta("octo/hf-unsure", "Rust", stars=10, topics=["hacktoberfest"]),
+        meta("octo/hf-archived", "Python", stars=1, topics=["hacktoberfest"], archived=True),
+        meta("octo/plain", "Python", stars=70_000, topics=["cli"]))
+
+
+def test_hacktoberfest_lists_repos_tagged_for_it_worth_your_time_best_first(h):
+    hacktoberfest_repos(h)
+    body = get(h, hacktoberfest="true")
+    assert body["hacktoberfest"] is True
+    # The welcoming board: only "Worth your time", best odds first. An
+    # archived repo can't take pull requests, so it isn't listed.
+    assert names(body) == ["octo/hf-great", "octo/hf-fair"]
+    assert body["repos"][0]["headline"] == "Worth your time"
+    # Every verdict when sorted by stars; untagged and unread repos never.
+    assert names(get(h, hacktoberfest="1", sort="stars")) == [
+        "octo/hf-closed", "octo/hf-fair", "octo/hf-great", "octo/hf-unsure"]
+    # It is off unless asked for.
+    assert get(h)["hacktoberfest"] is False
+    assert "octo/plain" in names(get(h))
+
+
+def test_hacktoberfest_combines_with_language_and_scopes_the_chips(h):
+    hacktoberfest_repos(h)
+    body = get(h, hacktoberfest="true", language="python", sort="stars")
+    assert names(body) == ["octo/hf-closed", "octo/hf-great"]
+    # The chips count Hacktoberfest repos only, so none leads to an empty list.
+    assert body["languages"] == [{"name": "Python", "repos": 2}, {"name": "Go", "repos": 1},
+                                 {"name": "Rust", "repos": 1}]
+
+
+def test_hacktoberfest_when_none_are_tagged(h):
+    add(h, report("octo/plain"), meta("octo/plain", "Python", topics=["cli"]))
+    body = get(h, hacktoberfest="true")
+    assert body["repos"] == [] and body["languages"] == [] and body["hacktoberfest"] is True
+
+
+def test_hacktoberfest_reads_only_the_database(h):
+    hacktoberfest_repos(h)
+
+    def no_github(*a, **kw):
+        raise AssertionError("Discover must not call GitHub")
+
+    async def no_github_async(*a, **kw):
+        no_github()
+
+    h.svc.pool.transport = no_github
+    h.svc.canonical = no_github_async
+    h.svc.lookup.repo = no_github_async
+    h.svc.lookup.details = no_github_async
+    h.svc.provider_factory = no_github
+    for sort in ("welcoming", "stars", "trending"):
+        get(h, hacktoberfest="true", sort=sort)
+    assert h.engine.calls == []
+
+
 # --- repository details, filled by the warm pass ---------------------------------
 
 
@@ -266,3 +336,14 @@ def test_details_when_every_repo_is_gone():
     assert err.value.code == "upstream"
     with pytest.raises(ValueError):
         lookup._details([f"o/r{i}" for i in range(github.DETAILS_BATCH + 1)])
+
+
+def test_every_topic_is_read_so_a_late_hacktoberfest_tag_counts(h):
+    # GitHub allows 20 topics; the Hacktoberfest one is often added last.
+    assert "repositoryTopics(first: 20)" in github.DETAILS_FIELDS
+    topics = [f"t{i}" for i in range(19)] + ["hacktoberfest"]
+    h.svc.lookup.details.known = {"octo/one": details("octo/one", topics=topics)}
+    h.svc.lookup.remaining = _plenty
+    add(h, report("octo/one"))
+    _run(h, [], reports=False, starter=False, finds=False)
+    assert names(get(h, hacktoberfest="true")) == ["octo/one"]
