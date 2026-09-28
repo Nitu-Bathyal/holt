@@ -2,7 +2,7 @@
 
 // The site footer: a sign-off, one last action, the links, and the repos Holt
 // checked most recently (docs/design/EXPRESSIVE.md, pattern 7).
-// - One cat carries it: its eyes follow the pointer across the footer, it
+// - One cat carries it, top right: its eyes follow the pointer across the footer, it
 //   reads along as you type a repo, cheers when it looks right, puzzles when
 //   it can't be one, and goes soft over the open-source links. Tap to pet.
 // - The sign-off is a terminal line, `$ git commit --to-the-right-repo`. It
@@ -121,21 +121,25 @@ export function Footer({ signedIn = false }: { signedIn?: boolean }) {
 
   return (
     <footer ref={root} onPointerMove={onMove} className="mt-auto overflow-clip border-t border-line bg-panel">
-      <div className="wrap pb-10 pt-14 md:pt-20">
+      <div className="wrap relative pb-10 pt-16 md:pt-24">
+        {/* Top right, in the padding above the sign-off. On the landing, the
+            scroll companion glides down into this spot and becomes this cat
+            (motion/cat-companion.tsx; data-footer-cat). */}
         <button
           ref={cat}
           type="button"
           aria-label="Pet the cat"
+          data-footer-cat
           onClick={() => {
             setPet(true);
             window.setTimeout(() => setPet(false), 900);
           }}
-          className="-ml-1 px-1 py-2 text-[clamp(2rem,5vw,3.4rem)] leading-none [touch-action:manipulation]"
+          className="absolute right-0 top-2 px-1 py-2 text-[clamp(1.9rem,4.4vw,3.2rem)] leading-none [touch-action:manipulation] md:top-3"
         >
           <ReactiveCat mood={mood} look={gaze} />
         </button>
         <p
-          className="ft-signoff mt-4 text-[clamp(1.5rem,4.4vw,3.6rem)] font-semibold tracking-[-0.03em] text-ink"
+          className="ft-signoff text-[clamp(1.5rem,4.4vw,3.6rem)] font-semibold tracking-[-0.03em] text-ink"
           data-waving={seen || waves > 0}
           onPointerEnter={() => setWaves((n) => n + 1)}
         >

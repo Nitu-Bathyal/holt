@@ -37,6 +37,8 @@ We took none of their layout, copy, colours, outline type, all-caps headlines or
 - **The "three answers" pane gets a new design**, not a restyle. Each verdict has to read instantly: what it means for you and what to do next.
 - **Footer (7):** the sign-off is a terminal line, `$ git commit --to-the-right-repo`, with a blinking cursor. It has no "Holt only reads public GitHub data…" line.
 - **Hero:** the headline, paste box and badges respond to the pointer a few px, eased (a gentle parallax). Nothing on touch, and nothing under reduced motion.
+- **One cat on the landing.** At the end of the page the scroll companion glides into the footer cat's spot (top right of the footer, on every page) and becomes it. Scrolling back up, it lifts out again. Reduced motion: no travel; the companion stays with the hero and the footer cat sits on the right. Phones have no companion, as before.
+- **Landing section 08** (the closing paste box) is removed: the footer's form closes the landing.
 
 ## The patterns
 ✓ = in the prototype. Cost: **P** = performance, **A** = accessibility.

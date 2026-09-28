@@ -97,7 +97,7 @@ export default async function Home() {
                 Already on GitHub? Swap <strong className="text-muted">hub</strong> for <strong className="text-muted">holt</strong>:{" "}
                 <SwapHost />
               </p>
-              <div className="fade-up mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 low:mt-5" style={{ ["--d" as string]: ".5s" }}>
+              <div className="fade-up mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 low:mt-4" style={{ ["--d" as string]: ".5s" }}>
                 <span className="award-badge">
                   <span>micro1 winner</span>
                   <span>Most useful real-world workflow</span>

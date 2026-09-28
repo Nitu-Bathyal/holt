@@ -37,7 +37,9 @@ export function CatCompanion() {
       aria-label="Play with Holt, the site cat"
       data-cat-companion
       // One hover target sized to the whole face, above the hero text layer.
-      className="pointer-events-auto absolute z-20 hidden origin-top-left p-5 text-blue [touch-action:manipulation] lg:fixed lg:left-[calc(50%+360px)] lg:top-[130px] lg:inline-block lg:opacity-85 lg:will-change-transform"
+      // It starts bottom right of the first screen, beside the short rows
+      // under the paste box: the full-scale headline and kicker fill the top.
+      className="pointer-events-auto absolute z-20 hidden origin-top-left p-5 text-blue [touch-action:manipulation] lg:fixed lg:bottom-[8svh] lg:right-[3vw] lg:inline-block lg:opacity-85 lg:will-change-transform"
     >
       <span className="cat-character inline-block">
         <span
@@ -202,14 +204,15 @@ async function start(gsap: Gsap, ScrollTrigger: ST, cat: HTMLButtonElement) {
   // scrolling back to the top plays it backwards.
   let journey: gsap.core.Timeline | undefined;
   let journeyTrigger: ReturnType<ST["create"]> | undefined;
-  let fade: gsap.core.Tween | undefined;
+  let dockTrigger: ReturnType<ST["create"]> | undefined;
+  let stopDock: (() => void) | undefined;
+  const root = document.documentElement;
   if (desktop) {
     const r = cat.getBoundingClientRect();
     const compact = innerWidth < 1180;
+    const side = { x: innerWidth - (compact ? 118 : 156) - r.left, y: innerHeight * 0.5 - 62 - r.top, scale: compact ? 0.36 : 0.43 };
     journey = gsap.timeline({ paused: true }).to(cat, {
-      x: innerWidth - (compact ? 118 : 156) - r.left,
-      y: innerHeight * 0.5 - 62 - r.top,
-      scale: compact ? 0.36 : 0.43,
+      ...side,
       opacity: 0.92,
       duration: 0.9,
       ease: "power3.inOut",
@@ -221,7 +224,73 @@ async function start(gsap: Gsap, ScrollTrigger: ST, cat: HTMLButtonElement) {
       onEnter: () => journey!.play(),
       onLeaveBack: () => journey!.reverse(),
     });
-    fade = gsap.to(cat, { autoAlpha: 0, scrollTrigger: { trigger: "footer", start: "top 94%", end: "top 75%", scrub: true } });
+
+    // The end of the walk: one cat, not two. As the footer comes up, the cat
+    // glides down into the footer cat's spot (top right) and becomes it; the
+    // footer's own cat stays hidden until then (globals.css, data-cat-away).
+    // Scrolling back up, it lifts out and carries on at the side. The target
+    // moves with the page while it glides, so each frame chases where the
+    // spot is now rather than where it was.
+    const spot = document.querySelector<HTMLElement>("[data-footer-cat]");
+    const footerFace = spot?.querySelector<HTMLElement>(".rcat-face");
+    if (spot && footerFace) {
+      root.dataset.catAway = "";
+      const glide = (to: () => { x: number; y: number; scale: number }, done: () => void) => {
+        stopDock?.();
+        const from = { x: Number(gsap.getProperty(cat, "x")), y: Number(gsap.getProperty(cat, "y")), scale: Number(gsap.getProperty(cat, "scale")) };
+        const ease = gsap.parseEase("power3.inOut");
+        const t0 = performance.now();
+        let raf = requestAnimationFrame(function step(now) {
+          const k = Math.min(1, (now - t0) / 700);
+          const e = ease(k);
+          const t = to();
+          gsap.set(cat, { x: from.x + (t.x - from.x) * e, y: from.y + (t.y - from.y) * e, scale: from.scale + (t.scale - from.scale) * e });
+          if (k < 1) raf = requestAnimationFrame(step);
+          else {
+            stopDock = undefined;
+            done();
+          }
+        });
+        stopDock = () => cancelAnimationFrame(raf);
+      };
+      // Where the companion must be for its face to sit exactly on the
+      // footer's: same width, same centre (the two faces' line boxes differ,
+      // so corners don't line up but centres do).
+      const onSpot = () => {
+        const s = Number(gsap.getProperty(cat, "scale"));
+        const x = Number(gsap.getProperty(cat, "x"));
+        const y = Number(gsap.getProperty(cat, "y"));
+        const box = cat.getBoundingClientRect();
+        const f = face.getBoundingClientRect();
+        const t = footerFace.getBoundingClientRect();
+        const origin = { left: box.left - x, top: box.top - y };
+        const mid = { x: (f.left + f.width / 2 - box.left) / s, y: (f.top + f.height / 2 - box.top) / s };
+        const scale = t.width / (f.width / s);
+        return { x: t.left + t.width / 2 - mid.x * scale - origin.left, y: t.top + t.height / 2 - mid.y * scale - origin.top, scale };
+      };
+      const dock = () => {
+        journey!.progress(1);
+        gsap.set(cat, { autoAlpha: 0.92 });
+        // Drop the pointer lean, so the face lands exactly on the spot.
+        gsap.to(character, { x: 0, y: 0, rotation: 0, duration: 0.3 });
+        glide(onSpot, () => {
+          delete root.dataset.catAway;
+          gsap.set(cat, { autoAlpha: 0 });
+          // Replay the landing squash on the footer's cat.
+          delete spot.dataset.landed;
+          void spot.offsetWidth;
+          spot.dataset.landed = "";
+        });
+      };
+      const undock = () => {
+        root.dataset.catAway = "";
+        gsap.set(cat, { autoAlpha: 0.92 });
+        glide(() => side, () => {});
+      };
+      dockTrigger = ScrollTrigger.create({ trigger: spot, start: "top 78%", onEnter: dock, onLeaveBack: undock });
+      // Arrived with the footer already in view (a reload at the bottom).
+      if (dockTrigger.isActive || dockTrigger.progress > 0) dock();
+    }
   }
 
   // Scroll reveals for anything still below the fold: short, small and started
@@ -238,8 +307,9 @@ async function start(gsap: Gsap, ScrollTrigger: ST, cat: HTMLButtonElement) {
     triggers.forEach((t) => t.kill());
     journeyTrigger?.kill();
     journey?.kill();
-    fade?.scrollTrigger?.kill();
-    fade?.kill();
+    dockTrigger?.kill();
+    stopDock?.();
+    delete root.dataset.catAway;
     reveals.forEach((r) => {
       r.scrollTrigger?.kill();
       r.revert();

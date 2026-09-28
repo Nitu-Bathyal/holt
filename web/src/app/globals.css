@@ -878,6 +878,17 @@
     }
   }
 
+  /* While the landing's scroll companion is out and about, it is the cat:
+     the footer's own stays hidden until the companion settles into its spot. */
+  :root[data-cat-away] [data-footer-cat] {
+    visibility: hidden;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    /* Its own name, so the squash replays when the companion lands. */
+    [data-footer-cat][data-landed] .rcat-face {
+      animation: rcat-land 460ms var(--ease-expressive);
+    }
+  }
   .ft-signoff {
     line-height: 1.15;
   }
@@ -948,6 +959,17 @@
   }
   55% {
     transform: scale(0.97, 1.06) translateY(-0.06em);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes rcat-land {
+  0% {
+    transform: scale(1.18, 0.66) translateY(0.1em);
+  }
+  55% {
+    transform: scale(0.96, 1.07) translateY(-0.08em);
   }
   100% {
     transform: none;
@@ -1374,10 +1396,10 @@
 .hero-lede {
   display: grid;
   gap: clamp(0.8rem, 2.2svh, 1.8rem);
-  margin-bottom: clamp(1rem, 3svh, 2.2rem);
+  margin-bottom: clamp(0.8rem, 1.8svh, 2rem);
 }
 .hero-h1 {
-  font-size: clamp(2.2rem, min(10.5vw, 10.5svh), 7.2rem);
+  font-size: clamp(2.2rem, min(10.5vw, 9.8svh), 7rem);
 }
 .hero-sub {
   max-width: 40ch;
@@ -1392,13 +1414,15 @@
     font-size: clamp(1.05rem, min(1.2vw, 2.3svh), 1.3rem);
   }
 }
-@media (min-width: 1200px) {
+/* From 1024px the sub-line sits beside the headline, and the headline is
+   bounded by width too, so "actually merge" keeps to one line. */
+@media (min-width: 1024px) {
   .hero-lede {
     grid-template-columns: minmax(0, 1fr) minmax(240px, 26%);
     align-items: end;
   }
   .hero-h1 {
-    font-size: clamp(2.2rem, min(6.4vw, 10.5svh), 7.2rem);
+    font-size: clamp(2.2rem, min(6vw, 9.8svh), 7rem);
   }
 }
 /* Phones held sideways: compact, as before. */
@@ -1423,6 +1447,15 @@
   }
   [data-hero] :is(.award-badge, .hf-pill) {
     translate: calc(var(--drift-x, 0) * 9px) calc(var(--drift-y, 0) * 6px);
+  }
+}
+
+/* Reduced motion: the companion cat doesn't travel (cat-companion.tsx never
+   starts), so it stays with the hero instead of hanging over every section;
+   the footer's cat is the one at the end. */
+@media (prefers-reduced-motion: reduce) {
+  [data-cat-companion] {
+    position: absolute;
   }
 }
 
