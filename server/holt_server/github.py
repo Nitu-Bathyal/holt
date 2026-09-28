@@ -14,6 +14,7 @@ from __future__ import annotations
 import asyncio
 import contextvars
 import logging
+import re
 import threading
 import time
 from dataclasses import dataclass
@@ -35,6 +36,15 @@ query($owner:String!, $name:String!) {
 """
 
 RATE_LIMIT = "query { rateLimit { remaining resetAt } }"
+
+# Repositories per details query. GitHub charges about one point for a query
+# of up to a hundred small lookups.
+DETAILS_BATCH = 100
+DETAILS_FIELDS = """
+  nameWithOwner description stargazerCount pushedAt isArchived isFork isPrivate
+  primaryLanguage { name }
+  repositoryTopics(first: 10) { nodes { topic { name } } }
+"""
 
 LOOKUP_TIMEOUT_S = 15.0
 
@@ -226,6 +236,25 @@ class PooledGraphQL(GitHubGraphQL):
         return super()._data(body)
 
 
+# GitHub shows ":books:" in a description as an emoji; the API sends the code.
+EMOJI_CODE = re.compile(r":[a-z0-9_+-]+:\s*")
+
+
+def _details(node: dict[str, Any]) -> dict[str, Any]:
+    topics = [((t or {}).get("topic") or {}).get("name")
+              for t in ((node.get("repositoryTopics") or {}).get("nodes") or [])]
+    return {
+        "repo": node.get("nameWithOwner"),
+        "description": EMOJI_CODE.sub("", node.get("description") or "").strip() or None,
+        "language": (node.get("primaryLanguage") or {}).get("name"),
+        "stars": int(node.get("stargazerCount") or 0),
+        "topics": [t for t in topics if t],
+        "pushed_at": node.get("pushedAt"),
+        "archived": bool(node.get("isArchived")),
+        "fork": bool(node.get("isFork")),
+    }
+
+
 @dataclass
 class RepoInfo:
     name_with_owner: str
@@ -262,6 +291,45 @@ class GitHubLookup:
 
             raise not_found_repo(repo)
         return RepoInfo(name_with_owner=found["nameWithOwner"])
+
+    async def details(self, repos: list[str]) -> dict[str, dict[str, Any] | None]:
+        """Description, language, stars, topics and last push for up to
+        `DETAILS_BATCH` repositories, in one GraphQL query. Keyed by the
+        requested `owner/repo`; None for one that is missing or private."""
+        return await asyncio.to_thread(self._details, repos)
+
+    def _details(self, repos: list[str]) -> dict[str, dict[str, Any] | None]:
+        from holt.evidence.errors import RepoNotFound
+
+        if len(repos) > DETAILS_BATCH:
+            raise ValueError(f"at most {DETAILS_BATCH} repositories per query")
+        if not repos:
+            return {}
+        params, parts, variables = [], [], {}
+        for i, repo in enumerate(repos):
+            owner, _, name = repo.partition("/")
+            params.append(f"$o{i}:String!, $n{i}:String!")
+            parts.append(f"r{i}: repository(owner:$o{i}, name:$n{i}) {{ ...details }}")
+            variables[f"o{i}"], variables[f"n{i}"] = owner, name
+        document = (f"query({', '.join(params)}) {{\n  " + "\n  ".join(parts)
+                    + "\n  rateLimit { cost remaining resetAt }\n}\n"
+                    + f"fragment details on Repository {{{DETAILS_FIELDS}}}")
+        from holt_server.engine import translate
+
+        try:
+            data = self.pool.transport(self.http).query(
+                document, timeout=LOOKUP_TIMEOUT_S * 2, **variables)
+        except RepoNotFound:
+            data = {}  # every one of them is gone
+        except ApiError:
+            raise
+        except Exception as exc:  # noqa: BLE001
+            raise translate(exc, repos[0]) from exc
+        out: dict[str, dict[str, Any] | None] = {}
+        for i, repo in enumerate(repos):
+            node = data.get(f"r{i}")
+            out[repo] = None if not node or node.get("isPrivate") else _details(node)
+        return out
 
     async def remaining(self) -> int:
         """The fewest GraphQL points left on any working token (checking is free).

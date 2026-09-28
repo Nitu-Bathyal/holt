@@ -1,5 +1,6 @@
 """Warm the caches before people arrive: popular repos' reports and starter
-issues, and the /find searches the web app's default pages make.
+issues, the repository details Discover shows, and the /find searches the web
+app's default pages make.
 
     python -m holt_server.warm                 # everything, stopping on GitHub budget
     python -m holt_server.warm --dry-run       # what would run, no GitHub calls
@@ -14,6 +15,8 @@ How it stays out of the way:
   pass itself waits for each job before queueing the next.
 * Fresh work is skipped: reports under HOLT_WARM_MAX_AGE_HOURS (20), finds
   and starter issues still inside most of their cache lifetime.
+* Repository details (discover.py) are read for every reported repo at once,
+  a hundred per GraphQL query (about a point each), once a day.
 * Before each step it checks the GitHub GraphQL points left on every token
   and stops below HOLT_WARM_MIN_POINTS, so a warm pass can never starve the
   requests people make.
@@ -119,6 +122,7 @@ class Result:
     reports_failed: int = 0
     starter_run: int = 0
     starter_fresh: int = 0
+    meta_run: int = 0
     finds_run: int = 0
     finds_fresh: int = 0
     stopped: str | None = None
@@ -128,6 +132,7 @@ class Result:
         parts = [f"reports {self.reports_run} run, {self.reports_fresh} fresh, "
                  f"{self.reports_failed} failed",
                  f"starter issues {self.starter_run} run, {self.starter_fresh} fresh",
+                 f"repo details {self.meta_run} read",
                  f"finds {self.finds_run} run, {self.finds_fresh} fresh"]
         if self.stopped:
             parts.append(f"stopped: {self.stopped}")
@@ -283,6 +288,29 @@ class Warmer:
             if err.code == "rate_limited":
                 raise OutOfBudget("GitHub rate limit reached") from err
 
+    async def warm_meta(self, seeds: list[str]) -> None:
+        """Details (language, stars, topics...) of every reported repo whose
+        copy is missing or a day old, a hundred per query."""
+        from holt_server import discover
+
+        stale = await discover.stale_meta(self.svc, seeds)
+        batches = discover.batches(stale)
+        if self.dry_run:
+            if stale:
+                self.say(f"would read details of {len(stale)} repos in {len(batches)} "
+                         f"quer{'y' if len(batches) == 1 else 'ies'}")
+            return
+        for batch in batches:
+            await self.check_budget()
+            try:
+                details = await self.svc.lookup.details(batch)
+            except ApiError as err:
+                self.result.failures.append(f"repo details: {err.code}")
+                if err.code == "rate_limited":
+                    raise OutOfBudget("GitHub rate limit reached") from err
+                return
+            self.result.meta_run += await discover.store_meta(self.svc, details)
+
     async def warm_find(self, profile: Profile) -> None:
         from holt_server import starter
 
@@ -316,7 +344,8 @@ class Warmer:
                 raise OutOfBudget("GitHub rate limit reached")
 
     async def run(self, seeds: list[str], *, reports: bool = True, starter: bool = True,
-                  finds: bool = True, max_profiles: int | None = None) -> Result:
+                  meta: bool = True, finds: bool = True,
+                  max_profiles: int | None = None) -> Result:
         try:
             # Reports first: finds screen repositories through the report
             # cache, so a warm report cache makes every search cheaper.
@@ -325,6 +354,8 @@ class Warmer:
                     await self.warm_report(repo)
                 if starter:
                     await self.warm_starter(repo)
+            if meta:
+                await self.warm_meta(seeds)
             if finds:
                 for profile in profiles()[:max_profiles]:
                     await self.warm_find(profile)
@@ -376,6 +407,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--limit", type=int, help="only the first N seed repositories")
     parser.add_argument("--no-reports", action="store_true")
     parser.add_argument("--no-starter", action="store_true")
+    parser.add_argument("--no-meta", action="store_true",
+                        help="don't read repository details (Discover)")
     parser.add_argument("--no-find", action="store_true")
     parser.add_argument("--profiles", type=int, help="only the first N find profiles")
     parser.add_argument("--dry-run", action="store_true",
@@ -397,7 +430,8 @@ def main(argv: list[str] | None = None) -> int:
                 seeds = seeds[: args.limit]
             result = await warm_once(svc, seeds=seeds, dry_run=args.dry_run, say=print,
                                      reports=not args.no_reports,
-                                     starter=not args.no_starter, finds=not args.no_find,
+                                     starter=not args.no_starter, meta=not args.no_meta,
+                                     finds=not args.no_find,
                                      max_profiles=args.profiles)
             if result is None:
                 return 1
