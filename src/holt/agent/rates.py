@@ -3,11 +3,17 @@
 A merge rate or a no-reply share is only honest over pull requests whose story
 has ended. Three things used to be counted that shouldn't be:
 
-* Pull requests opened a few hours ago. A busy repository read at any moment
-  has dozens with no outcome *yet*; pytorch's 200 newest span about two days.
-  A pull request is **decided** once it is merged (or landed another way),
-  closed, or older than the settle window. Younger open ones are "still open"
-  and leave both sides of every rate.
+* Pull requests opened in the last two weeks. A busy repository read at any
+  moment has dozens with no outcome *yet*; pytorch's 200 newest span about
+  two days. Counting the young ones that already have an outcome is worse
+  than leaving them all out: what happens within hours is the fast outcomes
+  (a quick merge, a quick triage close), so rates over them are inflated
+  (openssl read 40% merged that way; 11% over the ones two weeks old). A pull
+  request is **decided** once it is older than the settle window, whatever
+  happened to it. Younger ones are "still open" (still settling, even if
+  already merged or closed) and leave both sides of every rate. The live
+  provider reads further back when a busy repository's newest pages hold too
+  few decided ones (`github_graphql.SETTLED_TARGET`).
 * Pull requests closed without a word. On a popular repository that is mostly
   maintainers clearing out spam and AI junk, which is a good sign, not being
   ignored. "Ignored" is now only an open pull request, past the settle window,
@@ -60,13 +66,22 @@ STILL_OPEN = "still_open"
 
 # Rule codes this module's lines carry. They inform; they never decide, so
 # anything looking for the deciding rule skips them (`first_deciding`).
-INFO_CODES = frozenset({"sample_period", "dormant", "excluded", "still_open", "closed_silently"})
+INFO_CODES = frozenset({"sample_period", "dormant", "excluded", "still_open", "closed_silently",
+                        "slow_note"})
 
 
-def first_deciding(rules: list[str]) -> str | None:
-    """The first rule line that isn't one of these notes, else the first line."""
-    return next((r for r in rules if getattr(r, "code", "") not in INFO_CODES),
-                rules[0] if rules else None)
+# Rules that come after the merge count and overrule it (verdict.py): when
+# one is there, it is the reason, not the count before it.
+OVERRULING_CODES = frozenset({"rubber_stamp", "long_odds"})
+
+
+def first_deciding(rules: list[str], skip: frozenset[str] = frozenset()) -> str | None:
+    """The rule line that gave the answer: an overruling one if present, else
+    the first that isn't one of these notes (or in `skip`), else the first."""
+    overruled = next((r for r in rules if getattr(r, "code", "") in OVERRULING_CODES), None)
+    return overruled or next(
+        (r for r in rules if getattr(r, "code", "") not in INFO_CODES | skip),
+        rules[0] if rules else None)
 
 # Labels a project uses to say "this was not a real attempt". Matched on the
 # label with case and separators flattened ("bot:ai-policy-close" reads as
@@ -111,16 +126,16 @@ def outcome(thread: Thread, as_of: datetime | None,
             settle_hours: float = SETTLE_HOURS) -> str:
     """Where one pull request stands. Without a reference time nothing is still
     open and a silent close is "ignored", as the benchmark was scored."""
+    honest = judges_time(as_of, settle_hours)
+    if honest and as_of - thread.opened_at < timedelta(hours=settle_hours):
+        return STILL_OPEN
     if thread.merged:
         return MERGED
     replied = thread.engaged
-    honest = judges_time(as_of, settle_hours)
     if thread.closed_unmerged:
         if replied:
             return CLOSED_REPLIED
         return CLOSED_SILENTLY if honest else IGNORED
-    if honest and as_of - thread.opened_at < timedelta(hours=settle_hours):
-        return STILL_OPEN
     return OPEN_REPLIED if replied else IGNORED
 
 
@@ -196,7 +211,8 @@ def period_sentence(threads: Mapping[str, Thread], as_of: datetime) -> str | Non
     what = "1 pull request" if n == 1 else f"{n} pull requests"
     when = (f"opened on {_date(first)}" if first.date() == last.date()
             else f"opened between {_date(first)} and {_date(last)}")
-    text = f"These numbers come from the newest {what}, {when}."
+    # Not "the newest": a busy repository's sample has an older part too.
+    text = f"These numbers come from {what}, {when}."
     if (as_of - first).days > OLD_SAMPLE_DAYS:
         text += (" That reaches back more than a year, so older history counts as "
                  "much as how the project works today.")
@@ -205,7 +221,24 @@ def period_sentence(threads: Mapping[str, Thread], as_of: datetime) -> str | Non
 
 def dormant_sentence(records: Iterable[EvidenceRecord], threads: Mapping[str, Thread],
                      as_of: datetime, meta: Mapping[str, Any] | None) -> str | None:
-    """A plain line when nothing has been merged here in DORMANT_DAYS, or None.
+    """A plain line when nothing has been merged here in DORMANT_DAYS, or None."""
+    found = dormancy(records, threads, as_of, meta)
+    return found[0] if found else None
+
+
+def inactive_sentence(records: Iterable[EvidenceRecord], threads: Mapping[str, Thread],
+                      as_of: datetime, meta: Mapping[str, Any] | None) -> str | None:
+    """The dormancy line when the project looks inactive, not merely quiet on
+    pull requests: no merge *and* no push in DORMANT_DAYS. This one decides
+    (verdict.py): a pull request to an inactive project may never be read."""
+    found = dormancy(records, threads, as_of, meta)
+    return found[0] if found and found[1] else None
+
+
+def dormancy(records: Iterable[EvidenceRecord], threads: Mapping[str, Thread],
+             as_of: datetime, meta: Mapping[str, Any] | None) -> tuple[str, bool] | None:
+    """(the line, whether the project looks inactive), or None when it doesn't
+    look dormant at all.
 
     `pushed_at` is GitHub's time of the last push to any branch, read at fetch
     time: when it is recent, work may be landing outside pull requests, and the
@@ -228,9 +261,9 @@ def dormant_sentence(records: Iterable[EvidenceRecord], threads: Mapping[str, Th
     pushed = _pushed_at(meta)
     if pushed is not None and pushed <= as_of and as_of - pushed <= window:
         return (f"{lead}, though code was pushed on {_date(pushed)}, so work may be "
-                "landing some other way. Check recent activity before you start.")
+                "landing some other way. Check recent activity before you start.", False)
     return (f"{lead}, so this project looks inactive. A pull request here may "
-            "never be looked at.")
+            "never be looked at.", True)
 
 
 # --- lines for the rule trace -------------------------------------------------------
@@ -256,8 +289,9 @@ def count_sentences(still_open: int, closed_silently: int, excluded_: int,
         ))
     if still_open:
         out.append((
-            f"{_pr(still_open)} {'is' if still_open == 1 else 'are'} less than "
-            f"{settle_days} days old and still open, so "
+            f"{_pr(still_open)} {'was' if still_open == 1 else 'were'} opened in the "
+            f"last {settle_days} days, too recently to know how "
+            f"{'it' if still_open == 1 else 'they'} will end, so "
             f"{'it isn' if still_open == 1 else 'they aren'}'t counted yet.",
             "still_open",
         ))

@@ -43,7 +43,7 @@ def thread_records(repo: str, number: int) -> list[EvidenceRecord]:
 def test_a_merge_bot_closing_with_a_commit_is_a_landing():
     # pytorchmergebot lands the change as a commit on main; the commit closes
     # the pull request, which GitHub then shows as closed.
-    c = closure("pytorch/pytorch", 198476)
+    c = closure("pytorch/pytorch", 196819)
     assert (c.outcome, c.how) == (ld.LANDED, "merge_bot")
     assert "pytorchmergebot" in c.why
     assert c.evidence_id.endswith(":closed")
@@ -98,13 +98,13 @@ def test_a_merged_label_is_a_landing_when_nothing_else_is_known():
     # crowded out of the timeline window, sees it: no closer, no bot comment,
     # only the "Merged" label.
     records = []
-    for r in thread_records("pytorch/pytorch", 198482):
+    for r in thread_records("pytorch/pytorch", 196820):
         if ":comment:" in r.evidence_id or ":review:" in r.evidence_id:
             continue
         if r.evidence_id.endswith(":closed"):
             r = replace(r, payload={**r.payload, "closer": None, "closed_by": None})
         records.append(r)
-    c = ld.classify(records)["pr:pytorch/pytorch#198482"]
+    c = ld.classify(records)["pr:pytorch/pytorch#196820"]
     assert (c.outcome, c.how) == (ld.LANDED, "label")
     assert "Merged" in c.why
 
@@ -306,3 +306,17 @@ def test_only_the_team_can_say_a_pull_request_landed():
     key = "pr:openssl/openssl#32767"
     assert ld.classify([*records, regular], frozenset())[key].outcome == ld.CLOSED
     assert ld.classify([*records, regular], frozenset({"regular"}))[key].outcome == ld.LANDED
+
+
+def test_the_landed_line_never_takes_the_last_place_from_a_turn_down(monkeypatch):
+    """The web reads the reason for "Not worth" from the last line."""
+    from holt.agent import pipeline
+    from holt.agent.verdict import Rule
+
+    monkeypatch.setattr(pipeline.landing_detection, "landed_sentence", lambda threads: "Landed.")
+    rules = [Rule("5 merged.", code="merges"), Rule("Only 5 of 171.", code="long_odds")]
+    pipeline._say_how_merges_landed(rules, {})
+    assert [r.code for r in rules] == ["merges", "landed_off_button", "long_odds"]
+    rules = [Rule("5 merged.", code="merges")]
+    pipeline._say_how_merges_landed(rules, {})
+    assert [r.code for r in rules] == ["merges", "landed_off_button"]

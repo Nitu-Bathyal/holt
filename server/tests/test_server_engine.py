@@ -39,8 +39,12 @@ def check_report_shape(report: dict, mode: str) -> None:
             "decided_by", "unknowns", "landing", "never_landed", "evidence",
             "evidence_until", "generated_at", "cost", "rule_codes", "tone",
             "verdict_line", "odds", "sample", "asks", "numbers_line", "first_timer_line",
-            "next_step", "stat_line", "counted", "holt_users"}
+            "next_step", "stat_line", "counted", "holt_users", "budget_independent"}
     assert set(report) == keys
+    # The committed fixtures are a frozen capture read with the benchmark's
+    # rules, where the budget can move the verdict: never served for another
+    # budget (live reports are; server/tests/test_budget.py).
+    assert report["budget_independent"] is False
     assert report["sample"]["pull_requests"] >= report["stats"]["outsider_attempts"]
     for entry in report["counted"]:
         assert set(entry) == {"topic", "text"}
@@ -55,9 +59,9 @@ def check_report_shape(report: dict, mode: str) -> None:
         assert item["url"].startswith("https://github.com/"), item
         assert set(item) == {"id", "url", "kind", "value", "text", "quote"}
     for area in report["landing"]:
-        assert set(area) == {"path", "merged", "attempted"}
+        assert set(area) == {"path", "merged", "attempted", "is_file"}
     for area in report["never_landed"]:
-        assert set(area) == {"path", "attempted"}
+        assert set(area) == {"path", "attempted", "is_file"}
     assert report["evidence_until"] == "2026-06-01T00:00:00Z"
     # What a beginner reads is plain English. (`kind`/`value` are machine keys.)
     prose = " ".join([report["headline"], report["verdict_line"], report["numbers_line"],

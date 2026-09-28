@@ -172,3 +172,11 @@ def test_the_landing_section_is_identical_under_a_different_hash_seed():
         assert result.returncode == 0, result.stderr[-2000:]
         outputs.add(result.stdout)
     assert len(outputs) == 1, "the landing section changed with the hash seed"
+
+
+
+def test_an_area_that_is_one_file_says_so():
+    """A path cut to two segments can be a file; the web adds "/" only to folders."""
+    paths = ["tests/conftest.py"] * 2 + ["src/pkg/a.py"] * 3
+    where = landing_for([thread(n, f"u{n}", [p], merged=False) for n, p in enumerate(paths)])
+    assert {a.path: a.is_file for a in where.never} == {"tests/conftest.py": True, "src/pkg": False}

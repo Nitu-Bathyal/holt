@@ -22,7 +22,7 @@ from typing import Literal
 
 from holt.agent.verdict import headline as verdict_headline
 from holt.agent.rates import SETTLE_DAYS
-from holt.agent.verdict import MIN_MERGES, hours_phrase
+from holt.agent.verdict import MERGE_RATE_FLOOR, MIN_DISTINCT_AUTHORS, MIN_MERGES, hours_phrase
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_serializer
 
 # Bound here, not looked up per call: tests swap `holt.starter` for a fake.
@@ -72,8 +72,9 @@ class ErrorBody(Model):
 
 
 class Stats(Model):
-    # Decided attempts only (merged, closed, or open past the settle window):
-    # the denominator of every rate here. `still_open` are too new to count;
+    # Decided attempts only (opened more than the 14-day settle window ago):
+    # the denominator of every rate here. `still_open` were opened within the
+    # window, too recently to count, whatever has happened to them so far;
     # `closed_silently` were closed with no reply, which is not `no_reply`.
     outsider_attempts: int
     outsider_merged: int
@@ -109,11 +110,14 @@ class LandingPath(Model):
     path: str
     merged: int
     attempted: int
+    # One file rather than a folder (a path cut to two segments can be either).
+    is_file: bool = False
 
 
 class NeverLanded(Model):
     path: str
     attempted: int
+    is_file: bool = False
 
 
 class EvidenceItem(Model):
@@ -233,7 +237,7 @@ RUBBER_STAMP_LINE = ("Outside pull requests here get merged without anyone revie
 INFO_CODES = frozenset({
     "awaiting_reply", "landed_off_button", "package_updates", "kind_contested",
     "kind_uncited", "sample_period", "dormant", "excluded", "still_open",
-    "closed_silently",
+    "closed_silently", "slow_note",
 })
 
 
@@ -245,6 +249,13 @@ def deciding_rule(decided_by: list[str], rule_codes: list[str]) -> tuple[str, st
         if code not in INFO_CODES:
             return text, code
     return (decided_by[-1], "") if decided_by else ("", "")
+
+
+def _with_slow_note(line: str, decided_by: list[str], rule_codes: list[str]) -> str:
+    """"Worth your time", and replies take longer than the reader's budget:
+    the engine's note goes right under the reason, not only in the details."""
+    note = next((t for t, c in zip(decided_by, rule_codes) if c == "slow_note"), None)
+    return f"{line} {note}" if note else line
 
 
 def verdict_line(verdict: str, s: Stats, decided_by: list[str], rule_codes: list[str]) -> str:
@@ -263,11 +274,14 @@ def verdict_line(verdict: str, s: Stats, decided_by: list[str], rule_codes: list
                 "most of their pull requests don't land" if low_merge else "",
                 f"{_silent_phrase(silent)} get no reply" if many_silent else "",
             ) if b]
-            return (f"Outside contributors do get merged here, but {' and '.join(buts)}, "
-                    "so choose your first change carefully.")
-        if silent < 0.3:
-            return "Outside contributors get real replies here, and their work gets merged."
-        return "Outside contributors get merged here, though some wait a while for a reply."
+            return _with_slow_note(
+                f"Outside contributors do get merged here, but {' and '.join(buts)}, "
+                "so choose your first change carefully.", decided_by, rule_codes)
+        return _with_slow_note(
+            "Outside contributors get real replies here, and their work gets merged."
+            if silent < 0.3 else
+            "Outside contributors get merged here, though some wait a while for a reply.",
+            decided_by, rule_codes)
     if verdict == "not_viable":
         # Rubber-stamping reads as a "but" after the merge count, so it gets
         # its own sentence. Reports cached before `rule_codes` existed are
@@ -323,8 +337,8 @@ def numbers_line(s: Stats, sample: Sample | None) -> str:
         return f"Nobody outside the project's team opened a pull request{when}."
     if not n:
         return (f"Outside contributors opened {s.still_open} pull "
-                f"request{'' if s.still_open == 1 else 's'}{when}, all still open and "
-                f"too new to judge (less than {SETTLE_DAYS} days old).")
+                f"request{'' if s.still_open == 1 else 's'}{when}, all in the last "
+                f"{SETTLE_DAYS} days, too recently to judge.")
     decided = " that have had time for an answer" if s.still_open else ""
     out = [f"Of {n} pull request{'' if n == 1 else 's'} from outside contributors{when}"
            f"{decided}, {s.outsider_merged} {'was' if s.outsider_merged == 1 else 'were'} "
@@ -342,8 +356,8 @@ def numbers_line(s: Stats, sample: Sample | None) -> str:
     if s.no_reply:
         out.append(f"{_pct(s.no_reply, n)}% got no reply at all.")
     if s.still_open:
-        out.append(f"Another {s.still_open} {'is' if s.still_open == 1 else 'are'} still "
-                   "open and too new to count.")
+        out.append(f"Another {s.still_open} {'was' if s.still_open == 1 else 'were'} opened "
+                   f"in the last {SETTLE_DAYS} days, too recently to count.")
     return " ".join(out)
 
 
@@ -421,7 +435,8 @@ def next_step(verdict: str, decided_by: list[str], rule_codes: list[str],
 # `decided_by` lines that inform, shown in "How this was counted" under these.
 INFO_TOPICS: dict[str, str] = {
     "awaiting_reply": "Too new to judge",
-    "still_open": "Still open",
+    "still_open": "Too recent to count",
+    "slow_note": "Reply time",
     "closed_silently": "Closed without a word",
     "excluded": "Drafts and spam",
     "dormant": "Recent activity",
@@ -435,11 +450,16 @@ INFO_TOPICS: dict[str, str] = {
 def verdict_rule_text(days: int) -> str:
     return (
         f"“{verdict_headline('viable')}” needs at least {MIN_MERGES} merged pull requests "
-        "from outside contributors and a typical first reply within your "
-        f"{days}-day budget, with people actually reviewing what gets merged. "
+        f"from at least {MIN_DISTINCT_AUTHORS} different outside contributors, at least "
+        f"{MERGE_RATE_FLOOR:.0%} of outside pull requests merged, and a typical first reply "
+        f"within your {days}-day budget, with people actually reviewing what gets merged. "
+        "Only pull requests opened at least "
+        f"{SETTLE_DAYS} days ago count, so each has had time for an answer. "
         f"“{verdict_headline('not_viable')}” is an archived repository, a mirror, a "
-        "catalogue of entries, merges nobody reviews, or outside pull requests that "
-        f"are almost all ignored. Anything in between is “{verdict_headline('insufficient_evidence')}”. "
+        "project with nothing merged or pushed in 90 days, a catalogue of entries, "
+        f"merges nobody reviews, fewer than 1 in {round(1 / MERGE_RATE_FLOOR)} outside pull "
+        "requests merged, or outside pull requests that are almost all ignored. "
+        f"Anything in between is “{verdict_headline('insufficient_evidence')}”. "
         "These rules are fixed; no AI chooses the verdict."
     )
 
@@ -451,7 +471,8 @@ def counted(r: Report) -> list[Counted]:
     smp = r.sample
     when = period(smp)
     if smp is not None:
-        text = f"The newest {smp.pull_requests} pull requests on GitHub"
+        # Not "the newest": a busy project's sample reaches further back too.
+        text = f"{smp.pull_requests} pull requests on GitHub"
         text += f", opened {when}." if when else "."
         out.append(Counted(topic="What we read", text=text))
         team = smp.team_pull_requests
@@ -543,6 +564,11 @@ class Report(VerdictView):
     # What the project asks of a contributor (a CLA, a DCO sign-off, an issue
     # first), where Holt could read it. Empty means none found, not none asked.
     asks: list[Ask] = Field(default_factory=list)
+    # True when the verdict is the same for every time budget and only the
+    # reply-time note reads `days` (rules reports since ticket 08). The server
+    # then answers another `days` from this report without reading GitHub
+    # again (`report.retime`). False on AI reports and older cached ones.
+    budget_independent: bool = False
     # Filled when the report is served (GET /v1/reports/{owner}/{repo}), never
     # stored with it; null when too few Holt users sent pull requests here.
     holt_users: HoltUsers | None = None

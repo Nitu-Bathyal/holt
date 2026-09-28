@@ -1466,6 +1466,11 @@ export interface components {
         LandingPath: {
             /** Attempted */
             attempted: number;
+            /**
+             * Is File
+             * @default false
+             */
+            is_file: boolean;
             /** Merged */
             merged: number;
             /** Path */
@@ -1490,6 +1495,11 @@ export interface components {
         NeverLanded: {
             /** Attempted */
             attempted: number;
+            /**
+             * Is File
+             * @default false
+             */
+            is_file: boolean;
             /** Path */
             path: string;
         };
@@ -2216,6 +2226,11 @@ export interface components {
             asks: components["schemas"]["Ask"][];
             /** Bottom Line */
             bottom_line: string | null;
+            /**
+             * Budget Independent
+             * @default false
+             */
+            budget_independent: boolean;
             cost: components["schemas"]["Cost"] | null;
             /** Counted */
             readonly counted: components["schemas"]["Counted"][];

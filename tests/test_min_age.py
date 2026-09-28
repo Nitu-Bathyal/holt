@@ -84,11 +84,12 @@ def test_a_fresh_open_pull_request_that_got_a_reply_is_still_open():
     assert s.outsider_answered == 0 and s.merge_rate is None
 
 
-def test_a_fresh_pull_request_that_was_merged_is_decided():
+def test_a_fresh_pull_request_that_was_merged_is_too_recent_to_count():
+    """Only the fast outcomes are in yet; counting them inflates the rate."""
     records = silent_attempts(1, hours_ago=5) + [rec("pr:a/b#1:merged", 4, "maintainer")]
     s = compute(build_threads(records), as_of=NOW)
-    assert (s.outsider_still_open, s.outsider_judgeable, s.outsider_merged) == (0, 1, 1)
-    assert s.merge_rate == 1.0
+    assert (s.outsider_still_open, s.outsider_judgeable, s.outsider_merged) == (1, 0, 0)
+    assert s.merge_rate is None
 
 
 def test_a_burst_of_new_pull_requests_does_not_make_a_repo_look_hostile():

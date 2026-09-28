@@ -43,7 +43,8 @@ EXPECTED = HERE / "expected.json"
 RECORDINGS = HERE / "recordings"
 
 # What a report reads: the newest 200 pull requests, as the server and the CLI
-# fetch them.
+# fetch them (the provider reads further back on a busy repository; see
+# github_graphql.SETTLED_TARGET).
 PAGES = 8
 
 LABEL = {"viable": "Worth", "not_viable": "Not worth", "insufficient_evidence": "Not enough"}

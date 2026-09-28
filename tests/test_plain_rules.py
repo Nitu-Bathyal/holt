@@ -65,7 +65,7 @@ def every_trace():
         {"median_first_response_hours": 400.0},
         {"median_first_response_hours": 0.4},
         {"reviewed_share": 0.1, "merge_rate": 0.9},
-        {"outsider_merged": 3, "distinct_outsider_authors": 1},
+        {"outsider_merged": 3, "distinct_outsider_authors": 1, "distinct_merged_authors": 1},
         {"outsider_still_open": 3},
         {"outsider_still_open": 1, "outsider_ignored": 0},
         {"outsider_closed_silently": 1, "outsider_excluded": 1},

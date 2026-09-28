@@ -253,6 +253,46 @@
   "fastapi/fastapi": {
    "shape": "small or medium welcoming",
    "note": "one lead maintainer; a big backlog of outside PRs"
+  },
+  "freeCodeCamp/freeCodeCamp": {
+   "shape": "student favourite (ticket 08)",
+   "note": "beginner magnet: the most-starred learning repo; curriculum and platform PRs"
+  },
+  "appwrite/appwrite": {
+   "shape": "student favourite (ticket 08)",
+   "note": "Hacktoberfest favourite: backend platform with a company team"
+  },
+  "processing/p5.js": {
+   "shape": "student favourite (ticket 08)",
+   "note": "GSoC org: creative-coding library that courts first-time contributors"
+  },
+  "oppia/oppia": {
+   "shape": "student favourite (ticket 08)",
+   "note": "GSoC org: learning platform with a structured onboarding path"
+  },
+  "CircuitVerse/CircuitVerse": {
+   "shape": "student favourite (ticket 08)",
+   "note": "GSoC org: student-run circuit simulator"
+  },
+  "keploy/keploy": {
+   "shape": "student favourite (ticket 08)",
+   "note": "GSSoC and Hacktoberfest regular: company-backed testing tool"
+  },
+  "layer5io/layer5": {
+   "shape": "student favourite (ticket 08)",
+   "note": "Hacktoberfest regular: community website with many first PRs"
+  },
+  "mozilla/pdf.js": {
+   "shape": "student favourite (ticket 08)",
+   "note": "popular library with a strict review culture"
+  },
+  "django/django": {
+   "shape": "student favourite (ticket 08)",
+   "note": "big welcoming project whose PRs pair with Trac tickets"
+  },
+  "public-apis/public-apis": {
+   "shape": "student favourite (ticket 08)",
+   "note": "a list students add entries to during Hacktoberfest"
   }
  }
 }

@@ -91,8 +91,9 @@ responses. The server also accepts and normalises full URLs
   "decided_by": ["plain-English rule sentence", "..."],
   "rule_codes": ["merges", "rubber_stamp"], // stable code per decided_by line, same order
   "unknowns": ["plain-English sentence", "..."],
-  "landing": [ { "path": "pkgs/by-name", "merged": 13, "attempted": 62 } ],
-  "never_landed": [ { "path": "pkgs/applications", "attempted": 6 } ],
+  "landing": [ { "path": "pkgs/by-name", "merged": 13, "attempted": 62, "is_file": false } ],
+  "never_landed": [ { "path": "pkgs/applications", "attempted": 6, "is_file": false } ],
+                                    // is_file: the path is one file, not a folder (default false)
   "evidence": [
     { "id": "pr:NixOS/nixpkgs#526518:opened", "url": "https://github.com/NixOS/nixpkgs/pull/526518",
       "kind": "onboarding", "value": "substantive", "text": "…", "quote": "string | null" }
@@ -103,6 +104,7 @@ responses. The server also accepts and normalises full URLs
               "last_opened": "2026-09-26T09:00:00Z", "team_pull_requests": 40,
               "team_people": 9, "bot_pull_requests": 12 } | null,
   "asks": [ { "code": "cla" | "dco" | "issue_first", "url": "https://github.com/…" } ],
+  "budget_independent": true,         // the verdict is the same for any `days` (see below)
   "cost": { "model": "…", "input_tokens": 9000, "output_tokens": 6000,
             "usd": 0.0123, "seconds": 48.2 }, // ai only, else null
   "holt_users": { "people": 9, "pull_requests": 12, "merged": 7, "closed": 2,
@@ -145,12 +147,13 @@ Returning outsiders count.
 cached from evidence without GitHub's association use the earlier rule: an
 outsider had nothing merged earlier in the sample.
 
-`stats` counts are over **decided** newcomer pull requests: merged (or landed
-another way), closed, or open for longer than the 14-day settle window.
+`stats` counts are over **decided** newcomer pull requests: ones opened more
+than 14 days (the settle window) before the report, whatever happened to them.
 `outsider_attempts` is that decided total, so `outsider_merged /
 outsider_attempts` and `no_reply / outsider_attempts` are the rates the verdict
-was computed from. `no_reply` is open, past the window, with no reply.
-`still_open` (younger open ones, in no rate) and `closed_silently` (closed with
+was computed from. `no_reply` is still open, with no reply.
+`still_open` (opened within the window, merged or not; in no rate; reports
+cached before 30 Sep 2026 counted only the open ones) and `closed_silently` (closed with
 no reply, usually maintainers clearing out spam; not in `no_reply`) are shown
 beside them; both are 0 on reports cached before they existed. Drafts and pull
 requests labelled as spam or invalid are in no count.
@@ -200,15 +203,27 @@ they cannot disagree with each other or with the verdict:
   the answer on their own.
 - `rule_codes` is `[]` on reports cached before it existed. Codes include
   `archived`, `closed_kind`, `non_software_kind`, `no_attempts`, `ignored`,
-  `merges`, `rubber_stamp`, `slow`, `too_few_attempts`, `few_merges`, `few_people`,
+  `merges`, `rubber_stamp`, `long_odds` (under 5% of outside pull requests
+  merged), `inactive` (nothing merged or pushed in 90 days; decides alone),
+  `slow`, `too_few_attempts`, `few_merges`, `few_people`,
   `elsewhere` (a mirror or a fork; decides alone, like `archived`),
   `landed_off_button` (says how many merges GitHub shows as closed because
   they landed another way; never decides); new ones may appear. These never
   decide and come before the deciding rule: `sample_period` (the dates the
   sample's pull requests were opened; first on every live report), `dormant`
   (nothing merged in 90 days), `excluded` (drafts and spam left out),
-  `still_open`, `closed_silently`. `awaiting_reply` appears only on reports
+  `still_open`, `closed_silently`, `slow_note` (under "Worth your time": the
+  typical first reply takes longer than `days`; `verdict_line` ends with
+  it; comes after the merge count). `awaiting_reply` appears only on reports
   cached before `still_open` replaced it.
+
+`days` is the reader's time budget (1–90, the web offers 7, 14 and 30). Since
+30 Sep 2026 a rules report's verdict doesn't depend on it: replies slower
+than the budget add the `slow_note` line under "Worth your time", or a `slow`
+line beside the reason under "Not enough evidence". Such reports carry
+`budget_independent: true`, and the server answers another budget from them.
+AI reports and older cached ones carry `false` and are only served for the
+`days` they were made for.
 
 New fields are added with a default, so older cached reports stay valid.
 
@@ -230,6 +245,9 @@ Body: `{"repo": "owner/repo", "mode": "rules"|"ai", "days": 7, "refresh": false}
   never reaches the engine, the job or the cache key.
 - Returns `200 {"status":"done","report":Report}` immediately when a cached
   report exists (same repo/mode/days, younger than 24h) and `refresh` is false.
+  For `mode:"rules"`, a report younger than 24h for **another** `days` counts
+  too when it is `budget_independent`: it is served for the asked `days` with
+  its reply-time note redone, and nothing is read from GitHub.
 - Otherwise `202 {"status":"queued","job_id":"…"}`.
 - `mode:"rules"` is free and allowed anonymously (rate-limited per IP).
 - `mode:"ai"` requires `X-Holt-User` (else `needs_key`) and a server model key
@@ -256,7 +274,9 @@ The latest 7-day rules report per repository, newest first, for sitemaps:
 "verdict": "viable"}]}`. `limit` 1–5000, default 500.
 
 ### `GET /v1/reports/{owner}/{repo}?mode=rules|ai&days=7`
-Latest cached report or 404 `not_found`. Public via the BFF: no user needed
+Latest cached report or 404 `not_found`. With `mode=rules` and no fresh
+report for this `days`, a fresh `budget_independent` one made for another
+`days` is served for this one (as for `POST /v1/analyses`). Public via the BFF: no user needed
 (used for shareable pages and OG images), but it still requires the internal
 key like every `/v1` route.
 

@@ -58,6 +58,7 @@ CAT_NO_LANDING = "nobody outside has landed work in"
 CAT_SLOW = "replies too slow for the day budget"
 CAT_RUBBER_STAMP = "work merged without review (the rubber-stamp rule)"
 CAT_HOSTILE = "outsider attempts went unanswered"
+CAT_LONG_ODDS = "few outsider attempts get merged (the merge-rate floor)"
 
 
 @dataclass(slots=True)
@@ -163,6 +164,8 @@ def _categorise(verdict: Verdict, trace: list[str]) -> str | None:
         return CAT_ARCHIVED
     if "rubber_stamp" in codes or "waved through unread" in joined:
         return CAT_RUBBER_STAMP
+    if "long_odds" in codes:
+        return CAT_LONG_ODDS
     if "slow" in codes or "exceeds the" in joined:
         return CAT_SLOW
     if "ignored" in codes or "drew no response" in joined:

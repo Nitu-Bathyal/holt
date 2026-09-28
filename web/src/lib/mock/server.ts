@@ -225,8 +225,19 @@ export async function discover(sort: DiscoverSort, language: string | null, topi
 export async function getReport(repoIn: string, mode: Mode, days: number): Promise<Result<Report>> {
   const v = validate(repoIn);
   if (!v.ok) return v;
-  const r = state().cache.get(key(v.data, mode, days));
+  const r = state().cache.get(key(v.data, mode, days)) ?? (mode === "rules" ? anotherBudget(v.data, days) : undefined);
   return r ? { ok: true, data: r } : err(404, "not_found", "No report yet for this repository.");
+}
+
+/** Like the server: a rules report's verdict is the same for every budget, so
+ * another budget is served from the one already made (the mock's fixtures
+ * reply fast, so there's no slow-reply note to redo). */
+function anotherBudget(repo: string, days: number): Report | undefined {
+  for (const d of [7, 14, 30]) {
+    const r = state().cache.get(key(repo, "rules", d));
+    if (r?.budget_independent) return { ...r, days };
+  }
+  return undefined;
 }
 
 export async function starterIssues(repoIn: string, limit: number): Promise<Result<{ repo: string; issues: StarterIssue[] }>> {
