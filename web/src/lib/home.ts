@@ -1,26 +1,15 @@
 // The signed-in home (/me, docs/design/SIGNED-IN-HOME.md): where sign-in lands,
-// who skips the landing page, and what the home suggests next. Fixed rules, no
+// and what the home suggests next. Fixed rules, no
 // model. Pure, so it runs under `node --test`.
 import { safeCallback } from "./safe-url.ts";
 import type { ContributionPR } from "./types";
 
 export const HOME = "/me";
 
-/** The escape hatch: a signed-in person can still read the landing page at /?landing=1. */
-export const LANDING = "/?landing=1";
-
 /** Where sign-in sends you: back to a safe callbackUrl, else (none, "/" or unsafe) your home. */
 export function afterSignIn(callbackUrl: string | string[] | undefined | null): string {
   const to = safeCallback(callbackUrl, HOME);
   return to === "/" ? HOME : to;
-}
-
-/** On the redirect from "/": it depends on who's asking, so no cache (Cloudflare included) may keep it. */
-export const HOME_REDIRECT_CACHE = "private, no-store";
-
-/** "/" for a signed-in person is their home, unless they asked for the landing page. */
-export function landingRedirect(signedIn: boolean, landing: string | string[] | undefined): string | null {
-  return signedIn && landing === undefined ? HOME : null;
 }
 
 /** New: nothing to come back to yet. Returning: at least one check, saved repo or pull request. */

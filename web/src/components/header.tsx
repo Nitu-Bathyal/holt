@@ -7,6 +7,7 @@ import { HOME } from "@/lib/home";
 import { EXAMPLES_PATH } from "@/lib/examples";
 import type { SessionUser } from "@/lib/session";
 import { CatFace } from "./cat-face";
+import { logoHref } from "@/lib/shell";
 import { JumpNav } from "./shell/jump-nav";
 import { Icon } from "./shell/icons";
 import { QuickCheck } from "./shell/quick-check";
@@ -70,19 +71,19 @@ function MenuButton({ target, label }: { target: string; label: string }) {
 /**
  * Pages that explain or sell Holt, and every page while signed out: the
  * landing page's sections to jump to, an example to try, and sign in (or,
- * signed in, the way back to your home).
+ * signed in, your account menu and a button into the app).
  */
 export function MarketingHeader({ user, credits }: { user: SessionUser | null; credits: string | null }) {
   return (
     <header className="site-header sticky top-0 z-40 border-b border-line bg-header" style={{ viewTransitionName: "site-header" }}>
       <div className="wrap flex min-h-[60px] items-center gap-4">
-        <span className="mr-auto"><Logo href={user ? HOME : "/"} /></span>
-        <JumpNav signedIn={!!user} className="hidden items-center gap-6 text-[0.84rem] text-muted lg:flex" />
+        <span className="mr-auto"><Logo href={logoHref(!!user)} /></span>
+        <JumpNav className="hidden items-center gap-6 text-[0.84rem] text-muted lg:flex" />
         <div className="flex items-center gap-1">
           <ThemeToggle />
           {user ? (
             <>
-              <Link href={HOME} className="hidden min-h-11 items-center px-3 text-[0.86rem] text-blue hover:underline sm:inline-flex">your home →</Link>
+              <Link href={HOME} className="btn-primary ml-1 min-h-10 px-4 text-[0.84rem]">open Holt →</Link>
               <AccountMenu user={user} credits={credits} />
             </>
           ) : (
@@ -93,9 +94,9 @@ export function MarketingHeader({ user, credits }: { user: SessionUser | null; c
           )}
           <MenuButton target="mobile-nav" label="Menu" />
           <nav id="mobile-nav" popover="auto" data-lenis-prevent aria-label="Mobile" className="sheet text-[0.95rem] lg:hidden">
-            <JumpNav signedIn={!!user} item="block px-4 py-3 transition-colors hover:bg-panel-2" />
+            <JumpNav item="block px-4 py-3 transition-colors hover:bg-panel-2" />
             {user ? (
-              <Link href={HOME} className="block px-4 py-3 text-blue transition-colors hover:bg-panel-2">your home →</Link>
+              <Link href={HOME} className="block px-4 py-3 text-blue transition-colors hover:bg-panel-2">open Holt →</Link>
             ) : (
               <Link href={EXAMPLES_PATH} className="block px-4 py-3 transition-colors hover:bg-panel-2">try an example</Link>
             )}

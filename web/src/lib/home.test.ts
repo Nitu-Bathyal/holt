@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { HOME_REDIRECT_CACHE, afterSignIn, dismissedNudges, groupPulls, homeKind, homeNudge, landingRedirect, outsidePulls, primaryAction, pullCountLine, statusLine } from "./home.ts";
+import { afterSignIn, dismissedNudges, groupPulls, homeKind, homeNudge, outsidePulls, primaryAction, pullCountLine, statusLine } from "./home.ts";
 import type { ContributionPR } from "./types";
 
 test("sign-in without somewhere to go back to lands on the home", () => {
@@ -25,21 +25,6 @@ test("an unsafe callbackUrl falls back to the home, never off-site", () => {
   }
 });
 
-test("/ sends signed-in people home, and nobody else", () => {
-  assert.equal(landingRedirect(true, undefined), "/me");
-  assert.equal(landingRedirect(false, undefined), null);
-  // The escape hatch, in any spelling.
-  assert.equal(landingRedirect(true, "1"), null);
-  assert.equal(landingRedirect(true, ""), null);
-  assert.equal(landingRedirect(true, ["1"]), null);
-  assert.equal(landingRedirect(false, "1"), null);
-});
-
-test("the redirect from / is never cached for anyone else", () => {
-  const parts = HOME_REDIRECT_CACHE.split(",").map((p) => p.trim());
-  assert.ok(parts.includes("private") && parts.includes("no-store"));
-  assert.ok(!parts.some((p) => p === "public" || p.startsWith("s-maxage") || p.startsWith("max-age")));
-});
 
 test("new until there's something to come back to: a check, a saved repo or a pull request", () => {
   assert.equal(homeKind({ checked: 0, saved: 0, pulls: 0 }), "new");

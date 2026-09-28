@@ -214,7 +214,7 @@ function ExampleNote() {
   return (
     <p className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 border border-line-strong bg-panel-2 px-4 py-3 font-sans text-[0.9rem] text-muted" data-example-note>
       <span className="border border-blue px-2 py-0.5 font-mono text-[0.78rem] uppercase tracking-[0.08em] text-blue">Example report</span>
-      <span className="min-w-0 flex-1">Anyone can read this one. Sign in, free, to check any repo you like.</span>
+      <span className="min-w-0 flex-1">Sign in to check any repo you like.</span>
       <span className="flex flex-wrap gap-x-4">
         <Link href="/signin" prefetch={false} className="text-link">sign in</Link>
         <Link href={EXAMPLES_PATH} className="text-link">more examples</Link>

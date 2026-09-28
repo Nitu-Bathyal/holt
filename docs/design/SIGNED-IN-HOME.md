@@ -63,9 +63,9 @@ shell a page wears is one rule, `shellFor(pathname, signedIn)` in
 
 **Marketing shell.** Top nav = the landing page's sections, as jump links
 that glide on `/` (Lenis anchors) and go to `/#section` from anywhere else
-(`/?landing=1#section` when signed in): `the answer` · `what it checks` ·
+`the answer` · `what it checks` ·
 `the verdicts` · `open source` · `pricing`, then `try an example` and a
-`sign in` button. Signed in: `your home →` and the account menu instead.
+`sign in` button. Signed in: an `open Holt →` button to `/me` and the account menu instead.
 The footer stays. Phones: the same links in the ☰ sheet.
 
 **App shell.** A slim top bar (☰ below lg, logo → `/me`, a small repo box,
@@ -203,8 +203,8 @@ RETURNING, desktop                              NEW, desktop
 ## Where sign-in lands (unchanged)
 
 `afterSignIn(callbackUrl)`: a safe callback other than `/` wins, anything
-else goes to `/me`. A signed-in `/` redirects to `/me` (307, `proxy.ts`);
-`/?landing=1` still shows the landing page. First-time and returning people
+else goes to `/me`. `/` always shows the landing page, signed in or out (no redirect);
+`/?landing=1` renders the same page. First-time and returning people
 share one URL; the page tells them apart from what the account has, not
 from a stored flag.
 
