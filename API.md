@@ -704,6 +704,80 @@ nothing to match on yet. Starter issues older than 72 hours aren't shown.
   with the report's key numbers and a pseudonymous voter id (no user ids or IP
   hashes). There is no HTTP export.
 
+### PR pre-flight (paid)
+
+For one public pull request, or a branch not opened as one yet: how it
+compares with what gets merged in its repository. Each check says **looks
+fine**, **worth fixing** or **can't tell yet**, computed by rules, with the
+evidence behind it (example merged pull requests, the contributing guide's own
+line), plus the merged pull request most like it. There is no overall verdict,
+and it never changes the report's. Guidance only: Holt never posts to GitHub
+and never writes code. It exists only when the server runs with its paid
+features (`HOLT_PRO_URL`); without them the GET says `available: false` and the
+POST is 501 `not_implemented`.
+
+A target is either a pull request (`pr`: a link like
+`https://github.com/o/r/pull/12`, anything after the number ignored, or
+`o/r#12`) or a repository and a branch (`repo` + `branch`, `owner:branch` for
+one in that person's fork, with an optional `base` to compare with; the default
+branch otherwise). A link that isn't a pull request, a bad branch name, or both
+kinds at once is 400 `invalid_request` with a plain message.
+
+- `GET /v1/preflight?pr=…` or `?repo=…&branch=…&base=…` (anonymous or signed
+  in; the target is optional; reads only the database) → `PreflightState`:
+  `{"available": true, "on_sale": false, "access": Access|null, "target": {"repo", "number", "branch", "base"}|null, "result": Preflight|null, "job": PreflightJob|null}`.
+  - `access` (signed in only) is the `preflight` feature's `Access` (see
+    Account). `on_sale` says whether any plan or credit pack that pays for it
+    is on sale.
+  - `result` (signed in only) is this user's latest check of `target`;
+    results are kept per user, target and head commit.
+  - `job` is a check of `target` still running for this user
+    (`{"job_id", "status", "stage", "progress"}`), so a reloaded page can
+    follow it again.
+- `POST /v1/me/preflight` (signed in) body
+  `{"pr_url": "https://github.com/o/r/pull/12"}` or
+  `{"repo": "o/r", "branch": "me:fix", "base": "main"}`, plus optional
+  `"summary": true` (also a short written summary, same price). Unknown fields
+  are 400. → `202 {"status": "queued", "job_id"}`. Every check reads GitHub
+  again, so there is no instant answer.
+  - Charged for the `preflight` feature before anything runs (402
+    `quota_exceeded` or `needs_plan` otherwise, and nothing is queued). An
+    unknown or private repository is 404 `not_found` before any charge.
+  - A second request for the same target while one runs joins it, uncharged.
+  - A check of a commit this user already had checked is free: the charge is
+    given back when it finishes, and the result says `free_recheck: true`.
+  - A job that fails gives the charge back; its error message says so. A pull
+    request or branch GitHub doesn't have (or a branch with no new commits) is
+    `not_found`; GitHub trouble is `upstream`. Usually a few seconds, up to a
+    few minutes when the repository's history must be read first; stopped
+    after `HOLT_JOB_TIMEOUT_AI`.
+- `GET /v1/preflight-jobs/{job_id}` → `{"status", "stage", "progress", "preflight": Preflight|null, "error": Error|null}`,
+  and `GET /v1/preflight-jobs/{job_id}/events` (SSE, as for analyses; `done`
+  carries `{"preflight": Preflight}`).
+
+`Preflight`: `{"repo", "checked_at", "window_days", "archived", "note", "target", "checks", "counts", "similar", "summary", "free_recheck"}`.
+- `target`: `{"kind": "pull_request"|"branch", "number", "url", "title", "author", "outside", "state", "draft", "head", "base", "head_sha", "additions", "deletions", "lines", "files"}`.
+  For a branch, `number`, `state` and `outside` are null and `url` is GitHub's
+  compare page. `outside` is whether GitHub gives the author no role in the
+  repository.
+- `checks`, in display order: `{"id", "title", "verdict": "ok"|"worth_fixing"|"unknown", "statement", "links", "quote": {"text", "path", "url"}|null}`.
+  Show `title` and the verdict in words ("looks fine", "worth fixing", "can't
+  tell yet"), never the values. `statement` is plain English and may contain
+  Markdown code spans; `links` are example merged pull requests (up to 8).
+  A check that doesn't apply to the repository is left out; ids today are
+  `ci`, `tests`, `size`, `template`, `issue`, `cla`, `signoff`, `changelog`.
+- `counts`: `{"ok", "worth_fixing", "unknown"}`, counted from `checks`.
+- `similar`: the merged pull request that changed the most of the same files,
+  then folders (one from someone outside the project when any shares
+  something), `{"number", "url", "title", "author", "outside", "lines", "files", "touched_tests", "why"}`,
+  or null. `why` is plain English and may contain code spans.
+- `note`: plain English to show once near the top when present (the
+  comparison covers everyone's pull requests because too few outside ones were
+  merged).
+- `summary` (when asked for): `{"model", "sentences": [{"text", "checks": ["issue"]}]}`,
+  at most 3 sentences, each checked against the checks it cites; it never says
+  whether the pull request will be merged.
+
 ## Public proxy for the browser extension (implemented by `web/`)
 
 The browser extension (`extension/`) cannot hold `HOLT_INTERNAL_KEY`, so

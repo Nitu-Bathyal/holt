@@ -680,6 +680,149 @@ class ReportList(Model):
     reports: list[ReportListItem]
 
 
+# --- PR pre-flight (preflight.py) ------------------------------------------------------
+
+PreflightVerdict = Literal["ok", "worth_fixing", "unknown"]
+
+
+class PreflightQuote(Model):
+    """The contributing guide's own line on a check's topic."""
+
+    text: str
+    path: str | None
+    url: str | None
+
+
+class PreflightCheck(Model):
+    # `ci`, `tests`, `size`, `template`, `issue`, `cla`, `signoff`, `changelog`;
+    # more may come. Show `title`, not the id.
+    id: str
+    title: str
+    # Computed by rules, never by a model. Show it in words: "looks fine",
+    # "worth fixing", "can't tell yet".
+    verdict: PreflightVerdict
+    # Plain English; may hold Markdown code spans.
+    statement: str
+    # Example merged pull requests the check compares with (up to 8).
+    links: list[str]
+    quote: PreflightQuote | None
+
+
+class PreflightCounts(Model):
+    ok: int
+    worth_fixing: int
+    unknown: int
+
+
+class PreflightTarget(Model):
+    """What was checked. For a branch, `number`, `state` and `outside` are
+    null and `url` is GitHub's compare page."""
+
+    kind: Literal["pull_request", "branch"]
+    number: int | None
+    url: str
+    title: str | None
+    author: str | None
+    # Whether GitHub gives the author no role in the repository.
+    outside: bool | None
+    state: str | None
+    draft: bool
+    head: str | None
+    base: str | None
+    head_sha: str
+    additions: int | None
+    deletions: int | None
+    lines: int | None
+    files: int | None
+
+
+class PreflightSimilar(Model):
+    """The merged pull request most like this one (same files, then folders)."""
+
+    number: int | None
+    url: str
+    title: str
+    author: str | None
+    outside: bool
+    lines: int | None
+    files: int | None
+    touched_tests: bool | None
+    # Plain English, may hold code spans: "It changed files in the same folders: ...".
+    why: str
+
+
+class PreflightSentence(Model):
+    text: str
+    # The check ids the sentence is about.
+    checks: list[str]
+
+
+class PreflightSummary(Model):
+    """A short model-written summary, checked against the checks. No verdict."""
+
+    model: str | None
+    sentences: list[PreflightSentence]
+
+
+class Preflight(Model):
+    """One pre-flight check of a pull request or branch. There is no overall verdict."""
+
+    repo: str
+    checked_at: str
+    # How far back the merged pull requests it compares with go.
+    window_days: int | None
+    archived: bool
+    # Set when the comparison covers everyone's pull requests, not only outsiders'.
+    note: str | None
+    target: PreflightTarget
+    checks: list[PreflightCheck]
+    counts: PreflightCounts
+    similar: PreflightSimilar | None
+    summary: PreflightSummary | None
+    # This user had checked the same commit before, so this check was free.
+    free_recheck: bool = False
+
+
+class PreflightFor(Model):
+    """The pull request or branch a request named, as parsed."""
+
+    repo: str
+    number: int | None
+    branch: str | None
+    base: str | None
+
+
+class PreflightJob(Model):
+    job_id: str
+    status: JobState
+    stage: str
+    progress: float
+
+
+class PreflightState(Model):
+    """GET /v1/preflight."""
+
+    # False when this server runs without paid features: hide pre-flight.
+    available: bool
+    # Whether anything that pays for pre-flight can be bought yet.
+    on_sale: bool
+    # Signed in: whether this user can run a check now and what it costs.
+    access: Access | None
+    target: PreflightFor | None
+    # Signed in: this user's latest check of `target`.
+    result: Preflight | None
+    # Signed in: a check of `target` still running for this user.
+    job: PreflightJob | None
+
+
+class PreflightJobStatus(Model):
+    status: JobState
+    stage: str | None = None
+    progress: float
+    preflight: Preflight | None
+    error: Error | None
+
+
 # --- account ------------------------------------------------------------------------
 
 class Credits(Model):
