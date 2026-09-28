@@ -7,6 +7,7 @@ import { oauthProviders, signIn } from "@/auth";
 import { connectGitHub, disconnectGitHub, setStatsOptOut } from "@/lib/api";
 import { linkedGitHubId, PENDING_COOKIE, unlinkGitHubIfNotSignIn } from "@/lib/github-account";
 import { currentUser } from "@/lib/session";
+import { ACCOUNT_SETTINGS, PRIVACY_SETTINGS } from "@/lib/settings";
 
 async function signedIn(back: string) {
   const user = await currentUser();
@@ -23,8 +24,8 @@ export async function connect(form: FormData) {
   if (githubId) {
     const r = await connectGitHub(user.id, githubId, optOut);
     if (!r.ok) redirect(`/connect?error=${r.status === 409 ? "taken" : "save"}`);
-    revalidatePath("/settings");
-    redirect("/settings?github=connected");
+    revalidatePath("/settings", "layout");
+    redirect(`${ACCOUNT_SETTINGS}?github=connected`);
   }
 
   // Signed in with Google (or dev sign-in): prove which GitHub account is
@@ -42,17 +43,17 @@ export async function connect(form: FormData) {
 }
 
 export async function setStats(form: FormData) {
-  const user = await signedIn("/settings");
+  const user = await signedIn(PRIVACY_SETTINGS);
   const r = await setStatsOptOut(user.id, form.get("stats_opt_out") === "on");
-  revalidatePath("/settings");
-  redirect(r.ok ? "/settings?github=saved#github" : "/settings?github=error#github");
+  revalidatePath("/settings", "layout");
+  redirect(`${PRIVACY_SETTINGS}?github=${r.ok ? "saved" : "error"}`);
 }
 
 export async function disconnect() {
-  const user = await signedIn("/settings");
+  const user = await signedIn(ACCOUNT_SETTINGS);
   const r = await disconnectGitHub(user.id);
-  if (!r.ok) redirect("/settings?github=error#github");
+  if (!r.ok) redirect(`${ACCOUNT_SETTINGS}?github=error`);
   await unlinkGitHubIfNotSignIn(user.id);
-  revalidatePath("/settings");
-  redirect("/settings?github=disconnected#github");
+  revalidatePath("/settings", "layout");
+  redirect(`${ACCOUNT_SETTINGS}?github=disconnected`);
 }

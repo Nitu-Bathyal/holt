@@ -106,7 +106,7 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
             <p className="mt-6 font-sans text-[0.8rem] text-faint">
               &ldquo;Found via Holt&rdquo; marks a pull request you opened within 30 days of checking that repo here while connected.
               The verdict is Holt&apos;s latest check of each repo; no verdict yet means nobody has checked it.
-              Pull requests to your own repos are left out. <Link href="/settings#github" className="text-link">GitHub settings</Link>
+              Pull requests to your own repos are left out. <Link href="/settings/accounts" className="text-link">GitHub settings</Link>
             </p>
           </>
         )}

@@ -42,7 +42,6 @@ const ROUTES: Record<string, React.ReactElement> = {
   "/how-it-works": <HowItWorksLoading />,
   "/me/history": <HistoryLoading />,
   "/pricing": <PricingLoading />,
-  "/settings": <SettingsLoading />,
   "/signin": <SigninLoading />,
 };
 
@@ -54,9 +53,20 @@ const GENERIC = (
   </LoadingTransition>
 );
 
+/** Settings pages share a layout, and its loading.tsx only covers the section. */
+const SETTINGS = (
+  <>
+    <PageHeadSkeleton headline={1} lead={0} />
+    <div className="wrap pb-14 pt-6 md:pt-10 md:pl-[13.5rem]">
+      <SettingsLoading />
+    </div>
+  </>
+);
+
 function loadingFor(pathname: string): React.ReactElement {
   const known = ROUTES[pathname];
   if (known) return known;
+  if (pathname === "/settings" || pathname.startsWith("/settings/")) return SETTINGS;
   return pathname.split("/").filter(Boolean).length === 2 ? <ReportLoading /> : GENERIC;
 }
 

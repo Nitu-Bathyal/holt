@@ -93,7 +93,7 @@ export function FindView({ initialPicks, initial, source, hf, saved }: { initial
       <Results shown={shown} pending={pending} fit={fit} days={picks.days} saved={saved} picks={picks} setPicks={setPicks} onRetry={retryNow}>
         {source === "profile" && untouched && (
           <span>
-            Started from your profile. <Link href="/settings#profile" className="text-link">edit it</Link>
+            Started from your profile. <Link href="/settings/profile" className="text-link">edit it</Link>
           </span>
         )}
         {source === "last" && untouched && <span>Your last search.</span>}

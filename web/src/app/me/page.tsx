@@ -205,9 +205,9 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
             <p className="mt-10 font-sans text-[0.9rem] text-muted">
               <strong className="text-ink">{credits.balance}</strong> {credits.purchased > 0 ? "AI report credits" : "free AI reports"} left.{" "}
               {credits.can_claim ? (
-                <Link href="/settings" className="text-link">Claim this week&apos;s free one</Link>
+                <Link href="/settings/ai-reports" className="text-link">Claim this week&apos;s free one</Link>
               ) : (
-                <Link href="/settings" className="text-link">How they work</Link>
+                <Link href="/settings/ai-reports" className="text-link">How they work</Link>
               )}
             </p>
           )}

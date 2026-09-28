@@ -117,7 +117,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
           )}
           {profile && (
             <p className="mb-6 font-sans text-[0.88rem] text-muted">
-              Using your profile: {describe(profile)}. <Link href="/settings#profile" className="text-link">edit</Link>
+              Using your profile: {describe(profile)}. <Link href="/settings/profile" className="text-link">edit</Link>
             </p>
           )}
           <nav aria-label="Language">

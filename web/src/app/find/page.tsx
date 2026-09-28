@@ -39,7 +39,7 @@ export default async function FindPage({ searchParams }: PageProps<"/find">) {
           </p>
           {sp.profile === "saved" && (
             <p role="status" className="mt-4 border border-green/50 bg-green/10 px-4 py-2.5 font-sans text-[0.88rem] text-green">
-              Profile saved. This search uses it; change it any time in <Link href="/settings#profile" className="underline">settings</Link>.
+              Profile saved. This search uses it; change it any time in <Link href="/settings/profile" className="underline">settings</Link>.
             </p>
           )}
         </PageHead>
