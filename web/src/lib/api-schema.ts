@@ -444,6 +444,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/playbook/{owner}/{repo}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Unlock Playbook */
+        post: operations["unlock_playbook_v1_me_playbook__owner___repo__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/preflight": {
         parameters: {
             query?: never;
@@ -475,6 +492,26 @@ export interface paths {
         post?: never;
         /** Delete Profile */
         delete: operations["delete_profile_v1_me_profile_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Recommendations
+         * @description Reads only the database: no GitHub call, no model, no rate limit.
+         */
+        get: operations["get_recommendations_v1_me_recommendations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -533,6 +570,57 @@ export interface paths {
          *     doesn't retry them; 400 for anything not signed.
          */
         post: operations["razorpay_webhook_v1_payments_razorpay_webhook_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/playbook-jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Playbook Job */
+        get: operations["get_playbook_job_v1_playbook_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/playbook-jobs/{job_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Playbook Job Events */
+        get: operations["playbook_job_events_v1_playbook_jobs__job_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/playbook/{owner}/{repo}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Playbook */
+        get: operations["get_playbook_v1_playbook__owner___repo__get"];
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1113,7 +1201,7 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "unauthorized" | "not_found" | "invalid_repo" | "invalid_request" | "rate_limited" | "quota_exceeded" | "needs_key" | "claim_not_ready" | "ai_unavailable" | "upstream" | "internal" | "not_implemented" | "payments_off" | "payment_unconfirmed";
+            code: "unauthorized" | "not_found" | "invalid_repo" | "invalid_request" | "rate_limited" | "quota_exceeded" | "needs_plan" | "needs_key" | "claim_not_ready" | "ai_unavailable" | "upstream" | "internal" | "not_implemented" | "payments_off" | "payment_unconfirmed";
             /** Message */
             message: string;
             /** Retry After */
@@ -1561,6 +1649,175 @@ export interface components {
              */
             unlimited: boolean;
         };
+        /** Playbook */
+        Playbook: {
+            /**
+             * Archived
+             * @default false
+             */
+            archived: boolean;
+            /** Generated At */
+            generated_at: string;
+            /** Model */
+            model: string | null;
+            /** Note */
+            note: string | null;
+            /** Repo */
+            repo: string;
+            sections: components["schemas"]["PlaybookSections"];
+            /** Window Days */
+            window_days: number | null;
+        };
+        /** PlaybookClosingReason */
+        PlaybookClosingReason: {
+            /** Examples */
+            examples: components["schemas"]["PlaybookExample"][];
+            /**
+             * Explanation
+             * @default
+             */
+            explanation: string;
+            /** Of */
+            of: number;
+            /** Reason */
+            reason: string;
+            /** Seen */
+            seen: number;
+        };
+        /** PlaybookDone */
+        PlaybookDone: {
+            playbook: components["schemas"]["Playbook"];
+            /**
+             * Status
+             * @default done
+             * @constant
+             */
+            status: "done";
+        };
+        /**
+         * PlaybookExample
+         * @description A closed pull request and what someone in the project wrote on it.
+         */
+        PlaybookExample: {
+            /** Number */
+            number: number;
+            /** Quote */
+            quote: string;
+            /**
+             * Title
+             * @default
+             */
+            title: string;
+            /** Url */
+            url: string;
+            /** Who */
+            who: string;
+        };
+        /** PlaybookItem */
+        PlaybookItem: {
+            /** Sources */
+            sources: components["schemas"]["PlaybookSource"][];
+            /** Text */
+            text: string;
+        };
+        /** PlaybookJob */
+        PlaybookJob: {
+            /** Job Id */
+            job_id: string;
+            /** Progress */
+            progress: number;
+            /** Stage */
+            stage: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "done" | "error";
+        };
+        /** PlaybookJobStatus */
+        PlaybookJobStatus: {
+            error: components["schemas"]["Error"] | null;
+            playbook: components["schemas"]["Playbook"] | null;
+            /** Progress */
+            progress: number;
+            /** Stage */
+            stage: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "done" | "error";
+        };
+        /**
+         * PlaybookSections
+         * @description In display order. Any may be empty: show nothing for an empty one.
+         */
+        PlaybookSections: {
+            /** Checklist */
+            checklist: components["schemas"]["PlaybookItem"][];
+            /** Closing Reasons */
+            closing_reasons: components["schemas"]["PlaybookClosingReason"][];
+            /** Must Do */
+            must_do: components["schemas"]["PlaybookItem"][];
+            /** Reviewers */
+            reviewers: components["schemas"]["PlaybookItem"][];
+            /** Size And Scope */
+            size_and_scope: components["schemas"]["PlaybookItem"][];
+        };
+        /**
+         * PlaybookSource
+         * @description A counted fact behind a playbook item.
+         */
+        PlaybookSource: {
+            /** Links */
+            links: string[];
+            /** Of */
+            of: number | null;
+            /** Seen */
+            seen: number | null;
+            /** Statement */
+            statement: string;
+        };
+        /**
+         * PlaybookState
+         * @description GET /v1/playbook/{owner}/{repo}.
+         */
+        PlaybookState: {
+            access: components["schemas"]["Access"] | null;
+            /** Available */
+            available: boolean;
+            job: components["schemas"]["PlaybookJob"] | null;
+            /** On Sale */
+            on_sale: boolean;
+            playbook: components["schemas"]["Playbook"] | null;
+            /** Repo */
+            repo: string;
+            teaser: components["schemas"]["PlaybookTeaser"] | null;
+            /** Unlocked */
+            unlocked: boolean;
+        };
+        /**
+         * PlaybookTeaser
+         * @description What anyone sees before paying: which sections this repository's
+         *     playbook has, and its first must-do.
+         */
+        PlaybookTeaser: {
+            first: components["schemas"]["PlaybookItem"] | null;
+            /** Generated At */
+            generated_at: string;
+            /** Sections */
+            sections: components["schemas"]["PlaybookTeaserSection"][];
+        };
+        /** PlaybookTeaserSection */
+        PlaybookTeaserSection: {
+            /** Count */
+            count: number;
+            /**
+             * Key
+             * @enum {string}
+             */
+            key: "must_do" | "size_and_scope" | "reviewers" | "closing_reasons" | "checklist";
+        };
         /**
          * Preflight
          * @description One pre-flight check of a pull request or branch. There is no overall verdict.
@@ -1851,6 +2108,89 @@ export interface components {
             status: "queued";
         };
         /**
+         * Recommendation
+         * @description One pick: a repository Holt rates "Worth your time" that fits the user.
+         */
+        Recommendation: {
+            /** Checked At */
+            checked_at: string | null;
+            /** Description */
+            description: string | null;
+            /** Headline */
+            readonly headline: string;
+            /** Issues */
+            issues: components["schemas"]["StarterIssue"][];
+            /** Language */
+            language: string | null;
+            /**
+             * Numbers Line
+             * @description The report's counts line, without its dates (a pick doesn't carry them).
+             */
+            readonly numbers_line: string;
+            readonly odds: components["schemas"]["Odds"] | null;
+            /** Reason */
+            reason: string;
+            /** Repo */
+            repo: string;
+            /** Stars */
+            stars: number | null;
+            stats: components["schemas"]["Stats"];
+            /**
+             * Tone
+             * @enum {string}
+             */
+            readonly tone: "good" | "bad" | "warn";
+            /** Topics */
+            topics: string[];
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "viable" | "not_viable" | "insufficient_evidence";
+            /** Why */
+            why: string[];
+        };
+        /**
+         * RecommendationBasis
+         * @description What the picks were matched on, so the page can say so.
+         */
+        RecommendationBasis: {
+            /** Already Contributing */
+            already_contributing: number;
+            /** Connected */
+            connected: boolean;
+            /** Contributions */
+            contributions: ("code" | "docs" | "tests" | "design" | "translations")[];
+            /** Has Profile */
+            has_profile: boolean;
+            /** History Languages */
+            history_languages: string[];
+            /** Languages */
+            languages: string[];
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "newcomer" | "experienced";
+            /** Topics */
+            topics: string[];
+        };
+        /**
+         * Recommendations
+         * @description GET /v1/me/recommendations.
+         */
+        Recommendations: {
+            basis: components["schemas"]["RecommendationBasis"];
+            /** Computed At */
+            computed_at: string;
+            /** Full */
+            full: boolean;
+            /** Locked */
+            locked: number;
+            /** Picks */
+            picks: components["schemas"]["Recommendation"][];
+        };
+        /**
          * RepoVerdict
          * @description Holt's latest rules verdict for a repository, from the report cache.
          */
@@ -2109,6 +2449,18 @@ export type Packs = components['schemas']['Packs'];
 export type PartialStats = components['schemas']['PartialStats'];
 export type Plan = components['schemas']['Plan'];
 export type PlanFeature = components['schemas']['PlanFeature'];
+export type Playbook = components['schemas']['Playbook'];
+export type PlaybookClosingReason = components['schemas']['PlaybookClosingReason'];
+export type PlaybookDone = components['schemas']['PlaybookDone'];
+export type PlaybookExample = components['schemas']['PlaybookExample'];
+export type PlaybookItem = components['schemas']['PlaybookItem'];
+export type PlaybookJob = components['schemas']['PlaybookJob'];
+export type PlaybookJobStatus = components['schemas']['PlaybookJobStatus'];
+export type PlaybookSections = components['schemas']['PlaybookSections'];
+export type PlaybookSource = components['schemas']['PlaybookSource'];
+export type PlaybookState = components['schemas']['PlaybookState'];
+export type PlaybookTeaser = components['schemas']['PlaybookTeaser'];
+export type PlaybookTeaserSection = components['schemas']['PlaybookTeaserSection'];
 export type Preflight = components['schemas']['Preflight'];
 export type PreflightCheck = components['schemas']['PreflightCheck'];
 export type PreflightCounts = components['schemas']['PreflightCounts'];
@@ -2127,6 +2479,9 @@ export type ProfileIn = components['schemas']['ProfileIn'];
 export type ProfileOut = components['schemas']['ProfileOut'];
 export type ProfilePrefs = components['schemas']['ProfilePrefs'];
 export type Queued = components['schemas']['Queued'];
+export type Recommendation = components['schemas']['Recommendation'];
+export type RecommendationBasis = components['schemas']['RecommendationBasis'];
+export type Recommendations = components['schemas']['Recommendations'];
 export type RepoVerdict = components['schemas']['RepoVerdict'];
 export type Report = components['schemas']['Report'];
 export type ReportList = components['schemas']['ReportList'];
@@ -3119,6 +3474,51 @@ export interface operations {
             };
         };
     };
+    unlock_playbook_v1_me_playbook__owner___repo__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path: {
+                owner: string;
+                repo: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaybookDone"];
+                };
+            };
+            /** @description Accepted */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Queued"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     start_preflight_v1_me_preflight_post: {
         parameters: {
             query?: never;
@@ -3259,6 +3659,41 @@ export interface operations {
             };
         };
     };
+    get_recommendations_v1_me_recommendations_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Recommendations"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     get_metric_v1_metrics_contributions_get: {
         parameters: {
             query?: {
@@ -3346,6 +3781,108 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_playbook_job_v1_playbook_jobs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-internal-key"?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaybookJobStatus"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    playbook_job_events_v1_playbook_jobs__job_id__events_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-internal-key"?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_playbook_v1_playbook__owner___repo__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path: {
+                owner: string;
+                repo: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlaybookState"];
                 };
             };
             /** @description Default Response */

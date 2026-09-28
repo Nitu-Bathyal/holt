@@ -3,13 +3,15 @@
 import "server-only";
 import type {
   AnalysisStart, ApiError, Credits, DiscoverOut, DiscoverRepo, DiscoverSort, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, HistoryItem,
-  JobStatus, Me, Mode, Packs, ProfileOut, ProfilePrefs, Report, Result, StarterIssue,
+  ContributionType, JobStatus, Me, Mode, Packs, ProfileOut, ProfilePrefs, Recommendation, Recommendations, Report, Result, Stats, StarterIssue,
 } from "../types";
 import type { FeedbackInput } from "../feedback";
-import { verdictView } from "./derived";
+import { verdictView, withDerived } from "./derived";
 import { canonicalName, isMockNotFound, mockFindPool, mockIssues, mockReport, PRECACHED } from "./fixtures";
+import { playbookEvents } from "./playbook";
 import { preflightEvents } from "./preflight";
 
+export { playbookState, unlockPlaybook } from "./playbook";
 export { preflightState, startPreflight } from "./preflight";
 
 const JOB_MS = Number(process.env.MOCK_JOB_MS || 6500);
@@ -165,8 +167,9 @@ function sse(event: string, data: unknown) {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
-export function jobEvents(kind: "analyses" | "find" | "preflight-jobs", id: string, signal: AbortSignal): Response {
+export function jobEvents(kind: "analyses" | "find" | "playbook-jobs" | "preflight-jobs", id: string, signal: AbortSignal): Response {
   if (kind === "find") return findEvents(id, signal);
+  if (kind === "playbook-jobs") return playbookEvents(id, signal);
   if (kind === "preflight-jobs") return preflightEvents(id, signal);
   const job = state().jobs.get(id);
   const enc = new TextEncoder();
@@ -463,6 +466,75 @@ export async function refreshContributions(userId: string): Promise<Result<Contr
   const last = refreshed().get(userId);
   if (!last || last + 15 * 60_000 <= Date.now()) refreshed().set(userId, Date.now());
   return { ok: true, data: mockContributions(userId, acct.login) };
+}
+
+// Recommendations: a fixed ranked list once there is a profile or a connection.
+// The real ranking is server rules (server/holt_server/recommendations.py).
+// MOCK_PLAN=pro shows every pick; otherwise the free taste of two.
+function mockPicks(): Recommendation[] {
+  const at = (hoursAgo: number) => new Date(Date.now() - hoursAgo * 3_600_000).toISOString();
+  const stats = (attempts: number, merged: number, noReply: number, reply: number, firstTimers: number): Stats => ({
+    outsider_attempts: attempts, outsider_merged: merged, distinct_outsiders: Math.round(attempts * 0.8),
+    first_time_merged_authors: firstTimers, no_reply: noReply, median_first_response_hours: reply, bot_share: 0.05, still_open: 3, closed_silently: 1,
+  });
+  const issue = (repo: string, number: number, title: string, labels: string[], areas: ContributionType[], daysAgo: number): StarterIssue => ({
+    number, title, url: `https://github.com/${repo}/issues/${number}`, labels, created_at: at(daysAgo * 24), comments: 1,
+    why: ["Labelled good first issue", "Nobody has claimed it"], beginner: labels.some((l) => /good first/i.test(l)), areas,
+  });
+  const pick = (repo: string, language: string, description: string, stars: number, topics: string[], s: Stats, why: string[], issues: StarterIssue[]): Recommendation => {
+    const r = withDerived({ ...mockReport(repo, "rules", 7), stats: s });
+    return { repo, ...verdictView("viable"), verdict: "viable", odds: r.odds, reason: r.verdict_line, numbers_line: r.numbers_line, why, stats: s, description, language, stars, topics, issues, checked_at: at(5) };
+  };
+  return [
+    pick("pallets/click", "Python", "Python composable command line interface toolkit", 16_200, ["cli", "python"], stats(42, 19, 3, 6, 9), [
+      "Written in Python, one of your languages, and you've had pull requests merged in it.",
+      "About cli, a topic you picked.",
+      "Maintainers usually reply within 6 hours.",
+      "9 people had their first pull request merged here recently.",
+      "Has an open docs issue, the kind of work you want to do.",
+    ], [
+      issue("pallets/click", 2811, "Document how to test a command that reads from stdin", ["good first issue", "docs"], ["docs"], 4),
+      issue("pallets/click", 2794, "Help text wraps badly for long option names", ["good first issue"], ["code"], 9),
+    ]),
+    pick("Textualize/rich", "Python", "Rich is a Python library for rich text and beautiful formatting in the terminal.", 51_000, ["terminal", "python"], stats(60, 21, 9, 14, 11), [
+      "Written in Python, one of your languages.",
+      "Maintainers usually reply within 14 hours.",
+      "11 people had their first pull request merged here recently.",
+      "Has 3 open issues labelled for first-timers.",
+    ], [
+      issue("Textualize/rich", 3512, "Add an example for Table.grid to the docs", ["good first issue", "documentation"], ["docs"], 2),
+      issue("Textualize/rich", 3490, "Progress bar ignores `refresh_per_second` when paused", ["good first issue", "bug"], ["code"], 12),
+      issue("Textualize/rich", 3471, "Test coverage for Markdown tables with alignment", ["good first issue", "tests"], ["tests"], 20),
+    ]),
+    pick("fastapi/typer", "Python", "Typer, build great CLIs. Easy to code. Based on Python type hints.", 17_000, ["cli"], stats(35, 10, 6, 30, 5), [
+      "Written in Python, one of your languages.", "About cli, a topic you picked.", "Maintainers usually reply within 30 hours.",
+    ], []),
+    pick("astral-sh/ruff", "Rust", "An extremely fast Python linter and code formatter, written in Rust.", 38_000, ["linter"], stats(120, 70, 8, 3, 22), [
+      "Written in Rust, where you've had pull requests merged before.", "Maintainers usually reply within 3 hours.",
+    ], []),
+    pick("httpie/cli", "Python", "Modern, user-friendly command-line HTTP client for the API era.", 34_000, ["cli", "http"], stats(28, 7, 5, 40, 4), [
+      "Written in Python, one of your languages.", "About cli and http, topics you picked.", "Maintainers usually reply within 2 days.",
+    ], []),
+  ];
+}
+
+export async function recommendations(userId: string, limit: number): Promise<Result<Recommendations>> {
+  const prefs = profiles().get(userId) ?? null;
+  const connected = connections().has(userId);
+  const full = process.env.MOCK_PLAN === "pro" || user(userId).me.plan !== "free";
+  const picks = prefs || connected ? mockPicks() : [];
+  const shown = picks.slice(0, full ? limit : Math.min(limit, 2));
+  return {
+    ok: true,
+    data: {
+      picks: shown, locked: full ? 0 : Math.max(picks.length - 2, 0), full,
+      basis: {
+        languages: prefs?.languages ?? [], topics: prefs?.topics ?? [], level: prefs?.level ?? "newcomer", contributions: prefs?.contributions ?? [],
+        history_languages: connected ? ["Python", "Rust"] : [], already_contributing: connected ? 4 : 0, has_profile: prefs !== null, connected,
+      },
+      computed_at: new Date().toISOString(),
+    },
+  };
 }
 
 // Profile: kept in memory per user, like the connections above.
