@@ -4,6 +4,7 @@
 // The model is server configuration, so there is nothing to choose here.
 import Link from "next/link";
 import { useState } from "react";
+import { EXAMPLE_PATH } from "@/lib/example-report";
 import { shortDate } from "@/lib/format";
 import type { Credits, Mode } from "@/lib/types";
 import { AnalysisRunner } from "./analysis-runner";
@@ -54,6 +55,10 @@ export function AiStart({ repo, days, signedIn, credits }: { repo: string; days:
           </li>
         ))}
       </ul>
+      <p className="mt-4 font-sans text-[0.9rem] text-muted" data-ai-example-link>
+        Want to see one first?{" "}
+        <Link href={EXAMPLE_PATH} className="text-link">Read an example AI report</Link>. It&apos;s free and doesn&apos;t use a credit.
+      </p>
       {credits && (
         <p className={`mt-5 max-w-2xl border px-3 py-2 font-sans text-[0.9rem] ${blocked ? "border-orange/50 text-orange" : "border-green/50 text-green"}`} data-credits>
           {creditsNote(credits)}
