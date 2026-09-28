@@ -454,3 +454,21 @@ class Profile(Base):
                                                                 nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class RepoUserStats(Base):
+    """What connected Holt users' pull requests to one repository came to
+    (repo_stats.py): counts only, never who. A row exists only while at least
+    `repo_stats.MIN_PEOPLE` people who didn't opt out make up the numbers.
+    Rebuilt by the daily contributions refresh; a user's repositories are
+    rebuilt at once when they opt out or disconnect."""
+
+    __tablename__ = "repo_user_stats"
+
+    repo_key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    people: Mapped[int] = mapped_column(Integer)
+    pull_requests: Mapped[int] = mapped_column(Integer)
+    merged: Mapped[int] = mapped_column(Integer)
+    closed: Mapped[int] = mapped_column(Integer)
+    waiting: Mapped[int] = mapped_column(Integer)
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

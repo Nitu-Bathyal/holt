@@ -1128,6 +1128,28 @@ export interface components {
             /** Verdict */
             verdict: ("viable" | "not_viable" | "insufficient_evidence") | null;
         };
+        /**
+         * HoltUsers
+         * @description Pull requests that connected Holt users sent to this repository in the
+         *     last `window_days`: counts only. Present only when at least 5 people who
+         *     didn't opt out of statistics make up the numbers (repo_stats.py).
+         */
+        HoltUsers: {
+            /** Closed */
+            closed: number;
+            /** Computed At */
+            computed_at: string;
+            /** Merged */
+            merged: number;
+            /** People */
+            people: number;
+            /** Pull Requests */
+            pull_requests: number;
+            /** Waiting */
+            waiting: number;
+            /** Window Days */
+            window_days: number;
+        };
         /** JobStatus */
         JobStatus: {
             error: components["schemas"]["Error"] | null;
@@ -1367,6 +1389,7 @@ export interface components {
             generated_at: string;
             /** Headline */
             readonly headline: string;
+            holt_users: components["schemas"]["HoltUsers"] | null;
             /** Landing */
             landing: components["schemas"]["LandingPath"][];
             /**
@@ -1525,6 +1548,7 @@ export type HttpValidationError = components['schemas']['HTTPValidationError'];
 export type Health = components['schemas']['Health'];
 export type History = components['schemas']['History'];
 export type HistoryItem = components['schemas']['HistoryItem'];
+export type HoltUsers = components['schemas']['HoltUsers'];
 export type JobStatus = components['schemas']['JobStatus'];
 export type LandingPath = components['schemas']['LandingPath'];
 export type LanguageCount = components['schemas']['LanguageCount'];

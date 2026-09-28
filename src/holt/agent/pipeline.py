@@ -15,7 +15,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from holt.agent import landing, landing_detection, narration, stages
+from holt.agent import landing, landing_detection, narration, repo_kind_rules, stages
 from holt.agent.findings import Finding, Findings
 from holt.agent.signals import (
     MIN_AGE_HOURS,
@@ -308,7 +308,10 @@ def _timed(timings: dict[str, float], name: str):
 
 
 def _computed_bottom_line(verdict, rules) -> str:
-    deciding = next((r for r in rules if getattr(r, "code", "") != "awaiting_reply"),
+    # Neither line gives the reason: one is about timing, the other says what
+    # the work is (repo_kind_rules) without deciding anything.
+    deciding = next((r for r in rules
+                     if getattr(r, "code", "") not in ("awaiting_reply", "package_updates")),
                     rules[0] if rules else "")
     return f"{headline(verdict)}. {deciding}"
 
@@ -403,9 +406,19 @@ def analyze_without_model(
         findings.add("contribute_elsewhere", elsewhere, (meta.evidence_id,),
                      "read from GitHub's mirror and fork fields and the description")
 
+    # What Stage A would call a registry or a list, measured from the diffs
+    # outside contributors sent instead of asked of a model. The AI report
+    # still takes the model's word (see repo_kind_rules).
+    kind = repo_kind_rules.read(records)
+    if kind.catalogue is not None:
+        repo_kind_rules.add_finding(findings, kind.catalogue)
+
     report("Applying the rules", 0.9)
     verdict, rules = decide(findings, signals, contributor_days)
     _say_how_merges_landed(rules, threads)
+    # After the line above, which the generic kind rule silences: the measured
+    # sentence replaces it and stays last, where the web reads the reason.
+    rules = repo_kind_rules.explain(rules, kind, verdict)
 
     return Assessment(
         repo=repo,
@@ -414,8 +427,9 @@ def analyze_without_model(
         bottom_line=_computed_bottom_line(verdict, rules),
         limits=(
             "No model ran. This answer comes from counting the pull request "
-            "history, so it can't tell you what specific threads said, who was "
-            "welcoming, or what kind of project this is, and it cites no specific "
+            "history, so it can't tell you what specific threads said or who was "
+            "welcoming, and beyond spotting catalogues and lists it can't tell what "
+            "kind of project this is. It cites no specific "
             "threads, where a full AI report cites about 12. In our testing on "
             "repositories it hadn't seen, counting alone predicted how newcomers "
             "would fare a little less well than the full report (a score of 0.55 "
@@ -427,7 +441,8 @@ def analyze_without_model(
         as_of=as_of,
         landing=landing.render(landing.compute(threads)),
         claims=[
-            Claim(text=f"{i.field.replace('_', ' ')}: {i.value}", evidence_id=i.evidence_ids[0])
+            Claim(text=i.note if i.field == "repo_kind" else f"{i.field.replace('_', ' ')}: {i.value}",
+                  evidence_id=i.evidence_ids[0])
             for i in findings
         ],
         method=NO_MODEL_METHOD,
