@@ -190,9 +190,6 @@ function SignInToSearch({ back }: { back: string }) {
     <div className="border border-dashed border-line-strong p-6 text-center sm:p-8" data-signin-card>
       <CatFace mood="ready" className="text-[1.6rem]" />
       <p className="mt-4 text-[1.1rem] font-semibold">Sign in to search with these filters.</p>
-      <p className="mx-auto mt-2 max-w-md font-sans text-muted">
-        It&apos;s free: one click with GitHub or Google, and you come straight back to this search.
-      </p>
       <Link href={signInHref(back)} prefetch={false} className="btn-primary mt-5">
         sign in to search <span aria-hidden="true">→</span>
       </Link>
