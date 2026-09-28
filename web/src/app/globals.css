@@ -755,15 +755,14 @@
     position: relative;
     overflow: hidden;
   }
+  /* The scan line: a panel-sized layer with the line drawn at its top edge,
+     moved with transform (animating `top` counted as layout shift). */
   .scan::after {
     position: absolute;
-    right: 0;
-    left: 0;
-    top: 0;
-    height: 1px;
-    background: var(--blue);
-    box-shadow: 0 0 12px var(--blue);
+    inset: 0;
+    background: linear-gradient(var(--blue) 0 1px, color-mix(in oklab, var(--blue) 22%, transparent) 1px, transparent 12px);
     content: "";
+    pointer-events: none;
     animation: scan 1.6s ease-in-out infinite;
   }
 }
@@ -791,14 +790,14 @@
 }
 @keyframes scan {
   0% {
-    top: 0;
+    transform: translateY(0);
     opacity: 0;
   }
   20% {
     opacity: 0.8;
   }
   100% {
-    top: 100%;
+    transform: translateY(100%);
     opacity: 0;
   }
 }
@@ -1027,14 +1026,14 @@
     }
     .land-bar {
       transform-origin: top;
-      animation: land-draw 520ms var(--ease-expressive) both;
+      animation: answer-draw 520ms var(--ease-expressive) both;
     }
     /* Desktop only: the headline stamps down. It never fades, and on phones
        it never moves (it's the largest paint). */
     @media (min-width: 1024px) {
       .land-stamp {
         transform-origin: left center;
-        animation: land-stamp 480ms var(--ease-expressive) 120ms both;
+        animation: answer-stamp 480ms var(--ease-expressive) 120ms both;
       }
     }
   }
@@ -1051,12 +1050,12 @@
     transform: translateX(-6px);
   }
 }
-@keyframes land-draw {
+@keyframes answer-draw {
   from {
     transform: scaleY(0);
   }
 }
-@keyframes land-stamp {
+@keyframes answer-stamp {
   from {
     transform: scale(1.08) rotate(-1.5deg);
   }

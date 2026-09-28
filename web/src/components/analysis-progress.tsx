@@ -4,7 +4,7 @@
 // each stage Holt reaches prints a line, a finished one gets a tick and how
 // long it took, and the cat thinks while it works. The box keeps one height
 // from the start (the last six lines show), so nothing below it moves. Screen
-// readers hear only the current stage; the ticking clock is theirs to skip.
+// readers hear only the current stage, never the ticking times.
 import { useEffect, useState } from "react";
 import { logStage, stageTime } from "@/lib/stages";
 import { ReactiveCat } from "./reactive-cat";
@@ -34,8 +34,10 @@ export function AnalysisProgress({ repo, stage, progress, mode, kicker, note }: 
       <div className="flex flex-col-reverse items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
         <div className="min-w-0">
           <p className="break-words text-[0.8rem] uppercase tracking-[0.08em] text-faint">{kicker ?? `${mode === "ai" ? "writing your AI report" : "checking"} · ${repo}`}</p>
-          <h1 className="mt-3 text-[1.5rem] font-semibold leading-tight tracking-tight sm:text-[2.4rem]">{current.title}…</h1>
-          <p className="mt-2 max-w-lg font-sans text-muted">{current.detail}</p>
+          {/* Room for the longest stage and detail from the start (two lines of
+              each on phones), so a new stage never pushes the log down. */}
+          <h1 className="mt-3 min-h-[2.5em] text-[1.5rem] font-semibold leading-tight tracking-tight sm:min-h-0 sm:text-[2.4rem]">{current.title}…</h1>
+          <p className="mt-2 min-h-[3em] max-w-lg font-sans leading-normal text-muted sm:min-h-[1.5em]">{current.detail}</p>
         </div>
         <ReactiveCat mood="thinking" className="shrink-0 text-[1.4rem] sm:text-[2.2rem]" />
       </div>
