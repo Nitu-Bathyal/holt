@@ -191,7 +191,7 @@ export default function PrivacyPage() {
         analysed, plus Holt&rsquo;s own findings. <strong>Nothing about you</strong> (no name, email or account information) is included.
       </p>
       <ul>
-        <li>Requests go through <strong>OpenRouter</strong>, on Holt&rsquo;s own account, which routes them to the model vendor for the chosen model (currently OpenAI, Google or Anthropic models). OpenRouter&rsquo;s and that vendor&rsquo;s policies apply to those requests.</li>
+        <li>Requests go through <strong>OpenRouter</strong>, on Holt&rsquo;s own account, which routes them to the vendor of the model Holt uses (currently an OpenAI, Google or Anthropic model). OpenRouter&rsquo;s and that vendor&rsquo;s policies apply to those requests.</li>
       </ul>
 
       <h2>8. Who else sees data</h2>

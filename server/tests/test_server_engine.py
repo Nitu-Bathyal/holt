@@ -35,7 +35,7 @@ def replay_harness(make_harness, **overrides):
 
 
 def check_report_shape(report: dict, mode: str) -> None:
-    keys = {"repo", "mode", "days", "verdict", "headline", "summary", "stats",
+    keys = {"repo", "mode", "days", "verdict", "headline", "bottom_line", "summary", "stats",
             "decided_by", "unknowns", "landing", "never_landed", "evidence",
             "evidence_until", "generated_at", "cost", "rule_codes", "tone",
             "verdict_line", "odds", "holt_users"}
@@ -56,7 +56,8 @@ def check_report_shape(report: dict, mode: str) -> None:
     assert report["evidence_until"] == "2026-06-01T00:00:00Z"
     # What a beginner reads is plain English. (`kind`/`value` are machine keys.)
     prose = " ".join([report["headline"], report["verdict_line"],
-                      (report["odds"] or {}).get("text", ""), report["summary"] or "", *report["decided_by"],
+                      (report["odds"] or {}).get("text", ""), report["bottom_line"] or "",
+                      report["summary"] or "", *report["decided_by"],
                       *report["unknowns"], *(e["text"] for e in report["evidence"])])
     for jargon in ("not_viable", "MCC", "repo_kind", "insufficient_evidence"):
         assert jargon not in prose
@@ -75,6 +76,7 @@ def test_rules_report_end_to_end(make_harness):
     assert report["verdict"] == expected.verdict.value
     assert report["stats"]["outsider_attempts"] == trace.signals.outsider_threads
     assert report["summary"] is None and report["cost"] is None
+    assert report["bottom_line"] is None  # the verdict block already says it
     assert report["landing"], "nixpkgs has well-known landing areas"
     # Even with no AI, the counts come with pull requests to click through to.
     values = [e["value"] for e in report["evidence"] if e["kind"] == "outsider_pr"]
@@ -93,6 +95,9 @@ def test_ai_report_end_to_end(make_harness):
     assert report["summary"]
     assert report["evidence"], "replayed run cites evidence"
     assert report["cost"]["input_tokens"] > 0
+    assert isinstance(report["cost"]["usd"], float) and report["cost"]["usd"] >= 0
+    assert isinstance(report["cost"]["seconds"], float) and report["cost"]["seconds"] >= 0
+    assert report["bottom_line"] is None or isinstance(report["bottom_line"], str)
     assert any(e["kind"] == "outcome" for e in report["evidence"])
     assert all(e["url"].startswith("https://github.com/NixOS/nixpkgs")
                for e in report["evidence"])
@@ -133,6 +138,56 @@ def test_ai_all_claims_dropped_is_stated():
     assert out["unknowns"][0] == report_mod.ALL_DROPPED_UNKNOWN
     assert "Could not tell X." in out["unknowns"]
     assert out["headline"] == "Worth your time"
+
+
+def test_bottom_line_only_in_ai_mode():
+    from holt.agent.signals import compute
+
+    a = Assessment(repo="o/r", verdict=Verdict.VIABLE, summary="s",
+                   bottom_line="You'd likely get a reply. Start small.")
+    ai = report_mod.build(repo="o/r", mode="ai", assessment=a, signals=compute({}), records=[])
+    assert ai["bottom_line"] == "You'd likely get a reply. Start small."
+    rules = report_mod.build(repo="o/r", mode="rules", assessment=a, signals=compute({}),
+                             records=[])
+    assert rules["bottom_line"] is None
+    empty = Assessment(repo="o/r", verdict=Verdict.VIABLE, summary="s", bottom_line="")
+    assert report_mod.build(repo="o/r", mode="ai", assessment=empty, signals=compute({}),
+                            records=[])["bottom_line"] is None
+
+
+def test_reports_cached_before_new_fields_still_validate():
+    from holt_server import schema
+
+    old = {"repo": "o/r", "mode": "ai", "days": 7, "verdict": "viable", "summary": "s",
+           "stats": {"outsider_attempts": 1, "outsider_merged": 1, "distinct_outsiders": 1,
+                     "first_time_merged_authors": 1, "no_reply": 0,
+                     "median_first_response_hours": 1.0, "bot_share": 0.0},
+           "generated_at": "2026-09-01T00:00:00Z",
+           "cost": {"model": "m", "input_tokens": 1, "output_tokens": 1}}
+    out = schema.Report.model_validate(old).model_dump(mode="json")
+    assert out["bottom_line"] is None
+    assert out["cost"]["usd"] is None and out["cost"]["seconds"] is None
+
+
+def test_ai_cost_records_dollars_seconds_and_logs_one_line(caplog):
+    from types import SimpleNamespace
+
+    from holt.model import Usage
+
+    m = SimpleNamespace(usage=Usage())
+    m.usage.add("openai/gpt-5-mini", 12000, 3000)
+    m.usage.cost_usd = 0.0123456
+    timings = {"classify": 1.31, "narrate": 3.5, "total": 9.87}
+    with caplog.at_level("INFO", logger="holt_server.engine"):
+        cost = engine.ai_cost("o/r", m, timings)
+    assert cost == {"model": "openai/gpt-5-mini", "input_tokens": 12000,
+                    "output_tokens": 3000, "usd": 0.01235, "seconds": 9.9}
+    (line,) = [r.getMessage() for r in caplog.records]
+    for part in ("o/r", "openai/gpt-5-mini", "input_tokens=12000", "output_tokens=3000",
+                 "usd=0.01235", "total=9.9s", "classify=1.3s", "narrate=3.5s"):
+        assert part in line, line
+    # Before the engine records timings, the report still has the fields.
+    assert engine.ai_cost("o/r", m, {})["seconds"] == 0.0
 
 
 def test_claim_without_url_is_left_out():
