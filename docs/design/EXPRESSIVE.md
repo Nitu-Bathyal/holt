@@ -36,7 +36,10 @@ We took none of their layout, copy, colours, outline type, all-caps headlines or
 - **Replay (3) has two modes**, "on the web" (default: the web progress, then the report landing) and "in your terminal" (the real `holt analyze` output).
 - **The "three answers" pane gets a new design**, not a restyle. Each verdict has to read instantly: what it means for you and what to do next.
 - **Footer (7):** the sign-off is a terminal line, `$ git commit --to-the-right-repo`, with a blinking cursor. It has no "Holt only reads public GitHub data…" line.
-- **Hero:** the headline, paste box and badges respond to the pointer a few px, eased (a gentle parallax). Nothing on touch, and nothing under reduced motion.
+- **Hero:** no pointer parallax. A gentle lean of the headline, paste box and badges was tried in #147 and removed at the user's request (29 Sep): text doesn't wobble. The companion cat may still look at the pointer.
+- **Every landing section moves** (29 Sep): headlines land word by word as you scroll, and anything you can point at (people, receipts, answers) lifts and reacts. Section 03 is four cards, three people and "you", each with its own cat and a real example from the example report.
+- **One cat on the landing.** At the end of the page the scroll companion glides into the footer cat's spot (top right of the footer, on every page) and becomes it. Scrolling back up, it lifts out again. Reduced motion: no travel; the companion stays with the hero and the footer cat sits on the right. Phones have no companion, as before.
+- **Landing section 08** (the closing paste box) is removed: the footer's form closes the landing.
 
 ## The patterns
 ✓ = in the prototype. Cost: **P** = performance, **A** = accessibility.

@@ -7,8 +7,8 @@ import { HOME } from "@/lib/home";
 import { EXAMPLES_PATH } from "@/lib/examples";
 import type { SessionUser } from "@/lib/session";
 import { CatFace } from "./cat-face";
-import { logoHref } from "@/lib/shell";
 import { JumpNav } from "./shell/jump-nav";
+import { LogoLink } from "./shell/logo-link";
 import { Icon } from "./shell/icons";
 import { QuickCheck } from "./shell/quick-check";
 import { ThemeToggle } from "./theme-toggle";
@@ -18,11 +18,21 @@ export async function doSignOut() {
   await signOut({ redirectTo: "/" });
 }
 
-function Logo({ href }: { href: string }) {
+const LOGO = "cat-perk inline-flex min-h-11 shrink-0 items-center gap-3";
+
+function LogoBody() {
   return (
-    <Link href={href} className="cat-perk inline-flex min-h-11 shrink-0 items-center gap-3">
+    <>
       <CatFace className="text-[1.05rem]" perk />
       <span className="text-[0.95rem] font-semibold tracking-tight">holt<span className="sr-only"> home</span></span>
+    </>
+  );
+}
+
+function Logo({ href }: { href: string }) {
+  return (
+    <Link href={href} className={LOGO}>
+      <LogoBody />
     </Link>
   );
 }
@@ -77,7 +87,12 @@ export function MarketingHeader({ user, credits }: { user: SessionUser | null; c
   return (
     <header className="site-header sticky top-0 z-40 border-b border-line bg-header" style={{ viewTransitionName: "site-header" }}>
       <div className="wrap flex min-h-[60px] items-center gap-4">
-        <span className="mr-auto"><Logo href={logoHref(!!user)} /></span>
+        <span className="mr-auto">
+          {/* Signed out, on the landing page it glides back to the hero (lib/shell.ts, logoAction). */}
+          <LogoLink signedIn={!!user} className={LOGO}>
+            <LogoBody />
+          </LogoLink>
+        </span>
         <JumpNav className="hidden items-center gap-6 text-[0.84rem] text-muted lg:flex" />
         <div className="flex items-center gap-1">
           <ThemeToggle />

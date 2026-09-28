@@ -877,6 +877,17 @@
     }
   }
 
+  /* While the landing's scroll companion is out and about, it is the cat:
+     the footer's own stays hidden until the companion settles into its spot. */
+  :root[data-cat-away] [data-footer-cat] {
+    visibility: hidden;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    /* Its own name, so the squash replays when the companion lands. */
+    [data-footer-cat][data-landed] .rcat-face {
+      animation: rcat-land 460ms var(--ease-expressive);
+    }
+  }
   .ft-signoff {
     line-height: 1.15;
   }
@@ -947,6 +958,17 @@
   }
   55% {
     transform: scale(0.97, 1.06) translateY(-0.06em);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes rcat-land {
+  0% {
+    transform: scale(1.18, 0.66) translateY(0.1em);
+  }
+  55% {
+    transform: scale(0.96, 1.07) translateY(-0.08em);
   }
   100% {
     transform: none;
@@ -1421,6 +1443,603 @@
 @media (prefers-reduced-motion: reduce) and (max-width: 1023px) {
   .fade-up {
     animation: none;
+  }
+}
+
+/* Landing at full scale (docs/design/EXPRESSIVE.md, pattern 1). Each pane is
+   one screen tall (.pane), so its content is sized by the screen too: type by
+   the smaller of width and height (min(vw, svh)), so it fills 1440x900 and
+   still fits 1280x720; rem floors keep phones readable. No side rail: each
+   section's number sits above its headline (.ls-kicker). Unlayered on
+   purpose: it overrides the sections' fixed text-[…] utilities, and only
+   inside .landing-wide (the landing's Grid). */
+.landing-wide {
+  --gut: clamp(16px, 4vw, 80px);
+  width: min(calc(100% - 2 * var(--gut)), 1680px);
+}
+.landing-wide .h2 {
+  max-width: 22ch;
+  font-size: clamp(1.75rem, min(4.6vw, 7.6svh), 4.6rem);
+}
+.landing-wide .h2.ls-h2-wide {
+  max-width: none;
+  font-size: clamp(2rem, min(6.4vw, 10.5svh), 7rem);
+}
+.landing-wide .prose-sans {
+  font-size: clamp(1rem, min(1.25vw, 2.3svh), 1.3rem);
+}
+.ls-kicker {
+  margin-bottom: clamp(0.6rem, 2svh, 1.4rem);
+  color: var(--muted);
+  font-size: clamp(0.82rem, min(1vw, 1.9svh), 1.05rem);
+}
+.ls-kicker .text-blue {
+  margin-right: 0.8ch;
+}
+[data-hero] .ls-kicker {
+  margin-bottom: 0;
+}
+.ls-subhead {
+  color: var(--muted);
+  font-size: clamp(1rem, min(1.4vw, 2.6svh), 1.4rem);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+/* Text beside its demo from 1024px: section 02 (words | replay), 04 (flip | form). */
+.ls-split {
+  display: grid;
+  gap: clamp(1.5rem, 4svh, 3rem);
+}
+@media (min-width: 1024px) {
+  .ls-split {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    align-items: center;
+    gap: clamp(2rem, 4vw, 5rem);
+  }
+  .ls-split--even {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+
+/* The hero. */
+.hero-lede {
+  display: grid;
+  gap: clamp(0.9rem, 2.4svh, 2rem);
+  margin-top: clamp(0.6rem, 2.6svh, 2.4rem);
+}
+.hero-h1 {
+  font-size: clamp(2.3rem, min(11vw, 10svh), 9.5rem);
+  line-height: 0.94;
+}
+.hero-sub {
+  max-width: 36ch;
+  font-size: clamp(1rem, min(1.35vw, 2.5svh), 1.45rem);
+  line-height: 1.55;
+}
+/* The sub-line moves beside the headline only where both fit on one row;
+   the headline's vw cap then leaves "actually merge" room in ~70%. */
+@media (min-width: 1280px) {
+  .hero-lede {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 28%);
+    align-items: end;
+  }
+  .hero-h1 {
+    font-size: clamp(2.3rem, min(8.4vw, 11svh), 9.5rem);
+  }
+}
+.hero-act {
+  max-width: 1080px;
+  margin-top: clamp(1.1rem, 3.4svh, 3rem);
+}
+@media (min-width: 1024px) {
+  [data-hero] #repo-input {
+    height: clamp(3.5rem, 7.5svh, 5.25rem);
+    font-size: clamp(1rem, min(1.3vw, 2.4svh), 1.35rem);
+  }
+}
+.hero-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem 2rem;
+  max-width: 1080px;
+  margin-top: clamp(0.9rem, 2.4svh, 2.2rem);
+  font-size: clamp(0.9rem, min(1.05vw, 2svh), 1.1rem);
+}
+/* Phones held sideways: compact, as before. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .hero-h1 {
+    font-size: 2rem;
+  }
+  .hero-lede {
+    gap: 0.5rem;
+    margin-top: 0.4rem;
+  }
+}
+
+/* The companion cat starts top right of the hero, beside the kicker, where
+   the full-scale headline leaves room (the sub-line sits at the headline's
+   foot). The -20px is the button's padding: the face lines up with the
+   content edge. */
+@media (min-width: 1024px) {
+  [data-cat-companion] {
+    top: calc(61px + clamp(0.4rem, 2.5svh, 2rem));
+    right: calc(max(clamp(16px, 4vw, 80px), 50% - 840px) - 20px);
+  }
+}
+/* Reduced motion: the companion cat doesn't travel (cat-companion.tsx never
+   starts), so it stays with the hero instead of hanging over every section;
+   the footer's cat is the one at the end. */
+@media (prefers-reduced-motion: reduce) and (min-width: 1024px) {
+  [data-cat-companion] {
+    position: absolute;
+    top: clamp(0.4rem, 2.5svh, 2rem);
+  }
+}
+
+/* hub → holt split-flap (motion/swap-host.tsx). Both letters share one grid
+   cell; overflow: clip (not hidden) keeps the text baseline. */
+.swap {
+  color: inherit;
+  cursor: pointer;
+}
+.swap-flaps {
+  display: inline-flex;
+}
+.swap-flap {
+  display: inline-grid;
+  width: 1ch;
+  overflow: clip;
+}
+.swap-from,
+.swap-to {
+  grid-area: 1 / 1;
+  text-align: center;
+}
+.swap-from {
+  color: var(--orange);
+  transform: translateY(-100%);
+}
+.swap-to,
+.swap-on {
+  background: var(--green);
+  color: var(--on-accent);
+}
+.swap-on {
+  padding-inline: 0.1em;
+}
+.swap-sub,
+.swap-tail {
+  display: inline-block;
+}
+.swap[data-swapped="false"] .swap-from {
+  transform: none;
+}
+.swap[data-swapped="false"] .swap-to {
+  transform: translateY(100%);
+}
+/* "hub" is a letter shorter than "holt": the tail closes the gap. */
+.swap[data-swapped="false"] .swap-tail {
+  transform: translateX(-1ch);
+}
+.swap[data-swapped="false"] .swap-sub {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .swap-from,
+  .swap-to {
+    transition: transform 420ms var(--ease-expressive);
+    transition-delay: calc(var(--i) * 70ms);
+  }
+  .swap-tail,
+  .swap-sub {
+    transition:
+      transform 420ms var(--ease-expressive) 200ms,
+      opacity 200ms var(--ease-out);
+  }
+}
+
+/* The landing story (docs/design/EXPRESSIVE.md, patterns 3 and 6, and the
+   redesigned panes): transform and opacity only, and every rule that moves
+   something sits under prefers-reduced-motion: no-preference, so reduced
+   motion gets the finished state. */
+
+/* Headline words land as they come up the screen (landing/words.tsx). */
+.rw-word {
+  display: inline-block;
+}
+.rw-quiet {
+  color: var(--faint);
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: view()) {
+    .rw-word {
+      animation: rw-in linear both;
+      animation-timeline: view();
+      animation-range: cover calc(4% + var(--w, 0) * 2.2%) cover calc(20% + var(--w, 0) * 2.2%);
+    }
+    /* "void" arrives last, from further away, and stays a little lost. */
+    .rw-quiet {
+      animation-name: rw-void;
+      animation-range: cover 18% cover 42%;
+    }
+  }
+}
+@keyframes rw-in {
+  from {
+    opacity: 0;
+    transform: translateY(0.45em);
+  }
+}
+@keyframes rw-void {
+  from {
+    opacity: 0;
+    transform: translateY(0.2em) scale(0.6);
+  }
+  to {
+    transform: scale(0.96);
+  }
+}
+
+/* Anything you can point at lifts a little (people, receipts, answers). */
+/* `translate`/`scale` (not `transform`), so they compose with the entrances. */
+.ls-lift {
+  transition:
+    translate var(--dur-base) var(--ease-out),
+    opacity var(--dur-base) var(--ease-out),
+    border-color var(--dur-base) var(--ease-out);
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .ls-lift[data-hot="true"],
+  .ls-thread.ls-lift:hover {
+    translate: 0 -6px;
+  }
+}
+
+/* A caret, for terminals. */
+.ls-caret {
+  display: inline-block;
+  width: 0.55em;
+  height: 1em;
+  margin-left: 0.15em;
+  vertical-align: -0.15em;
+  background: var(--blue);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ls-caret {
+    animation: ft-caret 1.1s steps(1) infinite;
+  }
+}
+
+/* 02: the check replay (landing/check-replay.tsx). Lines are always laid
+   out; .ls-off only hides them, so the box never changes height. */
+.ls-panel {
+  grid-area: 1 / 1;
+}
+.ls-ghost {
+  color: transparent;
+}
+.ls-off {
+  opacity: 0;
+}
+.ls-modes-pill {
+  transition: transform 200ms var(--ease-move);
+}
+.ls-modes-pill[data-mode="terminal"] {
+  transform: translateX(100%);
+}
+.ls-meter {
+  transform-origin: left;
+}
+.ls-stamp {
+  border-color: currentColor;
+  transform: rotate(-1deg);
+}
+@media (prefers-reduced-motion: no-preference) {
+  .ls-on {
+    animation: ls-print 240ms var(--ease-out) both;
+  }
+  .ls-card[data-landed="true"] {
+    animation: ls-rise 360ms var(--ease-out) both;
+  }
+  .ls-card[data-landed="true"] .ls-card-bar {
+    transform-origin: top;
+    animation: land-draw 520ms var(--ease-expressive) both;
+  }
+  .ls-card[data-landed="true"] .ls-card-headline {
+    transform-origin: left center;
+    animation: land-stamp 480ms var(--ease-expressive) 120ms both;
+  }
+  .ls-card[data-landed="true"] .ls-meter {
+    animation: ls-fill 800ms var(--ease-expressive) calc(var(--d, 0ms) + 350ms) both;
+  }
+  .ls-stamp[data-landed="true"] {
+    animation: ls-stamp 460ms var(--ease-expressive) both;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .ls-modes-pill {
+    transition: none;
+  }
+}
+@keyframes ls-print {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+@keyframes ls-rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+@keyframes ls-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+@keyframes ls-stamp {
+  0% {
+    opacity: 0;
+    transform: scale(1.6) rotate(-4deg);
+  }
+  60% {
+    opacity: 1;
+    transform: scale(0.96) rotate(-1deg);
+  }
+  100% {
+    transform: rotate(-1deg);
+  }
+}
+@keyframes land-draw {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes land-stamp {
+  from {
+    transform: scale(1.08) rotate(-1.5deg);
+  }
+}
+
+/* 03: four people (landing/people.tsx). */
+.ls-people {
+  display: grid;
+  gap: clamp(0.75rem, 1.4vw, 1.25rem);
+}
+@media (min-width: 640px) {
+  .ls-people {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@media (min-width: 1280px) {
+  .ls-people {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+.ls-person {
+  min-height: clamp(13rem, 36svh, 24rem);
+  padding: clamp(1.1rem, 1.6vw, 1.6rem);
+}
+.ls-person-cat {
+  font-size: clamp(1.3rem, min(2vw, 3.6svh), 2.2rem);
+}
+.ls-person-title {
+  padding-top: clamp(1rem, 4svh, 2.5rem);
+  font-size: clamp(1.25rem, min(1.9vw, 3.4svh), 2rem);
+}
+.ls-person-body {
+  font-size: clamp(0.95rem, min(1.05vw, 2svh), 1.1rem);
+}
+.ls-person[data-hot="true"] {
+  border-color: var(--blue);
+}
+.ls-person--you[data-hot="true"] {
+  border-color: var(--orange);
+}
+@media (hover: hover) {
+  .ls-people[data-hot] .ls-person:not([data-hot="true"]) {
+    opacity: 0.55;
+  }
+  /* The example waits beside its card, dimmed, and slides in when pointed at. */
+  .ls-person-example {
+    opacity: 0.5;
+    transition:
+      opacity var(--dur-base) var(--ease-out),
+      translate var(--dur-base) var(--ease-out);
+  }
+  .ls-person[data-hot="true"] .ls-person-example {
+    opacity: 1;
+  }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .ls-person-example {
+    translate: 0 6px;
+  }
+  .ls-person[data-hot="true"] .ls-person-example {
+    translate: none;
+  }
+}
+@media (prefers-reduced-motion: no-preference) and (min-width: 1024px) {
+  .ls-people[data-phase="wait"] .ls-person {
+    transform: translateY(24px);
+  }
+  .ls-people[data-phase="go"] .ls-person {
+    animation: ls-step-in 640ms var(--ease-expressive) calc(var(--i) * 110ms) both;
+  }
+}
+@keyframes ls-step-in {
+  from {
+    transform: translateY(24px);
+  }
+}
+
+/* 04: the big hub → holt. */
+.swap--big {
+  font-size: clamp(1.4rem, min(3.4vw, 6svh), 3.4rem);
+  font-weight: 600;
+  letter-spacing: -0.03em;
+  line-height: 1.3;
+}
+
+/* 05: the receipts (landing/receipts.tsx). */
+.ls-mark {
+  position: relative;
+  z-index: 0;
+  background: none;
+  color: inherit;
+  font-weight: 600;
+}
+.ls-mark::before {
+  position: absolute;
+  inset: 45% -3px 2% -3px;
+  z-index: -1;
+  background: var(--marker);
+  content: "";
+  transform-origin: left;
+  transition: opacity var(--dur-base) var(--ease-out);
+}
+.ls-mark[data-ink="good"]::before {
+  background: color-mix(in oklab, var(--green) 32%, transparent);
+}
+.ls-mark[data-ink="bad"]::before {
+  background: color-mix(in oklab, var(--orange) 32%, transparent);
+}
+.ls-thread {
+  view-timeline: --ls-thread block;
+}
+.ls-thread-bar {
+  transform-origin: top;
+}
+.ls-thread-verdict,
+.ls-thread-bar {
+  transition: translate var(--dur-base) var(--ease-out), scale var(--dur-base) var(--ease-out);
+}
+@media (hover: hover) {
+  .ls-thread:hover .ls-mark::before {
+    inset-block-start: 8%;
+  }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .ls-thread:hover .ls-thread-verdict {
+    translate: -8px 0;
+  }
+  .ls-thread:hover .ls-thread-bar {
+    scale: 2.5 1;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* Fallback: play once on entering. */
+  .ls-receipts[data-seen="false"] .ls-mark::before {
+    transform: scaleX(0);
+  }
+  .ls-receipts[data-seen="false"] .ls-thread-bar {
+    transform: scaleY(0);
+  }
+  .ls-receipts .ls-mark::before {
+    transition: transform 600ms var(--ease-expressive) 150ms;
+  }
+  .ls-receipts[data-seen] .ls-thread-bar {
+    transition:
+      transform 600ms var(--ease-expressive) 150ms,
+      scale var(--dur-base) var(--ease-out);
+  }
+  /* Where supported: tied to the scroll position instead. */
+  @supports (animation-timeline: view()) {
+    .ls-receipts .ls-mark::before {
+      transition: none;
+      animation: ls-fill linear both;
+      animation-timeline: --ls-thread;
+      animation-range: entry 70% cover 45%;
+    }
+    .ls-receipts .ls-thread-bar {
+      animation: land-draw linear both;
+      animation-timeline: --ls-thread;
+      animation-range: entry 20% cover 40%;
+    }
+    .ls-receipts .ls-thread-verdict {
+      animation: ls-nudge linear both;
+      animation-timeline: --ls-thread;
+      animation-range: cover 35% cover 50%;
+    }
+  }
+}
+@keyframes ls-nudge {
+  from {
+    opacity: 0.3;
+    transform: translateX(-16px);
+  }
+}
+
+/* 06: three answers (landing/answers.tsx). */
+.ls-answers {
+  display: grid;
+  gap: clamp(0.5rem, 2svh, 1.5rem);
+  margin-top: clamp(1.2rem, 4svh, 3rem);
+}
+.ls-answer {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 0 clamp(0.75rem, 2vw, 2.5rem);
+  padding: clamp(0.6rem, 1.6svh, 1.2rem) 0 clamp(0.6rem, 1.6svh, 1.2rem) clamp(1rem, 1.6vw, 1.75rem);
+}
+.ls-answer-bar {
+  transform-origin: left;
+}
+.ls-answer-word {
+  font-size: clamp(1.7rem, min(5.4vw, 8svh), 6.4rem);
+  line-height: 1;
+}
+.ls-answer-cat {
+  padding-top: 0.3em;
+  font-size: clamp(1rem, min(2.4vw, 4svh), 2.8rem);
+}
+.ls-answer-text {
+  font-size: clamp(0.95rem, min(1.15vw, 2.1svh), 1.2rem);
+}
+@media (hover: hover) {
+  .ls-answers[data-hot] .ls-answer:not([data-hot="true"]) {
+    opacity: 0.4;
+  }
+  /* What to do waits a step back, and comes forward when pointed at. */
+  .ls-answer-next {
+    opacity: 0.6;
+    transition:
+      opacity var(--dur-base) var(--ease-out),
+      translate var(--dur-base) var(--ease-out);
+  }
+  .ls-answer[data-hot="true"] .ls-answer-next {
+    opacity: 1;
+  }
+}
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .ls-answer-next {
+    translate: -8px 0;
+  }
+  .ls-answer[data-hot="true"] .ls-answer-next {
+    translate: none;
+  }
+  .ls-answer-bar {
+    transition: scale var(--dur-base) var(--ease-out);
+  }
+  .ls-answer[data-hot="true"] .ls-answer-bar {
+    scale: 2 1;
+  }
+}
+@media (prefers-reduced-motion: no-preference) and (min-width: 1024px) {
+  .ls-answers[data-phase="wait"] .ls-answer-word {
+    transform: translateX(-6%);
+  }
+  .ls-answers[data-phase="go"] .ls-answer-word {
+    animation: ls-slide-in 700ms var(--ease-expressive) calc(var(--i) * 140ms) both;
+  }
+}
+@keyframes ls-slide-in {
+  from {
+    transform: translateX(-6%);
   }
 }
 

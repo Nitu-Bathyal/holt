@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { activeItem, CHECK_HREF, jumpHref, LANDING_SECTIONS, logoHref, RETIRED, retiredRedirect, shellFor, sidebarGroups } from "./shell.ts";
+import { activeItem, CHECK_HREF, jumpHref, LANDING_SECTIONS, logoAction, logoHref, RETIRED, retiredRedirect, shellFor, sidebarGroups } from "./shell.ts";
 
 test("signed out, every page wears the marketing shell", () => {
   for (const p of ["/", "/me", "/find", "/pallets/flask", "/settings/profile", "/pricing"]) assert.equal(shellFor(p, false), "marketing", p);
@@ -76,4 +76,12 @@ test("retired addresses go to where their content lives now", () => {
 test("the logo goes home when signed in, on every page, and to the landing page when not", () => {
   assert.equal(logoHref(true), "/me");
   assert.equal(logoHref(false), "/");
+});
+
+test("the logo: signed out on the landing page it glides to the hero; signed in it always goes home", () => {
+  assert.deepEqual(logoAction("/", false), { hero: true });
+  assert.deepEqual(logoAction("/", true), { href: "/me" });
+  assert.deepEqual(logoAction("/pricing", false), { href: "/" });
+  assert.deepEqual(logoAction("/pricing", true), { href: "/me" });
+  assert.deepEqual(logoAction("/pallets/flask", true), { href: "/me" });
 });
