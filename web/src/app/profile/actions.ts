@@ -6,6 +6,7 @@ import { revalidatePath } from "next/cache";
 import { deleteProfile, saveProfile } from "@/lib/api";
 import { PICKS_COOKIE } from "@/lib/find-picks";
 import { findHref, fromForm, SKIP_COOKIE } from "@/lib/profile";
+import { answer, BLANK, current, QUESTIONS, type Prefs } from "@/lib/profile-flow";
 import { currentUser } from "@/lib/session";
 import { PRIVACY_SETTINGS, PROFILE_SETTINGS } from "@/lib/settings";
 
@@ -52,4 +53,27 @@ export async function remove() {
   const r = await deleteProfile(user.id);
   revalidatePath("/", "layout");
   redirect(withNotice(PRIVACY_SETTINGS, r.ok ? "deleted" : "error"));
+}
+
+/**
+ * One answer from the first-time flow on /me. Saves the whole profile so far
+ * and returns, without revalidating or touching cookies: either would refresh
+ * /me and close the flow mid-way. `finish` does that at the end.
+ */
+export async function saveStep(p: Prefs): Promise<{ ok: true } | { ok: false; adult: boolean }> {
+  const user = await currentUser();
+  if (!user) return { ok: false, adult: false };
+  // Rebuilt from the answers, so only valid values reach the API.
+  let clean = BLANK;
+  for (const q of QUESTIONS) clean = answer(clean, q.id, current({ ...BLANK, ...p }, q.id));
+  const r = await saveProfile(user.id, { ...clean, adult_confirmed: true });
+  if (r.ok) return { ok: true };
+  return { ok: false, adult: r.status === 400 && r.error.message.includes("18") };
+}
+
+/** The end of the flow: the picks on /find start from the profile now, then on to the picks. */
+export async function finish() {
+  revalidatePath("/", "layout");
+  (await cookies()).delete(PICKS_COOKIE);
+  redirect("/for-you");
 }
