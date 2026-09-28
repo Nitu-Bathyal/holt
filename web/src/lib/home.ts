@@ -72,7 +72,7 @@ export function nextStep(s: HomeState, ago: (iso: string) => string): NextStep {
   if (s.checked === 0) {
     return {
       title: "Check your first repo",
-      body: "Paste one you're thinking of contributing to. Holt reads its recent pull requests and tells you whether outsiders get replies and get merged.",
+      body: "Paste one you're thinking about. Holt tells you whether outsiders get a reply and get merged.",
       href: "#check",
       cta: "check a repo",
     };
@@ -81,7 +81,7 @@ export function nextStep(s: HomeState, ago: (iso: string) => string): NextStep {
   if (pr) {
     return {
       title: `Your pull request to ${pr.repo} is still waiting`,
-      body: `You opened it ${ago(pr.created_at)} and nobody has decided yet. See how long this repo usually takes to reply.`,
+      body: `Opened ${ago(pr.created_at)}, no decision yet. See how fast this repo usually replies.`,
       href: `/${pr.repo}`,
       cta: "see the repo's report",
     };
@@ -89,7 +89,7 @@ export function nextStep(s: HomeState, ago: (iso: string) => string): NextStep {
   if (s.hasProfile === false) {
     return {
       title: "Finish your profile",
-      body: "Tell Holt your languages and how much time you have. Then it picks repos where maintainers are replying right now.",
+      body: "Your languages and the time you have. Then Holt picks repos where maintainers reply right now.",
       href: "/settings#profile",
       cta: "finish your profile",
     };
@@ -99,7 +99,7 @@ export function nextStep(s: HomeState, ago: (iso: string) => string): NextStep {
   }
   return {
     title: "Find a project",
-    body: "Tell Holt what you know and it finds repos worth your time, with issues to start on.",
+    body: "Tell Holt what you know. It finds repos worth your time, with issues to start on.",
     href: "/find",
     cta: "find a project",
   };
@@ -114,5 +114,5 @@ export function fastestReplies(repos: DiscoverRepo[], limit = 10): DiscoverRepo[
 }
 
 export function replyLine(hours: number | null | undefined): string | null {
-  return hours == null ? null : `Maintainers usually reply to outsiders in ${humanHours(hours)}.`;
+  return hours == null ? null : `Outsiders usually get a reply in ${humanHours(hours)}.`;
 }

@@ -152,8 +152,11 @@ your first two profile languages, fastest replies, trending), plus the credits
 line; logo and menu edits. Rows use a stand-in tile
 (`components/home/shelf.tsx`) until the find page's compact card is on main.
 
-**Later:** Hacktoberfest row (a server worker is adding a fast read; the slot
-is marked in `app/me/page.tsx` and stays hidden until then), Saved (after
+The Hacktoberfest row is built against PR #125's
+`GET /v1/discover?hacktoberfest=true` and shows only when the response echoes
+`hacktoberfest: true`, so it stays hidden until #125 is on main.
+
+**Later:** Saved (after
 save-a-repo merges), quick wins (server), the header "sign in" link returning
 you to the page you were on, `/connect` copy, sign-in page copy that names
 what you get, umami events for next-step clicks.

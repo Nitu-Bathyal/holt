@@ -15,15 +15,21 @@ import { fastestReplies, nextStep, replyLine, setupLeft, setupSteps, showProfile
 import { SKIP_COOKIE } from "@/lib/profile";
 import { languageName } from "@/lib/recommendations";
 import { currentUser } from "@/lib/session";
-import type { DiscoverRepo } from "@/lib/types";
+import type { DiscoverRepo, DiscoverSort } from "@/lib/types";
 
 export const metadata: Metadata = { title: "Your home", robots: { index: false } };
 
 const NOTICES: Record<string, { tone: string; text: string }> = {
-  saved: { tone: "text-green border-green/50 bg-green/10", text: "Profile saved. Holt picks repos from it below; change it any time in settings." },
+  saved: { tone: "text-green border-green/50 bg-green/10", text: "Profile saved. Your picks are below. Change it any time in settings." },
   adult: { tone: "text-orange border-orange/50 bg-orange/10", text: "Please confirm you're 18 or older to save a profile." },
   error: { tone: "text-orange border-orange/50 bg-orange/10", text: "We couldn't save your profile just now. Try again in a minute." },
 };
+
+// The Hacktoberfest filter (PR #125) is a fifth argument to discover(). Until
+// it's on main the argument is ignored, the response doesn't echo
+// `hacktoberfest: true`, and the row stays hidden. Once #125 merges, call
+// discover(..., true) directly.
+const discoverWithHacktoberfest: (sort: DiscoverSort, language: string | null, topic: string | null, limit: number, hacktoberfest: boolean) => ReturnType<typeof discover> = discover;
 
 const discoverTile = (r: DiscoverRepo, line?: string | null): Tile => ({
   key: r.repo,
@@ -38,7 +44,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
   const user = await currentUser();
   if (!user) redirect("/signin?callbackUrl=/me");
   const [sp, jar] = await Promise.all([searchParams, cookies()]);
-  const [account, checks, picks, prs, profile, welcoming, trending] = await Promise.all([
+  const [account, checks, picks, prs, profile, welcoming, trending, hacktoberfest] = await Promise.all([
     me(user.id),
     history(user.id, 20),
     recommendations(user.id, 10),
@@ -46,7 +52,9 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
     getProfile(user.id),
     discover("welcoming", null, null, 100),
     discover("trending", null, null, 12),
+    discoverWithHacktoberfest("welcoming", null, null, 20, true),
   ]);
+  const hf = hacktoberfest.ok && (hacktoberfest.data as { hacktoberfest?: boolean }).hacktoberfest === true ? hacktoberfest.data.repos : [];
   const prefs = profile.ok ? profile.data.profile : null;
   const langs = (prefs?.languages ?? []).slice(0, 2);
   const byLang = await Promise.all(langs.map((l) => discover("welcoming", l, null, 12)));
@@ -111,9 +119,13 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
       note: "worth your time, quickest to answer",
       tiles: welcoming.ok ? fastestReplies(welcoming.data.repos).map((r) => discoverTile(r, replyLine(r.stats.median_first_response_hours))) : [],
     },
-    // Hacktoberfest goes here once the server has a fast read for it (a separate
-    // worker is adding one); until then there's no row. Saved follows the
-    // save-a-repo API.
+    {
+      title: "Hacktoberfest",
+      more: { href: "/hacktoberfest", label: "all of them" },
+      note: "tagged for Hacktoberfest, worth your time",
+      tiles: hf.map((r) => discoverTile(r)),
+    },
+    // Saved goes here once the save-a-repo API is on main.
     {
       title: "Trending on Holt",
       more: { href: boardHref({ sort: "trending" }), label: "see the board" },

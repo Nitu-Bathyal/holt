@@ -84,5 +84,5 @@ test("fastest replies: only repos worth your time with a measured reply, quickes
 
 test("reply line in plain words", () => {
   assert.equal(replyLine(null), null);
-  assert.equal(replyLine(3), "Maintainers usually reply to outsiders in 3 hours.");
+  assert.equal(replyLine(3), "Outsiders usually get a reply in 3 hours.");
 });
