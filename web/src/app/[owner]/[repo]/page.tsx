@@ -41,7 +41,7 @@ function describe(report: Report | null, name: string): string {
   return `${report.headline}. ${s.outsider_merged} of ${s.outsider_attempts} outside PRs got merged${reply}. See the evidence and starter issues.`;
 }
 
-const titleFor = (name: string) => `${name}: Worth your time? | Holt`;
+const titleFor = (name: string) => `${name}: Worth your time? · Holt`;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { owner, repo } = await params;

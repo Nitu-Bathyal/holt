@@ -8,7 +8,7 @@ import { ACCOUNT_SETTINGS } from "@/lib/settings";
 import { GitHubConnectionCard } from "@/components/connect-github-card";
 import { Notice, SectionHead } from "@/components/settings/section-head";
 
-export const metadata: Metadata = { title: "Connected accounts | Settings", robots: { index: false } };
+export const metadata: Metadata = { title: "Connected accounts · Settings", robots: { index: false } };
 
 const PROVIDER_NAME: Record<string, string> = { github: "GitHub", google: "Google" };
 

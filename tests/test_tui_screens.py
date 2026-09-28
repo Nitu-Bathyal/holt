@@ -60,7 +60,7 @@ def screen_text(app) -> str:
     )
 
 
-async def settle(pilot, check, timeout: float = 5.0, step: float = 0.05) -> None:
+async def settle(pilot, check, timeout: float = 10.0, step: float = 0.05) -> None:
     """Let the app run until `check()` holds, or `timeout` passes.
 
     A fixed pause races the worker thread on a slow CI machine; this waits for
@@ -73,7 +73,7 @@ async def settle(pilot, check, timeout: float = 5.0, step: float = 0.05) -> None
         waited += step
 
 
-async def caught_up(app, pilot, session=None, timeout: float = 5.0) -> None:
+async def caught_up(app, pilot, session=None, timeout: float = 10.0) -> None:
     """Wait until a run's queued events are drained and the screen has taken
     in every one of them (the live screen's cursor reaches the end of the
     log), then let what it just added render. Replaces fixed pauses that
@@ -205,7 +205,7 @@ def test_typing_filters_what_you_already_have(tmp_path):
         assert "home-assistant/core" in screen_text(app)
 
         await type_repo(pilot, "astral")
-        await pilot.pause(0.4)
+        await settle(pilot, lambda: "home-assistant/core" not in screen_text(app))
         text = screen_text(app)
         assert "astral-sh/uv" in text
         assert "home-assistant/core" not in text
@@ -218,7 +218,7 @@ def test_a_repository_that_is_not_one_is_refused_before_the_network(tmp_path):
         app.screen.mode = "replay"
         await type_repo(pilot, "notarepo")
         await pilot.press("enter")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: "is not an owner/name" in screen_text(app))
         assert "is not an owner/name" in screen_text(app)
         assert app.session is None, "nothing should have been started"
 
@@ -230,7 +230,7 @@ def test_replay_without_a_recording_says_so_instead_of_failing(tmp_path):
         app.screen.mode = "replay"
         await type_repo(pilot, "nobody/nothing")
         await pilot.press("enter")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: "No recording" in screen_text(app))
         assert "No recording" in screen_text(app)
         assert app.session is None
 
@@ -248,7 +248,8 @@ def test_a_recent_assessment_is_reused_rather_than_re_bought(tmp_path):
         app.screen.mode = "replay"
         await type_repo(pilot, CLEAN)
         await pilot.press("enter")
-        await pilot.pause(0.5)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "AssessmentScreen"
+                     and "ctrl+r" in screen_text(app))
 
         assert app.screen.__class__.__name__ == "AssessmentScreen"
         assert app.session.restored_from is not None
@@ -344,7 +345,7 @@ async def show_run_with(app, pilot, script):
 
     app.session = fake_run.session(queued=script)
     await app.push_screen(LiveScreen())
-    await pilot.pause(0.3)
+    await caught_up(app, pilot)
     return app.screen
 
 
@@ -360,7 +361,7 @@ def test_an_unknown_event_renders_instead_of_raising(tmp_path):
     async def body(app, pilot):
         screen = await show_run(app, pilot, complete=False)
         screen._handle(Invented())
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: "Invented" in screen_text(app))
         assert "Invented" in screen_text(app)
 
     drive(body, tmp_path)
@@ -377,7 +378,7 @@ def test_a_stage_the_engine_grew_appears_rather_than_vanishing(tmp_path):
         screen._handle(
             events.StageFinished(stage="triage", seconds=0.2, summary="9 triaged")
         )
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: "9 triaged" in screen_text(app))
         text = screen_text(app)
         assert "triage" in text
         assert "9 triaged" in text
@@ -457,7 +458,10 @@ REAL_ID = "repo:home-assistant/core:meta"
 async def _reopen(app, pilot, entry):
     """Open a stored assessment the way home opens one."""
     app.open_stored(entry)
-    await pilot.pause(0.4)
+    # Keys are pressed on it next, so wait until the report is drawn, not just
+    # pushed: its footer is the last thing to render.
+    await settle(pilot, lambda: app.screen.__class__.__name__ == "AssessmentScreen"
+                 and "trace" in screen_text(app))
 
 
 def test_a_reopened_assessment_still_reads_the_record_behind_a_claim(tmp_path):
@@ -477,7 +481,7 @@ def test_a_reopened_assessment_still_reads_the_record_behind_a_claim(tmp_path):
     async def body(app, pilot):
         await _reopen(app, pilot, stored)
         app.inspect(REAL_ID)
-        await pilot.pause(0.4)
+        await settle(pilot, lambda: "home-assistant__core.json" in screen_text(app))
         text = screen_text(app)
         assert "resolved" in text
         assert "not loaded" not in text
@@ -500,7 +504,7 @@ def test_a_reopened_assessment_says_which_ids_the_evidence_does_not_have(tmp_pat
     async def body(app, pilot):
         await _reopen(app, pilot, stored)
         app.inspect("repo:no-such/thing:meta")
-        await pilot.pause(0.4)
+        await settle(pilot, lambda: "does not resolve" in screen_text(app))
         assert "does not resolve" in screen_text(app)
 
     drive(body, tmp_path)
@@ -524,7 +528,7 @@ def test_a_reopened_live_assessment_reads_the_records_stored_with_it(tmp_path):
     async def body(app, pilot):
         await _reopen(app, pilot, stored)
         app.inspect(cited)
-        await pilot.pause(0.4)
+        await settle(pilot, lambda: "stored with this assessment" in screen_text(app))
         text = screen_text(app)
         assert "resolved" in text
         assert "not loaded" not in text
@@ -553,7 +557,7 @@ def test_a_live_assessment_stored_before_records_were_kept_says_so(tmp_path):
     async def body(app, pilot):
         await _reopen(app, pilot, stored)
         app.inspect(REAL_ID)
-        await pilot.pause(0.4)
+        await settle(pilot, lambda: "stored before" in screen_text(app))
         text = screen_text(app)
         assert "not loaded" in text
         assert "stored before" in text
@@ -571,7 +575,7 @@ def test_trace_goes_back_to_the_run_you_came_from(tmp_path):
         await settle(pilot, lambda: app.screen.__class__.__name__ == "AssessmentScreen")
         assert app.screen.__class__.__name__ == "AssessmentScreen"
         await pilot.press("t")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "LiveScreen")
         assert app.screen.__class__.__name__ == "LiveScreen"
 
     drive(body, tmp_path)
@@ -590,7 +594,8 @@ def test_a_reopened_assessment_opens_the_trace_that_was_stored_with_it(tmp_path)
     async def body(app, pilot):
         await _reopen(app, pilot, stored)
         await pilot.press("t")
-        await pilot.pause(0.5)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "TraceScreen"
+                     and "15 findings → 15 kept" in screen_text(app))
         assert app.screen.__class__.__name__ == "TraceScreen"
         text = screen_text(app)
         assert "trace" in text
@@ -602,7 +607,7 @@ def test_a_reopened_assessment_opens_the_trace_that_was_stored_with_it(tmp_path)
         assert "stop" not in text
 
         await pilot.press("escape")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "AssessmentScreen")
         assert app.screen.__class__.__name__ == "AssessmentScreen"
 
     drive(body, tmp_path, size=(110, 60))
@@ -620,7 +625,7 @@ def test_an_assessment_stored_without_a_trace_says_so(tmp_path):
     async def body(app, pilot):
         await _reopen(app, pilot, stored)
         await pilot.press("t")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: "No trace was stored" in screen_text(app))
         assert app.screen.__class__.__name__ == "AssessmentScreen"
         assert "No trace was stored with this assessment" in screen_text(app)
 
@@ -634,7 +639,8 @@ def test_finishing_a_run_stores_it_and_home_lists_it(tmp_path):
         assert app.screen.__class__.__name__ == "AssessmentScreen"
 
         await pilot.press("escape")
-        await pilot.pause(0.6)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "HomeScreen"
+                     and CLEAN in screen_text(app))
         assert app.screen.__class__.__name__ == "HomeScreen"
         text = screen_text(app)
         assert CLEAN in text
@@ -665,7 +671,7 @@ def test_discover_opens_on_a_choice_not_on_a_canned_list(tmp_path):
 
     async def body(app, pilot):
         await pilot.press("ctrl+f")
-        await pilot.pause(0.6)
+        await settle(pilot, lambda: getattr(app.focused, "id", None) == "choices")
         assert app.screen.__class__.__name__ == "DiscoverScreen"
         text = screen_text(app)
         assert "Search GitHub for repositories" in text
@@ -690,7 +696,7 @@ def test_discover_lists_survivors_and_what_it_cut(tmp_path):
 
     async def body(app, pilot):
         await pilot.press("ctrl+f")
-        await pilot.pause(0.6)
+        await settle(pilot, lambda: getattr(app.focused, "id", None) == "choices")
         await _choose_recording(app, pilot)
         text = screen_text(app)
         assert "screened at no model cost" in text
@@ -722,7 +728,7 @@ def test_walking_the_finder_with_the_keyboard_scrolls_the_pane(tmp_path):
 
     async def body(app, pilot):
         await pilot.press("ctrl+f")
-        await pilot.pause(0.6)
+        await settle(pilot, lambda: getattr(app.focused, "id", None) == "choices")
         await _choose_recording(app, pilot)
 
         listing = app.screen.query_one("#candidates", CandidateList)
@@ -731,8 +737,8 @@ def test_walking_the_finder_with_the_keyboard_scrolls_the_pane(tmp_path):
 
         for _ in range(len(listing.children) - 1):
             await pilot.press("down")
-            await pilot.pause(0.02)
-        await pilot.pause(0.4)
+        await settle(pilot, lambda: listing.index == len(listing.children) - 1
+                     and box.scroll_y > 0)
 
         assert listing.index == len(listing.children) - 1
         assert box.scroll_y > 0, "the highlight moved and the pane did not"
@@ -750,15 +756,15 @@ def test_discover_says_a_live_search_needs_a_token(tmp_path, monkeypatch):
 
     async def body(app, pilot):
         await pilot.press("ctrl+f")
-        await pilot.pause(0.6)
+        await settle(pilot, lambda: getattr(app.focused, "id", None) == "choices")
         app.screen.query_one("#choices").index = 0
         await pilot.press("enter")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "TokenScreen")
         # Asked for, on the spot: the first-run token prompt.
         assert app.screen.__class__.__name__ == "TokenScreen"
         assert "github.com/settings/tokens/new" in screen_text(app)
         await pilot.press("escape")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: "GitHub token" in screen_text(app))
         # Skipped: the choice is still there; a missing token is not a dead end.
         assert "GitHub token" in screen_text(app)
         assert "Search GitHub for repositories" in screen_text(app)
@@ -825,10 +831,15 @@ def test_discover_draws_live_rows_as_they_land(tmp_path, monkeypatch):
 
     async def body(app, pilot):
         await pilot.press("ctrl+f")
-        await pilot.pause(0.6)
+        await settle(pilot, lambda: getattr(app.focused, "id", None) == "choices")
         app.screen.query_one("#choices").index = 0
         await pilot.press("enter")
-        await pilot.pause(0.4)
+        # Rows reach the screen on the screen's own poll timer, not when the
+        # search reports them. A fixed pause raced that timer under load, so
+        # this waits for what is drawn. The fake search never adds a row by
+        # itself: each one lands only when the test appends it.
+        await settle(pilot, lambda: "first/repo" in screen_text(app)
+                     and "screened 1 of 2" in screen_text(app))
 
         search = app.screen.search
         assert search.started
@@ -841,7 +852,8 @@ def test_discover_draws_live_rows_as_they_land(tmp_path, monkeypatch):
         search.rows.append(row("second/repo", category="inactive"))
         search.finished = True
         search.running = False
-        await pilot.pause(0.4)
+        await settle(pilot, lambda: "second/repo" in screen_text(app)
+                     and "stop searching" not in screen_text(app))
 
         text = screen_text(app)
         assert "second/repo" in text
@@ -914,10 +926,10 @@ def test_a_live_find_is_assessed_live_even_where_a_recording_exists(
     async def body(app, pilot):
         monkeypatch.setattr(app, "start_run", started.append)
         await pilot.press("ctrl+f")
-        await pilot.pause(0.6)
+        await settle(pilot, lambda: getattr(app.focused, "id", None) == "choices")
         app.screen.query_one("#choices").index = 0
         await pilot.press("enter")
-        await pilot.pause(0.5)
+        await settle(pilot, lambda: getattr(app.screen, "search", None) is not None)
         app.screen._assess(app.screen.search.rows[0])
 
     drive(body, tmp_path, size=(100, 60))
@@ -940,7 +952,7 @@ def test_a_recorded_row_with_no_recording_says_so_rather_than_going_live(
     async def body(app, pilot):
         monkeypatch.setattr(app, "start_run", started.append)
         await app.push_screen(DiscoverScreen(discovery.DEFAULT_SESSION))
-        await pilot.pause(0.5)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "DiscoverScreen")
         screen = app.screen
         row = discovery.Row(
             slug="nobody/never-recorded",
@@ -952,7 +964,7 @@ def test_a_recorded_row_with_no_recording_says_so_rather_than_going_live(
             reason="",
         )
         screen._assess(row)
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: "cannot be replayed" in screen_text(app))
         text = screen_text(app)
         assert "cannot be replayed" in text, text[-600:]
 
@@ -979,7 +991,7 @@ def test_discover_says_so_when_the_session_is_missing(tmp_path):
 
     async def body(app, pilot):
         await app.push_screen(DiscoverScreen("no-such-session"))
-        await pilot.pause(0.4)
+        await settle(pilot, lambda: "No recorded search" in screen_text(app))
         text = screen_text(app)
         assert "No recorded search" in text
         assert "--record" in text
@@ -992,7 +1004,7 @@ def test_profile_round_trips_through_the_same_file_the_cli_uses(tmp_path, monkey
 
     async def body(app, pilot):
         await pilot.press("ctrl+o")
-        await pilot.pause(0.4)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "ProfileScreen")
         assert app.screen.__class__.__name__ == "ProfileScreen"
 
         from textual.widgets import Input
@@ -1001,7 +1013,7 @@ def test_profile_round_trips_through_the_same_file_the_cli_uses(tmp_path, monkey
         app.screen.query_one("#profile-topics", Input).value = "cli"
         app.screen.query_one("#profile-days", Input).value = "3"
         app.screen.action_save()
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: "Saved to" in screen_text(app))
         assert "Saved to" in screen_text(app)
 
         from holt import profile as profile_mod
@@ -1019,12 +1031,12 @@ def test_profile_refuses_a_day_budget_that_is_not_a_number(tmp_path, monkeypatch
 
     async def body(app, pilot):
         await pilot.press("ctrl+o")
-        await pilot.pause(0.4)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "ProfileScreen")
         from textual.widgets import Input
 
         app.screen.query_one("#profile-days", Input).value = "soon"
         app.screen.action_save()
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: "is not a number of days" in screen_text(app))
         assert "is not a number of days" in screen_text(app)
 
         from holt import profile as profile_mod
@@ -1043,7 +1055,7 @@ def test_what_next_never_shows_an_order_without_its_measurement(tmp_path):
     async def body(app, pilot):
         app.session = fake_run.finished()
         await app.push_screen(NextScreen(CLEAN))
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: getattr(app.focused, "id", None) == "login-input")
         await type_repo(pilot, "frenck")
         await pilot.press("enter")
         await workers_done(app, pilot)
@@ -1067,7 +1079,7 @@ def test_what_next_names_the_token_rather_than_blaming_the_recording(
     async def body(app, pilot):
         app.session = fake_run.finished()
         await app.push_screen(NextScreen("canonical/ubuntu-cloud-docs", live=True))
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: getattr(app.focused, "id", None) == "login-input")
         await type_repo(pilot, "somebody")
         await pilot.press("enter")
         await workers_done(app, pilot)
@@ -1159,7 +1171,7 @@ def test_what_next_asks_for_a_github_username_in_those_words(tmp_path):
     async def body(app, pilot):
         app.session = fake_run.finished()
         await app.push_screen(NextScreen(CLEAN))
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: "GitHub username" in " ".join(screen_text(app).split()))
         flat = " ".join(screen_text(app).split())
         assert "GitHub username" in flat
         assert "enter to rank" in flat
@@ -1198,11 +1210,11 @@ def test_first_live_run_asks_for_a_token_then_runs(tmp_path, monkeypatch):
     async def body(app, pilot):
         app.start_run = lambda options: started.append(options)
         app.screen.run_repo("some/repo")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: getattr(app.focused, "id", None) == "token-input")
         assert app.screen.__class__.__name__ == "TokenScreen"
         app.screen.query_one("#token-input").value = "ghp_test"
         await pilot.press("enter")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: bool(started))
         assert [o.repo for o in started] == ["some/repo"]
 
     drive(body, tmp_path / "store", size=(120, 44))
@@ -1220,24 +1232,24 @@ def test_question_mark_opens_help_and_q_on_a_report_goes_back(tmp_path):
 
     async def body(app, pilot):
         await pilot.press("question_mark")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "HelpScreen")
         assert app.screen.__class__.__name__ == "HelpScreen"
         assert "Worth your time" in screen_text(app)
         await pilot.press("escape")
-        await pilot.pause(0.2)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "HomeScreen")
         assert app.screen.__class__.__name__ == "HomeScreen"
 
         await pilot.press("down")
         await pilot.press("enter")
-        await pilot.pause(0.4)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "AssessmentScreen")
         assert app.screen.__class__.__name__ == "AssessmentScreen"
         await pilot.press("question_mark")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: "open on GitHub" in screen_text(app))
         assert "open on GitHub" in screen_text(app)
         await pilot.press("escape")
-        await pilot.pause(0.2)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "AssessmentScreen")
         await pilot.press("q")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "HomeScreen")
         assert app.screen.__class__.__name__ == "HomeScreen"
         assert app.is_running
 
@@ -1275,7 +1287,7 @@ def test_what_next_offers_the_committed_evidence_rather_than_taking_it(tmp_path,
         # Live, and GitHub is unreachable in tests, so the read fails.
         screen = next_steps.NextScreen(CLEAN, live=True)
         await app.push_screen(screen)
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: getattr(app.focused, "id", None) == "login-input")
         assert screen.check_action("use_committed", ()) is None, (
             "a key that would be a no-op must not be advertised"
         )
@@ -1313,7 +1325,7 @@ def test_what_next_reuses_a_read_and_says_how_old_it_is(tmp_path):
     async def body(app, pilot):
         app.session = fake_run.finished()
         await app.push_screen(next_steps.NextScreen(CLEAN))
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: getattr(app.focused, "id", None) == "login-input")
         await type_repo(pilot, "frenck")
         await pilot.press("enter")
         await workers_done(app, pilot)
@@ -1357,7 +1369,7 @@ def test_what_next_says_plainly_when_the_login_has_landed_nothing(tmp_path):
     async def body(app, pilot):
         app.session = fake_run.finished()
         await app.push_screen(NextScreen(CLEAN))
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: getattr(app.focused, "id", None) == "login-input")
         await type_repo(pilot, "nobody-at-all")
         await pilot.press("enter")
         await workers_done(app, pilot)
@@ -1470,7 +1482,8 @@ def test_the_model_screen_lists_providers_with_their_key_status(tmp_path, monkey
 
     async def body(app, pilot):
         await pilot.press("ctrl+l")
-        await pilot.pause(0.5)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "ModelsScreen"
+                     and "set a base url first" in screen_text(app))
         assert app.screen.__class__.__name__ == "ModelsScreen"
         text = screen_text(app)
         for name in ("openai", "anthropic", "ollama", "gemini", "openai-compatible"):
@@ -1491,18 +1504,18 @@ def test_choosing_a_model_warns_that_replay_will_fail(tmp_path, monkeypatch):
 
     async def body(app, pilot):
         await pilot.press("ctrl+l")
-        await pilot.pause(0.5)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "ModelsScreen")
         screen = app.screen
         screen.chosen = next(p for p in screen.providers if p.name == "anthropic")
         screen._use("claude-opus-5")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: "fails loudly" in screen_text(app))
 
         text = screen_text(app)
         assert "fails loudly" in text
         assert model_module.model_for("classify") == "claude-opus-5"
 
         screen.action_reset()
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: "fails loudly" not in screen_text(app))
         assert "fails loudly" not in screen_text(app)
         assert model_module.model_for("classify") == model_module.SMALL
 
@@ -1521,11 +1534,11 @@ def test_the_model_screen_never_reaches_the_network_in_tests(tmp_path, monkeypat
 
     async def body(app, pilot):
         await pilot.press("ctrl+l")
-        await pilot.pause(0.4)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "ModelsScreen")
         screen = app.screen
         screen.chosen = next(p for p in screen.providers if p.name == "ollama")
         await screen._show_models(models_layer.list_models(screen.chosen))
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: models_layer.NO_NETWORK_ENV in screen_text(app))
         assert models_layer.NO_NETWORK_ENV in screen_text(app)
 
     drive(body, tmp_path, size=(110, 40))
@@ -1574,7 +1587,7 @@ def test_the_recent_list_shows_where_the_keyboard_is(tmp_path):
         assert rail_colour(app, "home-assistant/core") is None
 
         await pilot.press("down")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: rail_colour(app, "home-assistant/core") is not None)
         assert rail_colour(app, "home-assistant/core") is not None
         assert rail_colour(app, "astral-sh/uv") is None
 
@@ -1592,19 +1605,19 @@ def test_arrows_move_through_recent_without_taking_the_input(tmp_path):
     async def body(app, pilot):
         home = app.screen
         await pilot.press("down")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: "enter opens home-assistant/core" in screen_text(app))
         assert app.focused.id == "repo-input"
         assert home.query_one("#recent").selected.repo == "home-assistant/core"
         # And it says what enter now means, because enter has changed meaning.
         assert "enter opens home-assistant/core" in screen_text(app)
 
         await pilot.press("up")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: home.query_one("#recent").selected.repo == "astral-sh/uv")
         assert home.query_one("#recent").selected.repo == "astral-sh/uv"
 
         # Typing puts you back in the box.
         await type_repo(pilot, "x")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: home._browsing is False)
         assert home._browsing is False
 
     drive(body, tmp_path)
@@ -1620,7 +1633,7 @@ def test_enter_opens_the_highlighted_one_and_nothing_is_run(tmp_path):
     async def body(app, pilot):
         await pilot.press("down")
         await pilot.press("enter")
-        await pilot.pause(0.5)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "AssessmentScreen")
         assert app.screen.__class__.__name__ == "AssessmentScreen"
         assert app.session.assessment.repo == "home-assistant/core"
         assert app.session._thread is None, "opening a stored answer must run nothing"
@@ -1640,7 +1653,7 @@ def test_a_pasted_url_finds_the_repository_you_already_have(tmp_path):
         app.screen.query_one("#repo-input", __import__(
             "textual.widgets", fromlist=["Input"]
         ).Input).value = "https://github.com/astral-sh/uv"
-        await pilot.pause(0.4)
+        await settle(pilot, lambda: "Already assessed" in screen_text(app))
 
         assert [e.repo for e in app.screen._entries] == ["astral-sh/uv"]
         text = screen_text(app)
@@ -1661,7 +1674,7 @@ def test_discover_starts_on_the_candidates_not_the_scroll_box(tmp_path):
 
     async def body(app, pilot):
         await pilot.press("ctrl+f")
-        await pilot.pause(0.5)
+        await settle(pilot, lambda: getattr(app.focused, "id", None) == "choices")
         # The choice takes focus first, or enter would do nothing on it either.
         assert app.focused.id == "choices"
         await _choose_recording(app, pilot)
@@ -1680,11 +1693,11 @@ def test_enter_on_a_claim_you_tabbed_to_opens_its_record(tmp_path):
         await show_report(app, pilot)
         await pilot.press("tab")
         await pilot.press("down")
-        await pilot.pause(0.2)
+        await settle(pilot, lambda: getattr(app.focused, "id", None) == "claims")
         assert app.focused.id == "claims"
 
         await pilot.press("enter")
-        await pilot.pause(0.4)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "InspectorScreen")
         assert app.screen.__class__.__name__ == "InspectorScreen"
 
     drive(body, tmp_path)
@@ -1704,7 +1717,7 @@ def test_the_report_copies_as_the_markdown_the_engine_writes(tmp_path, monkeypat
     async def body(app, pilot):
         await show_report(app, pilot)
         await pilot.press("c")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: "Copied as markdown" in screen_text(app))
 
         assert copied == [app.session.assessment.render()]
         assert "# " in copied[0], "markdown, not the rendered screen"
@@ -1723,7 +1736,7 @@ def test_a_copy_that_cannot_be_confirmed_does_not_claim_it_was(tmp_path, monkeyp
     async def body(app, pilot):
         await show_report(app, pilot)
         await pilot.press("c")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: "Asked your terminal" in screen_text(app))
         text = screen_text(app)
         assert "Asked your terminal" in text
         assert "Copied as markdown" not in text
@@ -1834,7 +1847,7 @@ def test_a_run_that_finishes_while_nobody_watches_is_still_kept(tmp_path):
         await watch(app, pilot)
 
         app.go_home()
-        await pilot.pause(0.2)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "HomeScreen")
         assert app.screen.__class__.__name__ == "HomeScreen"
         assert not session.finished, "the run should still be in flight"
 
@@ -1902,7 +1915,7 @@ def test_leaving_the_live_screen_does_not_stop_the_run(tmp_path):
         await watch(app, pilot)
 
         await pilot.press("escape")
-        await pilot.pause(0.2)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "HomeScreen")
 
         assert app.screen.__class__.__name__ == "HomeScreen"
         assert session in app.in_flight
@@ -1918,7 +1931,7 @@ def test_home_lists_a_run_in_flight_and_enter_rejoins_it(tmp_path):
         # is in, and before anything is drained it can only say "starting".
         await settle(pilot, lambda: session._queue.empty() and len(session.log) > 5)
         await app.screen.refresh_entries()
-        await pilot.pause(0.2)
+        await settle(pilot, lambda: "running · " in screen_text(app))
 
         text = screen_text(app)
         assert CLEAN in text
@@ -1929,9 +1942,9 @@ def test_home_lists_a_run_in_flight_and_enter_rejoins_it(tmp_path):
         listing = app.screen.query_one("#recent", RecentList)
         listing.focus()
         listing.index = 0
-        await pilot.pause(0.1)
+        await settle(pilot, lambda: app.focused is listing)
         await pilot.press("enter")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "LiveScreen")
 
         assert app.screen.__class__.__name__ == "LiveScreen"
         assert app.session is session
@@ -1951,14 +1964,14 @@ def test_arrowing_onto_a_run_in_flight_says_so_and_rejoins_it(tmp_path):
 
     async def body(app, pilot):
         session = attach(app, CLEAN, unfinished(CLEAN))
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: session._queue.empty() and len(session.log) > 5)
         await app.screen.refresh_entries()
-        await pilot.pause(0.2)
+        await settle(pilot, lambda: CLEAN in screen_text(app))
 
         # The input keeps focus; the arrow key is handled by the screen.
         assert app.focused.id == "repo-input"
         await pilot.press("down")
-        await pilot.pause(0.2)
+        await settle(pilot, lambda: f"enter rejoins the run on {CLEAN}" in screen_text(app))
 
         text = screen_text(app)
         assert f"enter rejoins the run on {CLEAN}" in text
@@ -1968,13 +1981,13 @@ def test_arrowing_onto_a_run_in_flight_says_so_and_rejoins_it(tmp_path):
 
         # ctrl+r on it would be paying twice for one question.
         await pilot.press("ctrl+r")
-        await pilot.pause(0.2)
+        await settle(pilot, lambda: "still running" in screen_text(app))
         assert "still running" in screen_text(app)
         assert app.screen.__class__.__name__ == "HomeScreen"
         assert len(app.runs) == 1
 
         await pilot.press("enter")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "LiveScreen")
         assert app.screen.__class__.__name__ == "LiveScreen"
         assert app.session is session
 
@@ -1986,10 +1999,11 @@ def test_asking_for_a_repository_already_running_rejoins_rather_than_pays_twice(
 ):
     async def body(app, pilot):
         session = attach(app, CLEAN, unfinished(CLEAN))
-        await pilot.pause(0.1)
+        await settle(pilot, lambda: session._queue.empty())
 
         app.screen.run_repo(CLEAN)
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "LiveScreen"
+                     and "evidence records" in screen_text(app))
 
         assert app.screen.__class__.__name__ == "LiveScreen"
         assert app.session is session
@@ -2004,19 +2018,19 @@ def test_stopping_asks_first_and_only_then_stops(tmp_path):
         await watch(app, pilot)
 
         await pilot.press("ctrl+x")
-        await pilot.pause(0.2)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "ConfirmScreen")
         assert app.screen.__class__.__name__ == "ConfirmScreen"
         assert "stop home-assistant/core?" in screen_text(app)
 
         await pilot.press("n")
-        await pilot.pause(0.2)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "LiveScreen")
         assert app.screen.__class__.__name__ == "LiveScreen"
         assert not session._cancel.is_set(), "declining stopped the run anyway"
 
         await pilot.press("ctrl+x")
-        await pilot.pause(0.2)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "ConfirmScreen")
         await pilot.press("y")
-        await pilot.pause(0.2)
+        await settle(pilot, session._cancel.is_set)
         assert session._cancel.is_set()
 
     drive(body, tmp_path)
@@ -2025,10 +2039,10 @@ def test_stopping_asks_first_and_only_then_stops(tmp_path):
 def test_quitting_with_a_run_in_flight_says_what_it_would_stop(tmp_path):
     async def body(app, pilot):
         attach(app, CLEAN, unfinished(CLEAN))
-        await pilot.pause(0.2)
 
         app.action_quit()
-        await pilot.pause(0.2)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "ConfirmScreen"
+                     and "still in flight" in screen_text(app))
 
         text = screen_text(app)
         assert app.screen.__class__.__name__ == "ConfirmScreen"
@@ -2036,7 +2050,7 @@ def test_quitting_with_a_run_in_flight_says_what_it_would_stop(tmp_path):
         assert CLEAN in text
 
         await pilot.press("n")
-        await pilot.pause(0.2)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "HomeScreen")
         assert app.screen.__class__.__name__ == "HomeScreen"
 
     drive(body, tmp_path)
@@ -2118,7 +2132,7 @@ def test_the_palette_offers_what_is_true_right_now(tmp_path):
     async def body(app, pilot):
         session = attach(app, CLEAN, unfinished(CLEAN))
         await app.screen.refresh_entries()
-        await pilot.pause(0.2)
+        await settle(pilot, lambda: session._queue.empty())
 
         names = [name for name, _ in await palette_commands(app)]
         assert f"watch {CLEAN}" in names
@@ -2131,7 +2145,7 @@ def test_the_palette_offers_what_is_true_right_now(tmp_path):
         session._queue.put(
             _run_finished(fake_run.assessment(CLEAN)),
         )
-        await pilot.pause(0.4)
+        await settle(pilot, lambda: CLEAN not in app.runs and bool(app.store.all()))
         after = [name for name, _ in await palette_commands(app)]
         assert f"stop {CLEAN}" not in after
         assert f"open {CLEAN}" in after
@@ -2150,7 +2164,7 @@ def test_the_palette_opens_and_is_styled_as_one_surface(tmp_path):
 
     async def body(app, pilot):
         await pilot.press("ctrl+p")
-        await pilot.pause(0.6)
+        await settle(pilot, lambda: "assess a repository" in screen_text(app))
 
         assert app.screen.__class__.__name__ == "CommandPalette"
         text = screen_text(app)
@@ -2215,20 +2229,22 @@ def test_the_palette_cursor_is_visible_and_moves(tmp_path):
 
     async def body(app, pilot):
         await pilot.press("ctrl+p")
-        await pilot.pause(0.6)
+        await settle(pilot, lambda: bool(highlighted_rows(app)))
 
         first = highlighted_rows(app)
         assert first, "no option is visibly highlighted when the palette opens"
         assert "assess a repository" in first[0][1]
 
         await pilot.press("down")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: bool(highlighted_rows(app))
+                     and highlighted_rows(app)[0][0] > first[0][0])
         second = highlighted_rows(app)
         assert second, "the cursor disappeared instead of moving"
         assert second[0][0] > first[0][0], "the cursor did not move down"
 
         await pilot.press("up")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: bool(highlighted_rows(app))
+                     and highlighted_rows(app)[0][0] == first[0][0])
         back = highlighted_rows(app)
         assert back and back[0][0] == first[0][0], "up did not come back"
 
@@ -2268,11 +2284,12 @@ async def open_openai_models(app, pilot, monkeypatch, ids=None):
     monkeypatch.setenv(models_layer.NO_NETWORK_ENV, "0")
 
     await pilot.press("ctrl+l")
-    await pilot.pause(0.4)
+    await settle(pilot, lambda: app.screen.__class__.__name__ == "ModelsScreen")
     screen = app.screen
     screen.chosen = next(p for p in screen.providers if p.name == "openai")
     await screen._show_models(models_layer.list_models(screen.chosen))
-    await pilot.pause(0.3)
+    await settle(pilot, lambda: getattr(app.focused, "id", None) == "model-filter"
+                 and bool(listed_ids(screen)))
     return screen
 
 
@@ -2326,7 +2343,7 @@ def test_typing_narrows_the_model_list_without_losing_the_box(tmp_path, monkeypa
 
         for char in "mini":
             await pilot.press(char)
-        await pilot.pause(0.4)
+        await settle(pilot, lambda: "3 of " in screen_text(app))
 
         shown = listed_ids(screen)
         assert shown and all("mini" in i for i in shown)
@@ -2335,7 +2352,7 @@ def test_typing_narrows_the_model_list_without_losing_the_box(tmp_path, monkeypa
         assert app.focused.id == "model-filter"
 
         await pilot.press("down")
-        await pilot.pause(0.2)
+        await settle(pilot, lambda: screen.query_one("#models").index == 1)
         assert screen.query_one("#models").index == 1
         assert app.focused.id == "model-filter"
 
@@ -2349,7 +2366,7 @@ def test_a_filter_that_matches_nothing_says_so(tmp_path, monkeypatch):
         screen = await open_openai_models(app, pilot, monkeypatch)
         for char in "zzz":
             await pilot.press(char)
-        await pilot.pause(0.4)
+        await settle(pilot, lambda: "Nothing here matches" in screen_text(app))
         assert listed_ids(screen) == []
         assert "Nothing here matches" in screen_text(app)
 
@@ -2363,11 +2380,11 @@ def test_enter_in_the_filter_box_chooses_the_highlighted_model(tmp_path, monkeyp
         screen = await open_openai_models(app, pilot, monkeypatch)
         for char in "mini":
             await pilot.press(char)
-        await pilot.pause(0.4)
+        await settle(pilot, lambda: "3 of " in screen_text(app))
         chosen = listed_ids(screen)[0]
 
         await pilot.press("enter")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: f"{chosen} now answers every stage" in screen_text(app))
         assert f"{chosen} now answers every stage" in screen_text(app)
 
     drive(body, tmp_path, size=(110, 40))
@@ -2386,7 +2403,7 @@ def test_the_front_screen_has_a_way_out_that_survives_the_input(tmp_path):
         assert "ctrl+q quit" in screen_text(app)
 
         await pilot.press("ctrl+q")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: app._exit or not app.is_running)
         assert app._exit or not app.is_running
 
     drive(body, tmp_path)
@@ -2415,7 +2432,7 @@ def test_opening_a_screen_already_open_returns_to_it(tmp_path):
         await app.push_screen("discover")
         await app.push_screen("profile")
         await app.push_screen("discover")
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "DiscoverScreen")
 
         stack = app.screen_stack
         assert len({id(screen) for screen in stack}) == len(stack), [
@@ -2434,18 +2451,18 @@ def test_the_palette_can_reopen_the_screen_you_are_already_under(tmp_path):
 
     async def body(app, pilot):
         await pilot.press("ctrl+f")  # home → discover
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: getattr(app.focused, "id", None) == "choices")
         await pilot.press("ctrl+o")  # discover → profile
-        await pilot.pause(0.3)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "ProfileScreen")
         assert app.screen.__class__.__name__ == "ProfileScreen"
 
         await pilot.press("ctrl+p")
-        await pilot.pause(0.5)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "CommandPalette")
         for char in "find":
             await pilot.press(char)
-        await pilot.pause(0.5)
+        await settle(pilot, lambda: "find a repository" in screen_text(app))
         await pilot.press("enter")
-        await pilot.pause(0.5)
+        await settle(pilot, lambda: app.screen.__class__.__name__ == "DiscoverScreen")
 
         stack = app.screen_stack
         assert len({id(screen) for screen in stack}) == len(stack), [
