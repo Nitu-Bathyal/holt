@@ -1,7 +1,7 @@
 """Discover: browse the repositories Holt has checked, and the "most
 welcoming <language> repos" boards.
 
-    GET /v1/discover?language=python&topic=cli&sort=welcoming|stars|trending
+    GET /v1/discover?language=python&topic=cli&sort=welcoming|stars|trending&hacktoberfest=true
 
 Everything here comes from the latest 7-day **rules** report of each
 repository, never from a model, and ranks repositories, never people:
@@ -15,6 +15,11 @@ repository, never from a model, and ranks repositories, never people:
   (`usage_events`: one per person per day, see usage.py). Only repos with at
   least `TRENDING_MIN` are shown, so a handful of visits (or one person) can't
   put a repo on the list.
+
+`hacktoberfest=true` keeps only repos tagged with the `hacktoberfest` topic
+(how a project opts in to Hacktoberfest, and what a Hacktoberfest find searches
+for) that aren't archived, under any sort. The language chips then count those
+repos only.
 
 Language, stars, topics and descriptions live in `repo_meta`, which the warm
 pass fills (`refresh_meta`): one GraphQL query per hundred repositories.
@@ -52,6 +57,10 @@ TRENDING_DAYS = 7
 LANGUAGES_SHOWN = 16
 # Repository details older than this are read again by the warm pass.
 META_MAX_AGE_HOURS = 24
+# The GitHub topic a project adds to take part in Hacktoberfest.
+HACKTOBERFEST_TOPIC = "hacktoberfest"
+# GitHub allows a repository 20 topics; all are kept so a late one still counts.
+MAX_TOPICS = 20
 ODDS_RANK = {"good": 0, "fair": 1, "long": 2}
 # Welcoming order: small samples are pulled toward a typical merged share.
 PRIOR_PRS, PRIOR_RATE = 10, 0.2
@@ -83,9 +92,11 @@ class DiscoverOut(Model):
     sort: Sort
     language: str | None
     topic: str | None
+    hacktoberfest: bool = False
     repos: list[DiscoverRepo]
     # The languages to offer as filters, most repos first (ignores the
-    # language and topic filters, so the chips don't vanish once one is picked).
+    # language and topic filters, so the chips don't vanish once one is picked;
+    # with `hacktoberfest` they count Hacktoberfest repos only).
     languages: list[LanguageCount]
     trending_min: int
 
@@ -148,6 +159,13 @@ def _card(row: tuple, views: dict[str, int]) -> DiscoverRepo | None:
         checked_this_week=views.get(key), generated_at=generated or iso(created))
 
 
+def is_hacktoberfest(meta: RepoMeta | None) -> bool:
+    """Tagged for Hacktoberfest and not archived (archived repos can't take
+    pull requests). Repos whose details haven't been read yet aren't."""
+    return (meta is not None and not meta.archived
+            and HACKTOBERFEST_TOPIC in {t.lower() for t in meta.topics or []})
+
+
 def merged_share(s: Stats) -> float:
     """The share of outside pull requests merged, as if `PRIOR_PRS` more at a
     typical `PRIOR_RATE` had been seen too: 6 of 8 merged is less sure than
@@ -176,10 +194,12 @@ def rank(cards: list[DiscoverRepo], sort: Sort) -> list[DiscoverRepo]:
 
 
 async def discover_body(svc: Services, sort: Sort, language: str | None,
-                        topic: str | None, limit: int) -> DiscoverOut:
+                        topic: str | None, limit: int,
+                        hacktoberfest: bool = False) -> DiscoverOut:
     language, topic = _norm(language), _norm(topic)
     views = await checked_this_week(svc)
-    cards = [c for row in await _latest(svc) if (c := _card(row, views))]
+    cards = [c for row in await _latest(svc)  # row[-1] is the repo's RepoMeta
+             if (not hacktoberfest or is_hacktoberfest(row[-1])) and (c := _card(row, views))]
     counts = Counter(c.language for c in cards if c.language)
     chosen = [c for c in cards
               if (language is None or (c.language or "").lower() == language)
@@ -187,7 +207,8 @@ async def discover_body(svc: Services, sort: Sort, language: str | None,
     # The language as GitHub spells it, when a repo has it.
     shown = next((name for name in counts if name.lower() == language), language)
     return DiscoverOut(
-        sort=sort, language=shown, topic=topic, repos=rank(chosen, sort)[:limit],
+        sort=sort, language=shown, topic=topic, hacktoberfest=hacktoberfest,
+        repos=rank(chosen, sort)[:limit],
         languages=[LanguageCount(name=name, repos=n)
                    for name, n in sorted(counts.items(), key=lambda x: (-x[1], x[0].lower()))
                    [:LANGUAGES_SHOWN]],
@@ -199,10 +220,11 @@ async def discover(request: Request,
                    sort: Sort = "welcoming",
                    language: str | None = Query(None, max_length=80),
                    topic: str | None = Query(None, max_length=80),
-                   limit: int = Query(24, ge=1, le=100)) -> DiscoverOut:
+                   limit: int = Query(24, ge=1, le=100),
+                   hacktoberfest: bool = False) -> DiscoverOut:
     """Checked repositories, filtered and sorted (see the module docstring).
     Reads only the database: no GitHub call and no rate limit."""
-    return await discover_body(services(request), sort, language, topic, limit)
+    return await discover_body(services(request), sort, language, topic, limit, hacktoberfest)
 
 
 # --- the warm pass's part -------------------------------------------------------
@@ -246,7 +268,7 @@ async def store_meta(svc: Services, details: dict[str, dict[str, Any] | None]) -
             row.description = (d.get("description") or "")[:500] or None
             row.language = d.get("language") or None
             row.stars = int(d.get("stars") or 0)
-            row.topics = list(d.get("topics") or [])[:10]
+            row.topics = list(d.get("topics") or [])[:MAX_TOPICS]
             row.pushed_at = _parse_ts(d.get("pushed_at"))
             row.archived = bool(d.get("archived"))
             row.fork = bool(d.get("fork"))

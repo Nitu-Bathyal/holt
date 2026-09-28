@@ -217,15 +217,17 @@ export async function listReports(limit: number): Promise<Result<{ reports: { re
 }
 
 /** Discover over the cached reports. The mock has no GitHub details, so language and stars are empty. */
-export async function discover(sort: DiscoverSort, language: string | null, topic: string | null, limit: number): Promise<Result<DiscoverOut>> {
+export async function discover(sort: DiscoverSort, language: string | null, topic: string | null, limit: number, hacktoberfest = false): Promise<Result<DiscoverOut>> {
+  const tagged = new Set(mockFindPool().filter(({ seed }) => seed.hacktoberfest).map(({ seed }) => seed.repo));
   const cards: DiscoverRepo[] = [...state().cache.values()]
     .filter((r) => r.mode === "rules" && r.days === 7)
+    .filter((r) => !hacktoberfest || tagged.has(r.repo))
     .map((r) => ({
       repo: r.repo, verdict: r.verdict, headline: r.headline, tone: r.tone, reason: r.verdict_line, stats: r.stats,
       description: null, language: null, stars: null, topics: [], pushed_at: null, checked_this_week: null, generated_at: r.generated_at,
     }));
   const chosen = language || topic || sort === "trending" ? [] : sort === "welcoming" ? cards.filter((c) => c.verdict === "viable") : cards;
-  return { ok: true, data: { sort, language, topic, repos: chosen.slice(0, limit), languages: [], trending_min: 5 } };
+  return { ok: true, data: { sort, language, topic, hacktoberfest, repos: chosen.slice(0, limit), languages: [], trending_min: 5 } };
 }
 
 export async function getReport(repoIn: string, mode: Mode, days: number): Promise<Result<Report>> {

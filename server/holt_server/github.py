@@ -43,7 +43,7 @@ DETAILS_BATCH = 100
 DETAILS_FIELDS = """
   nameWithOwner description stargazerCount pushedAt isArchived isFork isPrivate
   primaryLanguage { name }
-  repositoryTopics(first: 10) { nodes { topic { name } } }
+  repositoryTopics(first: 20) { nodes { topic { name } } }
 """
 
 LOOKUP_TIMEOUT_S = 15.0
