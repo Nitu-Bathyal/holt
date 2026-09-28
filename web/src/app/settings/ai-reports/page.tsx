@@ -70,12 +70,12 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
       {m && c && (
         <div className="grid gap-px border border-line bg-line shadow-soft sm:grid-cols-2">
           <div className="bg-panel p-5">
-            <p className="text-[0.8rem] text-faint">{c.purchased > 0 ? "Credits left" : "Free AI reports left"}</p>
+            <p className="text-[0.87rem] text-faint">{c.purchased > 0 ? "Credits left" : "Free AI reports left"}</p>
             <p className="mt-1 text-[1.6rem] font-semibold leading-tight">{c.balance}</p>
-            {c.purchased > 0 && <p className="mt-1 text-[0.8rem] text-muted">{c.free} free, {c.purchased} bought</p>}
+            {c.purchased > 0 && <p className="mt-1 text-[0.87rem] text-muted">{c.free} free, {c.purchased} bought</p>}
           </div>
           <div className="bg-panel p-5">
-            <p className="text-[0.8rem] text-faint">This week&apos;s free one</p>
+            <p className="text-[0.87rem] text-faint">This week&apos;s free one</p>
             {c.can_claim ? (
               <form action={claim} className="mt-2">
                 <button type="submit" className="btn-primary">claim 1 free AI report</button>
@@ -83,7 +83,7 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
             ) : (
               <>
                 <p className="mt-1 text-[1.6rem] font-semibold leading-tight">{nextClaim || "soon"}</p>
-                <p className="mt-1 text-[0.8rem] text-muted">when you can claim the next one</p>
+                <p className="mt-1 text-[0.87rem] text-muted">when you can claim the next one</p>
               </>
             )}
           </div>
@@ -141,7 +141,7 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
         )}
         {charges.length > 0 && (
           <>
-            <h4 className="mt-6 text-[0.85rem] text-faint">Payments</h4>
+            <h4 className="mt-6 text-[0.89rem] text-faint">Payments</h4>
             <ul className="mt-2 divide-y divide-line border-y border-line">
               {charges.map((ch) => (
                 <li key={ch.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-[0.9rem]">
@@ -184,7 +184,7 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
             </ul>
           )}
           {onSale && purchases.length > 0 && (
-            <p className="mt-4 text-[0.85rem]"><Link href="/pricing#packs" className="text-link">Buy more credits →</Link></p>
+            <p className="mt-4 text-[0.89rem]"><Link href="/pricing#packs" className="text-link">Buy more credits →</Link></p>
           )}
         </div>
       )}

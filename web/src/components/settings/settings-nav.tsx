@@ -17,7 +17,7 @@ export function SettingsNav() {
               <Link
                 href={s.href}
                 aria-current={on ? "page" : undefined}
-                className={`-mb-px flex min-h-11 items-center whitespace-nowrap border-b-2 px-3 text-[0.85rem] transition-colors md:-ml-px md:mb-0 md:border-b-0 md:border-l-2 md:px-4 ${
+                className={`-mb-px flex min-h-11 items-center whitespace-nowrap border-b-2 px-3 text-[0.89rem] transition-colors md:-ml-px md:mb-0 md:border-b-0 md:border-l-2 md:px-4 ${
                   on ? "border-blue text-ink" : "border-transparent text-muted hover:text-ink"
                 }`}
               >

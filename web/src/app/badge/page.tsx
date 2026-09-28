@@ -34,7 +34,7 @@ export default async function BadgePage({ searchParams }: PageProps<"/badge">) {
           <p className="prose-sans mt-5 max-w-2xl text-[1.05rem]">
             Paste your repo. If outsiders get replies and get merged, you get a README badge that says so.
           </p>
-          <p className="mt-3 inline-flex overflow-hidden rounded-[3px] text-[0.75rem] leading-5 text-white" style={{ fontFamily: "Verdana,Geneva,DejaVu Sans,sans-serif" }}>
+          <p className="mt-3 inline-flex overflow-hidden rounded-[3px] text-[0.82rem] leading-5 text-white" style={{ fontFamily: "Verdana,Geneva,DejaVu Sans,sans-serif" }}>
             <span className="bg-[#555] px-1.5">Holt</span>
             <span className="bg-[#1a7f37] px-1.5">merges outsiders · replies in ~6h</span>
           </p>

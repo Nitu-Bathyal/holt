@@ -5,7 +5,7 @@ import { BUDGETS, reportHref } from "@/lib/budget";
  * the verdict stays the same, only the note about slow replies changes. */
 export function BudgetPicker({ repo, days }: { repo: string; days: number }) {
   return (
-    <nav aria-label="How long you can wait for a reply" className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.78rem]">
+    <nav aria-label="How long you can wait for a reply" className="mb-6 flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.85rem]">
       <span className="text-muted">How long can you wait for a first reply?</span>
       <span className="inline-flex border border-line-strong">
         {BUDGETS.map((b) => (

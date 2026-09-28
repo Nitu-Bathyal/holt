@@ -58,7 +58,7 @@ export default async function ConnectPage({ searchParams }: PageProps<"/connect"
               <input type="checkbox" name="stats_opt_out" className="mt-1 size-4 accent-blue" />
               <span>
                 <strong>Don&apos;t include me in statistics</strong>
-                <span className="block text-[0.85rem] text-muted">Your contributions stay out of every repo&apos;s numbers. You can change this later in settings.</span>
+                <span className="block text-[0.89rem] text-muted">Your contributions stay out of every repo&apos;s numbers. You can change this later in settings.</span>
               </span>
             </label>
             <label className="flex min-h-11 cursor-pointer items-start gap-3 text-[0.95rem]">
@@ -71,10 +71,10 @@ export default async function ConnectPage({ searchParams }: PageProps<"/connect"
             <button type="submit" className="btn-primary" disabled={viaGitHub && !canLink}>
               {viaGitHub ? "continue to GitHub" : "connect my GitHub account"}
             </button>
-            <Link href="/settings/accounts" className="text-[0.85rem] text-muted hover:text-ink">not now</Link>
+            <Link href="/settings/accounts" className="text-[0.89rem] text-muted hover:text-ink">not now</Link>
           </div>
-          {viaGitHub && !canLink && <p className="mt-3 font-sans text-[0.85rem] text-faint">{ERRORS.unavailable}</p>}
-          <p className="mt-6 font-sans text-[0.8rem] text-faint">
+          {viaGitHub && !canLink && <p className="mt-3 font-sans text-[0.89rem] text-faint">{ERRORS.unavailable}</p>}
+          <p className="mt-6 font-sans text-[0.87rem] text-faint">
             Details: <Link href="/privacy#connect-github" className="text-link">what Holt keeps when you connect GitHub</Link>.
           </p>
         </form>

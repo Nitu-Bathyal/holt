@@ -44,14 +44,14 @@ export default async function HistoryPage() {
                   >
                     <span className="min-w-0">
                       <span className="block truncate font-semibold">{h.repo}</span>
-                      <span className="text-[0.75rem] text-faint">
+                      <span className="text-[0.82rem] text-faint">
                         {h.mode === "ai" ? "AI report" : "free report"} · <time dateTime={h.created_at}>{timeAgo(h.created_at)}</time>
                       </span>
                     </span>
                     {h.headline && h.tone ? (
                       <VerdictPill headline={h.headline} tone={h.tone} className="justify-self-end" />
                     ) : (
-                      <span className={`justify-self-end text-[0.75rem] ${h.status === "error" ? "text-orange" : "text-faint"}`}>
+                      <span className={`justify-self-end text-[0.82rem] ${h.status === "error" ? "text-orange" : "text-faint"}`}>
                         {h.status === "error" ? "didn't finish" : "still running"}
                       </span>
                     )}

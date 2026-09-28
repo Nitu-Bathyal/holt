@@ -47,7 +47,7 @@ export function CompareBody({ report, leads = [] }: { report: Report; leads?: Le
         {rows.map(([k, v, lead]) => {
           const best = lead != null && leads.includes(lead);
           return (
-            <div key={k} className={`grid grid-cols-[1fr_auto] gap-3 px-4 py-3 text-[0.82rem] ${best ? "bg-green/[0.06]" : ""}`}>
+            <div key={k} className={`grid grid-cols-[1fr_auto] gap-3 px-4 py-3 text-[0.88rem] ${best ? "bg-green/[0.06]" : ""}`}>
               <dt className="font-sans text-muted">{k}</dt>
               <dd className="text-right text-muted">
                 {v}

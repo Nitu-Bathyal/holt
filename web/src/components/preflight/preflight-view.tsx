@@ -134,7 +134,7 @@ export function PreflightView({ initial, query, signedIn, badQuery }: { initial:
         className="border border-line-strong bg-panel p-5 shadow-card sm:p-7"
         data-preflight-form
       >
-        <div role="tablist" aria-label="What to check" className="flex gap-4 text-[0.8rem]">
+        <div role="tablist" aria-label="What to check" className="flex gap-4 text-[0.87rem]">
           {(["pr", "branch"] as const).map((m) => (
             <button
               key={m}
@@ -154,7 +154,7 @@ export function PreflightView({ initial, query, signedIn, badQuery }: { initial:
 
         {mode === "pr" ? (
           <div className="mt-4">
-            <label htmlFor="pf-pr" className="text-[0.72rem] uppercase tracking-[0.08em] text-faint">Pull request link</label>
+            <label htmlFor="pf-pr" className="text-[0.8rem] uppercase tracking-[0.08em] text-faint">Pull request link</label>
             <input
               id="pf-pr"
               value={pr}
@@ -177,7 +177,7 @@ export function PreflightView({ initial, query, signedIn, badQuery }: { initial:
             <Field id="pf-repo" label="Repository" value={repo} onChange={setRepo} placeholder="owner/repo" onEdit={() => setInputError("")} />
             <Field id="pf-branch" label="Your branch" value={branch} onChange={setBranch} placeholder="you:my-fix" onEdit={() => setInputError("")} />
             <Field id="pf-base" label="Compare with" value={base} onChange={setBase} placeholder="default branch" onEdit={() => setInputError("")} />
-            <p className="font-sans text-[0.8rem] text-faint sm:col-span-3">
+            <p className="font-sans text-[0.87rem] text-faint sm:col-span-3">
               A branch in your fork is <code className="bg-panel-2 px-1">your-name:branch</code>. The fork must be public.
             </p>
           </div>
@@ -200,7 +200,7 @@ export function PreflightView({ initial, query, signedIn, badQuery }: { initial:
               <Link href={`/signin?callbackUrl=${encodeURIComponent(href)}`} prefetch={false} className="btn-primary bg-blue">
                 sign in to check <span aria-hidden="true">→</span>
               </Link>
-              <span className="font-sans text-[0.85rem] text-faint">
+              <span className="font-sans text-[0.89rem] text-faint">
                 {s.on_sale ? "Pre-flight checks are a paid feature." : "Pre-flight checks are a paid feature and aren't on sale yet."} The example below is free.
               </span>
             </>
@@ -209,7 +209,7 @@ export function PreflightView({ initial, query, signedIn, badQuery }: { initial:
               <button type="submit" disabled={offer.kind !== "can-check" || busy} className="btn-primary bg-blue disabled:cursor-not-allowed disabled:opacity-50" data-preflight-check>
                 {busy ? "checking…" : result ? "check again" : "check it"} <span aria-hidden="true">→</span>
               </button>
-              <span className={`font-sans text-[0.85rem] ${offer.kind === "can-check" ? "text-muted" : "text-orange"}`}>{offer.note}</span>
+              <span className={`font-sans text-[0.89rem] ${offer.kind === "can-check" ? "text-muted" : "text-orange"}`}>{offer.note}</span>
               {offer.kind === "blocked" && offer.buy && (
                 <Link href="/pricing" className="bracket-link">[ see plans → ]</Link>
               )}
@@ -222,7 +222,7 @@ export function PreflightView({ initial, query, signedIn, badQuery }: { initial:
 
       {run.phase === "error" && (
         <div role="alert" className="border border-orange/60 bg-panel p-5 sm:p-6" data-preflight-error>
-          <p className="text-[0.72rem] uppercase tracking-[0.08em] text-orange">The check didn&apos;t finish</p>
+          <p className="text-[0.8rem] uppercase tracking-[0.08em] text-orange">The check didn&apos;t finish</p>
           <p className="mt-2 font-sans text-ink">{run.error.message}</p>
         </div>
       )}
@@ -239,7 +239,7 @@ export function PreflightView({ initial, query, signedIn, badQuery }: { initial:
 function Field({ id, label, value, onChange, placeholder, onEdit }: { id: string; label: string; value: string; onChange: (v: string) => void; placeholder: string; onEdit: () => void }) {
   return (
     <div className="min-w-0">
-      <label htmlFor={id} className="text-[0.72rem] uppercase tracking-[0.08em] text-faint">{label}</label>
+      <label htmlFor={id} className="text-[0.8rem] uppercase tracking-[0.08em] text-faint">{label}</label>
       <input
         id={id}
         value={value}
@@ -265,7 +265,7 @@ function Checking({ stage, progress }: { stage: string; progress: number }) {
       <div className="mt-3 h-1.5 bg-panel-2" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Progress">
         <div className="h-full bg-blue transition-[width] duration-500 ease-out" style={{ width: `${pct}%` }} />
       </div>
-      <p className="mt-3 font-sans text-[0.85rem] text-faint">
+      <p className="mt-3 font-sans text-[0.89rem] text-faint">
         Usually a few seconds. The first check on a repository can take a couple of minutes while Holt reads its history. You can leave this page and come back.
       </p>
     </div>
@@ -314,7 +314,7 @@ export function ResultView({ p, example = false }: { p: Preflight; example?: boo
   return (
     <section aria-labelledby={example ? "pf-example" : "pf-result"} className="space-y-7" data-preflight-result={example ? "example" : "live"}>
       <div className="border border-line-strong bg-panel p-5 shadow-card sm:p-7">
-        <p className="text-[0.72rem] uppercase tracking-[0.08em] text-faint">
+        <p className="text-[0.8rem] uppercase tracking-[0.08em] text-faint">
           {t.kind === "branch" ? "branch" : "pull request"} · {p.repo}
         </p>
         <h2 id={example ? "pf-example" : "pf-result"} className="mt-2 text-[1.2rem] font-semibold leading-snug tracking-tight [overflow-wrap:anywhere] sm:text-[1.4rem]">
@@ -323,32 +323,32 @@ export function ResultView({ p, example = false }: { p: Preflight; example?: boo
             {t.title ? <Text text={t.title} /> : `${t.head ?? "Your branch"} compared with ${t.base ?? "the default branch"}`}
           </GH>
         </h2>
-        <p className="mt-2 font-sans text-[0.88rem] text-muted">
+        <p className="mt-2 font-sans text-[0.9rem] text-muted">
           {t.author && <>by {t.author}{t.outside === true ? ", from outside the project" : t.outside === false ? ", who has a role in the project" : ""}</>}
           {t.author && size && " · "}
           {size}
           {t.draft && " · draft"}
         </p>
         {t.state && t.state !== "open" && (
-          <p className="mt-2 font-sans text-[0.88rem] text-orange">This pull request is already {t.state}. The checks still show how it compares.</p>
+          <p className="mt-2 font-sans text-[0.9rem] text-orange">This pull request is already {t.state}. The checks still show how it compares.</p>
         )}
         <p className="mt-5 text-[1.05rem] font-medium text-ink sm:text-[1.15rem]" data-preflight-counts>
           {p.checks.length ? countsLine(p.counts) : "No checks apply"}
         </p>
-        {p.note && <p className="mt-3 border border-dashed border-line-strong px-3 py-2 font-sans text-[0.88rem] text-muted">{p.note}</p>}
+        {p.note && <p className="mt-3 border border-dashed border-line-strong px-3 py-2 font-sans text-[0.9rem] text-muted">{p.note}</p>}
         {p.archived && <p className="mt-3 font-sans text-[0.9rem] text-orange">This repo is archived. It doesn&apos;t take PRs any more.</p>}
-        {p.free_recheck && <p className="mt-3 font-sans text-[0.85rem] text-green">Same commit as your last check, so this one was free.</p>}
+        {p.free_recheck && <p className="mt-3 font-sans text-[0.89rem] text-green">Same commit as your last check, so this one was free.</p>}
       </div>
 
       {p.summary && p.summary.sentences.length > 0 && (
         <div className="border-l-2 border-blue pl-5" data-preflight-summary>
-          <p className="text-[0.72rem] uppercase tracking-[0.08em] text-blue">Summary</p>
+          <p className="text-[0.8rem] uppercase tracking-[0.08em] text-blue">Summary</p>
           {p.summary.sentences.map((x, i) => (
             <p key={i} className="mt-2 font-sans text-[1rem] leading-relaxed text-ink">
               <Text text={x.text} />
             </p>
           ))}
-          <p className="mt-2 text-[0.72rem] text-faint">Written by {p.summary.model ?? "an AI model"} from the checks below, and checked against them. It doesn&apos;t predict whether this will be merged.</p>
+          <p className="mt-2 text-[0.8rem] text-faint">Written by {p.summary.model ?? "an AI model"} from the checks below, and checked against them. It doesn&apos;t predict whether this will be merged.</p>
         </div>
       )}
 
@@ -366,14 +366,14 @@ export function ResultView({ p, example = false }: { p: Preflight; example?: boo
 
       {p.similar && (
         <div className="border border-line-strong bg-panel p-5 sm:p-6" data-preflight-similar>
-          <p className="text-[0.72rem] uppercase tracking-[0.08em] text-faint">The closest merged PR</p>
+          <p className="text-[0.8rem] uppercase tracking-[0.08em] text-faint">The closest merged PR</p>
           <p className="mt-2 font-sans text-[1rem] font-medium text-ink [overflow-wrap:anywhere]">
             <GH url={p.similar.url} example={example}>
               {p.similar.number != null && <>#{p.similar.number} </>}
               <Text text={p.similar.title} />
             </GH>
           </p>
-          <p className="mt-1 font-sans text-[0.85rem] text-muted">
+          <p className="mt-1 font-sans text-[0.89rem] text-muted">
             {p.similar.author && <>by {p.similar.author}{p.similar.outside ? ", from outside the project" : ""}</>}
             {p.similar.lines != null && <> · {p.similar.lines} lines</>}
             {p.similar.files != null && <> · {p.similar.files} {p.similar.files === 1 ? "file" : "files"}</>}
@@ -387,7 +387,7 @@ export function ResultView({ p, example = false }: { p: Preflight; example?: boo
         </div>
       )}
 
-      <p className="border-t border-dashed border-line pt-4 text-[0.72rem] leading-relaxed text-faint">
+      <p className="border-t border-dashed border-line pt-4 text-[0.8rem] leading-relaxed text-faint">
         {example ? "Example, made up to show the layout. " : <>Checked <time dateTime={p.checked_at} suppressHydrationWarning>{timeAgo(p.checked_at)}</time>, </>}
         compared with pull requests merged in {span}. Each verdict comes from fixed rules, not an AI. Holt only reads GitHub: it never comments, labels or changes anything.
       </p>
@@ -405,7 +405,7 @@ function CheckRow({ c, example }: { c: PreflightCheck; example: boolean }) {
           <span aria-hidden="true" className={`w-3 text-center font-semibold ${m.text}`}>{m.sym}</span>
           {c.title}
         </p>
-        <span className={`text-[0.72rem] uppercase tracking-[0.08em] ${m.text}`}>{VERDICT_WORDS[c.verdict]}</span>
+        <span className={`text-[0.8rem] uppercase tracking-[0.08em] ${m.text}`}>{VERDICT_WORDS[c.verdict]}</span>
       </div>
       <p className="mt-1.5 pl-[1.4rem] font-sans text-[0.95rem] leading-relaxed text-muted">
         <Text text={c.statement} />
@@ -413,13 +413,13 @@ function CheckRow({ c, example }: { c: PreflightCheck; example: boolean }) {
       {c.quote && (
         <blockquote className="ml-[1.4rem] mt-2 border-l border-line-strong pl-3 font-sans text-[0.9rem] text-ink">
           &ldquo;<Text text={c.quote.text} />&rdquo;
-          <span className="mt-0.5 block text-[0.75rem] text-faint">
+          <span className="mt-0.5 block text-[0.82rem] text-faint">
             {c.quote.url ? <GH url={c.quote.url} example={example}>{c.quote.path ?? "the contributing guide"}</GH> : (c.quote.path ?? "the contributing guide")}
           </span>
         </blockquote>
       )}
       {links.length > 0 && (
-        <p className="mt-2 flex flex-wrap gap-x-2 pl-[1.4rem] text-[0.78rem] text-faint">
+        <p className="mt-2 flex flex-wrap gap-x-2 pl-[1.4rem] text-[0.85rem] text-faint">
           <span>merged examples:</span>
           {links.map((u) => (
             <GH key={u} url={u} example={example}>{linkLabel(u)}</GH>
@@ -460,7 +460,7 @@ function Explainer() {
         </p>
       </div>
       <div className="border border-dashed border-line-strong p-4 sm:p-6">
-        <p className="mb-4 text-[0.72rem] uppercase tracking-[0.08em] text-blue">Example · a made-up PR</p>
+        <p className="mb-4 text-[0.8rem] uppercase tracking-[0.08em] text-blue">Example · a made-up PR</p>
         <ResultView p={EXAMPLE_PREFLIGHT} example />
       </div>
     </div>

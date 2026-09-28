@@ -1,8 +1,9 @@
 "use client";
 
-// The site cat from the original landing page. Static HTML first; GSAP,
-// ScrollTrigger and Lenis load after the page is idle, and never when the
-// visitor prefers reduced motion.
+// The site cat from the original landing page. Static HTML first; GSAP and
+// ScrollTrigger load after the page is idle, and never when the visitor
+// prefers reduced motion. Scrolling stays native: a smooth-scroll library here
+// made the wheel lag behind the hand, and only on this page, only once idle.
 import { useEffect, useRef } from "react";
 import { CAT, type CatMood } from "@/lib/cat";
 
@@ -36,7 +37,7 @@ export function CatCompanion() {
       aria-label="Play with Holt, the site cat"
       data-cat-companion
       // One hover target sized to the whole face, above the hero text layer.
-      className="pointer-events-auto absolute z-20 hidden origin-top-left p-5 text-blue [touch-action:manipulation] lg:fixed lg:left-[calc(50%+360px)] lg:top-[130px] lg:inline-block lg:opacity-85"
+      className="pointer-events-auto absolute z-20 hidden origin-top-left p-5 text-blue [touch-action:manipulation] lg:fixed lg:left-[calc(50%+360px)] lg:top-[130px] lg:inline-block lg:opacity-85 lg:will-change-transform"
     >
       <span className="cat-character inline-block">
         <span
@@ -131,15 +132,19 @@ async function start(gsap: Gsap, ScrollTrigger: ST, cat: HTMLButtonElement) {
 
   const restore = () => {
     window.clearTimeout(reaction);
+    face.classList.remove("is-happy");
     glyphs(current);
     gsap.to(character, { scale: 1, x: 0, y: 0, rotation: 0, duration: 0.28 });
   };
   const onEnter = () => {
     hovered = true;
+    // Caret eyes are wider than the dots they replace: give them room so they
+    // don't run into the ears (see .cat-face.is-happy).
+    face.classList.add("is-happy");
     eyes.forEach((e) => (e.textContent = "^"));
     mouth.textContent = "ᴗ";
     gsap.to(character, { scale: 1.04, duration: 0.2 });
-    gsap.to(ears, { y: -3, rotation: (i: number) => (i ? 6 : -6), duration: 0.2 });
+    gsap.to(ears, { y: -3, rotation: (i: number) => (i ? 3 : -3), duration: 0.2 });
   };
   const onLeave = () => {
     hovered = false;
@@ -192,50 +197,53 @@ async function start(gsap: Gsap, ScrollTrigger: ST, cat: HTMLButtonElement) {
   );
 
   // Desktop: the cat walks from the hero to the right edge and stays with you.
+  // Timed, not scrubbed: tied to scroll position, the cat jumped with every
+  // wheel notch (up to ~50px a frame). Crossing the hero's top plays one glide;
+  // scrolling back to the top plays it backwards.
   let journey: gsap.core.Timeline | undefined;
-  let lenis: import("lenis").default | undefined;
+  let journeyTrigger: ReturnType<ST["create"]> | undefined;
+  let fade: gsap.core.Tween | undefined;
   if (desktop) {
     const r = cat.getBoundingClientRect();
     const compact = innerWidth < 1180;
-    journey = gsap
-      .timeline({ scrollTrigger: { trigger: "[data-hero]", start: "top top", end: "bottom 58%", scrub: 0.65 } })
-      .to(cat, {
-        x: innerWidth - (compact ? 118 : 156) - r.left,
-        y: innerHeight * 0.5 - 62 - r.top,
-        scale: compact ? 0.36 : 0.43,
-        opacity: 0.92,
-        ease: "power2.inOut",
-      });
-    gsap.to(cat, { autoAlpha: 0, scrollTrigger: { trigger: "footer", start: "top 94%", end: "top 75%", scrub: true } });
-
-    if (matchMedia("(pointer: fine)").matches) {
-      const { default: Lenis } = await import("lenis");
-      lenis = new Lenis({ duration: 1.15, smoothWheel: true, wheelMultiplier: 0.9, anchors: true });
-      lenis.on("scroll", ScrollTrigger.update);
-      const raf = (time: number) => lenis!.raf(time * 1000);
-      gsap.ticker.add(raf);
-      gsap.ticker.lagSmoothing(0);
-    }
+    journey = gsap.timeline({ paused: true }).to(cat, {
+      x: innerWidth - (compact ? 118 : 156) - r.left,
+      y: innerHeight * 0.5 - 62 - r.top,
+      scale: compact ? 0.36 : 0.43,
+      opacity: 0.92,
+      duration: 0.9,
+      ease: "power3.inOut",
+      force3D: true,
+    });
+    journeyTrigger = ScrollTrigger.create({
+      trigger: "[data-hero]",
+      start: "top top",
+      onEnter: () => journey!.play(),
+      onLeaveBack: () => journey!.reverse(),
+    });
+    fade = gsap.to(cat, { autoAlpha: 0, scrollTrigger: { trigger: "footer", start: "top 94%", end: "top 75%", scrub: true } });
   }
 
-  // Scroll reveals for anything still below the fold.
+  // Scroll reveals for anything still below the fold: short, small and started
+  // as the element enters, so fast scrolling never lands on a blank section.
   const reveals = gsap.utils
     .toArray<HTMLElement>("[data-reveal]")
     .filter((el) => el.getBoundingClientRect().top > innerHeight * 0.9)
     .map((el) =>
-      gsap.from(el, { y: 28, autoAlpha: 0, duration: 0.8, ease: "power3.out", scrollTrigger: { trigger: el, start: "top 88%", once: true } }),
+      gsap.from(el, { y: 12, autoAlpha: 0, duration: 0.45, ease: "power3.out", scrollTrigger: { trigger: el, start: "top 98%", once: true } }),
     );
 
   return () => {
     idleCall?.kill();
     triggers.forEach((t) => t.kill());
-    journey?.scrollTrigger?.kill();
+    journeyTrigger?.kill();
     journey?.kill();
+    fade?.scrollTrigger?.kill();
+    fade?.kill();
     reveals.forEach((r) => {
       r.scrollTrigger?.kill();
       r.revert();
     });
-    lenis?.destroy();
     if (onMove) removeEventListener("pointermove", onMove);
     cat.removeEventListener("pointerenter", onEnter);
     cat.removeEventListener("pointerleave", onLeave);

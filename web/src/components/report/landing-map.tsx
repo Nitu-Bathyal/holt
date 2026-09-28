@@ -12,7 +12,7 @@ export function LandingMap({ landing, neverLanded }: { landing: Report["landing"
         <ul className="space-y-4" aria-label="Folders where outside pull requests were merged">
           {landing.map((l) => (
             <li key={l.path}>
-              <div className="flex items-baseline justify-between gap-4 text-[0.85rem]">
+              <div className="flex items-baseline justify-between gap-4 text-[0.89rem]">
                 <code className="truncate text-ink">{areaLabel(l)}</code>
                 <span className="shrink-0 font-sans text-muted">
                   <strong className="font-semibold text-green">{l.merged}</strong> of {l.attempted} merged
@@ -28,7 +28,7 @@ export function LandingMap({ landing, neverLanded }: { landing: Report["landing"
       )}
       {neverLanded.length > 0 && (
         <div>
-          <p className="mb-2 text-[0.72rem] uppercase tracking-[0.08em] text-faint">Nothing from outsiders merged yet in</p>
+          <p className="mb-2 text-[0.8rem] uppercase tracking-[0.08em] text-faint">Nothing from outsiders merged yet in</p>
           <ul className="flex flex-wrap gap-2">
             {neverLanded.map((l) => (
               <li key={l.path} className="chip border-orange/40">

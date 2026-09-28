@@ -151,7 +151,7 @@ function Results({ shown, pending, fit, days, saved, picks, setPicks, onRetry, c
 
   return (
     <section aria-label="Results" aria-busy={pending || (!raw && !error)} className="mt-5">
-      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-[0.8rem] text-faint">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-[0.87rem] text-faint">
         <p aria-live="polite" className="flex items-center gap-x-2">
           {pending ? (
             <>
