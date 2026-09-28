@@ -46,7 +46,7 @@ export default async function SavedPage() {
           </div>
         ) : (
           <div className="space-y-10">
-            {cards.length > 0 && <RepoGrid repos={cards.map(fromDiscover)} topicBase="/discover" />}
+            {cards.length > 0 && <RepoGrid repos={cards.map(fromDiscover)} topicBase="/discover" saved={items.map((i) => i.repo)} fadeUnsaved />}
             {unchecked.length > 0 && (
               <section aria-labelledby="unchecked">
                 <h2 id="unchecked" className="text-[1.05rem] font-semibold tracking-tight">Not checked recently</h2>
@@ -72,7 +72,7 @@ export default async function SavedPage() {
               </section>
             )}
             <p className="text-[0.75rem] text-faint">
-              {items.length} of {r.data.max_saved} saved. To remove one, open its report and press saved.
+              {items.length} of {r.data.max_saved} saved. Press saved on a card to remove it; it leaves this list when you come back.
             </p>
           </div>
         )}

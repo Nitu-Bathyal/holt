@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { signInToSave, wantsSave, withoutSave } from "@/lib/saved";
 
 const FAILED = "That didn't save. Please try again.";
@@ -20,9 +20,19 @@ function Bookmark({ filled, drop }: { filled: boolean; drop: boolean }) {
  * when signed out: pressing it then explains saving and offers sign-in, which
  * comes back here and saves it. The toggle is optimistic; a failure puts it
  * back and says so.
+ *
+ * In a list, the list owns which repos are saved: it passes `saved` and hears
+ * every change through `onChange`, so the card and its focus view agree.
+ * `compact` leaves out the "see your saved repos" link, for a card's footer.
  */
-export function SaveButton({ repo, saved: initial, className = "" }: { repo: string; saved: boolean | null; className?: string }) {
+export function SaveButton({ repo, saved: initial, onChange, compact = false, className = "" }: { repo: string; saved: boolean | null; onChange?: (saved: boolean) => void; compact?: boolean; className?: string }) {
   const [saved, setSaved] = useState(Boolean(initial));
+  // Another button for the same repo (the card vs. its focus view) changed it.
+  const [shown, setShown] = useState(initial);
+  if (initial !== shown) {
+    setShown(initial);
+    setSaved(Boolean(initial));
+  }
   const [error, setError] = useState("");
   const [fresh, setFresh] = useState(false);
   const [asking, setAsking] = useState(false);
@@ -36,6 +46,7 @@ export function SaveButton({ repo, saved: initial, className = "" }: { repo: str
     setSaved(next);
     setFresh(next);
     setError("");
+    onChange?.(next);
     queue.current = queue.current.then(async () => {
       let ok = false;
       let message = FAILED;
@@ -51,6 +62,7 @@ export function SaveButton({ repo, saved: initial, className = "" }: { repo: str
         setSaved(!next);
         setFresh(false);
         setError(message);
+        onChange?.(!next);
       }
     });
   }
@@ -96,7 +108,7 @@ export function SaveButton({ repo, saved: initial, className = "" }: { repo: str
   return (
     <span className={`inline-flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 ${className}`}>
       {button}
-      {fresh && !error && (
+      {fresh && !error && !compact && (
         <Link href="/me/saved" className="hidden text-[0.75rem] text-faint hover:text-blue sm:inline">
           see your saved repos
         </Link>
@@ -115,20 +127,39 @@ function SignInPrompt({ repo, onClose }: { repo: string; onClose: () => void }) 
   const first = useRef<HTMLAnchorElement>(null);
   const titleId = useId();
   const [search, setSearch] = useState("");
+  const [place, setPlace] = useState<React.CSSProperties>({ visibility: "hidden" });
+
+  // Fixed to the viewport, next to the button, so a sideways-scrolling row or
+  // a card's edge can't clip it. Below the button, or above it near the bottom.
+  useLayoutEffect(() => {
+    const anchor = box.current?.parentElement;
+    if (!anchor) return;
+    const r = anchor.getBoundingClientRect();
+    const width = Math.min(320, window.innerWidth - 32);
+    const left = Math.max(16, Math.min(r.right - width, window.innerWidth - 16 - width));
+    const below = r.bottom + 8 + (box.current?.offsetHeight ?? 200) < window.innerHeight;
+    setPlace(below ? { top: r.bottom + 8, left, width } : { bottom: window.innerHeight - r.top + 8, left, width });
+  }, []);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- the query string is only known in the browser
     setSearch(window.location.search);
-    first.current?.focus();
+    first.current?.focus({ preventScroll: true });
     const onKey = (e: KeyboardEvent) => e.key === "Escape" && onClose();
     const onDown = (e: PointerEvent) => {
       if (box.current && !box.current.parentElement?.contains(e.target as Node)) onClose();
     };
+    // It stays put while the page moves, so scrolling closes it.
+    const onScroll = () => onClose();
     document.addEventListener("keydown", onKey);
     document.addEventListener("pointerdown", onDown);
+    document.addEventListener("scroll", onScroll, true);
+    window.addEventListener("resize", onScroll);
     return () => {
       document.removeEventListener("keydown", onKey);
       document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("scroll", onScroll, true);
+      window.removeEventListener("resize", onScroll);
     };
   }, [onClose]);
 
@@ -137,7 +168,8 @@ function SignInPrompt({ repo, onClose }: { repo: string; onClose: () => void }) 
       ref={box}
       role="dialog"
       aria-labelledby={titleId}
-      className="absolute right-0 top-full z-30 mt-2 w-[min(20rem,calc(100vw-2rem))] border border-line-strong bg-panel p-4 text-left shadow-card"
+      style={place}
+      className="fixed z-50 border border-line-strong bg-panel p-4 text-left shadow-card"
     >
       <p id={titleId} className="text-[0.92rem] font-semibold">Keep this one for later</p>
       <p className="mt-1.5 font-sans text-[0.85rem] leading-snug text-muted">

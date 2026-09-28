@@ -6,7 +6,7 @@ import { FindResults } from "@/components/find/find-results";
 import { FindRunner } from "@/components/find/find-runner";
 import { ShareBar } from "@/components/report/share-bar";
 import { ProfileOnboarding } from "@/components/profile-onboarding";
-import { getProfile } from "@/lib/api";
+import { getProfile, savedNames } from "@/lib/api";
 import { cachedFind } from "@/lib/find-cached";
 import { days as daysOf, describe, personalise } from "@/lib/profile";
 import { caller, currentUser } from "@/lib/session";
@@ -55,7 +55,7 @@ const TIPS = [
 
 export default async function HacktoberfestPage({ searchParams }: PageProps<"/hacktoberfest">) {
   const [sp, user] = await Promise.all([searchParams, currentUser()]);
-  const profileR = user ? await getProfile(user.id) : null;
+  const [profileR, saved] = await Promise.all([user ? getProfile(user.id) : null, savedNames(user?.id)]);
   const profile = profileR?.ok ? profileR.data.profile : null;
   // With no tab picked, a profile picks the first tab that has one of its languages.
   const tab = LANGS.find((l) => l.id === sp.lang)
@@ -142,9 +142,9 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
             {!result.ok ? (
               <ErrorPanel error={result.error} retryHref={here} />
             ) : result.data.status === "queued" ? (
-              <FindRunner key={tab.id} jobId={result.data.job_id} days={days} retryHref={here} fit={fit} />
+              <FindRunner key={tab.id} jobId={result.data.job_id} days={days} retryHref={here} fit={fit} saved={saved} />
             ) : (
-              <FindResults results={personalise(result.data.results, fit)} days={days} />
+              <FindResults results={personalise(result.data.results, fit)} days={days} saved={saved} />
             )}
           </section>
         </div>

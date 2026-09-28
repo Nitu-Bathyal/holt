@@ -5,7 +5,7 @@ import { FindView } from "@/components/find/find-view";
 import { PageTransition } from "@/components/motion/page-transition";
 import { PageHead } from "@/components/page-head";
 import { ProfileOnboarding } from "@/components/profile-onboarding";
-import { getProfile } from "@/lib/api";
+import { getProfile, savedNames } from "@/lib/api";
 import { cachedFind } from "@/lib/find-cached";
 import { findQuery, PICKS_COOKIE, resolvePicks } from "@/lib/find-picks";
 import { caller, currentUser } from "@/lib/session";
@@ -22,7 +22,7 @@ export const metadata: Metadata = {
 // in place. See components/find/find-view.tsx.
 export default async function FindPage({ searchParams }: PageProps<"/find">) {
   const [sp, user, jar] = await Promise.all([searchParams, currentUser(), cookies()]);
-  const profileR = user ? await getProfile(user.id) : null;
+  const [profileR, saved] = await Promise.all([user ? getProfile(user.id) : null, savedNames(user?.id)]);
   const profile = profileR?.ok ? profileR.data.profile : null;
   const season = hacktoberfest();
   const { picks, source } = resolvePicks({ params: sp, cookie: jar.get(PICKS_COOKIE)?.value, profile, hfWindow: Boolean(season), hfOn: Boolean(season) });
@@ -44,7 +44,7 @@ export default async function FindPage({ searchParams }: PageProps<"/find">) {
           )}
         </PageHead>
         <div className="wrap py-5 sm:py-6">
-          <FindView initialPicks={picks} initial={result} source={source} hf={hf} />
+          <FindView initialPicks={picks} initial={result} source={source} hf={hf} saved={saved} />
           <ProfileOnboarding back="/find" className="mt-10" />
         </div>
       </>

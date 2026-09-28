@@ -6,7 +6,7 @@ import { ErrorPanel } from "@/components/error-panel";
 import { PageTransition } from "@/components/motion/page-transition";
 import { PageHead } from "@/components/page-head";
 import { RepoGrid } from "@/components/repo-card/repo-grid";
-import { recommendations } from "@/lib/api";
+import { recommendations, savedNames } from "@/lib/api";
 import { fromPick } from "@/lib/repo-card";
 import { basisLine, emptyReason, excludedLine, lockedLine } from "@/lib/recommendations";
 import { currentUser } from "@/lib/session";
@@ -16,7 +16,7 @@ export const metadata: Metadata = { title: "Picked for you", robots: { index: fa
 export default async function ForYouPage() {
   const user = await currentUser();
   if (!user) redirect("/signin?callbackUrl=/for-you");
-  const r = await recommendations(user.id);
+  const [r, saved] = await Promise.all([recommendations(user.id), savedNames(user.id)]);
   const d = r.ok ? r.data : null;
   const basis = d ? basisLine(d.basis) : null;
   const excluded = d ? excludedLine(d.basis.already_contributing) : null;
@@ -73,7 +73,7 @@ export default async function ForYouPage() {
               </p>
             )}
             <div className="mt-6">
-              <RepoGrid repos={d.picks.map(fromPick)} />
+              <RepoGrid repos={d.picks.map(fromPick)} saved={saved} />
             </div>
             {d.locked > 0 && (
               <div className="mt-6 border border-blue/50 bg-blue/[0.06] p-5 sm:p-6">

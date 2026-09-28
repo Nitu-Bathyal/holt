@@ -8,7 +8,7 @@ import { FindResults } from "./find-results";
 import { useFindJob } from "./use-find-job";
 
 /** Follows a queued /v1/find job (API.md allows 202 for slow searches). */
-export function FindRunner({ jobId, days, retryHref = "/find", fit = null }: { jobId: string; days: number; retryHref?: string; fit?: Fit | null }) {
+export function FindRunner({ jobId, days, retryHref = "/find", fit = null, saved }: { jobId: string; days: number; retryHref?: string; fit?: Fit | null; saved?: string[] | null }) {
   const { stage, results, error } = useFindJob(jobId);
 
   if (error) return <ErrorPanel error={error} retryHref={retryHref} />;
@@ -16,7 +16,7 @@ export function FindRunner({ jobId, days, retryHref = "/find", fit = null }: { j
     return (
       <ViewTransition enter="sk-in" default="none">
         <div>
-          <FindResults results={personalise(results, fit)} days={days} />
+          <FindResults results={personalise(results, fit)} days={days} saved={saved} />
         </div>
       </ViewTransition>
     );
