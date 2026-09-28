@@ -50,8 +50,10 @@ async function AiReportsCta() {
   );
 }
 
-export default function Home() {
+export default async function Home() {
   const hf = hacktoberfest();
+  // Signed out, the paste boxes go through sign-in (see lib/gate.ts).
+  const signedIn = Boolean(await currentUser());
   return (
     <PageTransition>
       <>
@@ -76,7 +78,7 @@ export default function Home() {
                 did anything get merged?
               </p>
               <div className="fade-up max-w-[760px]" style={{ ["--d" as string]: ".38s" }}>
-                <PasteBox />
+                <PasteBox signedIn={signedIn} />
               </div>
               <div className="fade-up mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 sm:mt-4 sm:gap-x-5" style={{ ["--d" as string]: ".42s" }}>
                 <span className="font-sans text-[0.95rem] text-muted">No repo in mind?</span>
@@ -105,7 +107,7 @@ export default function Home() {
         </Suspense>
 
         {/* 02 — see the answer */}
-        <section data-cat-section="startled" className="pane">
+        <section id="answer" data-cat-section="startled" className="pane scroll-mt-[61px]">
           <Grid>
             <Rail n="02" label="see the answer" />
             <div>
@@ -164,7 +166,7 @@ export default function Home() {
         </section>
 
         {/* 05 — what it checks */}
-        <section data-cat-section="heartbroken" className="pane border-t border-line bg-section-alt">
+        <section id="what-it-checks" data-cat-section="heartbroken" className="pane scroll-mt-[61px] border-t border-line bg-section-alt">
           <Grid>
             <Rail n="05" label="what it checks" />
             <div>
@@ -197,7 +199,7 @@ export default function Home() {
         </section>
 
         {/* 06 — three answers */}
-        <section data-cat-section="celebrating" className="pane border-t border-line">
+        <section id="verdicts" data-cat-section="celebrating" className="pane scroll-mt-[61px] border-t border-line">
           <Grid>
             <Rail n="06" label="three answers" />
             <div>
@@ -231,7 +233,7 @@ export default function Home() {
         </section>
 
         {/* 07 — open source */}
-        <section data-cat-section="adoring" className="pane relative overflow-clip border-t border-line bg-panel">
+        <section id="open-source" data-cat-section="adoring" className="pane scroll-mt-[61px] relative overflow-clip border-t border-line bg-panel">
           <ScrollMarquee text="OPEN / SOURCE / OPEN / SOURCE / OPEN / SOURCE / OPEN / SOURCE / OPEN / SOURCE /" />
           <div className="relative">
             <Grid>
@@ -266,7 +268,7 @@ export default function Home() {
                 Paste it. You&apos;ll know before you write a line of code.
               </p>
               <div className="max-w-[760px]" data-reveal>
-                <PasteBox id="repo-input-end" label="Repo to check" examples={false} />
+                <PasteBox id="repo-input-end" label="Repo to check" examples={false} signedIn={signedIn} />
               </div>
               <p className="mt-5 font-sans text-[0.95rem] text-muted" data-reveal>
                 No repo yet?{" "}

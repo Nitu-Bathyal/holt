@@ -17,7 +17,7 @@ export function ForYouCard({ data }: { data: Recommendations }) {
           </li>
         ))}
       </ul>
-      <Link href="/for-you" className="mt-4 inline-block text-[0.89rem] text-green hover:underline">
+      <Link href="/me#picks" className="mt-4 inline-block text-[0.89rem] text-green hover:underline">
         [ see why, and issues to start with → ]
       </Link>
     </section>

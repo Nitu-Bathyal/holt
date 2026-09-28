@@ -7,12 +7,15 @@ import { ErrorPanel } from "@/components/error-panel";
 import { AiStart } from "@/components/report/ai-start";
 import { AnalysisRunner } from "@/components/report/analysis-runner";
 import { BudgetPicker } from "@/components/report/budget-picker";
+import { ReportTeaser } from "@/components/report/report-teaser";
 import { ReportView } from "@/components/report/report-view";
 import { StarterIssues, StarterIssuesSkeleton } from "@/components/report/starter-issues";
 import { LinkHint } from "@/components/motion/link-hint";
 import { SkeletonReveal } from "@/components/motion/reveal";
 import { getReport, me, recordView, savedState, starterIssues } from "@/lib/api";
 import { budgetFrom, reportHref } from "@/lib/budget";
+import { EXAMPLES_PATH } from "@/lib/examples";
+import { reportAccess, signInHref } from "@/lib/gate";
 import { isValidRepo } from "@/lib/repo";
 import { caller, currentUser, type SessionUser } from "@/lib/session";
 import { humanHours } from "@/lib/format";
@@ -41,7 +44,7 @@ function describe(report: Report | null, name: string): string {
   return `${report.headline}. ${s.outsider_merged} of ${s.outsider_attempts} outside PRs got merged${reply}. See the evidence and starter issues.`;
 }
 
-const titleFor = (name: string) => `${name}: Worth your time? | Holt`;
+const titleFor = (name: string) => `${name}: Worth your time? · Holt`;
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { owner, repo } = await params;
@@ -84,7 +87,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
   const name = `${owner}/${repo}`;
   const user = await currentUser();
   const signedIn = Boolean(user);
-  if (mode === "ai" && !signedIn) redirect(`/signin?callbackUrl=${encodeURIComponent(`/${name}?mode=ai`)}`);
+  if (mode === "ai" && !signedIn) redirect(signInHref(`/${name}?mode=ai`));
 
   // Only the report (and, signed in, whether it's saved: one database read)
   // blocks the page; starter issues (a live GitHub call) stream in.
@@ -102,6 +105,10 @@ export default async function RepoPage({ params, searchParams }: Props) {
   // For Connect GitHub users' "opened a PR after checking it on Holt" (the server ignores the rest).
   if (user && report.ok) after(() => recordView(user.id, report.data.repo));
   const [dOwner, dRepo] = display.split("/");
+  // Signed out: the examples in full, every other repo as a teaser, and never a
+  // new check (a repo with no report yet gets a teaser that offers one).
+  const access = reportAccess(display, signedIn);
+  const teaser = !signedIn && (report.ok ? access === "teaser" : report.error.code === "not_found");
 
   return (
     <PageTransition>
@@ -159,15 +166,21 @@ export default async function RepoPage({ params, searchParams }: Props) {
           </nav>
         </div>
 
-        {/* Free report only: on the AI tab another budget would be another paid run. */}
-        {mode === "rules" && <BudgetPicker repo={display} days={days} />}
+        {!signedIn && access === "full" && report.ok && <ExampleNote />}
+
+        {/* Free report only: on the AI tab another budget would be another paid run.
+            Signed in only: another budget is another check. */}
+        {mode === "rules" && signedIn && <BudgetPicker repo={display} days={days} />}
 
         {/* Switching between the free and AI tabs crossfades the report, not the page. */}
         <ViewTransition key={mode} name="report-body" share="swap" enter="swap" exit="swap" default="none">
           <div>
-            {report.ok && report.data.outdated && mode === "rules" ? (
+            {teaser ? (
+              <ReportTeaser repo={display} report={report.ok ? report.data : null} back={reportHref(display, days)} />
+            ) : report.ok && report.data.outdated && mode === "rules" && signedIn ? (
               // Made by an older version of the rules: check again, with the
-              // normal progress, and fall back to it only if that fails.
+              // normal progress, and fall back to it only if that fails. (Signed
+              // out, an example shows as it is: a re-check needs an account.)
               <AnalysisRunner repo={report.data.repo} mode={mode} days={days} signedIn={signedIn} fallback={report.data} />
             ) : report.ok ? (
               <ReportView
@@ -193,6 +206,20 @@ export default async function RepoPage({ params, searchParams }: Props) {
       </div>
       </div>
     </PageTransition>
+  );
+}
+
+/** Above an example report, for signed-out visitors: what this is, and the way to their own. */
+function ExampleNote() {
+  return (
+    <p className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 border border-line-strong bg-panel-2 px-4 py-3 font-sans text-[0.9rem] text-muted" data-example-note>
+      <span className="border border-blue px-2 py-0.5 font-mono text-[0.78rem] uppercase tracking-[0.08em] text-blue">Example report</span>
+      <span className="min-w-0 flex-1">Anyone can read this one. Sign in, free, to check any repo you like.</span>
+      <span className="flex flex-wrap gap-x-4">
+        <Link href="/signin" prefetch={false} className="text-link">sign in</Link>
+        <Link href={EXAMPLES_PATH} className="text-link">more examples</Link>
+      </span>
+    </p>
   );
 }
 

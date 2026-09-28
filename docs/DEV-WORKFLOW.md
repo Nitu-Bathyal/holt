@@ -35,6 +35,7 @@ the live site; the rest of each page is illustrative. Which URL shows which stat
 |---|---|
 | `/home-assistant/core`, `/NixOS/nixpkgs`, `/psf/requests`, `/pytorch/pytorch` | A finished report, **Worth your time**. Instant. |
 | `/pallets/flask`, `/aden-hive/hive` | A finished report, **Not worth your time**. Instant. |
+| `/vercel/next.js` | A finished report, **Not enough evidence**. Instant. |
 | `/anything/else` | The loading screen with live stages for about 6 seconds, then a report. The verdict is picked from the repo name, so it is stable. `MOCK_JOB_MS=20000` makes the wait longer. |
 | `/example/new-thing`, `/tiny/thing` | The same, ending in **Not enough evidence** (any name containing `tiny`, `empty` or `new-` does). |
 | `/mock/outdated` | The "we couldn't refresh this" fallback (an old report whose fresh check fails). |

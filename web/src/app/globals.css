@@ -1380,3 +1380,192 @@
     animation-range: entry 0% exit 100%;
   }
 }
+
+/* ------------------------------------------------------------------------
+   The app shell (docs/design/SIGNED-IN-HOME.md, "One system"): what a
+   signed-in person sees on app pages. A top bar, a sidebar rail on desktop
+   (a drawer below lg), and one look for nav items, section headings and
+   page headers. The selected mark is the same one the settings tabs use:
+   a 2px blue rule and ink text.
+   ------------------------------------------------------------------------ */
+:root {
+  --topbar-h: 61px; /* 60px bar + its 1px rule */
+  --rail-w: 15rem;
+  --rail-w-folded: 3.75rem;
+}
+
+@layer components {
+  .app-rail {
+    position: sticky;
+    top: var(--topbar-h);
+    display: none;
+    height: calc(100dvh - var(--topbar-h));
+    width: var(--rail-w);
+    flex-shrink: 0;
+    flex-direction: column;
+    overflow-y: auto;
+    border-right: 1px solid var(--line);
+    background: var(--header);
+    padding: 20px 10px 14px;
+    transition: width var(--dur-base) var(--ease-move);
+  }
+  @media (min-width: 1024px) {
+    .app-rail {
+      display: flex;
+    }
+  }
+  .app-rail[data-folded] {
+    width: var(--rail-w-folded);
+  }
+  .app-rail[data-folded] .side-label,
+  .app-rail[data-folded] .side-group-label,
+  .app-rail[data-folded] .side-foot {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+  .app-rail[data-folded] .side-item {
+    justify-content: center;
+    padding-inline: 0;
+  }
+
+  /* A sidebar item: icon and label, 44px tall to tap. */
+  .side-item {
+    position: relative;
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 12px;
+    padding-inline: 12px;
+    color: var(--muted);
+    font-size: 0.86rem;
+    white-space: nowrap;
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out);
+  }
+  .side-item:hover {
+    color: var(--ink);
+    background: var(--panel-2);
+  }
+  .side-item[aria-current="page"] {
+    color: var(--ink);
+    background: var(--panel-2);
+  }
+  .side-item[aria-current="page"]::before {
+    position: absolute;
+    inset: 8px auto 8px 0;
+    width: 2px;
+    background: var(--blue);
+    content: "";
+  }
+  .side-group-label {
+    padding: 0 12px 6px;
+    color: var(--faint);
+    font-size: 0.76rem;
+  }
+  .side-sub {
+    margin: 2px 0 6px 20px;
+    border-left: 1px solid var(--line);
+  }
+  .side-subitem {
+    display: flex;
+    min-height: 36px;
+    align-items: center;
+    margin-left: -1px;
+    border-left: 2px solid transparent;
+    padding-inline: 16px;
+    color: var(--muted);
+    font-size: 0.82rem;
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .side-subitem:hover {
+    color: var(--ink);
+  }
+  .side-subitem[aria-current="page"] {
+    border-left-color: var(--blue);
+    color: var(--ink);
+  }
+
+  /* The phone and tablet drawer: the sidebar, sliding in from the left. */
+  .drawer[popover] {
+    position: fixed;
+    inset: var(--topbar-h) auto 0 0;
+    margin: 0;
+    display: flex;
+    width: min(18rem, 86vw);
+    height: auto;
+    max-height: none;
+    flex-direction: column;
+    overflow-y: auto;
+    border: 0;
+    border-right: 1px solid var(--line-strong);
+    background: var(--header);
+    color: var(--ink);
+    padding: 16px 10px;
+    box-shadow: var(--shadow);
+    transition:
+      translate var(--dur-exit) var(--ease-in),
+      overlay var(--dur-exit) allow-discrete,
+      display var(--dur-exit) allow-discrete;
+  }
+  .drawer[popover]:not(:popover-open) {
+    display: none;
+    translate: -100% 0;
+  }
+  .drawer[popover]:popover-open {
+    translate: 0 0;
+    transition-duration: var(--dur-slow);
+    transition-timing-function: var(--ease-out);
+  }
+  @starting-style {
+    .drawer[popover]:popover-open {
+      translate: -100% 0;
+    }
+  }
+  .drawer[popover]::backdrop {
+    background: rgb(0 0 0 / 0.2);
+  }
+  .site-header:has(#app-drawer:popover-open) .icon-open {
+    display: none;
+  }
+  .site-header:has(#app-drawer:popover-open) .icon-close {
+    display: block;
+  }
+
+  /* A section on an app page: heading left, one quiet link right. */
+  .section-head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 4px 16px;
+    margin-bottom: 14px;
+  }
+  .section-head h2 {
+    font-size: 1.08rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+
+  /* "Check a repo": the box it lands on flashes once. */
+  .check-flash {
+    animation: check-flash 1.1s var(--ease-out);
+  }
+}
+@keyframes check-flash {
+  0%,
+  35% {
+    outline: 2px solid var(--blue);
+    outline-offset: 4px;
+    box-shadow: 0 0 0 8px color-mix(in oklab, var(--blue) 18%, transparent);
+  }
+  100% {
+    outline: 2px solid transparent;
+    outline-offset: 8px;
+    box-shadow: 0 0 0 0 transparent;
+  }
+}
