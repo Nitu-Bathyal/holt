@@ -42,7 +42,7 @@ export function FindRunner({ jobId, days, retryHref = "/find", fit = null }: { j
   return (
     <ViewTransition exit="sk-out" default="none">
       <div>
-        <AnalysisProgress repo="" kicker="searching · welcoming projects" note="Holt is checking which projects reply to newcomers and have issues you could take. This can take a minute." mode="rules" stage={stage.stage} progress={stage.progress} />
+        <AnalysisProgress repo="" kicker="searching · welcoming projects" note="Holt is checking which projects reply to outside contributors and have issues you could take. This can take a minute." mode="rules" stage={stage.stage} progress={stage.progress} />
       </div>
     </ViewTransition>
   );
