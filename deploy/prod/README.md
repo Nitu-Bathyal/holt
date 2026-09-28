@@ -17,9 +17,10 @@ pause it, and `deploy.sh` still works by hand.
 | `deploy.sh` | One deploy: build main's images, migrate, swap, health-check, roll back on failure, prune only this stack's images, stop the builder container. |
 | `env.sh` | Sourced by `deploy.sh` and `warm.sh`: state paths, `secrets.env` and the GitHub token fallback (`load_prod_env`). |
 | `make-env.sh` | Writes `~/.local/share/holt-prod/.env` once: fresh `AUTH_SECRET`, `HOLT_INTERNAL_KEY`, `HOLT_SECRET_KEY`, db password. Nothing shared with staging. |
-| `install.sh` | One-time: the env file plus the nightly backup timer. The deploy timer is `install-follow.sh`. |
+| `install.sh` | One-time: the env file plus the nightly backup timer and the daily repo-details timer. The deploy timer is `install-follow.sh`. |
 | `backup.sh` | `pg_dump` of both databases to `~/backups/holt/<stamp>/`, keeps 14 days. |
 | `warm.sh` | Runs `python -m holt_server.warm` detached in the server image (fills the caches), with the same secrets and token as a deploy. |
+| `warm-meta.sh` | The daily details-only warm pass (language, stars, topics for Discover), in the foreground, holding the deploy lock. See [Repository details](#repository-details). |
 | `edge.conf` | nginx: keeps the port across deploys, `/__build`, `www` → apex redirect, SSE-friendly proxy, the Umami paths. A deploy puts changes live with a reload ([Edge config](#edge-config)). |
 | `../swap.sh` | Sourced by `deploy.sh` (and staging's `preview.sh`): `swap_service` starts a service's new container beside the old one and retires the old one once the new one is healthy. |
 | `../edge.sh` | Sourced by `deploy.sh` (and staging's `preview.sh`): checks a changed `edge.conf` with `nginx -t` in the running edge and reloads it. |
@@ -64,7 +65,7 @@ tag with the new values; no rebuild).
 ## First time
 
 ```sh
-deploy/prod/install.sh        # .env + nightly backup timer (03:30 UTC)
+deploy/prod/install.sh        # .env + nightly backup (03:30 UTC) + repo details (05:00 UTC) timers
 deploy/prod/deploy.sh         # clone, build, migrate, start; ~10 min
 deploy/prod/warm.sh           # fill the empty cache (detached; --status / --logs)
 ```
@@ -331,6 +332,34 @@ deploy/prod/warm.sh --dry-run --stale-only   # "would analyse …" per outdated 
 deploy/prod/warm.sh --stale-only             # then --status or --logs
 ```
 
+## Repository details
+
+Discover, the Hacktoberfest row and the repo cards show each repo's
+language, stars, topics and description from `repo_meta`. They are read:
+
+- **right after a repo's report is stored**, when it has none or they are a
+  day old (`server/holt_server/meta_refresh.py`): best effort, after the
+  report is already done, reports finishing within a few seconds share one
+  query. A failure is logged (`repository details ... failed`) and the
+  next report tries again;
+- **once a day for every reported repo** by `holt-prod-warm-meta.timer`
+  (05:00 UTC, installed by `install.sh`), which runs the copy at
+  `~/.local/share/holt-prod/bin/warm-meta.sh`: the warm pass with
+  `--no-reports --no-starter --no-find`, in a one-off container of the live
+  server image. It works no jobs, costs about one GraphQL point per hundred
+  repos (the summary line says how many), and stops below
+  `HOLT_WARM_MIN_POINTS`. It holds `deploy.sh`'s lock while it runs (a
+  deploy then exits busy and the auto-deploy retries two minutes later),
+  waits for a running deploy or backup (`backup.lock`) for up to 45 minutes,
+  else skips the day.
+
+```sh
+deploy/prod/install.sh                              # (re)install both timers; needs a deploy first
+systemctl --user list-timers holt-prod-warm-meta.timer
+tail ~/.local/share/holt-prod/logs/warm-meta.log    # "repo details N read (P GitHub points)"
+~/.local/share/holt-prod/bin/warm-meta.sh           # one now
+```
+
 ## Checks after a deploy
 
 ```sh
@@ -388,11 +417,11 @@ on the port to show it never drops.
 
 ```sh
 deploy/prod/install-follow.sh --remove
-systemctl --user disable --now holt-prod-backup.timer
+systemctl --user disable --now holt-prod-backup.timer holt-prod-warm-meta.timer
 dc down            # add -v to drop the database too (take a backup first)
 docker buildx rm holt-prod
 docker image prune -af --filter label=holt.stack=holt-prod
-rm -rf ~/.local/share/holt-prod ~/.config/systemd/user/holt-prod-backup.*
+rm -rf ~/.local/share/holt-prod ~/.config/systemd/user/holt-prod-backup.* ~/.config/systemd/user/holt-prod-warm-meta.*
 ```
 
 ## Analytics

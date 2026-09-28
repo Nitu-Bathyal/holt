@@ -369,8 +369,12 @@ people. Reads only the database: no GitHub call and no rate limit.
 ```
 
 `description`, `language`, `stars`, `topics` and `pushed_at` come from
-`repo_meta`, which the warm pass fills from GitHub (one GraphQL query per
-hundred repositories, re-read daily); they are null or empty until then.
+`repo_meta`, read from GitHub right after a repository's report is stored
+(when it has none, or they are more than a day old) and again once a day for
+every reported repository. The read after a report is best effort and happens
+a few seconds after the report is done, so they can be null or empty for a
+moment, or longer if GitHub didn't answer (the next report or the daily read
+tries again).
 
 ### `GET /badge/{owner}/{repo}.svg` (no internal key; public; `Cache-Control: public, max-age=3600, stale-while-revalidate=86400`)
 Shields-style SVG badge. Maintainers embed it in READMEs; it links back to the

@@ -556,8 +556,9 @@ class Contribution(Base):
 
 class RepoMeta(Base):
     """What GitHub says about a repository Holt has a report for: the details
-    a Discover card shows and filters on (discover.py). Filled by the warm
-    pass, many repositories per GraphQL query; missing until then."""
+    a Discover card shows and filters on (discover.py). Read right after the
+    repo's report is stored (meta_refresh.py) and daily by the warm pass,
+    many repositories per GraphQL query."""
 
     __tablename__ = "repo_meta"
 
