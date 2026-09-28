@@ -246,8 +246,10 @@ if (( swapped )) && healthy; then
 else
     compose logs --tail 50 server web >>"$dlog" 2>&1 || true
     if [[ -n "$current" && "$current" != "$sha" ]]; then
+        how="the compose file it went live with"
+        [[ -f "$RELEASES/$current/compose.yml" ]] || how="its commit's compose.yml (from git)"
         prev_yml="$(release_compose "$current")"
-        if [[ -n "$prev_yml" ]]; then log "rolling back to ${current:0:7} with its own compose file ($prev_yml)"
+        if [[ -n "$prev_yml" ]]; then log "rolling back to ${current:0:7} with $how"
         else log "rolling back to ${current:0:7} with this commit's compose file (none kept for ${current:0:7})"; fi
         # swap_all (and swap.sh inside it) go through compose(), which reads
         # COMPOSE_YML: every step of the rollback uses the previous release's file.
