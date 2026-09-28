@@ -412,3 +412,63 @@ class Contribution(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     merged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+
+class RepoMeta(Base):
+    """What GitHub says about a repository Holt has a report for: the details
+    a Discover card shows and filters on (discover.py). Filled by the warm
+    pass, many repositories per GraphQL query; missing until then."""
+
+    __tablename__ = "repo_meta"
+
+    repo_key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    # GitHub's casing, as it answered.
+    repo: Mapped[str] = mapped_column(String(200))
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    language: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    stars: Mapped[int] = mapped_column(Integer, default=0)
+    topics: Mapped[list] = mapped_column(JSON, default=list)
+    pushed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    archived: Mapped[bool] = mapped_column(Boolean, default=False)
+    fork: Mapped[bool] = mapped_column(Boolean, default=False)
+    fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class Profile(Base):
+    """What a signed-in user told us about themselves (profiles.py), so /find
+    and /hacktoberfest start from it. Stated, never inferred."""
+
+    __tablename__ = "profiles"
+
+    user_id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    languages: Mapped[list] = mapped_column(JSON, default=list)
+    topics: Mapped[list] = mapped_column(JSON, default=list)
+    days: Mapped[int] = mapped_column(Integer, default=7)
+    # code | docs | tests | design | translations
+    contributions: Mapped[list] = mapped_column(JSON, default=list)
+    # newcomer | experienced
+    level: Mapped[str] = mapped_column(String(20), default="newcomer")
+    # When they ticked "I'm 18 or older" here. Null when they had already
+    # confirmed it by connecting GitHub.
+    adult_confirmed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                                nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class RepoUserStats(Base):
+    """What connected Holt users' pull requests to one repository came to
+    (repo_stats.py): counts only, never who. A row exists only while at least
+    `repo_stats.MIN_PEOPLE` people who didn't opt out make up the numbers.
+    Rebuilt by the daily contributions refresh; a user's repositories are
+    rebuilt at once when they opt out or disconnect."""
+
+    __tablename__ = "repo_user_stats"
+
+    repo_key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    people: Mapped[int] = mapped_column(Integer)
+    pull_requests: Mapped[int] = mapped_column(Integer)
+    merged: Mapped[int] = mapped_column(Integer)
+    closed: Mapped[int] = mapped_column(Integer)
+    waiting: Mapped[int] = mapped_column(Integer)
+    computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)

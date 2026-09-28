@@ -2,12 +2,15 @@
 // runner (report that just finished streaming), so no server-only imports.
 import Link from "next/link";
 import { shortDate, timeAgo } from "@/lib/format";
+import { EXAMPLE_PATH } from "@/lib/example-report";
 import { SITE_URL } from "@/lib/site";
 import type { Odds, Report } from "@/lib/types";
 import { CatFace } from "../cat-face";
 import { Track } from "../track";
+import { badgeOffered } from "@/lib/badge";
 import { BadgeSnippet } from "./badge-snippet";
 import { EvidenceList } from "./evidence-list";
+import { HoltUsersLine } from "./holt-users-line";
 import { LandingMap } from "./landing-map";
 import { ShareBar } from "./share-bar";
 import { StatsGrid } from "./stats-grid";
@@ -81,6 +84,7 @@ export function ReportView({
   issues,
   signedIn,
   reveal,
+  example,
 }: {
   report: Report;
   /** The starter-issues block: streamed by the server page, fetched by the runner. */
@@ -88,22 +92,29 @@ export function ReportView({
   signedIn: boolean;
   /** The report just arrived on this page: step its parts in. A server-rendered report doesn't wait. */
   reveal?: boolean;
+  /** A recorded example (/example-ai-report): shares its own link, and takes no votes, badge or view count. */
+  example?: boolean;
 }) {
   const repo = report.repo;
-  const url = `${SITE_URL}/${repo}`;
-  const shareText = `${repo} on Holt: ${report.headline}.`;
+  const url = example ? `${SITE_URL}${EXAMPLE_PATH}` : `${SITE_URL}/${repo}`;
+  const shareText = example ? `An example AI report on Holt, for ${repo}.` : `${repo} on Holt: ${report.headline}.`;
   const viable = report.verdict === "viable";
 
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-10">
-      <Track event="report-view" data={{ verdict: report.verdict, mode: report.mode, repo }} />
+      {!example && <Track event="report-view" data={{ verdict: report.verdict, mode: report.mode, repo }} />}
       <div className="min-w-0 space-y-10">
         <VerdictHero report={report} reveal={reveal} />
 
-        {report.summary && (
-          <div className="border-l-2 border-blue pl-5">
+        {(report.bottom_line || report.summary) && (
+          <div className="border-l-2 border-blue pl-5" data-ai-explanation>
             <p className="text-[0.72rem] uppercase tracking-[0.08em] text-blue">AI explanation</p>
-            <p className="mt-2 font-sans text-[1.02rem] leading-relaxed text-ink">{report.summary}</p>
+            {report.bottom_line && (
+              <p className="mt-2 font-sans text-[1.12rem] font-medium leading-relaxed text-ink" data-bottom-line>
+                {report.bottom_line}
+              </p>
+            )}
+            {report.summary && <p className="mt-2 font-sans text-[1.02rem] leading-relaxed text-ink">{report.summary}</p>}
             <p className="mt-2 text-[0.72rem] text-faint">
               Written by {report.cost?.model ?? "a model"} from the evidence below. The verdict itself comes from fixed rules.
             </p>
@@ -127,6 +138,7 @@ export function ReportView({
 
         <Section n="02" id="numbers" title="What happened to outside contributors">
           <StatsGrid stats={report.stats} reveal={reveal} />
+          <HoltUsersLine stats={report.holt_users} />
         </Section>
 
         <Section n="03" id="landing" title="Where newcomer work lands" reveal={reveal ? 230 : undefined}>
@@ -157,7 +169,7 @@ export function ReportView({
           )}
         </Section>
 
-        <VerdictFeedback report={report} />
+        {!example && <VerdictFeedback report={report} />}
 
         <Section n="05" id="evidence" title="The evidence" note="every claim links to GitHub" reveal={reveal ? 280 : undefined}>
           <EvidenceList evidence={report.evidence} />
@@ -165,7 +177,7 @@ export function ReportView({
 
         <div className="lg:hidden space-y-4">
           {report.mode === "rules" && <UpgradeCard repo={repo} signedIn={signedIn} />}
-          <BadgeSnippet repo={repo} />
+          {!example && <BadgeSnippet repo={repo} offered={badgeOffered(report)} />}
         </div>
       </div>
 
@@ -176,10 +188,12 @@ export function ReportView({
             <ShareBar url={url} text={shareText} />
           </div>
           {report.mode === "rules" && <UpgradeCard repo={repo} signedIn={signedIn} />}
-          <BadgeSnippet repo={repo} />
-          <Link href={`/compare?repos=${repo}`} className="block text-[0.8rem] text-muted hover:text-ink">
-            [ compare with another repo → ]
-          </Link>
+          {!example && <BadgeSnippet repo={repo} offered={badgeOffered(report)} />}
+          {!example && (
+            <Link href={`/compare?repos=${repo}`} className="block text-[0.8rem] text-muted hover:text-ink">
+              [ compare with another repo → ]
+            </Link>
+          )}
         </div>
       </aside>
     </div>

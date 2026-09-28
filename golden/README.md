@@ -52,8 +52,8 @@ because its last history entry no longer matches.
 
 Add it to `repos.json` with a `shape` and a one-line `note`, then `record` it
 and `approve --reason "added: <why>"`. Use the name GitHub currently uses (a
-renamed repository is refused, because a search under the old name finds
-nothing). A recording is 5–200 KB gzipped. Keep the whole set under 12 MB (a
+renamed repository is refused, so every recording is filed under the name
+its evidence ids use). A recording is 5–200 KB gzipped. Keep the whole set under 12 MB (a
 test checks).
 
 ## Hand-checked verdicts

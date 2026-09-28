@@ -4,6 +4,7 @@
     POST /v1/me/contributions/refresh     read GitHub again (at most every 15 minutes)
     GET  /v1/metrics/contributions        the product metric: counts only
     python -m holt_server.contributions metric [--since YYYY-MM-DD] [--json]
+    python -m holt_server.contributions stats   recount repo statistics now
 
 The pull requests come from GitHub's public search (`is:pr is:public
 author:<login>`), read with the server's token pool, never the user's token:
@@ -37,7 +38,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import and_, delete, func, select, text
 
-from holt_server import repos, schema
+from holt_server import repo_stats, repos, schema
 from holt_server.db import (
     Contribution,
     ContributionSync,
@@ -398,7 +399,8 @@ async def get_metric(request: Request, since: str | None = None,
 
 async def refresh_all(svc: Services, max_age: timedelta) -> int:
     """Fetch every connected user whose list is older than `max_age`, oldest
-    first, one at a time. Stops when GitHub points run low. Returns how many."""
+    first, one at a time. Stops when GitHub points run low. Then recounts the
+    repository statistics (repo_stats.py). Returns how many users."""
     async with svc.db.session() as s:
         due = (await s.execute(
             select(GitHubConnection.user_id, GitHubConnection.login)
@@ -419,6 +421,8 @@ async def refresh_all(svc: Services, max_age: timedelta) -> int:
             log.warning("contributions refresh: a user failed (%s)", err.code)
             if err.code == "rate_limited":
                 break
+    # Repository statistics from Holt users are recounted from the fresh lists.
+    await repo_stats.rebuild_all(svc)
     return done
 
 
@@ -464,17 +468,23 @@ def main(argv: list[str] | None = None) -> int:
     m = sub.add_parser("metric", help="pull requests opened after checking a repo on Holt")
     m.add_argument("--since", help="only pull requests opened on or after YYYY-MM-DD")
     m.add_argument("--json", action="store_true")
+    sub.add_parser("stats", help="recount repository statistics from Holt users now")
     args = p.parse_args(argv)
 
-    async def run() -> Metric:
+    async def run() -> Metric | int:
         svc = Services(get_settings())
         try:
+            if args.command == "stats":
+                return await repo_stats.rebuild_all(svc)
             return await metric(svc, _since(args.since))
         finally:
             svc.http.close()
             await svc.db.dispose()
 
     result = asyncio.run(run())
+    if isinstance(result, int):
+        print(f"repositories with statistics: {result}")
+        return 0
     if args.json:
         print(json.dumps(result.__dict__))
     else:

@@ -68,6 +68,22 @@ class FakeEngine:
         return canned_report(repo, mode, days, self.verdict)
 
 
+class FakeDetails:
+    """Stands in for `GitHubLookup.details` (repository details for Discover).
+    Repos in `known` answer with their entry; others are missing."""
+
+    def __init__(self) -> None:
+        self.calls: list[list[str]] = []
+        self.known: dict[str, dict[str, Any]] = {}
+        self.error: Exception | None = None
+
+    async def __call__(self, repos: list[str]) -> dict[str, dict[str, Any] | None]:
+        self.calls.append(list(repos))
+        if self.error is not None:
+            raise self.error
+        return {r: self.known.get(r.lower()) for r in repos}
+
+
 def make_settings(tmp_path: Path, **overrides: Any) -> Settings:
     values = {
         # Set HOLT_TEST_DATABASE_URL to run against a real Postgres (e.g. the
@@ -160,6 +176,7 @@ def make_harness(tmp_path):
                 raise not_found_repo(repo) from None
 
         services.canonical = canonical
+        services.lookup.details = FakeDetails()
         services.provider_factory = lambda repo, as_of: None
         harness_specs: list[Any] = []
 

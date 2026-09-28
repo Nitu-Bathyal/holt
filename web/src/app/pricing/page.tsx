@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { EXAMPLE_PATH } from "@/lib/example-report";
 import { CLAIM_EVERY_DAYS, WELCOME_AI_CREDITS } from "@/lib/site";
 import { PageHead } from "@/components/page-head";
 import { PageTransition } from "@/components/motion/page-transition";
@@ -28,17 +29,18 @@ const PLANS = [
     items: [
       `${WELCOME_AI_CREDITS} AI reports when you sign in`,
       `Claim 1 more every ${CLAIM_EVERY_DAYS} days`,
-      "Cited, mentor-style explanation",
+      "A written explanation, with checked quotes linked to GitHub",
       "Your report history",
     ],
     cta: { href: "/signin", label: "sign in" },
+    example: true,
     accent: "border-blue",
     featured: true,
   },
 ];
 
 const SOON = [
-  { name: "Student Pro", body: "More AI reports, and the pro models." },
+  { name: "Student Pro", body: "More AI reports each month." },
   { name: "Clubs & classrooms", body: "Shared quota for a college club or a course." },
 ];
 
@@ -72,6 +74,11 @@ export default function PricingPage() {
                 ))}
               </ul>
               <Link href={p.cta.href} className="btn-ghost mt-6 w-full">{p.cta.label} →</Link>
+              {p.example && (
+                <Link href={EXAMPLE_PATH} className="text-link mt-3 text-center font-sans text-[0.88rem]" data-example-link>
+                  or read an example AI report first
+                </Link>
+              )}
             </li>
           ))}
         </ul>

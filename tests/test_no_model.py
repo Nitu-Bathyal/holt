@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import pytest
 
+from holt.agent import repo_kind_rules
 from holt.agent.findings import Findings
 from holt.agent.pipeline import NO_MODEL_METHOD, analyze
 from holt.agent.signals import build_threads, compute
@@ -44,15 +45,19 @@ def test_the_verdict_is_the_same_function_the_full_pipeline_uses(
     records = list(provider.fetch(repo))
     threads = build_threads(records)
 
-    # Rebuild the exact call the mode makes: the only seeded finding is the
-    # archived flag, taken from metadata rather than asked of a model.
+    # Rebuild the exact call the mode makes: the only seeded findings are the
+    # archived flag, taken from metadata, and a catalogue measured from the
+    # diffs -- neither asked of a model.
     seed = Findings()
     meta = next((r for r in records if r.evidence_id.endswith(":meta")), None)
     if meta is not None and meta.payload.get("is_archived"):
         seed.add("is_archived", True, (meta.evidence_id,), "")
+    kind = repo_kind_rules.read(records)
+    if kind.catalogue is not None:
+        repo_kind_rules.add_finding(seed, kind.catalogue)
     expected, rules = classify(seed, compute(threads), 7)
     assert assessment.verdict == expected
-    assert assessment.rules == list(rules)
+    assert assessment.rules == repo_kind_rules.explain(list(rules), kind, expected)
     assert trace.signals == compute(threads)
 
 

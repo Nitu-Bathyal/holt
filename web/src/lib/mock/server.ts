@@ -2,11 +2,10 @@
 // reports return at once, anything else becomes a job with stages over SSE.
 import "server-only";
 import type {
-  AnalysisStart, ApiError, Credits, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, HistoryItem,
-  JobStatus, Me, Mode, Report, Result, StarterIssue,
+  AnalysisStart, ApiError, Credits, DiscoverOut, DiscoverRepo, DiscoverSort, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, HistoryItem,
+  JobStatus, Me, Mode, ProfileOut, ProfilePrefs, Report, Result, StarterIssue,
 } from "../types";
 import type { FeedbackInput } from "../feedback";
-import { MODELS } from "../models";
 import { verdictView } from "./derived";
 import { canonicalName, isMockNotFound, mockFindPool, mockIssues, mockReport, PRECACHED } from "./fixtures";
 
@@ -28,7 +27,6 @@ interface Job {
   mode: Mode;
   days: number;
   userId?: string;
-  model?: string;
   started: number;
 }
 
@@ -106,7 +104,7 @@ function validate(repo: string): Result<string> {
 }
 
 export async function startAnalysis(
-  repoIn: string, mode: Mode, days: number, refresh: boolean, userId?: string, model?: string,
+  repoIn: string, mode: Mode, days: number, refresh: boolean, userId?: string,
 ): Promise<Result<AnalysisStart>> {
   const v = validate(repoIn);
   if (!v.ok) return v;
@@ -124,7 +122,7 @@ export async function startAnalysis(
     return { ok: true, data: { status: "done", report: cached } };
   }
   const id = `job_${crypto.randomUUID().slice(0, 12)}`;
-  s.jobs.set(id, { id, repo, mode, days, userId, model, started: Date.now() });
+  s.jobs.set(id, { id, repo, mode, days, userId, started: Date.now() });
   if (mode === "ai" && userId) {
     const c = user(userId).me.credits;
     c.balance--;
@@ -146,8 +144,6 @@ function finish(job: Job): Report {
   let r = s.cache.get(k);
   if (!r) {
     r = { ...mockReport(job.repo, job.mode, job.days), generated_at: new Date().toISOString() };
-    // Show the chosen model the way a real AI report would.
-    if (r.cost && job.model) r = { ...r, cost: { ...r.cost, model: MODELS.find((m) => m.id === job.model)?.openrouter ?? job.model } };
     s.cache.set(k, r);
     remember(job.userId, r);
   }
@@ -205,6 +201,18 @@ export async function listReports(limit: number): Promise<Result<{ reports: { re
     .map((r) => ({ repo: r.repo, mode: r.mode, generated_at: r.generated_at, verdict: r.verdict }))
     .sort((a, b) => b.generated_at.localeCompare(a.generated_at));
   return { ok: true, data: { reports: rows.slice(0, limit) } };
+}
+
+/** Discover over the cached reports. The mock has no GitHub details, so language and stars are empty. */
+export async function discover(sort: DiscoverSort, language: string | null, topic: string | null, limit: number): Promise<Result<DiscoverOut>> {
+  const cards: DiscoverRepo[] = [...state().cache.values()]
+    .filter((r) => r.mode === "rules" && r.days === 7)
+    .map((r) => ({
+      repo: r.repo, verdict: r.verdict, headline: r.headline, tone: r.tone, reason: r.verdict_line, stats: r.stats,
+      description: null, language: null, stars: null, topics: [], pushed_at: null, checked_this_week: null, generated_at: r.generated_at,
+    }));
+  const chosen = language || topic || sort === "trending" ? [] : sort === "welcoming" ? cards.filter((c) => c.verdict === "viable") : cards;
+  return { ok: true, data: { sort, language, topic, repos: chosen.slice(0, limit), languages: [], trending_min: 5 } };
 }
 
 export async function getReport(repoIn: string, mode: Mode, days: number): Promise<Result<Report>> {
@@ -318,16 +326,28 @@ export async function history(userId: string): Promise<Result<{ items: HistoryIt
   return { ok: true, data: { items: user(userId).history } };
 }
 
+// Mirrors server/holt_server/badge.py: a positive, factual line for a passing
+// repo, neutral grey for anything else, never a red verdict.
+function shortHours(h: number): string {
+  if (h < 1) return `~${Math.max(1, Math.round(h * 60))}m`;
+  if (h < 24) return `~${Math.round(h)}h`;
+  return `~${Math.round(h / 24)}d`;
+}
+
+export function badgeMessage(report: Pick<Report, "verdict" | "stats"> | undefined): [string, string] {
+  if (!report) return ["not checked yet", "#57606a"];
+  if (report.verdict !== "viable") return ["see report", "#57606a"];
+  const parts: string[] = [];
+  if (report.stats.outsider_merged > 0) parts.push("merges outsiders");
+  const h = report.stats.median_first_response_hours;
+  if (h != null && h >= 0 && h <= 72) parts.push(`replies in ${shortHours(h)}`);
+  return [parts.join(" · ") || "worth your time", "#1a7f37"];
+}
+
 export function badge(repoIn: string): Response {
   const v = validate(repoIn);
   const report = v.ok ? state().cache.get(key(v.data, "rules", 7)) : undefined;
-  const [text, color] = !report
-    ? ["not checked yet", "#6b6b64"]
-    : report.verdict === "viable"
-      ? ["newcomer-friendly", "#17775a"]
-      : report.verdict === "not_viable"
-        ? ["hard for newcomers", "#b34a12"]
-        : ["not enough evidence", "#8a5a00"];
+  const [text, color] = badgeMessage(report);
   return new Response(badgeSvg("holt", text, color), {
     headers: { "Content-Type": "image/svg+xml; charset=utf-8", "Cache-Control": "public, max-age=3600" },
   });
@@ -430,4 +450,25 @@ export async function refreshContributions(userId: string): Promise<Result<Contr
   const last = refreshed().get(userId);
   if (!last || last + 15 * 60_000 <= Date.now()) refreshed().set(userId, Date.now());
   return { ok: true, data: mockContributions(userId, acct.login) };
+}
+
+// Profile: kept in memory per user, like the connections above.
+const g4 = globalThis as unknown as { holtMockProfiles?: Map<string, ProfilePrefs> };
+const profiles = () => (g4.holtMockProfiles ??= new Map());
+
+export async function getProfile(userId: string): Promise<Result<ProfileOut>> {
+  return { ok: true, data: { profile: profiles().get(userId) ?? null, adult_confirmed: profiles().has(userId) || connections().has(userId) } };
+}
+
+export async function saveProfile(userId: string, body: Omit<ProfilePrefs, "updated_at"> & { adult_confirmed: boolean }): Promise<Result<ProfileOut>> {
+  const { adult_confirmed, ...prefs } = body;
+  const known = profiles().has(userId) || connections().has(userId);
+  if (!adult_confirmed && !known) return { ok: false, status: 400, error: { code: "invalid_request", message: "Please confirm you're 18 or older to save a profile." } };
+  profiles().set(userId, { ...prefs, updated_at: new Date().toISOString() });
+  return getProfile(userId);
+}
+
+export async function deleteProfile(userId: string): Promise<Result<ProfileOut>> {
+  profiles().delete(userId);
+  return getProfile(userId);
 }

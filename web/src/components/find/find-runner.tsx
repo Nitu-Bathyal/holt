@@ -1,13 +1,14 @@
 "use client";
 
 import { startTransition, useEffect, useState, ViewTransition } from "react";
+import { personalise, type Fit } from "@/lib/profile";
 import type { ApiError, FindResult } from "@/lib/types";
 import { AnalysisProgress } from "../analysis-progress";
 import { ErrorPanel } from "../error-panel";
 import { FindResults } from "./find-results";
 
 /** Follows a queued /v1/find job (API.md allows 202 for slow searches). */
-export function FindRunner({ jobId, days, retryHref = "/find" }: { jobId: string; days: number; retryHref?: string }) {
+export function FindRunner({ jobId, days, retryHref = "/find", fit = null }: { jobId: string; days: number; retryHref?: string; fit?: Fit | null }) {
   const [stage, setStage] = useState({ stage: "Fetching pull requests", progress: 0.05 });
   const [results, setResults] = useState<FindResult[] | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
@@ -34,7 +35,7 @@ export function FindRunner({ jobId, days, retryHref = "/find" }: { jobId: string
     return (
       <ViewTransition enter="sk-in" default="none">
         <div>
-          <FindResults results={results} days={days} />
+          <FindResults results={personalise(results, fit)} days={days} />
         </div>
       </ViewTransition>
     );

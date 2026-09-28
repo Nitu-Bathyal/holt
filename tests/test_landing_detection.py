@@ -249,7 +249,8 @@ def test_a_flagged_mirror_is_decisive_in_rules_mode():
     assessment, _ = analyze_without_model(
         "v8/v8", golden.RecordingProvider("v8/v8"), as_of=cutoff)
     assert assessment.verdict == Verdict.NOT_VIABLE
-    assert rule_codes(assessment.rules) == ["elsewhere"]
+    # The dates the sample covers come first, as on every live report.
+    assert rule_codes(assessment.rules) == ["sample_period", "elsewhere"]
     assert assessment.bottom_line.startswith("Not worth your time. GitHub marks")
     assert any(c.evidence_id == "repo:v8/v8:meta" for c in assessment.claims)
 
@@ -289,3 +290,19 @@ def test_the_elsewhere_finding_decides_before_the_arithmetic():
     verdict, rules = decide(findings, signals)
     assert verdict == Verdict.NOT_VIABLE
     assert rule_codes(rules) == ["elsewhere"] and rules[0] == "This repository is a fork of a/b."
+
+
+def test_only_the_team_can_say_a_pull_request_landed():
+    # A CONTRIBUTOR has had work merged here, but that alone doesn't make them
+    # someone who can land yours: the team is people.maintainers, as for
+    # every other count.
+    records = [r for r in thread_records("openssl/openssl", 32767)
+               if ":comment:" not in r.evidence_id]
+    opened = next(r for r in records if r.evidence_id.endswith(":opened"))
+    regular = EvidenceRecord(
+        "pr:openssl/openssl#32767:comment:99", "github", opened.url, opened.timestamp,
+        {"author": "regular", "author_association": "CONTRIBUTOR", "body": "Merged to 3.4!"},
+    )
+    key = "pr:openssl/openssl#32767"
+    assert ld.classify([*records, regular], frozenset())[key].outcome == ld.CLOSED
+    assert ld.classify([*records, regular], frozenset({"regular"}))[key].outcome == ld.LANDED

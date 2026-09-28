@@ -1,0 +1,268 @@
+"""Discover and the repo boards: rules verdicts only, repos only, the
+repository details the warm pass reads, and the trending threshold."""
+
+from __future__ import annotations
+
+from datetime import timedelta
+
+import pytest
+from conftest import STATS, canned_report
+from holt_server import discover, github, warm
+from holt_server.db import RepoMeta, Report, Usage, now
+from holt_server.errors import ApiError
+
+
+def add(h, *items):
+    async def go():
+        async with h.svc.db.session() as s:
+            s.add_all(items)
+            await s.commit()
+    h.client.portal.call(go)
+
+
+def report(repo, verdict="viable", mode="rules", **stats):
+    body = canned_report(repo, mode, 7, verdict)
+    body["stats"] = {**STATS, **stats}
+    return Report(repo=repo, repo_key=repo.lower(), mode=mode, days=7, report=body)
+
+
+def meta(repo, language=None, stars=0, topics=(), **kw):
+    return RepoMeta(repo_key=repo.lower(), repo=repo, language=language, stars=stars,
+                    topics=list(topics), **kw)
+
+
+def views(repo, people, day_offset=0):
+    day = (now() - timedelta(days=day_offset)).strftime("%Y-%m-%d")
+    return [Usage(day=day, kind="analysis", who=f"p{i}", repo_key=repo.lower())
+            for i in range(people)]
+
+
+def get(h, **params):
+    r = h.get("/v1/discover", params=params)
+    assert r.status_code == 200, r.text
+    return r.json()
+
+
+def names(body):
+    return [r["repo"] for r in body["repos"]]
+
+
+def test_needs_the_internal_key(h):
+    assert h.client.get("/v1/discover").status_code == 401
+
+
+def test_welcoming_board_is_only_worth_your_time_best_odds_first(h):
+    add(h,
+        report("octo/great", outsider_merged=12, no_reply=1),        # good odds
+        report("octo/good", outsider_merged=10, no_reply=2),         # good, fewer merged
+        report("octo/fair", outsider_merged=2, no_reply=2),          # 10% merged: fair
+        report("octo/closed", "not_viable", outsider_merged=0),
+        report("octo/unsure", "insufficient_evidence"),
+        meta("octo/great", "Python"), meta("octo/good", "Python"), meta("octo/fair", "Go"))
+    body = get(h)
+    assert body["sort"] == "welcoming"
+    assert names(body) == ["octo/great", "octo/good", "octo/fair"]
+    card = body["repos"][0]
+    assert card["headline"] == "Worth your time" and card["tone"] == "good"
+    assert card["reason"].startswith("Outside contributors get real replies here")
+    assert card["stats"]["median_first_response_hours"] == 3.0
+    assert card["checked_this_week"] is None
+
+
+def test_equal_odds_break_ties_by_reply_time_then_sample(h):
+    add(h, report("octo/slow", median_first_response_hours=40.0),
+        report("octo/quick", median_first_response_hours=2.0),
+        report("octo/quick-more", median_first_response_hours=2.0, outsider_attempts=40,
+               outsider_merged=16, no_reply=4))
+    assert names(get(h)) == ["octo/quick-more", "octo/quick", "octo/slow"]
+
+
+def test_a_small_lucky_sample_does_not_top_the_board(h):
+    add(h, report("octo/lucky", outsider_attempts=8, outsider_merged=6, no_reply=0),
+        report("octo/proven", outsider_attempts=105, outsider_merged=60, no_reply=20))
+    assert names(get(h)) == ["octo/proven", "octo/lucky"]
+
+
+def test_card_reason_does_not_point_at_starter_issues(h):
+    add(h, report("octo/busy", outsider_attempts=100, outsider_merged=6, no_reply=55))
+    reason = get(h)["repos"][0]["reason"]
+    assert reason.startswith("Outside contributors do get merged here (6 of 100 recently)")
+    assert "below" not in reason and reason.endswith("pick your first issue carefully.")
+
+
+def test_only_rules_reports_and_the_newest_one_count(h):
+    add(h, report("octo/ai-only", mode="ai"),
+        report("octo/changed", "viable"))
+    add(h, report("octo/changed", "not_viable"))  # newer: it stopped being welcoming
+    assert names(get(h)) == []
+    assert names(get(h, sort="stars")) == ["octo/changed"]
+    assert get(h, sort="stars")["repos"][0]["verdict"] == "not_viable"
+
+
+def test_stars_shows_every_verdict_and_repos_without_details_last(h):
+    add(h, report("octo/big", "not_viable"), report("octo/small"), report("octo/unread"),
+        meta("octo/big", "Rust", stars=90_000), meta("octo/small", "Rust", stars=40))
+    body = get(h, sort="stars")
+    assert names(body) == ["octo/big", "octo/small", "octo/unread"]
+    unread = body["repos"][2]
+    assert unread["stars"] is None and unread["language"] is None and unread["topics"] == []
+
+
+def test_language_and_topic_filters_ignore_case(h):
+    add(h, report("octo/py-cli"), report("octo/py-web"), report("octo/cpp"),
+        meta("octo/py-cli", "Python", topics=["cli", "Hacktoberfest"]),
+        meta("octo/py-web", "Python", topics=["web"]), meta("octo/cpp", "C++"))
+    body = get(h, language="PYTHON")
+    assert body["language"] == "Python"  # GitHub's spelling back
+    assert sorted(names(body)) == ["octo/py-cli", "octo/py-web"]
+    assert names(get(h, language="python", topic="hacktoberfest")) == ["octo/py-cli"]
+    assert names(get(h, language="c++")) == ["octo/cpp"]
+    assert names(get(h, language="haskell")) == []
+    # The language chips don't depend on the filter in use.
+    assert get(h, language="c++")["languages"] == [{"name": "Python", "repos": 2},
+                                                   {"name": "C++", "repos": 1}]
+
+
+def test_trending_needs_enough_people_this_week(h):
+    add(h, report("octo/hot"), report("octo/warm"), report("octo/quiet"),
+        report("octo/last-month"),
+        *views("octo/hot", 9), *views("octo/warm", 3), *views("octo/warm", 3, day_offset=2),
+        *views("octo/quiet", discover.TRENDING_MIN - 1),
+        *views("octo/last-month", 20, day_offset=10))
+    body = get(h, sort="trending")
+    assert body["trending_min"] == discover.TRENDING_MIN
+    assert names(body) == ["octo/hot", "octo/warm"]
+    assert [r["checked_this_week"] for r in body["repos"]] == [9, 6]
+    # The same person on the same day counts once.
+    add(h, *views("octo/quiet", 1))
+    assert "octo/quiet" not in names(get(h, sort="trending"))
+    # Below the threshold the count isn't shown on any board either.
+    quiet = next(r for r in get(h, sort="stars")["repos"] if r["repo"] == "octo/quiet")
+    assert quiet["checked_this_week"] is None
+
+
+def test_trending_counts_people_asking_for_a_report(h):
+    add(h, report("octo/one"))
+    for i in range(discover.TRENDING_MIN):
+        assert h.post("/v1/analyses", {"repo": "octo/one"}, ip=f"10.0.0.{i + 2}").status_code == 200
+    assert names(get(h, sort="trending")) == ["octo/one"]
+
+
+def test_limit_and_bad_sort(h):
+    add(h, *(report(f"octo/r{i}") for i in range(5)))
+    assert len(get(h, limit=2)["repos"]) == 2
+    assert h.get("/v1/discover", params={"sort": "people"}).status_code == 400
+
+
+# --- repository details, filled by the warm pass ---------------------------------
+
+
+def details(repo, **kw):
+    return {"repo": repo, "description": "A thing", "language": "Python", "stars": 10,
+            "topics": ["cli"], "pushed_at": "2026-09-20T10:00:00Z", "archived": False,
+            "fork": False, **kw}
+
+
+def test_warm_pass_reads_details_of_reported_repos_once_a_day(h):
+    fake = h.svc.lookup.details
+    fake.known = {"octo/one": details("octo/one", stars=321), "octo/two": details("Octo/Two")}
+    add(h, report("octo/one"), report("octo/two"), report("octo/gone"))
+    h.svc.lookup.remaining = _plenty
+    result = _run(h, ["octo/three"], reports=False, starter=False, finds=False)
+    assert result.meta_run == 2 and result.stopped is None
+    assert len(fake.calls) == 1  # one query for all of them
+    assert sorted(fake.calls[0]) == ["octo/gone", "octo/one", "octo/three", "octo/two"]
+    body = get(h, sort="stars")
+    assert names(body)[:2] == ["octo/one", "Octo/Two"]
+    assert body["repos"][0]["stars"] == 321 and body["repos"][0]["topics"] == ["cli"]
+    assert body["repos"][0]["pushed_at"] == "2026-09-20T10:00:00Z"
+
+    again = _run(h, [], reports=False, starter=False, finds=False)
+    assert again.meta_run == 0
+    assert fake.calls[1:] == [["octo/gone"]]  # only the one GitHub didn't know
+
+
+def test_details_are_read_a_hundred_at_a_time():
+    items = [f"o/r{i}" for i in range(250)]
+    assert [len(b) for b in discover.batches(items)] == [100, 100, 50]
+
+
+def test_details_rate_limit_stops_the_pass(h):
+    h.svc.lookup.details.error = ApiError("rate_limited", "slow down", retry_after=60)
+    h.svc.lookup.remaining = _plenty
+    add(h, report("octo/one"))
+    result = _run(h, [], reports=False, starter=False, finds=True)
+    assert result.stopped == "GitHub rate limit reached" and result.finds_run == 0
+
+
+def test_dry_run_reads_no_details(h):
+    add(h, report("octo/one"))
+    lines = []
+    _run(h, [], dry_run=True, say=lines.append, reports=False, starter=False, finds=False)
+    assert h.svc.lookup.details.calls == []
+    assert "would read details of 1 repos in 1 query" in lines
+
+
+async def _plenty():
+    return 5000
+
+
+def _run(h, seeds, **kw):
+    return h.client.portal.call(lambda: warm.warm_once(h.svc, seeds=seeds, **kw))
+
+
+class FakeTransport:
+    def __init__(self, answer):
+        self.answer = answer
+        self.sent: list[tuple[str, dict]] = []
+
+    def query(self, document, timeout=None, **variables):
+        self.sent.append((document, variables))
+        return self.answer(variables)
+
+
+def lookup_with(answer):
+    pool = github.TokenPool(["tok"])
+    transport = FakeTransport(answer)
+    pool.transport = lambda http=None, index=None: transport
+    return github.GitHubLookup(pool, http=None), transport
+
+
+def test_details_query_is_one_request_with_one_alias_per_repo():
+    node = {"nameWithOwner": "Pallets/Flask", "description": " :books: Web ", "stargazerCount": 7,
+            "pushedAt": "2026-09-01T00:00:00Z", "isArchived": False, "isFork": False,
+            "isPrivate": False, "primaryLanguage": {"name": "Python"},
+            "repositoryTopics": {"nodes": [{"topic": {"name": "wsgi"}}, {"topic": None}]}}
+    lookup, transport = lookup_with(lambda v: {"r0": node, "r1": None,
+                                               "r2": {**node, "isPrivate": True}})
+    out = lookup._details(["pallets/flask", "octo/gone", "octo/secret"])
+    document, variables = transport.sent[0]
+    assert len(transport.sent) == 1
+    assert variables == {"o0": "pallets", "n0": "flask", "o1": "octo", "n1": "gone",
+                         "o2": "octo", "n2": "secret"}
+    assert "r2: repository(owner:$o2, name:$n2)" in document and "rateLimit" in document
+    assert out["pallets/flask"] == {
+        "repo": "Pallets/Flask", "description": "Web", "language": "Python", "stars": 7,
+        "topics": ["wsgi"], "pushed_at": "2026-09-01T00:00:00Z", "archived": False,
+        "fork": False}
+    assert out["octo/gone"] is None and out["octo/secret"] is None
+
+
+def test_details_when_every_repo_is_gone():
+    from holt.evidence.errors import RepoNotFound, UpstreamError
+
+    def gone(v):
+        raise RepoNotFound("octo/gone")
+
+    lookup, _ = lookup_with(gone)
+    assert lookup._details(["octo/gone"]) == {"octo/gone": None}
+
+    def broken(v):
+        raise UpstreamError("HTTP 502")
+
+    lookup, _ = lookup_with(broken)
+    with pytest.raises(ApiError) as err:
+        lookup._details(["octo/one"])
+    assert err.value.code == "upstream"
+    with pytest.raises(ValueError):
+        lookup._details([f"o/r{i}" for i in range(github.DETAILS_BATCH + 1)])

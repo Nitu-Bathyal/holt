@@ -43,6 +43,7 @@ from collections.abc import Iterable, Mapping
 from dataclasses import dataclass
 from typing import TYPE_CHECKING, Any
 
+from holt.agent import people
 from holt.types import EvidenceRecord
 
 if TYPE_CHECKING:
@@ -142,12 +143,6 @@ _LANDED_LABELS = {"merged", "landed", "merged upstream", "merged-upstream",
 _REVERTED_LABELS = {"reverted"}
 _REVERTED = re.compile(r"\bthis pull request has been \**reverted\**\b", re.I)
 
-# Who may say "merged" for a project. OWNER, MEMBER and COLLABORATOR can push;
-# a CONTRIBUTOR has had work merged before and is often a committer whose
-# membership is private (OpenSSL's release managers read as CONTRIBUTOR).
-# Strangers and first-timers cannot land anything, whatever they write.
-_CAN_LAND = {"OWNER", "MEMBER", "COLLABORATOR", "CONTRIBUTOR"}
-_MAINTAINER = {"OWNER", "MEMBER", "COLLABORATOR"}
 
 
 @dataclass(frozen=True, slots=True)
@@ -191,25 +186,31 @@ def _said_landed(body: str) -> str | None:
     return None
 
 
-def _may_say_landed(comment: dict[str, Any], author: str, author_assoc: str | None,
-                    closed_by: str | None) -> bool:
+def _may_say_landed(comment: dict[str, Any], author: str, closed_by: str | None,
+                    team: frozenset[str]) -> bool:
+    """Whether this person's "merged" can mean the pull request landed.
+
+    Whoever closed it, or anyone on the project's team (`people.maintainers`,
+    the same team every other count uses: OpenSSL's release managers read as
+    CONTRIBUTOR but merge and close other people's pull requests). Strangers
+    cannot land anything, whatever they write, and nor can an author on their
+    own pull request unless they could have pushed it themselves.
+    """
     who = comment.get("author") or ""
     if not who or comment.get("author_is_bot") or _looks_automated(who):
         return False
     if who == closed_by:
         return True
     assoc = comment.get("author_association")
-    if who == author:
-        # Your own pull request is yours to report on only if you could have
-        # pushed it yourself.
-        return author_assoc in _MAINTAINER and assoc in _MAINTAINER
-    # Older captures carry no association at all; a reply from anyone other
-    # than the author is the best that evidence can say.
-    return assoc is None or assoc in _CAN_LAND
+    if assoc is None and who != author:
+        # Older captures carry no association at all; a reply from anyone other
+        # than the author is the best that evidence can say.
+        return True
+    return who in team or assoc in people.MAINTAINER_ASSOCIATIONS
 
 
 def _classify_one(opened: EvidenceRecord | None, end: EvidenceRecord | None,
-                  talk: list[EvidenceRecord]) -> Closure | None:
+                  talk: list[EvidenceRecord], team: frozenset[str]) -> Closure | None:
     if end is None:
         return None  # still open
     if end.evidence_id.endswith(":merged"):
@@ -225,7 +226,6 @@ def _classify_one(opened: EvidenceRecord | None, end: EvidenceRecord | None,
         return closed  # it went in and came back out
 
     author = close.get("author") or (opened.payload.get("author") if opened else "") or ""
-    author_assoc = (opened.payload if opened else close).get("author_association")
     closed_by = close.get("closed_by")
     closer = close.get("closer") or {}
 
@@ -251,7 +251,7 @@ def _classify_one(opened: EvidenceRecord | None, end: EvidenceRecord | None,
                        end.evidence_id)
 
     for r in reversed(talk):  # the closing remark is usually the last one
-        if not _may_say_landed(r.payload, author, author_assoc, closed_by):
+        if not _may_say_landed(r.payload, author, closed_by, team):
             continue
         if line := _said_landed(r.payload.get("body") or ""):
             return Closure(LANDED, "comment",
@@ -282,13 +282,19 @@ def _clip(text: str, limit: int = 120) -> str:
     return text if len(text) <= limit else text[: limit - 1].rstrip() + "…"
 
 
-def classify(records: Iterable[EvidenceRecord]) -> dict[str, Closure]:
+def classify(records: Iterable[EvidenceRecord],
+             team: frozenset[str] | None = None) -> dict[str, Closure]:
     """How every finished pull request in `records` ended, keyed `pr:owner/repo#N`.
+
+    `team` is `people.maintainers(records)`, worked out here when not given.
 
     Open pull requests are left out. Comments and reviews after the close are
     read too: the bots write their notice as they close, and a maintainer's
     "merged to 3.4" often lands a second after the close event.
     """
+    records = list(records)
+    if team is None:
+        team = people.maintainers(records)
     opened: dict[str, EvidenceRecord] = {}
     ends: dict[str, EvidenceRecord] = {}
     talk: dict[str, list[EvidenceRecord]] = {}
@@ -309,7 +315,7 @@ def classify(records: Iterable[EvidenceRecord]) -> dict[str, Closure]:
     out: dict[str, Closure] = {}
     for key, end in ends.items():
         said = sorted(talk.get(key, []), key=lambda r: (r.timestamp is None, r.timestamp))
-        closure = _classify_one(opened.get(key), end, said)
+        closure = _classify_one(opened.get(key), end, said, team)
         if closure is not None:
             out[key] = closure
     return out
@@ -317,7 +323,7 @@ def classify(records: Iterable[EvidenceRecord]) -> dict[str, Closure]:
 
 def mark_landed(threads: Mapping[str, Thread], records: Iterable[EvidenceRecord]) -> None:
     """Count pull requests that landed another way as merged, noting how."""
-    for key, closure in classify(records).items():
+    for key, closure in classify(records, getattr(threads, "team", None)).items():
         thread = threads.get(key)
         if closure.outcome == LANDED and thread is not None and not thread.merged:
             thread.merged = True
@@ -328,7 +334,7 @@ def mark_landed(threads: Mapping[str, Thread], records: Iterable[EvidenceRecord]
 def landed_sentence(threads: Iterable[Thread]) -> str | None:
     """The plain line saying how many merges happened off the button, and how.
 
-    Given the newcomer threads a verdict was computed from; None when every
+    Given the outsider threads a verdict was computed from; None when every
     merge among them went through GitHub's merge button.
     """
     merged = [t for t in threads if t.merged]
@@ -343,7 +349,7 @@ def landed_sentence(threads: Iterable[Thread]) -> str | None:
     if total == 1 and len(merged) == 1:
         return (f"That pull request was landed {how}, so GitHub shows it as closed "
                 "rather than merged. It's counted as merged here.")
-    return (f"{of} merged pull requests from newcomers were landed {how}, so GitHub "
+    return (f"{of} merged pull requests from outside contributors were landed {how}, so GitHub "
             "shows them as closed rather than merged. They're counted as merged here.")
 
 
@@ -371,7 +377,7 @@ def elsewhere(meta: Mapping[str, Any] | None, outsider_merged: int) -> str | Non
     Returns the sentence the reader sees. A GitHub-flagged mirror is decisive on
     its own, like archived: GitHub copies it from somewhere else. A description
     that calls itself a mirror, or a fork of another repository, is only taken
-    at its word when no newcomer's work landed here in the sample; a fork that
+    at its word when no outsider's work landed here in the sample; a fork that
     merges outsiders is a project in its own right.
     """
     meta = meta or {}
@@ -385,12 +391,12 @@ def elsewhere(meta: Mapping[str, Any] | None, outsider_merged: int) -> str | Non
     if _MIRROR_WORDS.search(meta.get("description") or ""):
         where = _where(meta.get("homepage_url"))
         return ("This repository describes itself as a mirror, and no pull request "
-                "from a newcomer landed here in the period we looked at, so pull "
+                "from an outside contributor landed here in the period we looked at, so pull "
                 "requests here likely aren't how you contribute."
                 + (f" The project's own site is {where}." if where else ""))
     parent = meta.get("parent")
     if meta.get("is_fork") and parent:
-        return (f"This repository is a fork of {parent}, and no pull request from a "
-                "newcomer landed here in the period we looked at. Contributions "
+        return (f"This repository is a fork of {parent}, and no pull request from an "
+                "outside contributor landed here in the period we looked at. Contributions "
                 f"usually go to https://github.com/{parent} instead.")
     return None

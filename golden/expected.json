@@ -2,24 +2,34 @@
  "DefinitelyTyped/DefinitelyTyped": {
   "verdict": "viable",
   "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 105,
-   "outsider_merged": 60,
-   "outsider_ignored": 27,
-   "median_first_response_hours": 6.0,
+   "outsider_threads": 164,
+   "outsider_merged": 102,
+   "outsider_ignored": 17,
+   "median_first_response_hours": 24.2,
    "bot_share": 0.055,
-   "distinct_outsider_authors": 95,
-   "distinct_merged_authors": 60,
-   "reviewed_share": 0.815,
-   "merge_rate": 0.571,
+   "distinct_outsider_authors": 71,
+   "distinct_merged_authors": 55,
+   "reviewed_share": 0.615,
+   "merge_rate": 0.756,
    "merged_files_median": 3,
    "merged_dirs_median": 1,
    "merged_with_files": 129,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 68
+   "outsider_answered": 68,
+   "first_timer_threads": 70,
+   "first_timer_merged": 55,
+   "distinct_first_timer_authors": 65,
+   "distinct_first_timer_merged_authors": 55,
+   "outsider_still_open": 29,
+   "outsider_closed_silently": 8,
+   "outsider_excluded": 2
   },
   "history": [
    {
@@ -31,27 +41,33 @@
   ]
  },
  "EbookFoundation/free-programming-books": {
-  "verdict": "viable",
+  "verdict": "not_viable",
   "rules": [
-   "awaiting_reply",
-   "merges"
+   "sample_period",
+   "catalogue_shape"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 169,
-   "outsider_merged": 81,
-   "outsider_ignored": 34,
-   "median_first_response_hours": 21.9,
+   "outsider_threads": 190,
+   "outsider_merged": 95,
+   "outsider_ignored": 8,
+   "median_first_response_hours": 20.3,
    "bot_share": 0.03,
-   "distinct_outsider_authors": 142,
-   "distinct_merged_authors": 81,
-   "reviewed_share": 0.848,
-   "merge_rate": 0.479,
+   "distinct_outsider_authors": 137,
+   "distinct_merged_authors": 80,
+   "reviewed_share": 0.838,
+   "merge_rate": 0.519,
    "merged_files_median": 1,
    "merged_dirs_median": 1,
    "merged_with_files": 99,
-   "outsider_awaiting_reply": 2,
-   "outsider_answered": 128
+   "outsider_answered": 130,
+   "first_timer_threads": 160,
+   "first_timer_merged": 80,
+   "distinct_first_timer_authors": 136,
+   "distinct_first_timer_merged_authors": 80,
+   "outsider_still_open": 7,
+   "outsider_closed_silently": 30,
+   "outsider_excluded": 2
   },
   "history": [
    {
@@ -59,30 +75,43 @@
     "from": null,
     "to": "viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "not_viable",
+    "reason": "Catalogue detection from diff shape (ticket 07): most outside pull requests here add one data file or package manifest, or a line to a list, which isn't a software contribution"
    }
   ]
  },
  "Homebrew/homebrew-cask": {
-  "verdict": "viable",
+  "verdict": "not_viable",
   "rules": [
-   "merges"
+   "sample_period",
+   "catalogue_shape"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 8,
-   "outsider_merged": 6,
+   "outsider_threads": 11,
+   "outsider_merged": 8,
    "outsider_ignored": 0,
-   "median_first_response_hours": 2.3,
+   "median_first_response_hours": 1.9,
    "bot_share": 0.865,
-   "distinct_outsider_authors": 8,
-   "distinct_merged_authors": 6,
+   "distinct_outsider_authors": 4,
+   "distinct_merged_authors": 3,
    "reviewed_share": 1.0,
-   "merge_rate": 0.75,
+   "merge_rate": 0.8,
    "merged_files_median": 1,
    "merged_dirs_median": 1,
    "merged_with_files": 197,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 8
+   "outsider_answered": 9,
+   "first_timer_threads": 4,
+   "first_timer_merged": 3,
+   "distinct_first_timer_authors": 4,
+   "distinct_first_timer_merged_authors": 3,
+   "outsider_still_open": 1,
+   "outsider_closed_silently": 1,
+   "outsider_excluded": 0
   },
   "history": [
    {
@@ -90,31 +119,47 @@
     "from": null,
     "to": "viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "not_viable",
+    "reason": "Catalogue detection from diff shape (ticket 07): most outside pull requests here add one data file or package manifest, or a line to a list, which isn't a software contribution"
    }
   ]
  },
  "NixOS/nixpkgs": {
   "verdict": "viable",
   "rules": [
-   "awaiting_reply",
-   "merges"
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges",
+   "package_updates"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 94,
-   "outsider_merged": 18,
-   "outsider_ignored": 4,
-   "median_first_response_hours": 3.5,
+   "outsider_threads": 120,
+   "outsider_merged": 39,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 2.3,
    "bot_share": 0.065,
-   "distinct_outsider_authors": 72,
-   "distinct_merged_authors": 18,
-   "reviewed_share": 0.708,
-   "merge_rate": 0.191,
+   "distinct_outsider_authors": 12,
+   "distinct_merged_authors": 8,
+   "reviewed_share": 0.514,
+   "merge_rate": 0.886,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 72,
-   "outsider_awaiting_reply": 47,
-   "outsider_answered": 39
+   "outsider_answered": 18,
+   "first_timer_threads": 9,
+   "first_timer_merged": 8,
+   "distinct_first_timer_authors": 9,
+   "distinct_first_timer_merged_authors": 8,
+   "outsider_still_open": 76,
+   "outsider_closed_silently": 4,
+   "outsider_excluded": 1
   },
   "history": [
    {
@@ -128,25 +173,34 @@
  "PostHog/posthog": {
   "verdict": "viable",
   "rules": [
-   "awaiting_reply",
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 28,
-   "outsider_merged": 7,
-   "outsider_ignored": 1,
-   "median_first_response_hours": 19.4,
+   "outsider_threads": 14,
+   "outsider_merged": 5,
+   "outsider_ignored": 0,
+   "median_first_response_hours": null,
    "bot_share": 0.625,
-   "distinct_outsider_authors": 18,
-   "distinct_merged_authors": 7,
+   "distinct_outsider_authors": 5,
+   "distinct_merged_authors": 4,
    "reviewed_share": 0.2,
-   "merge_rate": 0.25,
+   "merge_rate": 0.833,
    "merged_files_median": 7.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 30,
-   "outsider_awaiting_reply": 18,
-   "outsider_answered": 2
+   "outsider_answered": 0,
+   "first_timer_threads": 4,
+   "first_timer_merged": 4,
+   "distinct_first_timer_authors": 4,
+   "distinct_first_timer_merged_authors": 4,
+   "outsider_still_open": 8,
+   "outsider_closed_silently": 1,
+   "outsider_excluded": 9
   },
   "history": [
    {
@@ -160,24 +214,34 @@
  "TheAlgorithms/Python": {
   "verdict": "viable",
   "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 86,
-   "outsider_merged": 49,
-   "outsider_ignored": 26,
-   "median_first_response_hours": 3.9,
+   "outsider_threads": 103,
+   "outsider_merged": 68,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 3.6,
    "bot_share": 0.125,
-   "distinct_outsider_authors": 60,
-   "distinct_merged_authors": 49,
+   "distinct_outsider_authors": 51,
+   "distinct_merged_authors": 47,
    "reviewed_share": 1.0,
-   "merge_rate": 0.57,
+   "merge_rate": 0.701,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 124,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 60
+   "outsider_answered": 86,
+   "first_timer_threads": 56,
+   "first_timer_merged": 47,
+   "distinct_first_timer_authors": 50,
+   "distinct_first_timer_merged_authors": 47,
+   "outsider_still_open": 6,
+   "outsider_closed_silently": 11,
+   "outsider_excluded": 35
   },
   "history": [
    {
@@ -191,25 +255,34 @@
  "astral-sh/ruff": {
   "verdict": "viable",
   "rules": [
-   "awaiting_reply",
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 61,
-   "outsider_merged": 18,
-   "outsider_ignored": 31,
-   "median_first_response_hours": 9.3,
+   "outsider_threads": 34,
+   "outsider_merged": 9,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 7.9,
    "bot_share": 0.075,
-   "distinct_outsider_authors": 37,
-   "distinct_merged_authors": 18,
-   "reviewed_share": 0.626,
-   "merge_rate": 0.295,
+   "distinct_outsider_authors": 15,
+   "distinct_merged_authors": 6,
+   "reviewed_share": 0.617,
+   "merge_rate": 0.375,
    "merged_files_median": 3,
    "merged_dirs_median": 1,
    "merged_with_files": 107,
-   "outsider_awaiting_reply": 1,
-   "outsider_answered": 25
+   "outsider_answered": 14,
+   "first_timer_threads": 20,
+   "first_timer_merged": 6,
+   "distinct_first_timer_authors": 14,
+   "distinct_first_timer_merged_authors": 6,
+   "outsider_still_open": 10,
+   "outsider_closed_silently": 6,
+   "outsider_excluded": 22
   },
   "history": [
    {
@@ -223,24 +296,34 @@
  "charmbracelet/bubbletea": {
   "verdict": "viable",
   "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 121,
-   "outsider_merged": 25,
-   "outsider_ignored": 70,
-   "median_first_response_hours": 49.6,
+   "outsider_threads": 122,
+   "outsider_merged": 23,
+   "outsider_ignored": 53,
+   "median_first_response_hours": 67.5,
    "bot_share": 0.16,
-   "distinct_outsider_authors": 91,
-   "distinct_merged_authors": 25,
-   "reviewed_share": 0.569,
-   "merge_rate": 0.207,
+   "distinct_outsider_authors": 80,
+   "distinct_merged_authors": 21,
+   "reviewed_share": 0.542,
+   "merge_rate": 0.205,
    "merged_files_median": 2.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 72,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 49
+   "outsider_answered": 35,
+   "first_timer_threads": 102,
+   "first_timer_merged": 21,
+   "distinct_first_timer_authors": 78,
+   "distinct_first_timer_merged_authors": 21,
+   "outsider_still_open": 10,
+   "outsider_closed_silently": 22,
+   "outsider_excluded": 1
   },
   "history": [
    {
@@ -254,25 +337,33 @@
  "dotnet/efcore": {
   "verdict": "viable",
   "rules": [
-   "awaiting_reply",
+   "sample_period",
+   "still_open",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 22,
-   "outsider_merged": 18,
-   "outsider_ignored": 3,
-   "median_first_response_hours": 28.0,
+   "outsider_threads": 35,
+   "outsider_merged": 21,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 39.1,
    "bot_share": 0.705,
-   "distinct_outsider_authors": 20,
-   "distinct_merged_authors": 18,
+   "distinct_outsider_authors": 14,
+   "distinct_merged_authors": 13,
    "reviewed_share": 0.963,
-   "merge_rate": 0.818,
+   "merge_rate": 0.913,
    "merged_files_median": 2,
    "merged_dirs_median": 2,
    "merged_with_files": 151,
-   "outsider_awaiting_reply": 1,
-   "outsider_answered": 18
+   "outsider_answered": 21,
+   "first_timer_threads": 14,
+   "first_timer_merged": 13,
+   "distinct_first_timer_authors": 14,
+   "distinct_first_timer_merged_authors": 13,
+   "outsider_still_open": 12,
+   "outsider_closed_silently": 2,
+   "outsider_excluded": 0
   },
   "history": [
    {
@@ -286,24 +377,34 @@
  "encode/httpx": {
   "verdict": "viable",
   "rules": [
+   "sample_period",
+   "dormant",
+   "excluded",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 135,
-   "outsider_merged": 25,
-   "outsider_ignored": 58,
-   "median_first_response_hours": 50.4,
+   "outsider_threads": 136,
+   "outsider_merged": 26,
+   "outsider_ignored": 47,
+   "median_first_response_hours": 40.5,
    "bot_share": 0.095,
-   "distinct_outsider_authors": 105,
-   "distinct_merged_authors": 25,
-   "reviewed_share": 0.667,
-   "merge_rate": 0.185,
+   "distinct_outsider_authors": 99,
+   "distinct_merged_authors": 23,
+   "reviewed_share": 0.6,
+   "merge_rate": 0.191,
    "merged_files_median": 2.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 60,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 77
+   "outsider_answered": 59,
+   "first_timer_threads": 125,
+   "first_timer_merged": 23,
+   "distinct_first_timer_authors": 97,
+   "distinct_first_timer_merged_authors": 23,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 29,
+   "outsider_excluded": 3
   },
   "history": [
    {
@@ -315,27 +416,37 @@
   ]
  },
  "excalidraw/excalidraw": {
-  "verdict": "viable",
+  "verdict": "insufficient_evidence",
   "rules": [
-   "awaiting_reply",
-   "merges"
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "slow",
+   "few_merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 169,
-   "outsider_merged": 4,
-   "outsider_ignored": 129,
-   "median_first_response_hours": 35.3,
+   "outsider_threads": 161,
+   "outsider_merged": 1,
+   "outsider_ignored": 100,
+   "median_first_response_hours": 453.7,
    "bot_share": 0.01,
-   "distinct_outsider_authors": 119,
-   "distinct_merged_authors": 4,
-   "reviewed_share": 0.36,
-   "merge_rate": 0.024,
+   "distinct_outsider_authors": 83,
+   "distinct_merged_authors": 1,
+   "reviewed_share": 0.28,
+   "merge_rate": 0.008,
    "merged_files_median": 10,
    "merged_dirs_median": 1,
    "merged_with_files": 25,
-   "outsider_awaiting_reply": 1,
-   "outsider_answered": 38
+   "outsider_answered": 4,
+   "first_timer_threads": 122,
+   "first_timer_merged": 1,
+   "distinct_first_timer_authors": 83,
+   "distinct_first_timer_merged_authors": 1,
+   "outsider_still_open": 36,
+   "outsider_closed_silently": 21,
+   "outsider_excluded": 7
   },
   "history": [
    {
@@ -343,31 +454,46 @@
     "from": null,
     "to": "viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "viable",
+    "to": "insufficient_evidence",
+    "reason": "Ticket 03 (outsiders by association): the 4 'first-time' merges that made it Worth were by the maintainers (dwelle, MEMBER, merged 20; mtolmacs and zsviczian, COLLABORATOR). Counted as outsiders, 1 of 168 outside PRs was merged."
    }
   ]
  },
  "facebook/fresco": {
   "verdict": "viable",
   "rules": [
+   "sample_period",
+   "excluded",
+   "closed_silently",
    "merges",
    "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 134,
-   "outsider_merged": 66,
-   "outsider_ignored": 37,
-   "median_first_response_hours": 80.8,
+   "outsider_threads": 144,
+   "outsider_merged": 80,
+   "outsider_ignored": 6,
+   "median_first_response_hours": 87.7,
    "bot_share": 0.005,
-   "distinct_outsider_authors": 106,
-   "distinct_merged_authors": 66,
-   "reviewed_share": 0.53,
-   "merge_rate": 0.493,
+   "distinct_outsider_authors": 96,
+   "distinct_merged_authors": 62,
+   "reviewed_share": 0.98,
+   "merge_rate": 0.556,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 100,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 70
+   "outsider_answered": 73,
+   "first_timer_threads": 110,
+   "first_timer_merged": 62,
+   "distinct_first_timer_authors": 92,
+   "distinct_first_timer_merged_authors": 62,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 28,
+   "outsider_excluded": 2
   },
   "history": [
    {
@@ -385,26 +511,36 @@
   ]
  },
  "fastapi/fastapi": {
-  "verdict": "viable",
+  "verdict": "insufficient_evidence",
   "rules": [
-   "merges"
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "few_merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 130,
-   "outsider_merged": 3,
-   "outsider_ignored": 33,
-   "median_first_response_hours": 9.4,
+   "outsider_threads": 121,
+   "outsider_merged": 0,
+   "outsider_ignored": 3,
+   "median_first_response_hours": 9.2,
    "bot_share": 0.155,
-   "distinct_outsider_authors": 86,
-   "distinct_merged_authors": 3,
+   "distinct_outsider_authors": 76,
+   "distinct_merged_authors": 0,
    "reviewed_share": 0.147,
-   "merge_rate": 0.023,
+   "merge_rate": 0.0,
    "merged_files_median": 2.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 68,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 96
+   "outsider_answered": 87,
+   "first_timer_threads": 108,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 73,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 5,
+   "outsider_closed_silently": 26,
+   "outsider_excluded": 3
   },
   "history": [
    {
@@ -412,32 +548,43 @@
     "from": null,
     "to": "viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "viable",
+    "to": "insufficient_evidence",
+    "reason": "Ticket 03: the 3 'first-time' merges that made it Worth were the maintainers' own PRs (tiangolo, YuriiMotov, alejsdev, all MEMBER). No outside PR of the 124 in the sample was merged."
    }
   ]
  },
  "firstcontributions/first-contributions": {
   "verdict": "not_viable",
   "rules": [
-   "awaiting_reply",
-   "merges",
-   "rubber_stamp"
+   "sample_period",
+   "catalogue_shape"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 187,
-   "outsider_merged": 154,
-   "outsider_ignored": 25,
+   "outsider_threads": 199,
+   "outsider_merged": 166,
+   "outsider_ignored": 0,
    "median_first_response_hours": null,
    "bot_share": 0.0,
-   "distinct_outsider_authors": 179,
+   "distinct_outsider_authors": 157,
    "distinct_merged_authors": 154,
    "reviewed_share": 0.0,
-   "merge_rate": 0.824,
+   "merge_rate": 0.965,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 166,
-   "outsider_awaiting_reply": 8,
-   "outsider_answered": 0
+   "outsider_answered": 0,
+   "first_timer_threads": 159,
+   "first_timer_merged": 154,
+   "distinct_first_timer_authors": 157,
+   "distinct_first_timer_merged_authors": 154,
+   "outsider_still_open": 27,
+   "outsider_closed_silently": 6,
+   "outsider_excluded": 1
   },
   "history": [
    {
@@ -451,25 +598,35 @@
  "git/git": {
   "verdict": "viable",
   "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges",
    "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 166,
-   "outsider_merged": 9,
-   "outsider_ignored": 93,
-   "median_first_response_hours": 6.2,
+   "outsider_threads": 181,
+   "outsider_merged": 16,
+   "outsider_ignored": 34,
+   "median_first_response_hours": 4.4,
    "bot_share": 0.005,
-   "distinct_outsider_authors": 102,
+   "distinct_outsider_authors": 93,
    "distinct_merged_authors": 9,
-   "reviewed_share": 0.312,
-   "merge_rate": 0.054,
+   "reviewed_share": 1.0,
+   "merge_rate": 0.094,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 16,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 68
+   "outsider_answered": 49,
+   "first_timer_threads": 115,
+   "first_timer_merged": 9,
+   "distinct_first_timer_authors": 81,
+   "distinct_first_timer_merged_authors": 9,
+   "outsider_still_open": 11,
+   "outsider_closed_silently": 73,
+   "outsider_excluded": 18
   },
   "history": [
    {
@@ -489,26 +646,35 @@
  "golang/go": {
   "verdict": "viable",
   "rules": [
-   "awaiting_reply",
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges",
    "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 147,
-   "outsider_merged": 33,
-   "outsider_ignored": 107,
-   "median_first_response_hours": 7.8,
+   "outsider_threads": 192,
+   "outsider_merged": 50,
+   "outsider_ignored": 85,
+   "median_first_response_hours": 0.3,
    "bot_share": 0.0,
-   "distinct_outsider_authors": 114,
-   "distinct_merged_authors": 33,
-   "reviewed_share": 0.019,
-   "merge_rate": 0.224,
+   "distinct_outsider_authors": 94,
+   "distinct_merged_authors": 31,
+   "reviewed_share": 1.0,
+   "merge_rate": 0.311,
    "merged_files_median": 2.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 52,
-   "outsider_awaiting_reply": 2,
-   "outsider_answered": 6
+   "outsider_answered": 2,
+   "first_timer_threads": 102,
+   "first_timer_merged": 31,
+   "distinct_first_timer_authors": 81,
+   "distinct_first_timer_merged_authors": 31,
+   "outsider_still_open": 31,
+   "outsider_closed_silently": 24,
+   "outsider_excluded": 4
   },
   "history": [
    {
@@ -528,25 +694,31 @@
  "hacs/default": {
   "verdict": "not_viable",
   "rules": [
-   "awaiting_reply",
-   "ignored"
+   "sample_period",
+   "catalogue_shape"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 200,
+   "outsider_threads": 194,
    "outsider_merged": 0,
-   "outsider_ignored": 173,
+   "outsider_ignored": 0,
    "median_first_response_hours": null,
    "bot_share": 0.0,
-   "distinct_outsider_authors": 126,
+   "distinct_outsider_authors": 32,
    "distinct_merged_authors": 0,
    "reviewed_share": null,
    "merge_rate": 0.0,
    "merged_files_median": null,
    "merged_dirs_median": null,
    "merged_with_files": 0,
-   "outsider_awaiting_reply": 27,
-   "outsider_answered": 0
+   "outsider_answered": 0,
+   "first_timer_threads": 55,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 29,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 132,
+   "outsider_closed_silently": 62,
+   "outsider_excluded": 6
   },
   "history": [
    {
@@ -560,25 +732,34 @@
  "home-assistant/core": {
   "verdict": "viable",
   "rules": [
-   "awaiting_reply",
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 113,
-   "outsider_merged": 41,
-   "outsider_ignored": 33,
+   "outsider_threads": 127,
+   "outsider_merged": 63,
+   "outsider_ignored": 0,
    "median_first_response_hours": 5.7,
    "bot_share": 0.095,
-   "distinct_outsider_authors": 94,
-   "distinct_merged_authors": 41,
-   "reviewed_share": 0.99,
-   "merge_rate": 0.363,
+   "distinct_outsider_authors": 39,
+   "distinct_merged_authors": 34,
+   "reviewed_share": 0.95,
+   "merge_rate": 0.913,
    "merged_files_median": 2.0,
    "merged_dirs_median": 2.0,
    "merged_with_files": 100,
-   "outsider_awaiting_reply": 20,
-   "outsider_answered": 59
+   "outsider_answered": 63,
+   "first_timer_threads": 36,
+   "first_timer_merged": 34,
+   "distinct_first_timer_authors": 36,
+   "distinct_first_timer_merged_authors": 34,
+   "outsider_still_open": 58,
+   "outsider_closed_silently": 4,
+   "outsider_excluded": 19
   },
   "history": [
    {
@@ -590,27 +771,37 @@
   ]
  },
  "httpie/cli": {
-  "verdict": "not_viable",
+  "verdict": "insufficient_evidence",
   "rules": [
-   "awaiting_reply",
-   "ignored"
+   "sample_period",
+   "dormant",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "few_merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 199,
+   "outsider_threads": 188,
    "outsider_merged": 0,
-   "outsider_ignored": 188,
-   "median_first_response_hours": 182.0,
+   "outsider_ignored": 125,
+   "median_first_response_hours": null,
    "bot_share": 0.005,
-   "distinct_outsider_authors": 132,
+   "distinct_outsider_authors": 129,
    "distinct_merged_authors": 0,
    "reviewed_share": null,
    "merge_rate": 0.0,
    "merged_files_median": null,
    "merged_dirs_median": null,
    "merged_with_files": 0,
-   "outsider_awaiting_reply": 2,
-   "outsider_answered": 9
+   "outsider_answered": 0,
+   "first_timer_threads": 184,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 128,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 3,
+   "outsider_closed_silently": 60,
+   "outsider_excluded": 11
   },
   "history": [
    {
@@ -618,31 +809,43 @@
     "from": null,
     "to": "not_viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "not_viable",
+    "to": "insufficient_evidence",
+    "reason": "ticket 06: 'ignored' is now only an open PR past the 14-day settle window with no reply; its 60 PRs closed without a reply (triage) and PRs under 14 days old no longer count as ignored, so the ignored rule no longer fires"
    }
   ]
  },
  "is-a-dev/register": {
-  "verdict": "insufficient_evidence",
+  "verdict": "not_viable",
   "rules": [
-   "awaiting_reply",
-   "few_merges"
+   "sample_period",
+   "catalogue_shape"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 200,
-   "outsider_merged": 1,
-   "outsider_ignored": 87,
-   "median_first_response_hours": 0.1,
+   "outsider_threads": 199,
+   "outsider_merged": 0,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 0.2,
    "bot_share": 0.0,
-   "distinct_outsider_authors": 153,
-   "distinct_merged_authors": 1,
+   "distinct_outsider_authors": 47,
+   "distinct_merged_authors": 0,
    "reviewed_share": 1.0,
-   "merge_rate": 0.005,
+   "merge_rate": 0.0,
    "merged_files_median": 10,
    "merged_dirs_median": 1,
    "merged_with_files": 1,
-   "outsider_awaiting_reply": 111,
-   "outsider_answered": 2
+   "outsider_answered": 1,
+   "first_timer_threads": 68,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 41,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 125,
+   "outsider_closed_silently": 73,
+   "outsider_excluded": 0
   },
   "history": [
    {
@@ -650,32 +853,47 @@
     "from": null,
     "to": "insufficient_evidence",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "insufficient_evidence",
+    "to": "not_viable",
+    "reason": "Ticket 03: its one merge was a MEMBER's (linuskang). 0 of 199 outside PRs merged and nearly all got no reply, so the 'ignored' rule decides. Matches the hand check (a registry; ticket 07 adds the registry reason)."
    }
   ]
  },
  "jashkenas/backbone": {
   "verdict": "viable",
   "rules": [
-   "awaiting_reply",
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges",
    "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 131,
-   "outsider_merged": 50,
-   "outsider_ignored": 16,
-   "median_first_response_hours": 18.2,
+   "outsider_threads": 156,
+   "outsider_merged": 74,
+   "outsider_ignored": 2,
+   "median_first_response_hours": 19.5,
    "bot_share": 0.0,
-   "distinct_outsider_authors": 112,
-   "distinct_merged_authors": 50,
-   "reviewed_share": 0.701,
-   "merge_rate": 0.382,
+   "distinct_outsider_authors": 97,
+   "distinct_merged_authors": 45,
+   "reviewed_share": 0.645,
+   "merge_rate": 0.477,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 106,
-   "outsider_awaiting_reply": 1,
-   "outsider_answered": 100
+   "outsider_answered": 110,
+   "first_timer_threads": 114,
+   "first_timer_merged": 45,
+   "distinct_first_timer_authors": 96,
+   "distinct_first_timer_merged_authors": 45,
+   "outsider_still_open": 1,
+   "outsider_closed_silently": 15,
+   "outsider_excluded": 9
   },
   "history": [
    {
@@ -689,25 +907,34 @@
  "jesseduffield/lazygit": {
   "verdict": "viable",
   "rules": [
-   "awaiting_reply",
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 58,
+   "outsider_threads": 50,
    "outsider_merged": 2,
-   "outsider_ignored": 42,
-   "median_first_response_hours": 3.0,
+   "outsider_ignored": 23,
+   "median_first_response_hours": 6.1,
    "bot_share": 0.095,
-   "distinct_outsider_authors": 43,
-   "distinct_merged_authors": 2,
-   "reviewed_share": 0.153,
-   "merge_rate": 0.034,
+   "distinct_outsider_authors": 35,
+   "distinct_merged_authors": 1,
+   "reviewed_share": 0.093,
+   "merge_rate": 0.041,
    "merged_files_median": 6.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 118,
-   "outsider_awaiting_reply": 1,
-   "outsider_answered": 15
+   "outsider_answered": 11,
+   "first_timer_threads": 44,
+   "first_timer_merged": 1,
+   "distinct_first_timer_authors": 32,
+   "distinct_first_timer_merged_authors": 1,
+   "outsider_still_open": 1,
+   "outsider_closed_silently": 15,
+   "outsider_excluded": 7
   },
   "history": [
    {
@@ -721,25 +948,34 @@
  "kubernetes/kubernetes": {
   "verdict": "viable",
   "rules": [
-   "awaiting_reply",
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 136,
-   "outsider_merged": 25,
-   "outsider_ignored": 48,
-   "median_first_response_hours": 9.5,
+   "outsider_threads": 132,
+   "outsider_merged": 22,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 16.8,
    "bot_share": 0.0,
-   "distinct_outsider_authors": 105,
-   "distinct_merged_authors": 25,
-   "reviewed_share": 1.0,
-   "merge_rate": 0.184,
+   "distinct_outsider_authors": 23,
+   "distinct_merged_authors": 15,
+   "reviewed_share": 0.929,
+   "merge_rate": 0.629,
    "merged_files_median": 5.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 56,
-   "outsider_awaiting_reply": 6,
-   "outsider_answered": 82
+   "outsider_answered": 30,
+   "first_timer_threads": 26,
+   "first_timer_merged": 15,
+   "distinct_first_timer_authors": 22,
+   "distinct_first_timer_merged_authors": 15,
+   "outsider_still_open": 97,
+   "outsider_closed_silently": 5,
+   "outsider_excluded": 3
   },
   "history": [
    {
@@ -753,25 +989,34 @@
  "llvm/llvm-project": {
   "verdict": "viable",
   "rules": [
-   "awaiting_reply",
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 150,
-   "outsider_merged": 28,
-   "outsider_ignored": 24,
-   "median_first_response_hours": 2.8,
+   "outsider_threads": 157,
+   "outsider_merged": 49,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 0.9,
    "bot_share": 0.005,
-   "distinct_outsider_authors": 115,
-   "distinct_merged_authors": 28,
-   "reviewed_share": 0.448,
-   "merge_rate": 0.187,
+   "distinct_outsider_authors": 27,
+   "distinct_merged_authors": 23,
+   "reviewed_share": 0.207,
+   "merge_rate": 0.907,
    "merged_files_median": 2.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 58,
-   "outsider_awaiting_reply": 50,
-   "outsider_answered": 65
+   "outsider_answered": 10,
+   "first_timer_threads": 24,
+   "first_timer_merged": 23,
+   "distinct_first_timer_authors": 24,
+   "distinct_first_timer_merged_authors": 23,
+   "outsider_still_open": 103,
+   "outsider_closed_silently": 5,
+   "outsider_excluded": 9
   },
   "history": [
    {
@@ -785,25 +1030,35 @@
  "material-components/material-components-android": {
   "verdict": "viable",
   "rules": [
+   "sample_period",
+   "dormant",
+   "excluded",
+   "closed_silently",
    "merges",
    "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 52,
-   "outsider_merged": 13,
-   "outsider_ignored": 22,
-   "median_first_response_hours": 100.5,
+   "outsider_threads": 181,
+   "outsider_merged": 81,
+   "outsider_ignored": 43,
+   "median_first_response_hours": 132.1,
    "bot_share": 0.075,
-   "distinct_outsider_authors": 35,
-   "distinct_merged_authors": 13,
-   "reviewed_share": 0.488,
-   "merge_rate": 0.25,
+   "distinct_outsider_authors": 32,
+   "distinct_merged_authors": 11,
+   "reviewed_share": 0.988,
+   "merge_rate": 0.448,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 86,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 25
+   "outsider_answered": 77,
+   "first_timer_threads": 47,
+   "first_timer_merged": 11,
+   "distinct_first_timer_authors": 31,
+   "distinct_first_timer_merged_authors": 11,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 20,
+   "outsider_excluded": 2
   },
   "history": [
    {
@@ -817,25 +1072,34 @@
  "microsoft/vscode": {
   "verdict": "viable",
   "rules": [
-   "awaiting_reply",
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 67,
-   "outsider_merged": 31,
-   "outsider_ignored": 14,
-   "median_first_response_hours": 0.9,
+   "outsider_threads": 57,
+   "outsider_merged": 22,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 1.0,
    "bot_share": 0.055,
-   "distinct_outsider_authors": 53,
-   "distinct_merged_authors": 31,
-   "reviewed_share": 1.0,
-   "merge_rate": 0.463,
+   "distinct_outsider_authors": 8,
+   "distinct_merged_authors": 7,
+   "reviewed_share": 0.992,
+   "merge_rate": 0.786,
    "merged_files_median": 4.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 130,
-   "outsider_awaiting_reply": 20,
-   "outsider_answered": 33
+   "outsider_answered": 22,
+   "first_timer_threads": 8,
+   "first_timer_merged": 7,
+   "distinct_first_timer_authors": 8,
+   "distinct_first_timer_merged_authors": 7,
+   "outsider_still_open": 29,
+   "outsider_closed_silently": 6,
+   "outsider_excluded": 3
   },
   "history": [
    {
@@ -847,27 +1111,33 @@
   ]
  },
  "microsoft/winget-pkgs": {
-  "verdict": "viable",
+  "verdict": "not_viable",
   "rules": [
-   "awaiting_reply",
-   "merges"
+   "sample_period",
+   "catalogue_shape"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 85,
-   "outsider_merged": 44,
-   "outsider_ignored": 4,
+   "outsider_threads": 187,
+   "outsider_merged": 134,
+   "outsider_ignored": 0,
    "median_first_response_hours": 1.0,
    "bot_share": 0.065,
-   "distinct_outsider_authors": 72,
+   "distinct_outsider_authors": 47,
    "distinct_merged_authors": 44,
    "reviewed_share": 1.0,
-   "merge_rate": 0.518,
+   "merge_rate": 0.964,
    "merged_files_median": 3.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 146,
-   "outsider_awaiting_reply": 33,
-   "outsider_answered": 48
+   "outsider_answered": 134,
+   "first_timer_threads": 48,
+   "first_timer_merged": 44,
+   "distinct_first_timer_authors": 47,
+   "distinct_first_timer_merged_authors": 44,
+   "outsider_still_open": 48,
+   "outsider_closed_silently": 5,
+   "outsider_excluded": 0
   },
   "history": [
    {
@@ -875,20 +1145,27 @@
     "from": null,
     "to": "viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "not_viable",
+    "reason": "Catalogue detection from diff shape (ticket 07): most outside pull requests here add one data file or package manifest, or a line to a list, which isn't a software contribution"
    }
   ]
  },
  "mirror/busybox": {
   "verdict": "not_viable",
   "rules": [
+   "sample_period",
    "elsewhere"
   ],
   "numbers": {
    "total_threads": 26,
    "outsider_threads": 26,
    "outsider_merged": 0,
-   "outsider_ignored": 17,
-   "median_first_response_hours": 6563.9,
+   "outsider_ignored": 14,
+   "median_first_response_hours": null,
    "bot_share": 0.0,
    "distinct_outsider_authors": 25,
    "distinct_merged_authors": 0,
@@ -897,8 +1174,14 @@
    "merged_files_median": null,
    "merged_dirs_median": null,
    "merged_with_files": 0,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 9
+   "outsider_answered": 0,
+   "first_timer_threads": 26,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 25,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 12,
+   "outsider_excluded": 0
   },
   "history": [
    {
@@ -916,26 +1199,34 @@
   ]
  },
  "monicahq/monica": {
-  "verdict": "viable",
+  "verdict": "insufficient_evidence",
   "rules": [
-   "merges"
+   "sample_period",
+   "closed_silently",
+   "slow"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 47,
-   "outsider_merged": 4,
-   "outsider_ignored": 5,
-   "median_first_response_hours": 0.0,
+   "outsider_threads": 46,
+   "outsider_merged": 2,
+   "outsider_ignored": 37,
+   "median_first_response_hours": 368.7,
    "bot_share": 0.655,
-   "distinct_outsider_authors": 40,
-   "distinct_merged_authors": 4,
+   "distinct_outsider_authors": 38,
+   "distinct_merged_authors": 2,
    "reviewed_share": 0.088,
-   "merge_rate": 0.085,
+   "merge_rate": 0.043,
    "merged_files_median": 2.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 34,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 40
+   "outsider_answered": 4,
+   "first_timer_threads": 45,
+   "first_timer_merged": 2,
+   "distinct_first_timer_authors": 38,
+   "distinct_first_timer_merged_authors": 2,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 5,
+   "outsider_excluded": 0
   },
   "history": [
    {
@@ -943,31 +1234,45 @@
     "from": null,
     "to": "viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "viable",
+    "to": "insufficient_evidence",
+    "reason": "ticket 04: only maintainer replies count. monica's first reply came from CLAassistant within a minute; without it the maintainers' own replies decide."
    }
   ]
  },
  "ollama/ollama": {
   "verdict": "viable",
   "rules": [
-   "awaiting_reply",
+   "sample_period",
+   "still_open",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 151,
-   "outsider_merged": 7,
-   "outsider_ignored": 120,
-   "median_first_response_hours": 18.5,
+   "outsider_threads": 146,
+   "outsider_merged": 3,
+   "outsider_ignored": 37,
+   "median_first_response_hours": 3.0,
    "bot_share": 0.0,
-   "distinct_outsider_authors": 103,
-   "distinct_merged_authors": 7,
-   "reviewed_share": 1.0,
-   "merge_rate": 0.046,
+   "distinct_outsider_authors": 44,
+   "distinct_merged_authors": 2,
+   "reviewed_share": 0.949,
+   "merge_rate": 0.054,
    "merged_files_median": 4,
    "merged_dirs_median": 1,
    "merged_with_files": 39,
-   "outsider_awaiting_reply": 11,
-   "outsider_answered": 20
+   "outsider_answered": 7,
+   "first_timer_threads": 55,
+   "first_timer_merged": 2,
+   "distinct_first_timer_authors": 44,
+   "distinct_first_timer_merged_authors": 2,
+   "outsider_still_open": 90,
+   "outsider_closed_silently": 12,
+   "outsider_excluded": 0
   },
   "history": [
    {
@@ -981,26 +1286,35 @@
  "openssl/openssl": {
   "verdict": "viable",
   "rules": [
-   "awaiting_reply",
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges",
    "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 104,
-   "outsider_merged": 24,
-   "outsider_ignored": 33,
-   "median_first_response_hours": 8.0,
+   "outsider_threads": 75,
+   "outsider_merged": 14,
+   "outsider_ignored": 2,
+   "median_first_response_hours": 2.6,
    "bot_share": 0.005,
-   "distinct_outsider_authors": 64,
-   "distinct_merged_authors": 24,
+   "distinct_outsider_authors": 21,
+   "distinct_merged_authors": 6,
    "reviewed_share": 1.0,
-   "merge_rate": 0.231,
+   "merge_rate": 0.4,
    "merged_files_median": 2.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 74,
-   "outsider_awaiting_reply": 3,
-   "outsider_answered": 68
+   "outsider_answered": 25,
+   "first_timer_threads": 21,
+   "first_timer_merged": 6,
+   "distinct_first_timer_authors": 15,
+   "distinct_first_timer_merged_authors": 6,
+   "outsider_still_open": 40,
+   "outsider_closed_silently": 8,
+   "outsider_excluded": 4
   },
   "history": [
    {
@@ -1020,24 +1334,33 @@
  "pallets/click": {
   "verdict": "viable",
   "rules": [
+   "sample_period",
+   "excluded",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 152,
-   "outsider_merged": 7,
-   "outsider_ignored": 64,
-   "median_first_response_hours": 1.4,
+   "outsider_threads": 10,
+   "outsider_merged": 5,
+   "outsider_ignored": 1,
+   "median_first_response_hours": 0.9,
    "bot_share": 0.005,
-   "distinct_outsider_authors": 137,
-   "distinct_merged_authors": 7,
+   "distinct_outsider_authors": 9,
+   "distinct_merged_authors": 5,
    "reviewed_share": 0.776,
-   "merge_rate": 0.046,
+   "merge_rate": 0.5,
    "merged_files_median": 3,
    "merged_dirs_median": 3,
    "merged_with_files": 49,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 87
+   "outsider_answered": 7,
+   "first_timer_threads": 10,
+   "first_timer_merged": 5,
+   "distinct_first_timer_authors": 9,
+   "distinct_first_timer_merged_authors": 5,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 2,
+   "outsider_excluded": 140
   },
   "history": [
    {
@@ -1051,24 +1374,33 @@
  "pallets/flask": {
   "verdict": "viable",
   "rules": [
+   "sample_period",
+   "excluded",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 189,
+   "outsider_threads": 171,
    "outsider_merged": 5,
-   "outsider_ignored": 100,
-   "median_first_response_hours": 0.5,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 0.7,
    "bot_share": 0.0,
-   "distinct_outsider_authors": 164,
-   "distinct_merged_authors": 5,
-   "reviewed_share": 0.267,
-   "merge_rate": 0.026,
+   "distinct_outsider_authors": 147,
+   "distinct_merged_authors": 4,
+   "reviewed_share": 0.133,
+   "merge_rate": 0.029,
    "merged_files_median": 3,
    "merged_dirs_median": 2,
    "merged_with_files": 15,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 86
+   "outsider_answered": 69,
+   "first_timer_threads": 169,
+   "first_timer_merged": 4,
+   "distinct_first_timer_authors": 146,
+   "distinct_first_timer_merged_authors": 4,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 99,
+   "outsider_excluded": 18
   },
   "history": [
    {
@@ -1082,24 +1414,35 @@
  "pallets/itsdangerous": {
   "verdict": "viable",
   "rules": [
+   "sample_period",
+   "dormant",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 35,
-   "outsider_merged": 9,
-   "outsider_ignored": 15,
-   "median_first_response_hours": 1.8,
+   "outsider_threads": 30,
+   "outsider_merged": 8,
+   "outsider_ignored": 1,
+   "median_first_response_hours": 1.2,
    "bot_share": 0.63,
-   "distinct_outsider_authors": 35,
-   "distinct_merged_authors": 9,
-   "reviewed_share": 0.034,
-   "merge_rate": 0.257,
+   "distinct_outsider_authors": 29,
+   "distinct_merged_authors": 8,
+   "reviewed_share": 0.027,
+   "merge_rate": 0.276,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 146,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 14
+   "outsider_answered": 11,
+   "first_timer_threads": 29,
+   "first_timer_merged": 8,
+   "distinct_first_timer_authors": 29,
+   "distinct_first_timer_merged_authors": 8,
+   "outsider_still_open": 1,
+   "outsider_closed_silently": 12,
+   "outsider_excluded": 3
   },
   "history": [
    {
@@ -1113,25 +1456,34 @@
  "plantuml/plantuml": {
   "verdict": "not_viable",
   "rules": [
+   "sample_period",
+   "excluded",
+   "closed_silently",
    "merges",
    "rubber_stamp"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 43,
-   "outsider_merged": 34,
-   "outsider_ignored": 6,
-   "median_first_response_hours": 5.1,
+   "outsider_threads": 56,
+   "outsider_merged": 46,
+   "outsider_ignored": 4,
+   "median_first_response_hours": 14.2,
    "bot_share": 0.47,
-   "distinct_outsider_authors": 41,
-   "distinct_merged_authors": 34,
+   "distinct_outsider_authors": 37,
+   "distinct_merged_authors": 31,
    "reviewed_share": 0.192,
-   "merge_rate": 0.791,
+   "merge_rate": 0.821,
    "merged_files_median": 2,
    "merged_dirs_median": 1,
    "merged_with_files": 167,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 19
+   "outsider_answered": 25,
+   "first_timer_threads": 39,
+   "first_timer_merged": 31,
+   "distinct_first_timer_authors": 37,
+   "distinct_first_timer_merged_authors": 31,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 3,
+   "outsider_excluded": 1
   },
   "history": [
    {
@@ -1145,25 +1497,33 @@
  "python/cpython": {
   "verdict": "viable",
   "rules": [
-   "awaiting_reply",
+   "sample_period",
+   "still_open",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 91,
-   "outsider_merged": 18,
-   "outsider_ignored": 30,
-   "median_first_response_hours": 3.2,
+   "outsider_threads": 139,
+   "outsider_merged": 55,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 0.4,
    "bot_share": 0.0,
-   "distinct_outsider_authors": 54,
-   "distinct_merged_authors": 18,
-   "reviewed_share": 0.33,
-   "merge_rate": 0.198,
+   "distinct_outsider_authors": 13,
+   "distinct_merged_authors": 10,
+   "reviewed_share": 0.299,
+   "merge_rate": 0.932,
    "merged_files_median": 3,
    "merged_dirs_median": 2,
    "merged_with_files": 97,
-   "outsider_awaiting_reply": 14,
-   "outsider_answered": 42
+   "outsider_answered": 25,
+   "first_timer_threads": 13,
+   "first_timer_merged": 10,
+   "distinct_first_timer_authors": 12,
+   "distinct_first_timer_merged_authors": 10,
+   "outsider_still_open": 80,
+   "outsider_closed_silently": 1,
+   "outsider_excluded": 0
   },
   "history": [
    {
@@ -1177,26 +1537,35 @@
  "pytorch/pytorch": {
   "verdict": "viable",
   "rules": [
-   "awaiting_reply",
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges",
    "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 138,
-   "outsider_merged": 22,
-   "outsider_ignored": 57,
-   "median_first_response_hours": 8.0,
+   "outsider_threads": 60,
+   "outsider_merged": 7,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 25.1,
    "bot_share": 0.015,
-   "distinct_outsider_authors": 92,
-   "distinct_merged_authors": 22,
-   "reviewed_share": 0.929,
-   "merge_rate": 0.159,
+   "distinct_outsider_authors": 13,
+   "distinct_merged_authors": 6,
+   "reviewed_share": 0.952,
+   "merge_rate": 0.389,
    "merged_files_median": 2.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 42,
-   "outsider_awaiting_reply": 31,
-   "outsider_answered": 50
+   "outsider_answered": 13,
+   "first_timer_threads": 13,
+   "first_timer_merged": 6,
+   "distinct_first_timer_authors": 11,
+   "distinct_first_timer_merged_authors": 6,
+   "outsider_still_open": 42,
+   "outsider_closed_silently": 5,
+   "outsider_excluded": 27
   },
   "history": [
    {
@@ -1216,26 +1585,35 @@
  "react/react-native": {
   "verdict": "viable",
   "rules": [
-   "awaiting_reply",
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges",
    "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 74,
-   "outsider_merged": 33,
-   "outsider_ignored": 25,
-   "median_first_response_hours": 21.2,
+   "outsider_threads": 116,
+   "outsider_merged": 54,
+   "outsider_ignored": 3,
+   "median_first_response_hours": 26.1,
    "bot_share": 0.04,
-   "distinct_outsider_authors": 55,
-   "distinct_merged_authors": 33,
-   "reviewed_share": 0.164,
-   "merge_rate": 0.446,
+   "distinct_outsider_authors": 32,
+   "distinct_merged_authors": 24,
+   "reviewed_share": 1.0,
+   "merge_rate": 0.761,
    "merged_files_median": 4.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 116,
-   "outsider_awaiting_reply": 6,
-   "outsider_answered": 22
+   "outsider_answered": 16,
+   "first_timer_threads": 36,
+   "first_timer_merged": 24,
+   "distinct_first_timer_authors": 31,
+   "distinct_first_timer_merged_authors": 24,
+   "outsider_still_open": 45,
+   "outsider_closed_silently": 11,
+   "outsider_excluded": 6
   },
   "history": [
    {
@@ -1255,24 +1633,34 @@
  "request/request": {
   "verdict": "insufficient_evidence",
   "rules": [
+   "sample_period",
+   "dormant",
+   "excluded",
+   "closed_silently",
    "slow"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 191,
-   "outsider_merged": 30,
-   "outsider_ignored": 115,
-   "median_first_response_hours": 545.5,
+   "outsider_threads": 184,
+   "outsider_merged": 27,
+   "outsider_ignored": 17,
+   "median_first_response_hours": 186.5,
    "bot_share": 0.03,
-   "distinct_outsider_authors": 165,
-   "distinct_merged_authors": 30,
-   "reviewed_share": 0.526,
-   "merge_rate": 0.157,
+   "distinct_outsider_authors": 160,
+   "distinct_merged_authors": 27,
+   "reviewed_share": 0.342,
+   "merge_rate": 0.147,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 38,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 64
+   "outsider_answered": 22,
+   "first_timer_threads": 182,
+   "first_timer_merged": 27,
+   "distinct_first_timer_authors": 158,
+   "distinct_first_timer_merged_authors": 27,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 130,
+   "outsider_excluded": 4
   },
   "history": [
    {
@@ -1286,25 +1674,34 @@
  "rust-lang/rust": {
   "verdict": "viable",
   "rules": [
-   "awaiting_reply",
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 123,
-   "outsider_merged": 43,
-   "outsider_ignored": 18,
-   "median_first_response_hours": 0.7,
+   "outsider_threads": 81,
+   "outsider_merged": 28,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 0.8,
    "bot_share": 0.0,
-   "distinct_outsider_authors": 91,
-   "distinct_merged_authors": 43,
-   "reviewed_share": 0.964,
-   "merge_rate": 0.35,
+   "distinct_outsider_authors": 26,
+   "distinct_merged_authors": 23,
+   "reviewed_share": 0.679,
+   "merge_rate": 0.848,
    "merged_files_median": 4.5,
    "merged_dirs_median": 1.0,
    "merged_with_files": 84,
-   "outsider_awaiting_reply": 6,
-   "outsider_answered": 97
+   "outsider_answered": 25,
+   "first_timer_threads": 27,
+   "first_timer_merged": 23,
+   "distinct_first_timer_authors": 25,
+   "distinct_first_timer_merged_authors": 23,
+   "outsider_still_open": 48,
+   "outsider_closed_silently": 2,
+   "outsider_excluded": 10
   },
   "history": [
    {
@@ -1318,24 +1715,34 @@
  "rust-lang/rustlings": {
   "verdict": "viable",
   "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
    "outsider_threads": 167,
-   "outsider_merged": 47,
-   "outsider_ignored": 57,
-   "median_first_response_hours": 61.8,
+   "outsider_merged": 45,
+   "outsider_ignored": 4,
+   "median_first_response_hours": 65.5,
    "bot_share": 0.005,
-   "distinct_outsider_authors": 141,
-   "distinct_merged_authors": 47,
-   "reviewed_share": 0.915,
-   "merge_rate": 0.281,
+   "distinct_outsider_authors": 136,
+   "distinct_merged_authors": 44,
+   "reviewed_share": 0.901,
+   "merge_rate": 0.271,
    "merged_files_median": 1,
    "merged_dirs_median": 1,
    "merged_with_files": 71,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 108
+   "outsider_answered": 106,
+   "first_timer_threads": 159,
+   "first_timer_merged": 44,
+   "distinct_first_timer_authors": 134,
+   "distinct_first_timer_merged_authors": 44,
+   "outsider_still_open": 1,
+   "outsider_closed_silently": 54,
+   "outsider_excluded": 1
   },
   "history": [
    {
@@ -1349,25 +1756,35 @@
  "semgrep/semgrep": {
   "verdict": "insufficient_evidence",
   "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "few_merges",
    "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 44,
+   "outsider_threads": 43,
    "outsider_merged": 1,
-   "outsider_ignored": 18,
-   "median_first_response_hours": 0.0,
+   "outsider_ignored": 25,
+   "median_first_response_hours": 125.4,
    "bot_share": 0.765,
-   "distinct_outsider_authors": 34,
+   "distinct_outsider_authors": 29,
    "distinct_merged_authors": 1,
-   "reviewed_share": 1.0,
-   "merge_rate": 0.023,
+   "reviewed_share": 0.96,
+   "merge_rate": 0.027,
    "merged_files_median": 20.0,
    "merged_dirs_median": 5.0,
    "merged_with_files": 48,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 26
+   "outsider_answered": 7,
+   "first_timer_threads": 32,
+   "first_timer_merged": 1,
+   "distinct_first_timer_authors": 26,
+   "distinct_first_timer_merged_authors": 1,
+   "outsider_still_open": 6,
+   "outsider_closed_silently": 5,
+   "outsider_excluded": 3
   },
   "history": [
    {
@@ -1381,25 +1798,34 @@
  "sharkdp/bat": {
   "verdict": "viable",
   "rules": [
-   "awaiting_reply",
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 87,
-   "outsider_merged": 16,
-   "outsider_ignored": 61,
-   "median_first_response_hours": 17.4,
+   "outsider_threads": 170,
+   "outsider_merged": 19,
+   "outsider_ignored": 133,
+   "median_first_response_hours": 10.2,
    "bot_share": 0.125,
-   "distinct_outsider_authors": 72,
+   "distinct_outsider_authors": 65,
    "distinct_merged_authors": 16,
    "reviewed_share": 0.5,
-   "merge_rate": 0.184,
+   "merge_rate": 0.115,
    "merged_files_median": 2.0,
    "merged_dirs_median": 2.0,
    "merged_with_files": 38,
-   "outsider_awaiting_reply": 2,
-   "outsider_answered": 24
+   "outsider_answered": 21,
+   "first_timer_threads": 77,
+   "first_timer_merged": 16,
+   "distinct_first_timer_authors": 65,
+   "distinct_first_timer_merged_authors": 16,
+   "outsider_still_open": 5,
+   "outsider_closed_silently": 11,
+   "outsider_excluded": 5
   },
   "history": [
    {
@@ -1411,26 +1837,33 @@
   ]
  },
  "sindresorhus/awesome": {
-  "verdict": "viable",
+  "verdict": "not_viable",
   "rules": [
-   "merges"
+   "sample_period",
+   "catalogue_shape"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 199,
-   "outsider_merged": 7,
-   "outsider_ignored": 74,
-   "median_first_response_hours": 6.7,
+   "outsider_threads": 196,
+   "outsider_merged": 8,
+   "outsider_ignored": 35,
+   "median_first_response_hours": 3.9,
    "bot_share": 0.0,
-   "distinct_outsider_authors": 173,
+   "distinct_outsider_authors": 170,
    "distinct_merged_authors": 7,
-   "reviewed_share": 0.25,
-   "merge_rate": 0.035,
+   "reviewed_share": 0.125,
+   "merge_rate": 0.041,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 8,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 120
+   "outsider_answered": 74,
+   "first_timer_threads": 193,
+   "first_timer_merged": 7,
+   "distinct_first_timer_authors": 168,
+   "distinct_first_timer_merged_authors": 7,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 80,
+   "outsider_excluded": 4
   },
   "history": [
    {
@@ -1438,31 +1871,46 @@
     "from": null,
     "to": "viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "not_viable",
+    "reason": "Catalogue detection from diff shape (ticket 07): most outside pull requests here add one data file or package manifest, or a line to a list, which isn't a software contribution"
    }
   ]
  },
  "tensorflow/tensorflow": {
   "verdict": "insufficient_evidence",
   "rules": [
-   "awaiting_reply",
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "few_merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 38,
+   "outsider_threads": 35,
    "outsider_merged": 0,
-   "outsider_ignored": 3,
-   "median_first_response_hours": 17.8,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 18.8,
    "bot_share": 0.81,
-   "distinct_outsider_authors": 16,
+   "distinct_outsider_authors": 4,
    "distinct_merged_authors": 0,
-   "reviewed_share": 0.043,
+   "reviewed_share": 0.0,
    "merge_rate": 0.0,
    "merged_files_median": 2,
    "merged_dirs_median": 1,
    "merged_with_files": 23,
-   "outsider_awaiting_reply": 3,
-   "outsider_answered": 32
+   "outsider_answered": 1,
+   "first_timer_threads": 2,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 2,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 31,
+   "outsider_closed_silently": 3,
+   "outsider_excluded": 3
   },
   "history": [
    {
@@ -1476,24 +1924,35 @@
  "termux/termux-packages": {
   "verdict": "viable",
   "rules": [
-   "merges"
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges",
+   "package_updates"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 29,
-   "outsider_merged": 16,
-   "outsider_ignored": 3,
-   "median_first_response_hours": 1.1,
+   "outsider_threads": 54,
+   "outsider_merged": 39,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 2.7,
    "bot_share": 0.005,
-   "distinct_outsider_authors": 25,
-   "distinct_merged_authors": 16,
-   "reviewed_share": 0.343,
-   "merge_rate": 0.552,
+   "distinct_outsider_authors": 16,
+   "distinct_merged_authors": 8,
+   "reviewed_share": 0.309,
+   "merge_rate": 0.796,
    "merged_files_median": 2.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 174,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 19
+   "outsider_answered": 43,
+   "first_timer_threads": 17,
+   "first_timer_merged": 8,
+   "distinct_first_timer_authors": 16,
+   "distinct_first_timer_merged_authors": 8,
+   "outsider_still_open": 5,
+   "outsider_closed_silently": 3,
+   "outsider_excluded": 4
   },
   "history": [
    {
@@ -1507,24 +1966,33 @@
  "tldr-pages/tldr": {
   "verdict": "viable",
   "rules": [
+   "sample_period",
+   "still_open",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 29,
-   "outsider_merged": 17,
-   "outsider_ignored": 3,
-   "median_first_response_hours": 0.2,
+   "outsider_threads": 22,
+   "outsider_merged": 8,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 2.8,
    "bot_share": 0.005,
-   "distinct_outsider_authors": 28,
-   "distinct_merged_authors": 17,
+   "distinct_outsider_authors": 12,
+   "distinct_merged_authors": 6,
    "reviewed_share": 1.0,
-   "merge_rate": 0.586,
+   "merge_rate": 0.533,
    "merged_files_median": 5,
    "merged_dirs_median": 1,
    "merged_with_files": 171,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 26
+   "outsider_answered": 11,
+   "first_timer_threads": 11,
+   "first_timer_merged": 6,
+   "distinct_first_timer_authors": 11,
+   "distinct_first_timer_merged_authors": 6,
+   "outsider_still_open": 7,
+   "outsider_closed_silently": 4,
+   "outsider_excluded": 0
   },
   "history": [
    {
@@ -1554,8 +2022,14 @@
    "merged_files_median": null,
    "merged_dirs_median": null,
    "merged_with_files": 0,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 0
+   "outsider_answered": 0,
+   "first_timer_threads": 0,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 0,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 0,
+   "outsider_excluded": 0
   },
   "history": [
    {
@@ -1569,24 +2043,31 @@
  "v8/v8": {
   "verdict": "not_viable",
   "rules": [
+   "sample_period",
    "elsewhere"
   ],
   "numbers": {
    "total_threads": 166,
-   "outsider_threads": 103,
-   "outsider_merged": 1,
-   "outsider_ignored": 56,
-   "median_first_response_hours": 4.9,
+   "outsider_threads": 107,
+   "outsider_merged": 0,
+   "outsider_ignored": 1,
+   "median_first_response_hours": 2.8,
    "bot_share": 0.343,
-   "distinct_outsider_authors": 89,
-   "distinct_merged_authors": 1,
-   "reviewed_share": 1.0,
-   "merge_rate": 0.01,
-   "merged_files_median": 1.0,
-   "merged_dirs_median": 1.0,
-   "merged_with_files": 2,
-   "outsider_awaiting_reply": 0,
-   "outsider_answered": 47
+   "distinct_outsider_authors": 87,
+   "distinct_merged_authors": 0,
+   "reviewed_share": null,
+   "merge_rate": 0.0,
+   "merged_files_median": null,
+   "merged_dirs_median": null,
+   "merged_with_files": 0,
+   "outsider_answered": 37,
+   "first_timer_threads": 97,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 78,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 69,
+   "outsider_excluded": 0
   },
   "history": [
    {
@@ -1604,27 +2085,35 @@
   ]
  },
  "vercel/next.js": {
-  "verdict": "viable",
+  "verdict": "insufficient_evidence",
   "rules": [
-   "awaiting_reply",
-   "merges"
+   "sample_period",
+   "excluded",
+   "still_open",
+   "few_people"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 81,
-   "outsider_merged": 14,
-   "outsider_ignored": 55,
-   "median_first_response_hours": 6.2,
+   "outsider_threads": 33,
+   "outsider_merged": 2,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 0.8,
    "bot_share": 0.03,
-   "distinct_outsider_authors": 43,
-   "distinct_merged_authors": 14,
-   "reviewed_share": 0.97,
-   "merge_rate": 0.173,
+   "distinct_outsider_authors": 1,
+   "distinct_merged_authors": 1,
+   "reviewed_share": 0.879,
+   "merge_rate": 1.0,
    "merged_files_median": 4.5,
    "merged_dirs_median": 1.0,
    "merged_with_files": 66,
-   "outsider_awaiting_reply": 6,
-   "outsider_answered": 20
+   "outsider_answered": 2,
+   "first_timer_threads": 1,
+   "first_timer_merged": 1,
+   "distinct_first_timer_authors": 1,
+   "distinct_first_timer_merged_authors": 1,
+   "outsider_still_open": 31,
+   "outsider_closed_silently": 0,
+   "outsider_excluded": 18
   },
   "history": [
    {
@@ -1632,31 +2121,46 @@
     "from": null,
     "to": "viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "insufficient_evidence",
+    "reason": "ticket 06: the 200 newest PRs span 4 days; of 33 outside PRs, 31 are still open and 18 more are drafts, leaving 2 decided (both merged, one author): too little to judge"
    }
   ]
  },
  "zephyrproject-rtos/zephyr": {
-  "verdict": "viable",
+  "verdict": "insufficient_evidence",
   "rules": [
-   "awaiting_reply",
-   "merges"
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "few_merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 144,
-   "outsider_merged": 7,
-   "outsider_ignored": 28,
-   "median_first_response_hours": 1.3,
+   "outsider_threads": 92,
+   "outsider_merged": 1,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 2.4,
    "bot_share": 0.015,
-   "distinct_outsider_authors": 94,
-   "distinct_merged_authors": 7,
+   "distinct_outsider_authors": 3,
+   "distinct_merged_authors": 1,
    "reviewed_share": 1.0,
-   "merge_rate": 0.049,
+   "merge_rate": 0.333,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 12,
-   "outsider_awaiting_reply": 26,
-   "outsider_answered": 90
+   "outsider_answered": 2,
+   "first_timer_threads": 1,
+   "first_timer_merged": 1,
+   "distinct_first_timer_authors": 1,
+   "distinct_first_timer_merged_authors": 1,
+   "outsider_still_open": 89,
+   "outsider_closed_silently": 1,
+   "outsider_excluded": 17
   },
   "history": [
    {
@@ -1664,31 +2168,46 @@
     "from": null,
     "to": "viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "viable",
+    "to": "insufficient_evidence",
+    "reason": "Ticket 03: 6 of its 7 'outside' merges were by the team: MEMBERs' first PRs in the sample, a maintainer who merges others' work (teburd), and vendor area maintainers (mathieuchopstm, tpambor) who read CONTRIBUTOR but approve or request changes on other people's PRs. 1 of 109 outside PRs merged."
    }
   ]
  },
  "zulip/zulip": {
   "verdict": "viable",
   "rules": [
-   "awaiting_reply",
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
    "merges"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 122,
-   "outsider_merged": 18,
-   "outsider_ignored": 24,
-   "median_first_response_hours": 25.4,
+   "outsider_threads": 48,
+   "outsider_merged": 3,
+   "outsider_ignored": 3,
+   "median_first_response_hours": 21.8,
    "bot_share": 0.0,
-   "distinct_outsider_authors": 95,
-   "distinct_merged_authors": 18,
+   "distinct_outsider_authors": 25,
+   "distinct_merged_authors": 2,
    "reviewed_share": 0.797,
-   "merge_rate": 0.148,
+   "merge_rate": 0.1,
    "merged_files_median": 2.5,
    "merged_dirs_median": 1.0,
    "merged_with_files": 64,
-   "outsider_awaiting_reply": 4,
-   "outsider_answered": 93
+   "outsider_answered": 24,
+   "first_timer_threads": 26,
+   "first_timer_merged": 2,
+   "distinct_first_timer_authors": 22,
+   "distinct_first_timer_merged_authors": 2,
+   "outsider_still_open": 18,
+   "outsider_closed_silently": 3,
+   "outsider_excluded": 2
   },
   "history": [
    {

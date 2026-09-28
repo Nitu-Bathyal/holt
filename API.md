@@ -73,11 +73,13 @@ responses. The server also accepts and normalises full URLs
   "verdict_line": "string",           // one plain sentence under the headline
   "odds": { "level": "good" | "fair" | "long", "tone": "good" | "warn" | "bad",
             "text": "most outside pull requests get a reply, and plenty get merged" } | null,
+  "bottom_line": "string | null",     // ai mode: at most two model-written sentences, the lead of the AI explanation
   "summary": "string | null",         // ai mode: short plain-English paragraph
   "stats": {
     "outsider_attempts": 100, "outsider_merged": 15, "distinct_outsiders": 72,
     "first_time_merged_authors": 15, "no_reply": 63,
-    "median_first_response_hours": 0.8, "bot_share": 0.085
+    "median_first_response_hours": 0.8, "bot_share": 0.085,
+    "still_open": 12, "closed_silently": 20
   },
   "decided_by": ["plain-English rule sentence", "..."],
   "rule_codes": ["merges", "rubber_stamp"], // stable code per decided_by line, same order
@@ -90,11 +92,57 @@ responses. The server also accepts and normalises full URLs
   ],
   "evidence_until": "2026-06-01T00:00:00Z", // or null
   "generated_at": "2026-09-25T12:00:00Z",
-  "cost": { "model": "…", "input_tokens": 9000, "output_tokens": 6000 } // ai only, else null
+  "cost": { "model": "…", "input_tokens": 9000, "output_tokens": 6000,
+            "usd": 0.0123, "seconds": 48.2 }, // ai only, else null
+  "holt_users": { "people": 9, "pull_requests": 12, "merged": 7, "closed": 2,
+                  "waiting": 3, "window_days": 365, "computed_at": "…" } | null
 }
 ```
 
+`bottom_line` and `summary` are null in rules mode (the headline and
+`verdict_line` already are the rules report's bottom line). In AI mode they are
+the model's words, checked by the engine before they are stored; either can be
+null on a report where the model wrote nothing usable, and `bottom_line` is
+null on AI reports cached before it existed. Show them as AI-written.
+
+`cost` is for operators, not the product: `usd` is what the model calls cost
+(from the engine's price table), `seconds` the whole run's wall time. Both are
+null on reports cached before they were recorded. Per-stage timings go to the
+server log, not the report.
+
+`holt_users` is what connected Holt users' public pull requests to this
+repository came to (from My Contributions, the last `window_days`): counts only,
+never who. It is filled only by `GET /v1/reports/{owner}/{repo}` (null on the
+analysis endpoints and never stored with the report), and only when at least 5
+different people make up the numbers: one person with many pull requests
+counts once. Users who turned on `stats_opt_out` are never counted. The numbers
+are recounted by the daily contributions refresh (and
+`python -m holt_server.contributions stats`); opting out or disconnecting
+recounts that user's repositories at once. Surfaces show them as they come and
+never rank or name anyone.
+
 Every evidence item MUST have a clickable `url`.
+
+In `stats`, an outsider is anyone not on the project's team. The team is the
+repository's OWNER, MEMBER and COLLABORATOR accounts on GitHub, plus anyone the
+sample shows merging or closing someone else's pull request, approving or
+requesting changes on 3 or more other people's, or (in a project that labels
+outside work, like PyTorch's "open source") never getting that label.
+Returning outsiders count.
+`first_time_merged_authors` is the number of those who were new to this repo
+(nothing of theirs merged here before) and got a pull request merged. Reports
+cached from evidence without GitHub's association use the earlier rule: an
+outsider had nothing merged earlier in the sample.
+
+`stats` counts are over **decided** newcomer pull requests: merged (or landed
+another way), closed, or open for longer than the 14-day settle window.
+`outsider_attempts` is that decided total, so `outsider_merged /
+outsider_attempts` and `no_reply / outsider_attempts` are the rates the verdict
+was computed from. `no_reply` is open, past the window, with no reply.
+`still_open` (younger open ones, in no rate) and `closed_silently` (closed with
+no reply, usually maintainers clearing out spam; not in `no_reply`) are shown
+beside them; both are 0 on reports cached before they existed. Drafts and pull
+requests labelled as spam or invalid are in no count.
 
 `headline`, `tone`, `verdict_line` and `odds` are derived by the server from
 `verdict`, `stats` and `decided_by`/`rule_codes`, every time a report is
@@ -112,12 +160,16 @@ they cannot disagree with each other or with the verdict:
   ≤ 25%, fair ≤ 50%); its `text` names the weak part. The other verdicts are
   the answer on their own.
 - `rule_codes` is `[]` on reports cached before it existed. Codes include
-  `archived`, `closed_kind`, `non_software_kind`, `awaiting_reply`,
-  `no_attempts`, `ignored`, `merges`, `rubber_stamp`, `slow`,
-  `too_few_attempts`, `elsewhere` (a mirror or a fork; decides alone, like
-  `archived`), `landed_off_button` (says how many merges GitHub shows as
-  closed because they landed another way; never decides); new ones may
-  appear.
+  `archived`, `closed_kind`, `non_software_kind`, `no_attempts`, `ignored`,
+  `merges`, `rubber_stamp`, `slow`, `too_few_attempts`, `few_merges`, `few_people`,
+  `elsewhere` (a mirror or a fork; decides alone, like `archived`),
+  `landed_off_button` (says how many merges GitHub shows as closed because
+  they landed another way; never decides); new ones may appear. These never
+  decide and come before the deciding rule: `sample_period` (the dates the
+  sample's pull requests were opened; first on every live report), `dormant`
+  (nothing merged in 90 days), `excluded` (drafts and spam left out),
+  `still_open`, `closed_silently`. `awaiting_reply` appears only on reports
+  cached before `still_open` replaced it.
 
 New fields are added with a default, so older cached reports stay valid.
 
@@ -134,6 +186,9 @@ newest first-timer pull requests behind the counts instead, as
 
 ### `POST /v1/analyses`
 Body: `{"repo": "owner/repo", "mode": "rules"|"ai", "days": 7, "refresh": false}`
+- Model choice is server configuration (`OPENROUTER_MODEL`); a `model` field in
+  the request is ignored. It is accepted (not a 400) for older clients, and it
+  never reaches the engine, the job or the cache key.
 - Returns `200 {"status":"done","report":Report}` immediately when a cached
   report exists (same repo/mode/days, younger than 24h) and `refresh` is false.
 - Otherwise `202 {"status":"queued","job_id":"…"}`.
@@ -197,15 +252,59 @@ StarterIssue:
 ```jsonc
 { "number": 123, "title": "…", "url": "https://github.com/o/r/issues/123",
   "labels": ["good first issue"], "created_at": "…", "comments": 2,
-  "why": ["Labelled good first issue", "Touches docs/, where 8 of 10 outsider PRs were merged"] }
+  "why": ["Labelled good first issue", "Touches docs/, where 8 of 10 outsider PRs were merged"],
+  "beginner": true,          // labelled for first-timers ("good first issue" and its spellings)
+  "areas": ["docs"] }        // which of code/docs/tests/design/translations it looks like
+```
+`beginner` and `areas` are worked out from the labels and title every time an
+issue is sent, so cached issues have them too. The web uses them with a
+profile (see Profile); they never change a verdict or which repos are listed.
+
+### `GET /v1/discover?sort=welcoming|stars|trending&language=python&topic=cli&limit=24`
+Browse the repositories Holt has checked, built only from each repo's latest
+7-day **rules** report (never the model) and ranking repositories, never
+people. Reads only the database: no GitHub call and no rate limit.
+
+- `sort=welcoming` (default; the "Most welcoming <language> repos" boards):
+  only repos whose verdict is `viable`, best odds first (good, fair, long),
+  then the share of outside pull requests merged (a small sample is pulled
+  toward a typical share, so 6 of 8 doesn't outrank 60 of 105), the median
+  reply time and how many outsiders tried.
+- `sort=stars`: GitHub stars, every verdict.
+- `sort=trending`: people who asked for the repo's report on Holt in the last
+  7 days (each person counted once per UTC day), only repos with at least
+  `trending_min` (5).
+- `language` and `topic` filter case-insensitively (`c++`, `Python`). `limit`
+  1–100, default 24.
+
+```jsonc
+{ "sort": "welcoming", "language": "Python", "topic": null, "trending_min": 5,
+  "repos": [ { "repo": "owner/repo", "verdict": "viable", "headline": "Worth your time",
+    "tone": "good", "reason": "…the report's verdict_line…", "stats": Stats,
+    "description": "…"|null, "language": "Python"|null, "stars": 123|null,
+    "topics": ["cli"], "pushed_at": "…"|null,
+    "checked_this_week": 12|null,     // null below trending_min
+    "generated_at": "…" } ],
+  "languages": [ { "name": "Python", "repos": 40 } ] }  // filter chips, most repos first
 ```
 
+`description`, `language`, `stars`, `topics` and `pushed_at` come from
+`repo_meta`, which the warm pass fills from GitHub (one GraphQL query per
+hundred repositories, re-read daily); they are null or empty until then.
+
 ### `GET /badge/{owner}/{repo}.svg` (no internal key; public; `Cache-Control: public, max-age=3600, stale-while-revalidate=86400`)
-Shields-style SVG badge showing the rules verdict ("Holt | newcomer-friendly").
-Maintainers embed it in READMEs; it links back to the report page at
-`{HOLT_WEB_URL}/{owner}/{repo}`. Uses the latest 7-day rules report; when
-there is none, or it is over 24h old, it shows what it has ("not checked yet")
-and queues a rules check behind it. Badge-queued checks have their own rate
+Shields-style SVG badge. Maintainers embed it in READMEs; it links back to the
+report page at `{HOLT_WEB_URL}/{owner}/{repo}`. Uses the latest 7-day rules
+report:
+- `viable`: a positive, factual line in green from `stats`, e.g.
+  "Holt | merges outsiders · replies in ~6h" ("merges outsiders" when
+  `outsider_merged` > 0; the reply time when the median first reply is within
+  72h; "worth your time" if neither).
+- any other verdict: neutral grey "Holt | see report", never a red verdict.
+- no report yet: neutral grey "Holt | not checked yet".
+
+When there is no report, or it is over 24h old, it shows what it has and
+queues a rules check behind it. Badge-queued checks have their own rate
 limits (per client IP and in total, separate from user limits), run at most
 one at a time, and wait behind every user request.
 
@@ -308,8 +407,10 @@ the user's GitHub token. Stored in `github_connections` and `repo_views`.
   `invalid_repo`.
 
 A connected user's public contributions may be counted, anonymously, in
-cross-user repo statistics (shown only when 5+ people contribute) unless
-`stats_opt_out` is true.
+cross-user repo statistics (the report's `holt_users`, shown only when 5+
+people contribute) unless `stats_opt_out` is true. Turning it on (PATCH, or a
+POST that changes it) or disconnecting takes them out of every repository's
+numbers in the same request.
 
 ### My Contributions
 
@@ -364,6 +465,36 @@ Nothing here starts an analysis.
   on `stats_opt_out`, of pull requests opened on or after `since` (default:
   all stored). Also `python -m holt_server.contributions metric [--since DATE]
   [--json]`.
+
+### Profile
+
+What a signed-in user tells Holt once, so `/find` and `/hacktoberfest` start
+from it. Stated, never inferred. Stored in `profiles`.
+
+`ProfileOut` = `{"profile": ProfilePrefs | null, "adult_confirmed": true}`, where
+`ProfilePrefs` = `{"languages": ["python"], "topics": ["cli"], "days": 7,
+"contributions": ["docs", "tests"], "level": "newcomer", "updated_at": "…"}`.
+`adult_confirmed` is true once the user has confirmed they're 18 or older,
+here or by connecting GitHub.
+
+- `GET /v1/me/profile` → `ProfileOut` (`profile` is null until saved).
+- `PUT /v1/me/profile` body `{"languages", "topics", "days", "contributions",
+  "level", "adult_confirmed"}` (all optional) → `ProfileOut`. Replaces the whole
+  profile. Languages and topics are lower-cased and deduplicated, at most 10
+  each; topics are GitHub topics (letters, numbers, dashes; spaces become
+  dashes). `days` 1–90. `contributions` from `code`, `docs`, `tests`,
+  `design`, `translations`. `level` is `newcomer` or `experienced`. The first
+  save needs `adult_confirmed: true` unless GitHub is connected, else 400
+  `invalid_request`; its time is stored.
+- `DELETE /v1/me/profile` → `ProfileOut` with `profile: null`.
+
+What each answer changes: languages, topics and days go into the find search
+(days is the time budget the verdict uses). `level: newcomer` shows only
+issues with `beginner: true`, and drops repos left with none; `experienced`
+also shows issues asking for help and small unlabelled fixes. Issues whose
+`areas` match `contributions` come first. The web applies `level` and
+`contributions` to find results itself, so they don't change the find search
+or its cache.
 
 ### Feedback: "Was this verdict right?"
 - `POST /v1/feedback` body `{"repo": "owner/repo", "mode": "rules"|"ai", "days": 7,

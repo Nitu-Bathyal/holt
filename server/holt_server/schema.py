@@ -21,8 +21,13 @@ from typing import Literal
 from holt.agent.verdict import headline as verdict_headline
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_serializer
 
+# Bound here, not looked up per call: tests swap `holt.starter` for a fake.
+from holt.starter import is_beginner_issue, issue_areas
+
 Verdict = Literal["viable", "not_viable", "insufficient_evidence"]
 Mode = Literal["rules", "ai"]
+ContributionType = Literal["code", "docs", "tests", "design", "translations"]
+Level = Literal["newcomer", "experienced"]
 Tone = Literal["good", "bad", "warn"]
 OddsLevel = Literal["good", "fair", "long"]
 JobState = Literal["queued", "running", "done", "error"]
@@ -62,6 +67,9 @@ class ErrorBody(Model):
 
 
 class Stats(Model):
+    # Decided attempts only (merged, closed, or open past the settle window):
+    # the denominator of every rate here. `still_open` are too new to count;
+    # `closed_silently` were closed with no reply, which is not `no_reply`.
     outsider_attempts: int
     outsider_merged: int
     distinct_outsiders: int
@@ -69,6 +77,8 @@ class Stats(Model):
     no_reply: int
     median_first_response_hours: float | None
     bot_share: float
+    still_open: int = 0
+    closed_silently: int = 0
 
 
 class PartialStats(Model):
@@ -114,6 +124,10 @@ class Cost(Model):
     model: str
     input_tokens: int
     output_tokens: int
+    # What the model calls cost in US dollars, and how long the whole run took.
+    # Null on reports cached before these were recorded.
+    usd: float | None = None
+    seconds: float | None = None
 
 
 class Odds(Model):
@@ -177,10 +191,12 @@ RUBBER_STAMP_LINE = ("Outside pull requests here get merged without anyone revie
                      "them, so you wouldn't get feedback on yours.")
 
 
-def verdict_line(verdict: str, s: Stats, decided_by: list[str], rule_codes: list[str]) -> str:
+def verdict_line(verdict: str, s: Stats, decided_by: list[str], rule_codes: list[str],
+                 starter_issues_below: bool = True) -> str:
     """One sentence under the headline. It explains the verdict and never
     oversells it: "Worth your time" with a low merge rate or many ignored pull
-    requests says so plainly."""
+    requests says so plainly. `starter_issues_below=False` where no starter
+    issues follow (Discover cards)."""
     n = s.outsider_attempts
     merged = f"{s.outsider_merged} of {n}"
     if verdict == "viable":
@@ -192,8 +208,10 @@ def verdict_line(verdict: str, s: Stats, decided_by: list[str], rule_codes: list
                 "most pull requests don't land" if low_merge else "",
                 f"{_silent_phrase(silent)} get no reply" if many_silent else "",
             ) if b]
-            return (f"Newcomers do get merged here ({merged} recently), but "
-                    f"{' and '.join(buts)}, so start with one of the starter issues below.")
+            advice = (", so start with one of the starter issues below" if starter_issues_below
+                      else ", so pick your first issue carefully")
+            return (f"Outside contributors do get merged here ({merged} recently), but "
+                    f"{' and '.join(buts)}{advice}.")
         if silent < 0.3:
             return ("Outside contributors get real replies here, and "
                     f"{merged} of their recent pull requests were merged.")
@@ -232,10 +250,29 @@ class VerdictView(Model):
         return TONES[self.verdict]
 
 
+class HoltUsers(Model):
+    """Pull requests that connected Holt users sent to this repository in the
+    last `window_days`: counts only. Present only when at least 5 people who
+    didn't opt out of statistics make up the numbers (repo_stats.py)."""
+
+    people: int
+    pull_requests: int
+    merged: int
+    # Closed without being merged.
+    closed: int
+    # Still open.
+    waiting: int
+    window_days: int
+    computed_at: str
+
+
 class Report(VerdictView):
     repo: str
     mode: Mode
     days: int
+    # AI mode only: at most two model-written sentences, the lead of the AI
+    # explanation. Null in rules mode and on reports cached before it existed.
+    bottom_line: str | None = None
     summary: str | None = None
     stats: Stats
     decided_by: list[str] = Field(default_factory=list)
@@ -250,6 +287,9 @@ class Report(VerdictView):
     evidence_until: str | None = None
     generated_at: str
     cost: Cost | None = None
+    # Filled when the report is served (GET /v1/reports/{owner}/{repo}), never
+    # stored with it; null when too few Holt users sent pull requests here.
+    holt_users: HoltUsers | None = None
 
     @computed_field
     @property
@@ -273,6 +313,19 @@ class StarterIssue(Model):
     created_at: str | None = None
     comments: int = 0
     why: list[str] = Field(default_factory=list)
+
+    # Derived from the labels and title, so cached issues get them too. The
+    # web uses them with a profile: a newcomer sees only `beginner` issues,
+    # and issues matching their contribution types come first.
+    @computed_field
+    @property
+    def beginner(self) -> bool:
+        return is_beginner_issue(self.labels)
+
+    @computed_field
+    @property
+    def areas(self) -> list[ContributionType]:
+        return issue_areas(self.labels, self.title)
 
 
 class StarterIssues(Model):
@@ -502,6 +555,25 @@ class GitHubAccount(Model):
 class GitHubConnection(Model):
     connected: bool
     account: GitHubAccount | None
+
+
+# --- Profile ---------------------------------------------------------------------------
+
+class ProfilePrefs(Model):
+    languages: list[str] = Field(default_factory=list)
+    topics: list[str] = Field(default_factory=list)
+    days: int = 7
+    contributions: list[ContributionType] = Field(default_factory=list)
+    level: Level = "newcomer"
+    updated_at: str | None = None
+
+
+class ProfileOut(Model):
+    # Null until they save one.
+    profile: ProfilePrefs | None
+    # True when they've confirmed they're 18 or older (here or by connecting
+    # GitHub): saving then doesn't ask again.
+    adult_confirmed: bool
 
 
 # --- My Contributions ----------------------------------------------------------------

@@ -115,9 +115,9 @@ def test_the_replay_reads_as_a_live_report_did_at_capture_time(tmp_path):
     assert result["verdict"] == "viable"
     numbers = result["numbers"]
     assert numbers["outsider_merged"] == 3
-    # The hour-old PR is waiting, not ignored, because the replay is read at
-    # the moment of capture with the live "too new to judge" window.
-    assert numbers["outsider_awaiting_reply"] == 1
+    # The hour-old PR is still open, not ignored, because the replay is read
+    # at the moment of capture with the live "too new to judge" window.
+    assert numbers["outsider_still_open"] == 1
     assert numbers["outsider_ignored"] == 0
 
 

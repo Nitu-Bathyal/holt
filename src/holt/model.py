@@ -18,6 +18,7 @@ import hashlib
 import json
 import os
 import re
+import threading
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
@@ -53,6 +54,10 @@ PRICES = {
 MODEL_ALIASES: dict[str, str] = {
     "gpt-5": LARGE,
     "gpt-5-mini": SMALL,
+    # OpenRouter's names for the same models, which the server runs on. Without
+    # these every server report was costed at zero.
+    "openai/gpt-5": LARGE,
+    "openai/gpt-5-mini": SMALL,
 }
 
 
@@ -84,6 +89,28 @@ STAGE_MODELS: dict[str, str] = {
     "profile": SMALL,
     "describe": SMALL,
 }
+
+# The most a stage may write, in tokens, reasoning included. Every provider call
+# sets one: without it a reasoning model on OpenRouter could think for as long
+# as it liked and bill for all of it. Sized at several times what the recorded
+# runs used, so a cap is a guard against a runaway call, not a limit a normal
+# report meets. A call that hits it fails loudly (see `_check_finished`).
+MAX_OUTPUT_TOKENS: dict[str, int] = {
+    "classify": 6000,
+    "opportunity": 6000,
+    "outcomes": 12000,
+    "narrate": 8000,
+}
+DEFAULT_MAX_OUTPUT_TOKENS = 12000
+
+
+def max_output_tokens(label: str) -> int:
+    return MAX_OUTPUT_TOKENS.get(label, DEFAULT_MAX_OUTPUT_TOKENS)
+
+
+class OutputLimitReached(RuntimeError):
+    """A model call used its whole output allowance and was cut off."""
+
 
 # Where the *committed* recordings live, relative to a repository clone. Replay
 # reads from here; nothing writes here unless recording is switched on.
@@ -356,6 +383,9 @@ def call_key(label: str, system: str, prompt: str) -> str:
     return hashlib.sha256(blob.encode()).hexdigest()[:24]
 
 
+_USAGE_LOCK = threading.Lock()
+
+
 @dataclass(slots=True)
 class Usage:
     input_tokens: int = 0
@@ -368,6 +398,11 @@ class Usage:
     models: list[str] = field(default_factory=list)
 
     def add(self, model: str, inp: int, out: int) -> None:
+        # Stages A, B and C run at once and share one Usage.
+        with _USAGE_LOCK:
+            self._add(model, inp, out)
+
+    def _add(self, model: str, inp: int, out: int) -> None:
         # Through the alias table: a run on `gpt-5` spends real money, and
         # recording zero for it because the id carries no date would understate
         # the bill rather than decline to guess at it.
@@ -439,7 +474,9 @@ class OpenAIModel:
                 "type": "json_schema",
                 "json_schema": {"name": label, "schema": schema, "strict": True},
             },
+            **_output_cap(label),
         )
+        _check_finished(label, model, getattr(response.choices[0], "finish_reason", None))
         parsed = json.loads(response.choices[0].message.content)
         u = response.usage
         self.usage.add(model, u.prompt_tokens, u.completion_tokens)
@@ -457,6 +494,25 @@ class OpenAIModel:
                 },
             })
         return parsed
+
+
+def _output_cap(label: str) -> dict[str, int]:
+    """The output limit, in the parameter the configured provider reads.
+
+    OpenAI's own API takes `max_completion_tokens` for its reasoning models and
+    rejects `max_tokens`; OpenRouter, Gemini, Ollama and other compatible
+    servers read `max_tokens`.
+    """
+    name = "max_completion_tokens" if active_config().provider == "openai" else "max_tokens"
+    return {name: max_output_tokens(label)}
+
+
+def _check_finished(label: str, model: str, reason: str | None) -> None:
+    if reason in ("length", "max_tokens"):
+        raise OutputLimitReached(
+            f"{model} used its whole {max_output_tokens(label)}-token allowance on "
+            f"the {label} stage and was cut off; nothing was kept from it"
+        )
 
 
 def _resolve_record(record: bool | None, path: Path | None) -> bool:
@@ -483,8 +539,6 @@ class AnthropicModel:
     record: bool | None = None
     _client: Any = None
 
-    MAX_TOKENS = 16000  # thinking counts toward this on current Claude models
-
     def __post_init__(self) -> None:
         self.record = _resolve_record(self.record, self.trajectory_path)
         if self._client is None:
@@ -496,11 +550,12 @@ class AnthropicModel:
         model = model_for(label)
         response = self._client.messages.create(
             model=model,
-            max_tokens=self.MAX_TOKENS,
+            max_tokens=max_output_tokens(label),
             system=system,
             messages=[{"role": "user", "content": prompt}],
             output_config={"format": {"type": "json_schema", "schema": schema}},
         )
+        _check_finished(label, model, getattr(response, "stop_reason", None))
         if response.stop_reason == "refusal":
             raise RuntimeError(
                 f"{model} declined the {label} request (stop_reason=refusal); "

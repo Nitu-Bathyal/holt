@@ -148,6 +148,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/discover": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Discover
+         * @description Checked repositories, filtered and sorted (see the module docstring).
+         *     Reads only the database: no GitHub call and no rate limit.
+         */
+        get: operations["discover_v1_discover_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/feedback": {
         parameters: {
             query?: never;
@@ -380,6 +401,25 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Profile */
+        get: operations["get_profile_v1_me_profile_get"];
+        /** Put Profile */
+        put: operations["put_profile_v1_me_profile_put"];
+        post?: never;
+        /** Delete Profile */
+        delete: operations["delete_profile_v1_me_profile_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -768,6 +808,10 @@ export interface components {
             model: string;
             /** Output Tokens */
             output_tokens: number;
+            /** Seconds */
+            seconds: number | null;
+            /** Usd */
+            usd: number | null;
         };
         /**
          * Credits
@@ -788,6 +832,58 @@ export interface components {
             next_claim_at: string | null;
             /** Purchased */
             purchased: number;
+        };
+        /** DiscoverOut */
+        DiscoverOut: {
+            /** Language */
+            language: string | null;
+            /** Languages */
+            languages: components["schemas"]["LanguageCount"][];
+            /** Repos */
+            repos: components["schemas"]["DiscoverRepo"][];
+            /**
+             * Sort
+             * @enum {string}
+             */
+            sort: "welcoming" | "stars" | "trending";
+            /** Topic */
+            topic: string | null;
+            /** Trending Min */
+            trending_min: number;
+        };
+        /** DiscoverRepo */
+        DiscoverRepo: {
+            /** Checked This Week */
+            checked_this_week: number | null;
+            /** Description */
+            description: string | null;
+            /** Generated At */
+            generated_at: string | null;
+            /** Headline */
+            readonly headline: string;
+            /** Language */
+            language: string | null;
+            /** Pushed At */
+            pushed_at: string | null;
+            /** Reason */
+            reason: string;
+            /** Repo */
+            repo: string;
+            /** Stars */
+            stars: number | null;
+            stats: components["schemas"]["Stats"];
+            /**
+             * Tone
+             * @enum {string}
+             */
+            readonly tone: "good" | "bad" | "warn";
+            /** Topics */
+            topics: string[];
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "viable" | "not_viable" | "insufficient_evidence";
         };
         /**
          * Entitlements
@@ -1032,6 +1128,28 @@ export interface components {
             /** Verdict */
             verdict: ("viable" | "not_viable" | "insufficient_evidence") | null;
         };
+        /**
+         * HoltUsers
+         * @description Pull requests that connected Holt users sent to this repository in the
+         *     last `window_days`: counts only. Present only when at least 5 people who
+         *     didn't opt out of statistics make up the numbers (repo_stats.py).
+         */
+        HoltUsers: {
+            /** Closed */
+            closed: number;
+            /** Computed At */
+            computed_at: string;
+            /** Merged */
+            merged: number;
+            /** People */
+            people: number;
+            /** Pull Requests */
+            pull_requests: number;
+            /** Waiting */
+            waiting: number;
+            /** Window Days */
+            window_days: number;
+        };
         /** JobStatus */
         JobStatus: {
             error: components["schemas"]["Error"] | null;
@@ -1054,6 +1172,13 @@ export interface components {
             merged: number;
             /** Path */
             path: string;
+        };
+        /** LanguageCount */
+        LanguageCount: {
+            /** Name */
+            name: string;
+            /** Repos */
+            repos: number;
         };
         /** Me */
         Me: {
@@ -1163,6 +1288,59 @@ export interface components {
             /** Usd Cents */
             usd_cents?: number | null;
         };
+        /** ProfileIn */
+        ProfileIn: {
+            /**
+             * Adult Confirmed
+             * @default false
+             */
+            adult_confirmed: boolean;
+            /** Contributions */
+            contributions?: ("code" | "docs" | "tests" | "design" | "translations")[];
+            /**
+             * Days
+             * @default 7
+             */
+            days: number;
+            /** Languages */
+            languages?: string[];
+            /**
+             * Level
+             * @default newcomer
+             * @enum {string}
+             */
+            level: "newcomer" | "experienced";
+            /** Topics */
+            topics?: string[];
+        };
+        /** ProfileOut */
+        ProfileOut: {
+            /** Adult Confirmed */
+            adult_confirmed: boolean;
+            profile: components["schemas"]["ProfilePrefs"] | null;
+        };
+        /** ProfilePrefs */
+        ProfilePrefs: {
+            /** Contributions */
+            contributions: ("code" | "docs" | "tests" | "design" | "translations")[];
+            /**
+             * Days
+             * @default 7
+             */
+            days: number;
+            /** Languages */
+            languages: string[];
+            /**
+             * Level
+             * @default newcomer
+             * @enum {string}
+             */
+            level: "newcomer" | "experienced";
+            /** Topics */
+            topics: string[];
+            /** Updated At */
+            updated_at: string | null;
+        };
         /** Queued */
         Queued: {
             /** Job Id */
@@ -1196,6 +1374,8 @@ export interface components {
         };
         /** Report */
         Report: {
+            /** Bottom Line */
+            bottom_line: string | null;
             cost: components["schemas"]["Cost"] | null;
             /** Days */
             days: number;
@@ -1209,6 +1389,7 @@ export interface components {
             generated_at: string;
             /** Headline */
             readonly headline: string;
+            holt_users: components["schemas"]["HoltUsers"] | null;
             /** Landing */
             landing: components["schemas"]["LandingPath"][];
             /**
@@ -1262,6 +1443,10 @@ export interface components {
         };
         /** StarterIssue */
         StarterIssue: {
+            /** Areas */
+            readonly areas: ("code" | "docs" | "tests" | "design" | "translations")[];
+            /** Beginner */
+            readonly beginner: boolean;
             /**
              * Comments
              * @default 0
@@ -1291,6 +1476,11 @@ export interface components {
         Stats: {
             /** Bot Share */
             bot_share: number;
+            /**
+             * Closed Silently
+             * @default 0
+             */
+            closed_silently: number;
             /** Distinct Outsiders */
             distinct_outsiders: number;
             /** First Time Merged Authors */
@@ -1303,6 +1493,11 @@ export interface components {
             outsider_attempts: number;
             /** Outsider Merged */
             outsider_merged: number;
+            /**
+             * Still Open
+             * @default 0
+             */
+            still_open: number;
         };
         /** ValidationError */
         ValidationError: {
@@ -1343,6 +1538,8 @@ export type ContributionSummary = components['schemas']['ContributionSummary'];
 export type Contributions = components['schemas']['Contributions'];
 export type Cost = components['schemas']['Cost'];
 export type Credits = components['schemas']['Credits'];
+export type DiscoverOut = components['schemas']['DiscoverOut'];
+export type DiscoverRepo = components['schemas']['DiscoverRepo'];
 export type Entitlements = components['schemas']['Entitlements'];
 export type Error = components['schemas']['Error'];
 export type ErrorBody = components['schemas']['ErrorBody'];
@@ -1361,8 +1558,10 @@ export type HttpValidationError = components['schemas']['HTTPValidationError'];
 export type Health = components['schemas']['Health'];
 export type History = components['schemas']['History'];
 export type HistoryItem = components['schemas']['HistoryItem'];
+export type HoltUsers = components['schemas']['HoltUsers'];
 export type JobStatus = components['schemas']['JobStatus'];
 export type LandingPath = components['schemas']['LandingPath'];
+export type LanguageCount = components['schemas']['LanguageCount'];
 export type Me = components['schemas']['Me'];
 export type NeverLanded = components['schemas']['NeverLanded'];
 export type Odds = components['schemas']['Odds'];
@@ -1371,6 +1570,9 @@ export type PartialStats = components['schemas']['PartialStats'];
 export type Plan = components['schemas']['Plan'];
 export type PlanFeature = components['schemas']['PlanFeature'];
 export type Price = components['schemas']['Price'];
+export type ProfileIn = components['schemas']['ProfileIn'];
+export type ProfileOut = components['schemas']['ProfileOut'];
+export type ProfilePrefs = components['schemas']['ProfilePrefs'];
 export type Queued = components['schemas']['Queued'];
 export type RepoVerdict = components['schemas']['RepoVerdict'];
 export type Report = components['schemas']['Report'];
@@ -1648,6 +1850,42 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    discover_v1_discover_get: {
+        parameters: {
+            query?: {
+                sort?: "welcoming" | "stars" | "trending";
+                language?: string | null;
+                topic?: string | null;
+                limit?: number;
+            };
+            header?: {
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscoverOut"];
                 };
             };
             /** @description Default Response */
@@ -2205,6 +2443,109 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["History"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_profile_v1_me_profile_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileOut"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    put_profile_v1_me_profile_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ProfileIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileOut"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    delete_profile_v1_me_profile_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProfileOut"];
                 };
             };
             /** @description Default Response */
