@@ -94,7 +94,7 @@ pause_reason() { local r; r="$(cat "$PAUSE" 2>/dev/null || true)"; echo "${r:-pa
 case "${1:-}" in
     --pause)
         shift; printf '%s\n' "$*" > "$PAUSE"
-        status paused "$(cat "$STATE/current" 2>/dev/null || true)" "$(pause_reason); follow.sh --resume to start again"
+        status paused "$(cat "$STATE/current" 2>/dev/null || true)" "$(pause_reason); follow.sh --resume to follow main again"
         exit 0 ;;
     --resume)
         rm -f "$PAUSE"
@@ -122,7 +122,7 @@ current="$(cat "$STATE/current" 2>/dev/null || true)"
 live="${current:0:7}"; live="${live:-nothing yet}"
 
 if [[ -f "$PAUSE" ]]; then
-    status paused "$current" "$(pause_reason); follow.sh --resume to start again"; exit 0
+    status paused "$current" "$(pause_reason); follow.sh --resume to follow main again"; exit 0
 fi
 
 # --- origin/main ---------------------------------------------------------------
