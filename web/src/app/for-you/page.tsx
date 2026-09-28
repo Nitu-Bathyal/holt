@@ -5,8 +5,9 @@ import { CatFace } from "@/components/cat-face";
 import { ErrorPanel } from "@/components/error-panel";
 import { PageTransition } from "@/components/motion/page-transition";
 import { PageHead } from "@/components/page-head";
-import { PickCard } from "@/components/recommendations/pick-card";
+import { RepoGrid } from "@/components/repo-card/repo-grid";
 import { recommendations } from "@/lib/api";
+import { fromPick } from "@/lib/repo-card";
 import { basisLine, emptyReason, excludedLine, lockedLine } from "@/lib/recommendations";
 import { currentUser } from "@/lib/session";
 
@@ -23,7 +24,7 @@ export default async function ForYouPage() {
   return (
     <PageTransition>
       <>
-      <PageHead narrow>
+      <PageHead compact>
         <p className="rail mb-4 flex gap-2">
           <strong className="m-0">for you</strong>
           <span>{user.name || user.email}</span>
@@ -34,7 +35,7 @@ export default async function ForYouPage() {
           what you told us and what you&apos;ve done on GitHub. Ranked by fixed rules, never by AI.
         </p>
       </PageHead>
-      <div className="wrap max-w-3xl pb-14 pt-2 sm:pb-16">
+      <div className="wrap pb-14 pt-2 sm:pb-16">
         {!r.ok ? (
           <div className="mt-8"><ErrorPanel error={r.error} retryHref="/for-you" /></div>
         ) : d && d.picks.length === 0 ? (
@@ -71,11 +72,9 @@ export default async function ForYouPage() {
                 {basis} {excluded} <Link href="/settings#profile" className="text-link">Edit your profile</Link>
               </p>
             )}
-            <ol className="mt-6 space-y-4">
-              {d.picks.map((p, i) => (
-                <PickCard key={p.repo} p={p} rank={i + 1} />
-              ))}
-            </ol>
+            <div className="mt-6">
+              <RepoGrid repos={d.picks.map(fromPick)} />
+            </div>
             {d.locked > 0 && (
               <div className="mt-6 border border-blue/50 bg-blue/[0.06] p-5 sm:p-6">
                 <p className="text-[0.72rem] uppercase tracking-[0.08em] text-blue">Holt Pro</p>
