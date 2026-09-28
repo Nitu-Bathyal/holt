@@ -22,8 +22,8 @@ import json
 import math
 from pathlib import Path
 
-from holt import baseline as baseline_solution
-from holt import baseline_matched
+from eval import baseline as baseline_solution
+from eval import baseline_matched
 from holt.agent.pipeline import analyze
 from holt.evidence.fixtures import FixtureProvider
 from holt.model import OpenAIModel, PatchModel, ReplayModel, TRAJECTORY_DIR

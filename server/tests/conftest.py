@@ -29,6 +29,11 @@ KNOWN = {r.lower(): r for r in (
 )}
 
 
+STATS = {"outsider_attempts": 20, "outsider_merged": 8, "distinct_outsiders": 15,
+         "first_time_merged_authors": 6, "no_reply": 2, "median_first_response_hours": 3.0,
+         "bot_share": 0.1}
+
+
 def canned_report(repo: str, mode: str = "rules", days: int = 7,
                   verdict: str = "viable") -> dict[str, Any]:
     headline = {"viable": "Worth your time", "not_viable": "Not worth your time",
@@ -36,7 +41,7 @@ def canned_report(repo: str, mode: str = "rules", days: int = 7,
     return {
         "repo": repo, "mode": mode, "days": days, "verdict": verdict,
         "headline": headline, "summary": "ok" if mode == "ai" else None,
-        "stats": {}, "decided_by": [], "unknowns": [], "landing": [],
+        "stats": STATS, "decided_by": [], "unknowns": [], "landing": [],
         "never_landed": [], "evidence": [], "evidence_until": None,
         "generated_at": "2026-09-25T00:00:00Z",
         "cost": {"model": "m", "input_tokens": 1, "output_tokens": 1} if mode == "ai" else None,
@@ -63,22 +68,87 @@ class FakeEngine:
         return canned_report(repo, mode, days, self.verdict)
 
 
+class FakeDetails:
+    """Stands in for `GitHubLookup.details` (repository details for Discover).
+    Repos in `known` answer with their entry; others are missing."""
+
+    def __init__(self) -> None:
+        self.calls: list[list[str]] = []
+        self.known: dict[str, dict[str, Any]] = {}
+        self.error: Exception | None = None
+
+    async def __call__(self, repos: list[str]) -> dict[str, dict[str, Any] | None]:
+        self.calls.append(list(repos))
+        if self.error is not None:
+            raise self.error
+        return {r: self.known.get(r.lower()) for r in repos}
+
+
+def _database_per_xdist_worker() -> None:
+    """Under pytest-xdist every harness would drop the tables another worker is
+    using, so each worker gets its own database next to the one in
+    HOLT_TEST_DATABASE_URL (`holt` -> `holt_gw0`, ...), created on first use."""
+    url = os.environ.get("HOLT_TEST_DATABASE_URL")
+    worker = os.environ.get("PYTEST_XDIST_WORKER")
+    if not url or not worker or not url.startswith("postgresql"):
+        return
+    import asyncio
+
+    import asyncpg
+    from sqlalchemy.engine import make_url
+
+    base = make_url(url)
+    name = f"{base.database}_{worker}"
+
+    async def create() -> None:
+        conn = await asyncpg.connect(
+            user=base.username, password=base.password, host=base.host,
+            port=base.port or 5432, database=base.database,
+        )
+        try:
+            if not await conn.fetchval("SELECT 1 FROM pg_database WHERE datname = $1", name):
+                await conn.execute(f'CREATE DATABASE "{name}"')
+        finally:
+            await conn.close()
+
+    asyncio.run(create())
+    os.environ["HOLT_TEST_DATABASE_URL"] = base.set(database=name).render_as_string(
+        hide_password=False)
+
+
+_database_per_xdist_worker()
+
+
 def make_settings(tmp_path: Path, **overrides: Any) -> Settings:
     values = {
         # Set HOLT_TEST_DATABASE_URL to run against a real Postgres (e.g. the
-        # one in server/compose.yml). Its tables are dropped for every harness.
+        # one in server/compose.yml; CI does). Its tables are dropped for every
+        # harness, and the app's startup migrates it from empty.
         "DATABASE_URL": os.environ.get("HOLT_TEST_DATABASE_URL")
         or f"sqlite+aiosqlite:///{tmp_path / 'holt.db'}",
         "HOLT_INTERNAL_KEY": KEY,
         "HOLT_SECRET_KEY": "a test passphrase",
         "GITHUB_TOKENS": "tok1,tok2",
         "OPENROUTER_API_KEY": "",
+        # AI is off without a budget; most tests are about something else.
+        # test_server_ai_budget.py sets its own.
+        "HOLT_AI_BUDGET_USD": 1000,
+        "HOLT_AI_BUDGET_OWNER_OK": True,
         "HOLT_ANON_RATE_PER_HOUR": 100,
         "HOLT_USER_RATE_PER_HOUR": 100,
-        "HOLT_FREE_AI_LIMIT": 3,
     }
     values.update(overrides)
     return Settings(_env_file=None, **values)
+
+
+async def drop_everything(engine) -> None:
+    """Every table, including ones only a migration knows about."""
+    from sqlalchemy import MetaData
+
+    async with engine.begin() as conn:
+        meta = MetaData()
+        await conn.run_sync(meta.reflect)
+        await conn.run_sync(meta.drop_all)
 
 
 class Harness:
@@ -130,11 +200,8 @@ def make_harness(tmp_path):
         if os.environ.get("HOLT_TEST_DATABASE_URL"):
             import asyncio
 
-            from holt_server.db import Base
-
             async def reset():
-                async with services.db.engine.begin() as conn:
-                    await conn.run_sync(Base.metadata.drop_all)
+                await drop_everything(services.db.engine)
                 await services.db.engine.dispose()
 
             asyncio.run(reset())
@@ -148,6 +215,7 @@ def make_harness(tmp_path):
                 raise not_found_repo(repo) from None
 
         services.canonical = canonical
+        services.lookup.details = FakeDetails()
         services.provider_factory = lambda repo, as_of: None
         harness_specs: list[Any] = []
 
@@ -166,6 +234,11 @@ def make_harness(tmp_path):
     yield build
     for client in clients:
         client.__exit__(None, None, None)
+
+
+@pytest.fixture(name="drop_everything")
+def drop_everything_fixture():
+    return drop_everything
 
 
 @pytest.fixture

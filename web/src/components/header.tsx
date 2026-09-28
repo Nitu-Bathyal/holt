@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signOut } from "@/auth";
+import { HOME, LANDING } from "@/lib/home";
 import { currentUser } from "@/lib/session";
 import { GITHUB_REPO_URL } from "@/lib/site";
 import { CatFace } from "./cat-face";
@@ -8,13 +9,16 @@ import { ThemeToggle } from "./theme-toggle";
 
 // Every route is dynamic (the header reads the session), so a default prefetch
 // stops at loading.tsx: a click showed the skeleton, which React then holds
-// for at least 300ms even when the page arrives in 15ms. These pages are cheap
-// to render with no query, so the nav prefetches them in full.
+// for at least 300ms even when the page arrives in 15ms. The `full` pages are
+// cheap to render with no query, so the nav prefetches them in full. /find and
+// /discover run a search on every render, so they keep the default (skeleton
+// first) rather than searching for every visitor who merely sees the header.
 const NAV = [
   { href: "/find", label: "find a project" },
-  { href: "/compare", label: "compare" },
-  { href: "/how-it-works", label: "how it works" },
-  { href: "/pricing", label: "pricing" },
+  { href: "/discover", label: "discover" },
+  { href: "/compare", label: "compare", full: true },
+  { href: "/how-it-works", label: "how it works", full: true },
+  { href: "/pricing", label: "pricing", full: true },
 ];
 
 function GitHubMark({ className }: { className: string }) {
@@ -37,14 +41,14 @@ export async function Header() {
     <header className="site-header sticky top-0 z-40 border-b border-line bg-header" style={{ viewTransitionName: "site-header" }}>
       <MenuAutoClose />
       <div className="wrap flex min-h-[60px] items-center gap-4">
-        <Link href="/" className="mr-auto inline-flex min-h-11 items-center gap-3">
-          <CatFace className="text-[1.05rem]" />
+        <Link href={user ? HOME : "/"} className="cat-perk mr-auto inline-flex min-h-11 items-center gap-3">
+          <CatFace className="text-[1.05rem]" perk />
           <span className="text-[0.95rem] font-semibold tracking-tight">holt<span className="sr-only"> home</span></span>
         </Link>
 
         <nav aria-label="Main" className="hidden items-center gap-6 text-[0.85rem] text-muted lg:flex">
           {NAV.map((n) => (
-            <Link key={n.href} href={n.href} prefetch className="py-2 transition-colors hover:text-ink">
+            <Link key={n.href} href={n.href} prefetch={n.full ? true : null} className="py-2 transition-colors hover:text-ink">
               {n.label}
             </Link>
           ))}
@@ -72,8 +76,13 @@ export async function Header() {
               </button>
               <div id="account-menu" popover="auto" className="menu w-56 text-[0.88rem]">
                 <p className="truncate px-3 py-2 text-faint">{user.name || user.email}</p>
+                <Link href={HOME} className="block px-3 py-2.5 transition-colors hover:bg-panel-2">home</Link>
+                <Link href="/for-you" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">picked for you</Link>
+                <Link href="/me/saved" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">saved repos</Link>
                 <Link href="/me/history" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">your history</Link>
-                <Link href="/settings" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">settings &amp; API key</Link>
+                <Link href="/me/contributions" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">your contributions</Link>
+                <Link href="/settings" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">settings</Link>
+                <Link href={LANDING} className="block px-3 py-2.5 transition-colors hover:bg-panel-2">about Holt</Link>
                 <Link href="/privacy" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">privacy</Link>
                 <form action={doSignOut}>
                   <button type="submit" className="block w-full px-3 py-2.5 text-left text-muted transition-colors hover:bg-panel-2">sign out</button>
@@ -95,7 +104,7 @@ export async function Header() {
           </button>
           <nav id="mobile-nav" popover="auto" aria-label="Mobile" className="sheet text-[0.95rem] lg:hidden">
             {NAV.map((n) => (
-              <Link key={n.href} href={n.href} prefetch className="block px-4 py-3 transition-colors hover:bg-panel-2">{n.label}</Link>
+              <Link key={n.href} href={n.href} prefetch={n.full ? true : null} className="block px-4 py-3 transition-colors hover:bg-panel-2">{n.label}</Link>
             ))}
             {!user && <Link href="/signin" className="block px-4 py-3 transition-colors hover:bg-panel-2">sign in</Link>}
             <a href={GITHUB_REPO_URL} className="flex items-center gap-2 px-4 py-3 text-ink transition-colors hover:bg-panel-2"><GitHubMark className="size-4" />github</a>

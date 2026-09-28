@@ -59,6 +59,23 @@ services:
     mem_limit: 64m
     restart: "no"
 
+  # One-shot: brings the API's schema up to date (holt_server/migrations)
+  # with the new server image, then exits. deploy.sh runs it before swapping
+  # the containers, so the old release briefly runs on the new schema: a
+  # migration must keep working with the release before it (docs in
+  # server/README.md). A database from before migrations is only stamped.
+  migrate-server:
+    image: ${HOLT_PROD_PROJECT:-holt-prod}-server:${HOLT_TAG:?set by deploy.sh}
+    labels: *prod-label
+    profiles: [migrate]
+    environment:
+      DATABASE_URL: postgresql+asyncpg://holt:${HOLT_DB_PASSWORD}@db:5432/holt
+    command: ["python", "-m", "holt_server.migrate"]
+    depends_on:
+      db: { condition: service_healthy }
+    mem_limit: 256m
+    restart: "no"
+
   server:
     build:
       context: ${HOLT_SRC:?set by deploy.sh}
@@ -74,13 +91,36 @@ services:
       HOLT_WEB_URL: https://githolt.com
       GITHUB_TOKENS: ${GITHUB_TOKENS}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      HOLT_JOB_CONCURRENCY: ${HOLT_JOB_CONCURRENCY:-1}
+      # AI is OFF in production: a budget of 0. Only prod-named variables in
+      # $HOLT_PROD_HOME/.env or secrets.env can change that (a
+      # HOLT_AI_BUDGET_USD meant for staging never reaches here), and the
+      # server ignores a budget without the owner's explicit OWNER_OK=1.
+      HOLT_AI_BUDGET_USD: ${HOLT_PROD_AI_BUDGET_USD:-0}
+      HOLT_AI_BUDGET_OWNER_OK: ${HOLT_PROD_AI_BUDGET_OWNER_OK:-0}
+      # Six people's jobs at once, plus one background worker for badges
+      # and warm passes (it takes a waiting person's job first). Each job is
+      # a thread holding one crawl; mem_limit below is sized for seven.
+      HOLT_JOB_CONCURRENCY: ${HOLT_JOB_CONCURRENCY:-6}
+      HOLT_BADGE_CONCURRENCY: ${HOLT_BADGE_CONCURRENCY:-1}
+      # Per-job time limits, in seconds (rules, AI, find).
+      HOLT_JOB_TIMEOUT_RULES: ${HOLT_JOB_TIMEOUT_RULES:-180}
+      HOLT_JOB_TIMEOUT_AI: ${HOLT_JOB_TIMEOUT_AI:-480}
+      HOLT_JOB_TIMEOUT_FIND: ${HOLT_JOB_TIMEOUT_FIND:-300}
       # The warm pass (warm.sh) fills this cache for a day.
       HOLT_STARTER_CACHE_HOURS: ${HOLT_STARTER_CACHE_HOURS:-24}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     depends_on:
       db: { condition: service_healthy }
-    mem_limit: 512m
+    # The image's own check, polled every second while it starts so
+    # deploy/swap.sh can retire the old server as soon as this one is ready.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 90s
+      start_interval: 1s
+    mem_limit: 1536m
     restart: unless-stopped
 
   web:
@@ -121,21 +161,69 @@ services:
       NODE_OPTIONS: --max-old-space-size=384
     depends_on:
       server: { condition: service_healthy }
+    # deploy/swap.sh starts the new web beside the old one and waits for
+    # this before retiring the old one. robots.txt is rendered by Next.js
+    # but never calls the API.
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/robots.txt').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+      start_interval: 1s
     mem_limit: 512m
     restart: unless-stopped
 
   # Front door: keeps the published port across deploys (web is recreated
   # behind it), serves /__build, redirects www to the apex, proxies the rest.
+  # Its config is a directory: deploy.sh copies edge.conf into
+  # $HOLT_PROD_HOME/edge/default.conf, checks it with nginx -t and reloads,
+  # so config changes go live without restarting the edge. (A single-file
+  # mount of ./edge.conf kept the old file after git replaced it.)
   edge:
     image: nginx:1.27-alpine
     labels: *prod-label
     ports:
       - "127.0.0.1:${HOLT_PROD_PORT:-8310}:8080"
     volumes:
-      - ./edge.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${HOLT_PROD_HOME:?set by deploy.sh}/edge:/etc/nginx/conf.d:ro
       - ${HOLT_PROD_HOME:?set by deploy.sh}/build:/srv/build:ro
     depends_on: [web]
     mem_limit: 32m
+    restart: unless-stopped
+
+  # Cookieless page and event counts (web/src/lib/analytics.ts). Opt-in
+  # profile: deploy/prod/umami.sh creates its database and role in `db`,
+  # writes UMAMI_* and COMPOSE_PROFILES=analytics to .env, starts it and
+  # replaces the default admin password. From then on every deploy's
+  # `compose up` keeps it running. The public only reaches /stats/script.js
+  # and /stats/api/send, through the edge; the dashboard (login required) is
+  # on 127.0.0.1:${HOLT_UMAMI_PORT:-8311} only, for an SSH tunnel.
+  umami:
+    image: ghcr.io/umami-software/umami:3.4.0
+    labels: *prod-label
+    profiles: [analytics]
+    environment:
+      # Its own role and database in the same Postgres: no second server to
+      # run, and the role can't read Holt's tables.
+      DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD:-}@db:5432/umami
+      APP_SECRET: ${UMAMI_APP_SECRET:-}
+      DISABLE_TELEMETRY: "1"
+      DISABLE_UPDATES: "1"
+      # The edge forwards Cloudflare's header untouched.
+      CLIENT_IP_HEADER: cf-connecting-ip
+      NODE_OPTIONS: --max-old-space-size=192
+    ports:
+      - "127.0.0.1:${HOLT_UMAMI_PORT:-8311}:3000"
+    depends_on:
+      db: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:3000/api/heartbeat >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    mem_limit: 320m
     restart: unless-stopped
 
 volumes:

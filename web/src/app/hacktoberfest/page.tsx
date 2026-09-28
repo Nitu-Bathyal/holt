@@ -5,21 +5,24 @@ import { ErrorPanel } from "@/components/error-panel";
 import { FindResults } from "@/components/find/find-results";
 import { FindRunner } from "@/components/find/find-runner";
 import { ShareBar } from "@/components/report/share-bar";
+import { ProfileOnboarding } from "@/components/profile-onboarding";
+import { getProfile, savedNames } from "@/lib/api";
 import { cachedFind } from "@/lib/find-cached";
-import { caller } from "@/lib/session";
+import { days as daysOf, describe, personalise } from "@/lib/profile";
+import { caller, currentUser } from "@/lib/session";
 import { hacktoberfest, hacktoberfestOver, SITE_URL } from "@/lib/site";
 import { PageTransition } from "@/components/motion/page-transition";
 
 const YEAR = 2026;
 
 export const metadata: Metadata = {
-  title: { absolute: `Hacktoberfest ${YEAR}: repos that will actually review your PR | Holt` },
+  title: { absolute: `Hacktoberfest ${YEAR}: contributions that actually land | Holt` },
   description:
-    "Welcoming open-source projects for your first Hacktoberfest pull request, with specific starter issues by language, and five tips so your PR doesn't get ignored.",
+    "Open-source projects that reply to and merge outside contributors, with specific issues by language, and five tips so your pull request gets reviewed.",
   alternates: { canonical: "/hacktoberfest" },
   openGraph: {
-    title: `Hacktoberfest ${YEAR}: repos that will actually review your PR`,
-    description: "Welcoming projects and starter issues, by language. Free, from Holt.",
+    title: `Hacktoberfest ${YEAR}: contributions that actually land`,
+    description: "Projects that merge outside work, with issues to start on, by language. Free, from Holt.",
     url: "/hacktoberfest",
   },
 };
@@ -37,26 +40,33 @@ const LANGS = [
 ] as const;
 
 const STEPS = [
-  ["Sign up", "Register on the official Hacktoberfest site and link your GitHub or GitLab account. It runs all of October."],
-  ["Open pull requests", "Contribute to projects taking part (they have the hacktoberfest topic, or a maintainer adds the hacktoberfest-accepted label)."],
-  ["Get them accepted", "Only pull requests a maintainer merges or approves count. Check the official site for this year's exact rules."],
+  ["Pick a project that merges outside work", "Start from the list above, or paste any repo into Holt. Skip the ones where outside pull requests sit unanswered."],
+  ["Take one real issue", "Choose something you understand, ask the maintainers if you can take it, and agree on the approach first."],
+  ["See it through to merged", "Answer review, make the changes, and keep going until it lands. One merged fix beats ten ignored pull requests."],
 ] as const;
 
 const TIPS = [
   ["Ask before you start.", "Comment on the issue and ask if you can take it. Maintainers ignore surprise pull requests far more often than ones they agreed to."],
   ["Read CONTRIBUTING first.", "Follow the project's setup, style and commit rules. It's the fastest way to look like someone worth reviewing."],
   ["Keep it small and focused.", "One issue, one pull request. Link the issue, say what you changed and how you tested it."],
-  ["Don't send spam.", "Typo-only or whitespace changes in random repos get labelled spam and can get you disqualified. Holt shows you real issues instead."],
+  ["Own every line.", "Send only changes you understand and have tested. Typo-only edits and unreviewed AI-written code get closed as spam. Holt shows you real issues instead."],
   ["Reply to review, then be patient.", "Answer feedback within a day or two. Busy maintainers may take a week; one polite nudge after that is fine."],
 ] as const;
 
 export default async function HacktoberfestPage({ searchParams }: PageProps<"/hacktoberfest">) {
-  const sp = await searchParams;
-  const tab = LANGS.find((l) => l.id === sp.lang) ?? LANGS[0];
+  const [sp, user] = await Promise.all([searchParams, currentUser()]);
+  const [profileR, saved] = await Promise.all([user ? getProfile(user.id) : null, savedNames(user?.id)]);
+  const profile = profileR?.ok ? profileR.data.profile : null;
+  // With no tab picked, a profile picks the first tab that has one of its languages.
+  const tab = LANGS.find((l) => l.id === sp.lang)
+    ?? (profile && LANGS.find((l) => l.langs.some((x: string) => profile.languages.includes(x))))
+    ?? LANGS[0];
+  const days = profile ? daysOf(profile.days) : 7;
   const hf = hacktoberfest();
   const ended = hacktoberfestOver(YEAR);
-  const result = await cachedFind({ languages: [...tab.langs], topics: [], days: 7, hacktoberfest: true, limit: 12 }, await caller());
+  const result = await cachedFind({ languages: [...tab.langs], topics: [], days, hacktoberfest: true, limit: 12 }, await caller(user));
   const here = `/hacktoberfest${tab.id === "all" ? "" : `?lang=${tab.id}`}`;
+  const fit = profile ? { level: profile.level, contributions: profile.contributions } : null;
 
   return (
     <PageTransition>
@@ -81,32 +91,41 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
             </div>
             {ended && (
               <p role="status" className="mb-6 max-w-2xl border border-hf-line bg-panel px-4 py-3 font-sans text-[0.92rem] text-muted">
-                Hacktoberfest {YEAR} has ended. The projects below still welcome newcomers, and{" "}
+                Hacktoberfest {YEAR} has ended. The projects below still merge outside work, and{" "}
                 <Link href="/find" className="text-link">/find</Link> works all year.
               </p>
             )}
             <h1 className="display max-w-4xl text-[clamp(2rem,6.5vw,3.6rem)]">
-              Your first Hacktoberfest PR, <span className="text-hf">in a repo that will actually review it.</span>
+              This October, make contributions <span className="text-hf">that actually land.</span>
             </h1>
             <p className="prose-sans mt-5 max-w-2xl text-[1.05rem]">
-              Every project below takes part in Hacktoberfest, replies to newcomers and merges their work. Each comes with
-              open issues you could pick up today, and what to do next.
+              Hacktoberfest no longer counts pull requests, so aim for work that gets merged. Every project below is
+              tagged for Hacktoberfest and merges outside contributors&apos; work, with open issues you could pick up today.
             </p>
             <p className="mt-3 text-[0.85rem] text-faint">This page is for October. Outside Hacktoberfest, use <Link href="/find" className="text-link">find a project</Link>.</p>
             <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
-              <a href="#tips" className="bracket-link bracket-link--hf px-3 text-center text-[0.83rem] sm:px-4 sm:text-[0.88rem]">[ 5 tips so your PR isn&apos;t ignored ]</a>
-              <ShareBar url={`${SITE_URL}/hacktoberfest`} text={`Doing Hacktoberfest ${YEAR}? These repos actually review newcomers' pull requests:`} />
+              <a href="#tips" className="bracket-link bracket-link--hf px-3 text-center text-[0.83rem] sm:px-4 sm:text-[0.88rem]">[ 5 tips so your PR gets reviewed ]</a>
+              <ShareBar url={`${SITE_URL}/hacktoberfest`} text={`Contributing this October? These repos actually merge outsiders' pull requests:`} />
             </div>
           </div>
         </section>
 
         <div className="wrap py-10 sm:py-12">
+          <ProfileOnboarding back="/hacktoberfest" className="mb-8" />
+          {sp.profile === "saved" && (
+            <p role="status" className="mb-6 border border-green/50 bg-green/10 px-4 py-3 font-sans text-[0.9rem] text-green">Profile saved. The projects below use it.</p>
+          )}
+          {profile && (
+            <p className="mb-6 font-sans text-[0.9rem] text-muted">
+              Using your profile: {describe(profile)}. <Link href="/settings/profile" className="text-link">edit</Link>
+            </p>
+          )}
           <nav aria-label="Language">
             <ul className="flex flex-wrap gap-2">
               {LANGS.map((l) => (
                 <li key={l.id}>
                   <Link
-                    href={l.id === "all" ? "/hacktoberfest" : `/hacktoberfest?lang=${l.id}`}
+                    href={l.id === "all" ? (profile ? "/hacktoberfest?lang=all" : "/hacktoberfest") : `/hacktoberfest?lang=${l.id}`}
                     scroll={false}
                     aria-current={l.id === tab.id ? "page" : undefined}
                     className={`chip min-h-11 whitespace-nowrap px-4 text-[0.89rem] transition-colors ${l.id === tab.id ? "border-hf bg-hf text-bg" : "hover:border-hf hover:text-ink"}`}
@@ -123,9 +142,9 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
             {!result.ok ? (
               <ErrorPanel error={result.error} retryHref={here} />
             ) : result.data.status === "queued" ? (
-              <FindRunner key={tab.id} jobId={result.data.job_id} days={7} retryHref={here} />
+              <FindRunner key={tab.id} jobId={result.data.job_id} days={days} retryHref={here} fit={fit} saved={saved} />
             ) : (
-              <FindResults results={result.data.results} days={7} />
+              <FindResults results={personalise(result.data.results, fit)} days={days} saved={saved} />
             )}
           </section>
         </div>
@@ -133,7 +152,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
         <section aria-labelledby="how" className="border-t border-line bg-panel py-14 sm:py-20">
           <div className="wrap grid grid-cols-1 gap-12 lg:grid-cols-2">
             <div>
-              <h2 id="how" className="h2">How Hacktoberfest works</h2>
+              <h2 id="how" className="h2">How to make October count</h2>
               <ol className="mt-8 space-y-6">
                 {STEPS.map(([title, body], i) => (
                   <li key={title} className="grid grid-cols-[2.5rem_1fr] gap-3">
@@ -146,7 +165,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
                 ))}
               </ol>
               <p className="mt-6 font-sans text-[0.9rem] text-faint">
-                Holt isn&apos;t affiliated with Hacktoberfest. For the official rules, see{" "}
+                Holt isn&apos;t affiliated with Hacktoberfest. For this year&apos;s events, see{" "}
                 <a className="text-link" href="https://hacktoberfest.com" target="_blank" rel="noopener noreferrer">hacktoberfest.com ↗</a>.
               </p>
             </div>
@@ -170,7 +189,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
           <div className="wrap max-w-2xl">
             <CatFace mood="adoring" className="text-[1.8rem]" />
             <p className="mt-4 text-[1.3rem] font-semibold tracking-tight">Already have a repo in mind?</p>
-            <p className="mt-2 font-sans text-muted">Check whether it reviews newcomers before you spend your October on it.</p>
+            <p className="mt-2 font-sans text-muted">Check whether it merges outside work before you spend your October on it.</p>
             <Link href="/" className="bracket-link mt-6">[ check any repo → ]</Link>
           </div>
         </section>

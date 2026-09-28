@@ -11,36 +11,55 @@ describe("chipView", () => {
   it("shows the verdict headline and one stat", () => {
     const v = chipView({ state: "found", data: report() }, flask);
     expect(v.label).toBe("Holt: Worth your time");
-    expect(v.stat).toBe("15 of 100 newcomer PRs merged");
-    expect(v.tone).toBe("viable");
+    expect(v.stat).toBe("15 of 100 outside PRs merged");
+    expect(v.tone).toBe("good");
   });
 
-  it.each([
-    ["not_viable", "Holt: Not worth your time"],
-    ["insufficient_evidence", "Holt: Not enough evidence"],
-  ] as const)("%s → %s", (verdict, label) => {
-    expect(chipView({ state: "found", data: report({ verdict }) }, flask).label).toBe(label);
-  });
-
-  it("derives the headline from the verdict, not the free-text field", () => {
-    const v = chipView({ state: "found", data: report({ verdict: "not_viable", headline: "Worth your time" }) }, flask);
+  it("shows the server's headline and tone, never its own reading of the verdict", () => {
+    const v = chipView({ state: "found", data: report({ verdict: "not_viable", headline: "Not worth your time", tone: "bad" }) }, flask);
     expect(v.label).toBe("Holt: Not worth your time");
+    expect(v.tone).toBe("bad");
+    const w = chipView({ state: "found", data: report({ verdict: "insufficient_evidence", headline: "Not enough evidence", tone: "warn" }) }, flask);
+    expect(w.tone).toBe("warn");
   });
 
-  it("says 'Check with Holt' when nothing is cached, on errors and on unknown verdicts", () => {
+  it("uses the neutral colour when a cached response has no tone yet", () => {
+    const v = chipView({ state: "found", data: report({ tone: undefined }) }, flask);
+    expect(v.label).toBe("Holt: Worth your time");
+    expect(v.tone).toBe("unknown");
+    expect(chipView({ state: "found", data: report({ tone: "purple" as never }) }, flask).tone).toBe("unknown");
+  });
+
+  it("says 'updating', never the old verdict, when older rules made the report", () => {
+    const v = chipView({ state: "found", data: report({ outdated: true, verdict: "viable" }) }, flask);
+    expect(v.label).toBe("Holt: updating");
+    expect(v.tone).toBe("unknown");
+    expect(v.stat).toBeNull();
+    expect(chipView({ state: "found", data: report({ outdated: false }) }, flask).label).toBe("Holt: Worth your time");
+  });
+
+  it("says 'Check with Holt' when nothing is cached, on errors and without a usable headline", () => {
     expect(chipView({ state: "missing" }, flask).label).toBe("Check with Holt");
     expect(chipView({ state: "error" }, flask).label).toBe("Check with Holt");
-    const odd = report({ verdict: "maybe" as never });
-    expect(chipView({ state: "found", data: odd }, flask).label).toBe("Check with Holt");
+    for (const headline of [undefined, "", 42, "x".repeat(61)]) {
+      expect(chipView({ state: "found", data: report({ headline: headline as never }) }, flask).label).toBe("Check with Holt");
+    }
   });
 });
 
 describe("statLine", () => {
   it("handles singular, zero and missing counts", () => {
-    expect(statLine(report({ stats: { outsider_attempts: 1, outsider_merged: 0 } }))).toBe("0 of 1 newcomer PR merged");
+    expect(statLine(report({ stats: { outsider_attempts: 1, outsider_merged: 0 } }))).toBe("0 of 1 outside PR merged");
     expect(statLine(report({ stats: { outsider_attempts: 0, outsider_merged: 0 } }))).toBeNull();
     expect(statLine(report({ stats: null }))).toBeNull();
     expect(statLine(report({ stats: { outsider_attempts: 3 } }))).toBeNull();
+  });
+
+  it("shows the server's stat_line when it sends one", () => {
+    expect(statLine(report({ stat_line: "22 of 120 outside PRs merged" }))).toBe("22 of 120 outside PRs merged");
+    expect(statLine(report({ stat_line: null }))).toBeNull();
+    // Anything that isn't a short sentence falls back to the counts.
+    expect(statLine(report({ stat_line: "x".repeat(61) }))).toBe("15 of 100 outside PRs merged");
   });
 });
 
@@ -52,8 +71,8 @@ describe("ensureChip", () => {
     expect(chip.href).toBe("https://githolt.com/pallets/flask");
     expect(chip.target).toBe("_blank");
     expect(chip.rel).toContain("noopener");
-    expect(chip.textContent).toBe("Holt: Worth your time15 of 100 newcomer PRs merged");
-    expect(chip.getAttribute("aria-label")).toBe("Holt: Worth your time. 15 of 100 newcomer PRs merged.");
+    expect(chip.textContent).toBe("Holt: Worth your time15 of 100 outside PRs merged");
+    expect(chip.getAttribute("aria-label")).toBe("Holt: Worth your time. 15 of 100 outside PRs merged.");
   });
 
   it("goes right after the repo name in the legacy layout", () => {
@@ -99,8 +118,8 @@ describe("ensureChip", () => {
     document.body.innerHTML = repoHeader();
     const chip = ensureChip(document, flask, { state: "loading" })!;
     expect(chip.dataset.holtState).toBe("loading");
-    updateChip(chip, flask, { state: "found", data: report({ verdict: "insufficient_evidence" }) });
-    expect(chip.dataset.holtTone).toBe("insufficient_evidence");
+    updateChip(chip, flask, { state: "found", data: report({ verdict: "insufficient_evidence", headline: "Not enough evidence", tone: "warn" }) });
+    expect(chip.dataset.holtTone).toBe("warn");
     expect(chip.textContent).toContain("Not enough evidence");
   });
 

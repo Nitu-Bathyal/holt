@@ -20,6 +20,9 @@ FORBIDDEN_PARTS = {
     "tests",
     "trajectories",
 }
+# Benchmark code that moved to eval/. The package is the product; research
+# methods run from a clone.
+FORBIDDEN_MODULES = {"holt/baseline.py", "holt/baseline_matched.py"}
 
 
 def _members(path: Path) -> list[str]:
@@ -44,6 +47,8 @@ def check_archive(path: Path) -> list[str]:
         forbidden = sorted(parts & FORBIDDEN_PARTS)
         if forbidden:
             errors.append(f"{path.name} contains forbidden path {member!r}")
+        if any(member.endswith(module) for module in FORBIDDEN_MODULES):
+            errors.append(f"{path.name} contains benchmark-only module {member!r}")
         if Path(member).name == "**What":
             errors.append(f"{path.name} contains unexpected workspace file {member!r}")
 

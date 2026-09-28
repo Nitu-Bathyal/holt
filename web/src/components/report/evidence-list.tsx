@@ -29,14 +29,14 @@ export function EvidenceList({ evidence }: { evidence: EvidenceItem[] }) {
   const rest = evidence.slice(5);
   return (
     <div className="border-t border-line-strong">
-      <ul>{first.map((e) => <Item key={e.id} e={e} />)}</ul>
+      <ul>{first.map((e, i) => <Item key={`${i}:${e.id}`} e={e} />)}</ul>
       {rest.length > 0 && (
         <details className="group">
           <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 py-3 text-[0.88rem] text-green [&::-webkit-details-marker]:hidden">
             <span className="group-open:hidden">[ show {rest.length} more ]</span>
             <span className="hidden group-open:inline">[ show fewer ]</span>
           </summary>
-          <ul>{rest.map((e) => <Item key={e.id} e={e} />)}</ul>
+          <ul>{rest.map((e, i) => <Item key={`${i + first.length}:${e.id}`} e={e} />)}</ul>
         </details>
       )}
     </div>

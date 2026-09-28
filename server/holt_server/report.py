@@ -1,4 +1,4 @@
-"""Assessment + Trace -> the Report object in API.md.
+"""Assessment + Trace -> the Report object in API.md (`schema.Report`).
 
 The engine's `Assessment` is shaped for a terminal: rendered Markdown lines for
 the landing section, claims flattened to text. This rebuilds what the web needs
@@ -14,12 +14,17 @@ from collections.abc import Iterable
 from datetime import UTC, datetime
 from typing import Any
 
+from holt.agent import asks as asks_mod
+from holt.agent import labels
 from holt.agent import landing as landing_mod
-from holt.agent.pipeline import MODEL_NOTE_LABEL
-from holt.agent.signals import Signals, Thread, build_threads, newcomer_threads
-from holt.agent.verdict import headline
-from holt.report import Assessment
+from holt.agent import rates
+from holt.agent.landing_detection import VIA
+from holt.agent.signals import Signals, Thread, Threads, build_threads, outsider_threads
+from holt.agent.verdict import rule_codes, slow_note, slow_sentence
+from holt.report import Assessment, Claim
 from holt.types import EvidenceRecord
+
+from holt_server import schema
 
 RULES_ONLY_UNKNOWN = (
     "No AI read the conversations for this report, so it doesn't say how "
@@ -35,12 +40,6 @@ ALL_DROPPED_UNKNOWN = (
     "it up. The verdict and the numbers don't depend on the AI and still stand."
 )
 
-_OUTCOME = re.compile(r"^(?P<outcome>[^—“]+?) — “(?P<quote>.*)”$", re.S)
-_NOTHING = re.compile(r"^(?P<outcome>.+), nothing said$", re.S)
-# `field words: value`, optionally `(AI's reading, not a quote: note)`.
-_FIELD = re.compile(
-    r"^(?P<field>[a-z][a-z ]*?): (?P<value>.*?)"
-    rf"(?: \({re.escape(MODEL_NOTE_LABEL)}: (?P<note>.*)\))?$", re.S)
 
 
 def iso(value: datetime | None) -> str | None:
@@ -70,26 +69,23 @@ def url_for(evidence_id: str, records: dict[str, EvidenceRecord]) -> str | None:
     return base
 
 
-def evidence_item(text: str, evidence_id: str | None,
-                  records: dict[str, EvidenceRecord]) -> dict[str, Any] | None:
-    if not evidence_id:
+def evidence_item(claim: Claim, records: dict[str, EvidenceRecord]) -> dict[str, Any] | None:
+    """One evidence card. `kind` and `value` stay machine values (API.md); the
+    text is in plain words (agent/labels.py)."""
+    if not claim.evidence_id:
         return None
-    url = url_for(evidence_id, records)
+    url = url_for(claim.evidence_id, records)
     if not url:
         return None  # API.md: every evidence item must be clickable.
-    kind, value, body, quote = "claim", None, text, None
-    if m := _OUTCOME.match(text):
-        kind, value, quote = "outcome", m["outcome"].strip(), m["quote"].strip() or None
-        body = value.capitalize()
-    elif m := _NOTHING.match(text):
-        kind, value = "outcome", m["outcome"].strip()
-        body = f"{value.capitalize()}, with nothing said"
-    elif m := _FIELD.match(text):
-        kind, value = m["field"].strip().replace(" ", "_"), m["value"].strip()
-        body = (m["note"] or "").strip() or f"{m['field'].capitalize()}: {value}"
+    kind, value, body, quote = claim.kind or "claim", claim.value or None, claim.text, None
     if kind == "outcome" and value:
-        value = value.replace(" ", "_")
-    return {"id": evidence_id, "url": url, "kind": kind, "value": value,
+        quote = claim.quote or None
+        body = labels.outcome(value, quoted=bool(quote))
+    elif claim.kind and value:
+        said = labels.value(kind, value)
+        said = said[:1].upper() + said[1:] + ("" if said.endswith((".", "!", "?")) else ".")
+        body = f"{said} {claim.note}" if claim.note else said
+    return {"id": claim.evidence_id, "url": url, "kind": kind, "value": value,
             "text": body, "quote": quote}
 
 
@@ -97,18 +93,23 @@ RULES_EVIDENCE_EACH = 4
 
 
 def counted_examples(threads: dict[str, Thread],
-                     records: dict[str, EvidenceRecord]) -> list[dict[str, Any]]:
-    """Recent first-timer pull requests behind the counts, for a report with no AI.
+                     records: dict[str, EvidenceRecord],
+                     as_of: datetime | None = None,
+                     settle_hours: float = 0.0) -> list[dict[str, Any]]:
+    """Recent outsider pull requests behind the counts, for a report with no AI.
 
     Without a model the engine cites nothing, which leaves a beginner with
     numbers and no way to look for themselves. These are picked by arithmetic
     only (newest merged, newest with no reply), so they say nothing the counts
     do not already say; they just make the counts clickable.
     """
-    outsiders = sorted(newcomer_threads(threads), key=lambda t: t.opened_at, reverse=True)
+    outsiders = sorted((t for t in outsider_threads(threads) if not rates.excluded(t)),
+                       key=lambda t: t.opened_at, reverse=True)
     picks = [("merged", t) for t in outsiders if t.merged][:RULES_EVIDENCE_EACH]
+    # The pull requests the "no reply" count is made of: open, unanswered and
+    # past the settle window. Not a silent close, and not one opened yesterday.
     picks += [("no_reply", t) for t in outsiders
-              if not t.merged and not t.engaged][:RULES_EVIDENCE_EACH]
+              if rates.outcome(t, as_of, settle_hours) == rates.IGNORED][:RULES_EVIDENCE_EACH]
     out = []
     for value, t in picks:
         evidence_id = f"{t.key}:opened"
@@ -117,8 +118,11 @@ def counted_examples(threads: dict[str, Thread],
             continue
         title = (records.get(evidence_id).payload.get("title") or "").strip() \
             if evidence_id in records else ""
-        what = "was merged" if value == "merged" else "had no reply from anyone when we looked"
-        text = f"First-time contributor's pull request #{t.number} {what}"
+        what = "had no reply from anyone when we looked"
+        if value == "merged":
+            # GitHub shows an off-button landing as closed; say how it went in.
+            what = f"landed {VIA[t.landed_via]}" if t.landed_via else "was merged"
+        text = f"Outside contributor's pull request #{t.number} {what}"
         out.append({"id": evidence_id, "url": url, "kind": "outsider_pr", "value": value,
                     "text": text + (f": “{title}”" if title else ""), "quote": None})
     return out
@@ -134,14 +138,47 @@ def split_limits(limits: str) -> list[str]:
 
 
 def stats(signals: Signals) -> dict[str, Any]:
+    # Attempts are the decided ones, the engine's denominator for every rate, so
+    # a percentage on a page is the one the verdict was computed from.
     return {
-        "outsider_attempts": signals.outsider_threads,
+        "outsider_attempts": signals.outsider_judgeable,
         "outsider_merged": signals.outsider_merged,
         "distinct_outsiders": signals.distinct_outsider_authors,
-        "first_time_merged_authors": signals.distinct_merged_authors,
+        "first_time_merged_authors": signals.distinct_first_timer_merged_authors,
         "no_reply": signals.outsider_ignored,
         "median_first_response_hours": signals.median_first_response_hours,
         "bot_share": round(signals.bot_share, 3),
+        "still_open": signals.outsider_still_open,
+        "closed_silently": signals.outsider_closed_silently,
+    }
+
+
+def decided_only(threads: Threads, as_of: datetime | None,
+                 settle_hours: float) -> Threads:
+    """The threads without the outside pull requests the counts leave out
+    (still open, drafts, spam), so where work landed is counted over the same
+    pull requests as the stats and the numbers line above it."""
+    outsiders = outsider_threads(threads)
+    keep = {t.key for t in rates.split(outsiders, as_of, settle_hours).decided}
+    drop = {t.key for t in outsiders} - keep
+    out = Threads({k: t for k, t in threads.items() if k not in drop})
+    out.team = threads.team
+    return out
+
+
+def sample(threads: dict[str, Thread]) -> dict[str, Any]:
+    """What the counts were read from, and who was left out before counting."""
+    opened = [t.opened_at for t in threads.values()]
+    outsiders = {t.key for t in outsider_threads(threads)}
+    bots = [t for t in threads.values() if t.author_is_bot]
+    team = [t for t in threads.values() if not t.author_is_bot and t.key not in outsiders]
+    return {
+        "pull_requests": len(threads),
+        "first_opened": iso(min(opened)) if opened else None,
+        "last_opened": iso(max(opened)) if opened else None,
+        "team_pull_requests": len(team),
+        "team_people": len({t.author for t in team}),
+        "bot_pull_requests": len(bots),
     }
 
 
@@ -157,15 +194,16 @@ def build(
 ) -> dict[str, Any]:
     by_id = {r.evidence_id: r for r in records}
     threads = build_threads(by_id.values())
-    where = landing_mod.compute(threads)
+    as_of = assessment.as_of or generated_at or datetime.now(UTC)
+    where = landing_mod.compute(decided_only(threads, as_of, signals.settle_hours))
 
     evidence = []
     for claim in assessment.claims:
-        item = evidence_item(claim.text, claim.evidence_id, by_id)
+        item = evidence_item(claim, by_id)
         if item is not None:
             evidence.append(item)
     if mode == "rules":
-        evidence += counted_examples(threads, by_id)
+        evidence += counted_examples(threads, by_id, as_of, signals.settle_hours)
 
     unknowns: list[str] = []
     if mode == "ai":
@@ -177,21 +215,70 @@ def build(
     if not signals.outsider_threads:
         unknowns.append(NO_OUTSIDERS_UNKNOWN)
 
-    return {
+    # Validated here, so a report that breaks the contract fails its job
+    # instead of reaching a page. The dump includes the derived fields
+    # (headline, tone, verdict_line, odds), so the stored job result and the
+    # SSE `done` event carry them too.
+    return schema.Report.model_validate({
         "repo": repo,
         "mode": mode,
         "days": assessment.contributor_days,
         "verdict": assessment.verdict.value,
-        "headline": headline(assessment.verdict),
+        # Rules mode computes a bottom line too ("headline. deciding rule"), but
+        # the verdict block already says exactly that, so only AI mode sends it.
+        "bottom_line": (assessment.bottom_line or None) if mode == "ai" else None,
         "summary": (assessment.summary or None) if mode == "ai" else None,
         "stats": stats(signals),
         "decided_by": [str(r) for r in assessment.rules],
+        "rule_codes": [c or "" for c in rule_codes(assessment.rules)],
         "unknowns": unknowns,
-        "landing": [{"path": a.path, "merged": a.landed, "attempted": a.attempted}
-                    for a in where.landed],
-        "never_landed": [{"path": a.path, "attempted": a.attempted} for a in where.never],
+        "landing": [{"path": a.path, "merged": a.landed, "attempted": a.attempted,
+                     "is_file": a.is_file} for a in where.landed],
+        "never_landed": [{"path": a.path, "attempted": a.attempted, "is_file": a.is_file}
+                         for a in where.never],
         "evidence": evidence,
         "evidence_until": iso(assessment.as_of),
         "generated_at": iso(generated_at or datetime.now(UTC)),
         "cost": cost if mode == "ai" else None,
-    }
+        "sample": sample(threads),
+        # Rules reports from a live reading: every budget gets the same verdict
+        # (verdict.py), so another `days` is this report with its note redone.
+        "budget_independent": mode == "rules" and signals.settle_hours > 0,
+        "asks": [{"code": a.code, "url": a.url} for a in asks_mod.read(
+            by_id.values(), {t.key for t in outsider_threads(threads)})],
+    }).model_dump(mode="json")
+
+
+# --- another time budget, from a report already made ----------------------------
+
+# The lines that read the reader's budget, and the ones a slow line goes before.
+_BUDGET_CODES = ("slow", "slow_note")
+_THIN_EVIDENCE = ("too_few_attempts", "few_merges", "few_people")
+
+
+def retime(report: dict[str, Any], days: int) -> dict[str, Any] | None:
+    """`report` as it reads for a `days`-day budget, or None if it can't be.
+
+    Only for a report marked `budget_independent`: its verdict is the same
+    for every budget (verdict.py), and the budget shows only in whether the
+    typical first reply is "slow". So the lines that say so are taken out and
+    put back for `days`, where the engine puts them: the note right after the
+    merge count under "Worth your time", and the slow line before the reason
+    the evidence is thin. No GitHub read, no model.
+    """
+    if not report.get("budget_independent") or report.get("mode") != "rules":
+        return None
+    lines = [(t, c) for t, c in zip(report.get("decided_by") or [], report.get("rule_codes") or [])
+             if c not in _BUDGET_CODES]
+    median = (report.get("stats") or {}).get("median_first_response_hours")
+    if median is not None and median > days * 24:
+        codes = [c for _, c in lines]
+        if report.get("verdict") == "viable" and "merges" in codes:
+            note = slow_note(median, days)
+            lines.insert(codes.index("merges") + 1, (str(note), note.code))
+        elif report.get("verdict") == "insufficient_evidence":
+            at = next((i for i, c in enumerate(codes) if c in _THIN_EVIDENCE), None)
+            if at is not None:
+                lines.insert(at, (slow_sentence(median, days), "slow"))
+    return {**report, "days": days,
+            "decided_by": [t for t, _ in lines], "rule_codes": [c for _, c in lines]}

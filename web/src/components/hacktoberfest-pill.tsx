@@ -23,7 +23,7 @@ export function HacktoberfestPill({ year, short }: { year: number; short: string
         <strong className="shrink-0 font-semibold">Hacktoberfest {year}</strong>
         <span className="hidden text-muted sm:inline">· Oct 1–31 ·</span>
         <span className="truncate text-muted">
-          {short} <span className="hidden sm:inline">· limited time</span>
+          {short}
         </span>
         <span aria-hidden="true">→</span>
       </Link>

@@ -1,140 +1,89 @@
-// Types for the Holt HTTP API. Source of truth: API.md at the repo root.
+// Types for the Holt HTTP API (API.md). The shapes come from the server's
+// pydantic models via ./api-schema.ts, which is generated: change the server
+// (server/holt_server/schema.py) and run server/scripts/api_types.sh.
+import type * as S from "./api-schema";
 
-export type Mode = "rules" | "ai";
-export type Verdict = "viable" | "not_viable" | "insufficient_evidence";
+export type Report = S.Report;
+export type Stats = S.Stats;
+export type LandingPath = S.LandingPath;
+export type EvidenceItem = S.EvidenceItem;
+export type Odds = S.Odds;
+export type Counted = S.Counted;
+export type StarterIssue = S.StarterIssue;
+export type FindResult = S.FindResult;
+// The web always sends every field; the server has defaults for them.
+export type FindQuery = Required<S.FindIn>;
+export type JobStatus = S.JobStatus;
+export type FindJobStatus = S.FindJobStatus;
+export type Me = S.Me;
+export type HistoryItem = S.HistoryItem;
+export type GitHubConnection = S.GitHubConnection;
+export type Contributions = S.Contributions;
+export type ContributionPR = S.ContributionPullRequest;
+export type ApiError = S.Error;
+export type FeedbackOut = S.FeedbackOut;
+export type DiscoverOut = S.DiscoverOut;
+export type DiscoverRepo = S.DiscoverRepo;
+export type DiscoverSort = S.DiscoverOut["sort"];
+export type ProfileOut = S.ProfileOut;
+export type ProfilePrefs = S.ProfilePrefs;
+export type Recommendations = S.Recommendations;
+export type Recommendation = S.Recommendation;
+export type RecommendationBasis = S.RecommendationBasis;
+export type SavedList = S.SavedList;
+export type SavedItem = S.SavedItem;
+export type SavedState = S.SavedState;
+export type ContributionType = ProfilePrefs["contributions"][number];
+export type Level = ProfilePrefs["level"];
 
-export type ApiErrorCode =
-  | "unauthorized"
-  | "not_found"
-  | "invalid_repo"
-  | "invalid_request"
-  | "rate_limited"
-  | "quota_exceeded"
-  | "needs_key"
-  | "upstream"
-  | "internal"
-  | "not_implemented";
-
-export interface ApiError {
-  code: ApiErrorCode;
-  message: string;
-  retry_after?: number;
+export type Mode = Report["mode"];
+export type Verdict = Report["verdict"];
+/** The colour of a verdict or of the odds, chosen by the server. */
+export type Tone = Report["tone"];
+export type ApiErrorCode = ApiError["code"];
+export type Credits = S.Credits;
+export type Pack = S.PackOffer;
+export type Packs = S.Packs;
+export type Checkout = S.Checkout;
+export type Order = S.Order;
+export type OrderConfirmed = S.OrderConfirmed;
+/** What Razorpay Checkout hands the page after a successful payment. */
+export interface RazorpaySuccess {
+  razorpay_order_id: string;
+  razorpay_payment_id: string;
+  razorpay_signature: string;
 }
 
-export interface Stats {
-  outsider_attempts: number;
-  outsider_merged: number;
-  distinct_outsiders: number;
-  first_time_merged_authors: number;
-  no_reply: number;
-  median_first_response_hours: number | null;
-  bot_share: number;
+export type Access = S.Access;
+export type Playbook = S.Playbook;
+export type PlaybookItem = S.PlaybookItem;
+export type PlaybookSource = S.PlaybookSource;
+export type PlaybookClosingReason = S.PlaybookClosingReason;
+export type PlaybookState = S.PlaybookState;
+export type PlaybookSectionKey = S.PlaybookTeaserSection["key"];
+export type Preflight = S.Preflight;
+export type PreflightCheck = S.PreflightCheck;
+export type PreflightState = S.PreflightState;
+export type PreflightVerdict = S.PreflightCheck["verdict"];
+export type PreflightFor = S.PreflightFor;
+export type PreflightStart = S.Queued;
+export type PlanOffer = S.PlanOffer;
+export type Plans = S.Plans;
+export type SubscriptionCheckout = S.SubscriptionCheckout;
+export type Subscription = S.SubscriptionInfo;
+export type SubscriptionCharge = S.SubscriptionChargeInfo;
+export type MySubscription = S.MySubscription;
+export type SubscriptionConfirmed = S.SubscriptionConfirmed;
+/** What Razorpay Checkout hands the page after the first payment of a subscription. */
+export interface RazorpaySubscriptionSuccess {
+  razorpay_payment_id: string;
+  razorpay_subscription_id: string;
+  razorpay_signature: string;
 }
 
-export interface LandingPath {
-  path: string;
-  merged: number;
-  attempted: number;
-}
-
-export interface EvidenceItem {
-  id: string;
-  url: string;
-  kind: string;
-  value: string;
-  text: string;
-  quote: string | null;
-}
-
-export interface Report {
-  repo: string;
-  mode: Mode;
-  days: number;
-  verdict: Verdict;
-  headline: string;
-  summary: string | null;
-  stats: Stats;
-  decided_by: string[];
-  unknowns: string[];
-  landing: LandingPath[];
-  never_landed: { path: string; attempted: number }[];
-  evidence: EvidenceItem[];
-  evidence_until: string;
-  generated_at: string;
-  cost: { model: string; input_tokens: number; output_tokens: number } | null;
-}
-
-export interface StarterIssue {
-  number: number;
-  title: string;
-  url: string;
-  labels: string[];
-  created_at: string;
-  comments: number;
-  why: string[];
-}
-
-export type AnalysisStart =
-  | { status: "done"; report: Report }
-  | { status: "queued"; job_id: string };
-
-export interface JobStatus {
-  status: "queued" | "running" | "done" | "error";
-  stage: string;
-  progress: number;
-  report: Report | null;
-  error: ApiError | null;
-}
-
-export interface FindQuery {
-  languages: string[];
-  topics: string[];
-  days: number;
-  hacktoberfest: boolean;
-  limit: number;
-}
-
-export interface FindResult {
-  repo: string;
-  headline: string;
-  verdict: Verdict;
-  stats: Partial<Stats>;
-  issues: StarterIssue[];
-  /** Not in API.md v0; shown when present. */
-  description?: string;
-  language?: string;
-  stars?: number;
-}
-
-export type FindStart = { status: "done"; results: FindResult[] } | { status: "queued"; job_id: string };
-
-export interface FindJobStatus {
-  status: "queued" | "running" | "done" | "error";
-  stage: string;
-  progress: number;
-  results: FindResult[] | null;
-  error: ApiError | null;
-}
-
-export type ByokProvider = "openrouter" | "openai" | "anthropic" | "gemini";
-
-export interface Me {
-  plan: string;
-  quota: { ai_used: number; ai_limit: number; resets_at: string };
-  byok: { provider: ByokProvider; model: string; set: boolean } | null;
-}
-
-/** GET /v1/me/history -> {"items": HistoryItem[]} */
-export interface HistoryItem {
-  job_id: string;
-  status: "queued" | "running" | "done" | "error";
-  repo: string;
-  mode: Mode;
-  days: number;
-  verdict: Verdict | null;
-  headline: string | null;
-  created_at: string;
-}
+export type AnalysisStart = S.AnalysisDone | S.Queued;
+export type PlaybookStart = S.PlaybookDone | S.Queued;
+export type FindStart = S.FindDone | S.Queued;
 
 /** Result of a call: either data or a plain-English error. */
 export type Result<T> = { ok: true; data: T } | { ok: false; error: ApiError; status: number };

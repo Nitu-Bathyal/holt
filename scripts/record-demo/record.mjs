@@ -7,6 +7,10 @@
 //   OUT_DIR         where raw .webm files go (default scripts/record-demo/out)
 //   PLAYWRIGHT_CORE path to a playwright-core package (default: resolve it, then ~/.local/share/cx-tools)
 //   CHROMIUM_PATH   browser binary (default: newest cached headless shell in ~/.cache/ms-playwright)
+//   STAGING_CF_ACCESS_CLIENT_ID / STAGING_CF_ACCESS_CLIENT_SECRET
+//                   a Cloudflare Access service token, when the site is behind Access. It is
+//                   traded for Access's cookie, which only ever goes to HOLT_URL's host
+//                   (e2e/access.mjs).
 //
 // One browser, one clip at a time; the browser is always closed. Then run
 // scripts/record-demo/encode.sh to make the mp4/gif files in assets/.
@@ -14,12 +18,29 @@ import { createRequire } from "node:module";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { accessCookie, accessToken } from "../../e2e/access.mjs";
 
 const require = createRequire(import.meta.url);
 const HOLT_URL = (process.env.HOLT_URL || "https://staging.githolt.com").replace(/\/$/, "");
 const HOST = new URL(HOLT_URL).host;
 const OUT = path.resolve(process.env.OUT_DIR || path.join(path.dirname(new URL(import.meta.url).pathname), "out"));
 const REPO_URL = "https://github.com/pallets/flask";
+const token = accessToken();
+const ACCESS = token ? await accessCookie(HOLT_URL, token) : null;
+
+/** fetch() for the site; behind Access, the cookie goes along, and only to the site's host. */
+async function siteFetch(url, init = {}) {
+  if (!ACCESS) return fetch(url, init);
+  for (let hops = 0; hops < 10; hops++) {
+    const ours = new URL(url).hostname === ACCESS.domain;
+    const headers = { ...init.headers, ...(ours ? { Cookie: `${ACCESS.name}=${ACCESS.value}` } : {}) };
+    const res = await fetch(url, { ...init, headers, redirect: "manual" });
+    const to = res.headers.get("location");
+    if (res.status < 300 || res.status >= 400 || !to) return res;
+    url = new URL(to, url).href;
+  }
+  throw new Error(`too many redirects from ${url}`);
+}
 
 function loadPlaywright() {
   const candidates = [process.env.PLAYWRIGHT_CORE, "playwright-core", path.join(os.homedir(), ".local/share/cx-tools/node_modules/playwright-core")];
@@ -146,6 +167,7 @@ async function record(chromium, exe, name, sizeKey, flow) {
       colorScheme: "dark",
       recordVideo: { dir, size: { width: s.viewport.width * s.scale, height: s.viewport.height * s.scale } },
     });
+    if (ACCESS) await ctx.addCookies([ACCESS]);
     await ctx.addInitScript(() => {
       try {
         localStorage.setItem("holt-theme", "dark");
@@ -175,12 +197,12 @@ async function record(chromium, exe, name, sizeKey, flow) {
  */
 async function warm() {
   const url = `${HOLT_URL}/hacktoberfest?lang=python`;
-  const html = await fetch(url).then((r) => r.text()).catch(() => "");
+  const html = await siteFetch(url).then((r) => r.text()).catch(() => "");
   if (html.includes("Pick one of these")) return console.log("warm: find already cached");
   if (html.includes("Too many checks")) throw new Error("staging is rate-limiting this IP; try again later");
   const job = html.match(/jobId\\?"?:\\?"([A-Za-z0-9_-]{1,64})/)?.[1];
   if (!job) return console.log("warm: no job id found; recording will show the wait");
-  const res = await fetch(`${HOLT_URL}/api/find/${job}/events`, { signal: AbortSignal.timeout(180_000) }).catch(() => null);
+  const res = await siteFetch(`${HOLT_URL}/api/find/${job}/events`, { signal: AbortSignal.timeout(180_000) }).catch(() => null);
   const text = res ? await res.text().catch(() => "") : "";
   console.log(`warm: find ${job} ${text.includes("event: done") ? "done" : "did not finish"}`);
 }

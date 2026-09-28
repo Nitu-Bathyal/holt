@@ -5,10 +5,12 @@ from __future__ import annotations
 import asyncio
 import json
 import sys
+import time
 import types
 
 import pytest
-from holt_server.db import Job, User
+from holt_server import api
+from holt_server.db import Job
 from holt_server.errors import ApiError
 from sqlalchemy import select
 
@@ -168,6 +170,82 @@ def test_events_stream_stages_then_done(h):
     assert progress == sorted(progress)
 
 
+def test_progress_is_recorded_in_the_order_it_was_emitted(h, monkeypatch):
+    # The engine emits two steps back to back (the gate is open). When the
+    # first one's write is slow, the second must still wait for it; before,
+    # it overtook it and subscribers saw progress go backwards.
+    runner = h.svc.runner
+    write, publish = runner._progress, runner.hub.publish
+    published: list[tuple[str, dict]] = []
+
+    async def slow_first_step(job_id, stage, progress):
+        if progress == 0.1:
+            await asyncio.sleep(0.2)
+        await write(job_id, stage, progress)
+
+    def record(job_id, event, data):
+        published.append((event, data))
+        publish(job_id, event, data)
+
+    monkeypatch.setattr(runner, "_progress", slow_first_step)
+    monkeypatch.setattr(runner.hub, "publish", record)
+    assert h.wait(h.post("/v1/analyses", {"repo": "pallets/flask"}).json()["job_id"]
+                  )["status"] == "done"
+    assert [e for e, _ in published] == ["stage", "stage", "stage", "done"]
+    assert [d["progress"] for _, d in published[:-1]] == [0.01, 0.1, 0.5]
+
+
+def test_events_skip_steps_the_table_already_covers(h, monkeypatch):
+    # The stream subscribes, then reads the table. A step published in between
+    # is already in the table's answer; sending it afterwards stepped backwards.
+    h.engine.gate.clear()
+    job = h.post("/v1/analyses", {"repo": "pallets/flask"}).json()["job_id"]
+    deadline = time.monotonic() + 10
+    while h.get(f"/v1/analyses/{job}").json()["progress"] < 0.1:
+        assert time.monotonic() < deadline
+        time.sleep(0.02)
+    read = api.load_job
+
+    async def step_arrives_during_read(svc, job_id, kind):
+        found = await read(svc, job_id, kind)
+        if job_id in svc.runner.hub.watched():  # the stream's own read
+            svc.runner.hub.publish(job_id, "stage", {"stage": "Starting", "progress": 0.01})
+            h.engine.gate.set()
+        return found
+
+    monkeypatch.setattr(api, "load_job", step_arrives_during_read)
+    with h.client.stream("GET", f"/v1/analyses/{job}/events", headers=h.headers()) as r:
+        events = parse_sse(r.read().decode())
+    assert [(e, d.get("progress")) for e, d in events] == [
+        ("stage", 0.1), ("stage", 0.5), ("done", None)]
+
+
+def test_a_started_job_hears_no_stale_queue_position(h, monkeypatch):
+    # Queue positions are read before they are sent; a job claimed in between
+    # has already said "Starting" and must not be told it is waiting again.
+    runner = h.svc.runner
+
+    async def stale_positions(job_ids=None):
+        return {"j1": 1, "j2": 2}
+
+    async def announce() -> list[tuple[str, dict]]:
+        started, waiting = runner.hub.subscribe("j1"), runner.hub.subscribe("j2")
+        runner._running["j1"] = 0
+        try:
+            await runner.announce_queue()
+        finally:
+            runner._running.pop("j1")
+            runner.hub.unsubscribe("j1", started)
+            runner.hub.unsubscribe("j2", waiting)
+        assert started.empty()
+        return [waiting.get_nowait()]
+
+    monkeypatch.setattr(runner, "queue_positions", stale_positions)
+    assert h.client.portal.call(announce) == [
+        ("stage", {"stage": "In the queue: 1 check ahead of yours", "progress": 0.0,
+                   "queue_position": 2})]
+
+
 def test_events_after_finish_replay_the_result(h):
     job = h.post("/v1/analyses", {"repo": "pallets/flask"}).json()["job_id"]
     h.wait(job)
@@ -211,7 +289,7 @@ def test_cache_hits_do_not_count(make_harness):
         assert h.post("/v1/analyses", {"repo": "octo/one"}, ip="9.9.9.9").status_code == 200
 
 
-# --- AI mode, quota and BYOK --------------------------------------------------------
+# --- AI mode (credits have their own file) ------------------------------------------
 
 
 def test_ai_needs_sign_in(h):
@@ -220,69 +298,43 @@ def test_ai_needs_sign_in(h):
     assert r.json()["error"]["code"] == "needs_key"
 
 
-def test_ai_without_server_key_or_byok_needs_key(h):
-    r = h.post("/v1/analyses", {"repo": "pallets/flask", "mode": "ai"}, user="u1")
-    assert r.json()["error"]["code"] == "needs_key"
-
-
-def test_ai_quota(make_harness):
-    h = make_harness(OPENROUTER_API_KEY="sk-or-server", HOLT_FREE_AI_LIMIT=2,
-                     OPENROUTER_MODEL="some/model")
-    for repo in ("octo/one", "octo/two"):
-        job = h.post("/v1/analyses", {"repo": repo, "mode": "ai"}, user="u1").json()["job_id"]
-        assert h.wait(job)["status"] == "done"
-    assert h.model_specs[0].api_key == "sk-or-server"
-    assert h.model_specs[0].model == "some/model"
-    assert h.model_specs[0].provider == "openrouter"
-
-    me = h.get("/v1/me", user="u1").json()
-    assert me["quota"]["ai_used"] == 2 and me["quota"]["ai_limit"] == 2
-    assert me["plan"] == "free" and me["byok"] is None
-
-    r = h.post("/v1/analyses", {"repo": "octo/three", "mode": "ai"}, user="u1")
-    assert r.status_code == 402
-    assert r.json()["error"]["code"] == "quota_exceeded"
-    # Someone else still has theirs, and cached AI reports cost nothing.
+def test_ai_uses_the_server_model(make_harness):
+    h = make_harness(OPENROUTER_API_KEY="sk-or-server", OPENROUTER_MODEL="openai/gpt-5")
+    job = h.post("/v1/analyses", {"repo": "octo/one", "mode": "ai"}, user="u1").json()["job_id"]
+    assert h.wait(job)["status"] == "done"
+    spec = h.model_specs[0]
+    assert (spec.provider, spec.model, spec.api_key) == ("openrouter", "openai/gpt-5", "sk-or-server")
+    # A cached AI report costs nothing.
     assert h.post("/v1/analyses", {"repo": "octo/one", "mode": "ai"},
                   user="u1").status_code == 200
 
 
-def test_failed_ai_job_is_refunded(make_harness):
-    h = make_harness(OPENROUTER_API_KEY="sk-or-server")
-    h.engine.error = ApiError("upstream", "model down")
-    job = h.post("/v1/analyses", {"repo": "octo/one", "mode": "ai"}, user="u1").json()["job_id"]
-    assert h.wait(job)["status"] == "error"
-    assert h.get("/v1/me", user="u1").json()["quota"]["ai_used"] == 0
+def test_a_model_in_the_request_is_ignored(make_harness):
+    # Model choice is server configuration. Old clients that still send one
+    # aren't refused, and the field changes nothing: not the model, not the job.
+    h = make_harness(OPENROUTER_API_KEY="sk-or-server", OPENROUTER_MODEL="openai/gpt-5")
+    h.engine.gate.clear()
+    picked = h.post("/v1/analyses", {"repo": "octo/one", "mode": "ai", "model": "claude-opus-5",
+                                     "params": {"model": "claude-opus-5"}}, user="u1")
+    assert picked.status_code == 202
+    plain = h.post("/v1/analyses", {"repo": "octo/one", "mode": "ai"}, user="u2")
+    assert plain.status_code == 202
+    assert plain.json()["job_id"] == picked.json()["job_id"]  # same cache key, one job
+    h.engine.gate.set()
+    assert h.wait(picked.json()["job_id"])["status"] == "done"
+    assert [s.model for s in h.model_specs] == ["openai/gpt-5"]
+    (row,) = db_rows(h, Job)
+    assert "claude-opus-5" not in json.dumps({"p": row.params, "k": row.dedupe_key})
+    # And the cached report answers either request.
+    assert h.post("/v1/analyses", {"repo": "octo/one", "mode": "ai", "model": "claude-opus-5"},
+                  user="u1").status_code == 200
 
 
-def test_byok_roundtrip_and_use(make_harness):
-    h = make_harness(OPENROUTER_API_KEY="sk-or-server")
-    assert h.get("/v1/me").status_code == 401
-
-    r = h.put("/v1/me/byok", {"provider": "anthropic", "api_key": "sk-ant-secret-123"},
-              user="u2")
-    assert r.status_code == 200
-    assert r.json()["byok"] == {"provider": "anthropic", "model": "claude-haiku-4-5",
-                                "set": True}
-    assert "sk-ant-secret-123" not in r.text
-    assert "sk-ant-secret-123" not in h.get("/v1/me", user="u2").text
-
-    user = [u for u in db_rows(h, User) if u.id == "u2"][0]
-    assert user.byok_cipher and "sk-ant-secret-123" not in user.byok_cipher
-
-    job = h.post("/v1/analyses", {"repo": "octo/one", "mode": "ai"}, user="u2").json()["job_id"]
-    assert h.wait(job)["status"] == "done"
-    spec = h.model_specs[-1]
-    assert (spec.provider, spec.api_key, spec.byok) == ("anthropic", "sk-ant-secret-123", True)
-    assert h.get("/v1/me", user="u2").json()["quota"]["ai_used"] == 0
-
-    r = h.delete("/v1/me/byok", user="u2")
-    assert r.status_code == 200 and r.json()["byok"] is None
-
-
-def test_byok_rejects_unknown_provider(h):
-    r = h.put("/v1/me/byok", {"provider": "acme", "api_key": "sk-123456789"}, user="u1")
-    assert r.status_code == 400
+def test_bring_your_own_key_routes_are_gone(h):
+    assert h.put("/v1/me/byok", {"provider": "openai", "api_key": "sk-123456789"},
+                 user="u1").status_code in (404, 405)
+    assert h.delete("/v1/me/byok", user="u1").status_code in (404, 405)
+    assert "byok" not in h.get("/v1/me", user="u1").json()
 
 
 def test_history(h):
@@ -296,12 +348,11 @@ def test_history(h):
 
 def test_secrets_never_stored_on_jobs(make_harness):
     h = make_harness(OPENROUTER_API_KEY="sk-or-server")
-    h.put("/v1/me/byok", {"provider": "openai", "api_key": "sk-openai-xyz-999"}, user="u4")
     job = h.post("/v1/analyses", {"repo": "octo/one", "mode": "ai"}, user="u4").json()["job_id"]
     h.wait(job)
     for row in db_rows(h, Job):
         dumped = json.dumps({"p": row.params, "r": row.result, "e": row.error})
-        assert "sk-openai-xyz-999" not in dumped and "sk-or-server" not in dumped
+        assert "sk-or-server" not in dumped
 
 
 # --- badge --------------------------------------------------------------------------
@@ -318,8 +369,22 @@ def test_badge(h):
     assert len(jobs) == 1 and jobs[0].mode == "rules"
     h.wait(jobs[0].id)
     r = h.client.get("/badge/Pallets/Flask.svg")
-    assert "newcomer-friendly" in r.text and "not newcomer" not in r.text
+    assert "merges outsiders · replies in ~3h" in r.text
     assert "https://githolt.com/pallets/flask\"" in r.text
+
+
+@pytest.mark.parametrize("verdict", ["not_viable", "insufficient_evidence"])
+def test_badge_turns_neutral_when_a_repo_stops_passing(make_harness, verdict):
+    h = make_harness()
+    h.client.get("/badge/octo/one.svg")
+    h.wait(db_rows(h, Job)[0].id)
+    assert "merges outsiders" in h.client.get("/badge/octo/one.svg").text
+    h.engine.verdict = verdict
+    h.wait(h.post("/v1/analyses", {"repo": "octo/one", "refresh": True}).json()["job_id"])
+    r = h.client.get("/badge/octo/one.svg")
+    assert "Holt: see report" in r.text and "merges" not in r.text
+    assert "#1a7f37" not in r.text  # never green, and never a red verdict either
+    assert "not worth" not in r.text.lower() and "enough evidence" not in r.text
 
 
 # --- starter issues and find ---------------------------------------------------------
@@ -371,7 +436,7 @@ def test_starter_issues(h, fake_starter):
     assert body["issues"] == [{
         "number": 7, "title": "Fix typo", "url": "https://github.com/pallets/flask/issues/7",
         "labels": ["good first issue"], "created_at": "2026-09-01T00:00:00Z", "comments": 1,
-        "why": ["Labelled good first issue"],
+        "why": ["Labelled good first issue"], "beginner": True, "areas": ["docs"],
     }]
     assert fake_starter["issues"][0] == "pallets/flask"
     assert fake_starter["issues"][2] == 50  # ranked once at the cache size, sliced here
@@ -385,6 +450,7 @@ def test_find(h, fake_starter):
     assert [x["repo"] for x in body["results"]] == ["octo/one"]
     assert body["results"][0]["headline"] == "Worth your time"
     assert body["results"][0]["stats"] == {"outsider_merged": 4}
+    assert body["results"][0]["tone"] == "good"
     assert fake_starter["find"] == (["python"], [], True, 20)  # computed for >= 20
     # find jobs are not analyses
     assert h.get(f"/v1/analyses/{r.json()['job_id']}").status_code == 404
@@ -416,7 +482,8 @@ def test_concurrent_identical_requests_share_one_job(make_harness):
         assert {r.status_code for r in rs} == {202}
         assert len({r.json()["job_id"] for r in rs}) == 1
         assert len([j for j in db_rows(h, Job) if j.repo == "octo/one"]) == 1
-        assert h.get("/v1/me", user="racer").json()["quota"]["ai_used"] == 1
+        # One job, one credit.
+        assert h.get("/v1/me", user="racer").json()["credits"]["balance"] == 2
     finally:
         h.engine.gate.set()
 
@@ -457,12 +524,22 @@ def test_user_jobs_run_before_badge_refreshes(make_harness):
     h.client.get("/badge/octo/two.svg")
     user_job = h.post("/v1/analyses", {"repo": "octo/three"}).json()["job_id"]
     runner = h.svc.runner
-    first = h.client.portal.call(runner._claim)
+    # The background lane takes a waiting person's job before any badge work.
+    first = h.client.portal.call(runner._claim, "background")
     assert first.id == user_job
-    second = h.client.portal.call(runner._claim)
+    second = h.client.portal.call(runner._claim, "background")
     assert second.priority == 10
     # One badge job at a time: the other badge job waits even with a free worker.
-    assert h.client.portal.call(runner._claim) is None
+    assert h.client.portal.call(runner._claim, "background") is None
+
+
+def test_user_lane_never_takes_badge_work(make_harness):
+    h = make_harness(run_jobs=False)
+    h.client.get("/badge/octo/one.svg")
+    runner = h.svc.runner
+    assert h.client.portal.call(runner._claim, "user") is None
+    user_job = h.post("/v1/analyses", {"repo": "octo/two"}).json()["job_id"]
+    assert h.client.portal.call(runner._claim, "user").id == user_job
 
 
 def test_joining_a_badge_job_promotes_it(make_harness):
@@ -513,15 +590,6 @@ def test_result_from_a_runner_that_lost_the_job_is_dropped(make_harness):
     assert h.get("/v1/reports/octo/one").status_code == 404
 
 
-def test_refund_only_hits_the_month_charged(make_harness):
-    h = make_harness(run_jobs=False, OPENROUTER_API_KEY="sk-or-server")
-    h.post("/v1/analyses", {"repo": "octo/one", "mode": "ai"}, user="m1")
-    job = h.client.portal.call(h.svc.runner._claim)
-    job.params = {"ai_period": "2000-01"}  # charged in some earlier month
-    h.client.portal.call(h.svc.runner._fail, job, ApiError("upstream", "x"))
-    assert h.get("/v1/me", user="m1").json()["quota"]["ai_used"] == 1
-
-
 def test_docs_only_in_dev(make_harness):
     assert make_harness().client.get("/openapi.json").status_code == 404
     dev = make_harness(HOLT_ENV="dev")
@@ -544,16 +612,17 @@ def test_report_list_for_sitemaps(h):
     assert len(h.get("/v1/reports?limit=2").json()["reports"]) == 2
 
 
-def test_badge_work_runs_even_with_a_single_worker(make_harness):
-    """Staging runs one worker; badge and warm jobs must not starve there."""
+def test_badge_work_has_its_own_lane(make_harness):
+    """Staging runs one user worker; badge and warm jobs must not starve there,
+    and must not take that worker either."""
     h = make_harness(run_jobs=False, HOLT_JOB_CONCURRENCY=1)
-    assert h.svc.runner.badge_concurrency == 1
+    runner = h.svc.runner
+    assert (runner.concurrency, runner.badge_concurrency) == (1, 1)
     h.client.get("/badge/octo/one.svg")
     user_job = h.post("/v1/analyses", {"repo": "octo/two"}).json()["job_id"]
-    runner = h.svc.runner
-    first = h.client.portal.call(runner._claim)
-    assert first.id == user_job  # the user's job still goes first
-    runner._running.pop(first.id)
-    assert h.client.portal.call(runner._claim).priority == 10  # then the badge job
+    assert h.client.portal.call(runner._claim, "user").id == user_job
+    assert h.client.portal.call(runner._claim, "background").priority == 10
     off = make_harness(run_jobs=False, HOLT_JOB_CONCURRENCY=1, HOLT_BADGE_CONCURRENCY=0)
     assert off.svc.runner.badge_concurrency == 0
+    off.client.get("/badge/octo/one.svg")
+    assert off.client.portal.call(off.svc.runner._claim, "user") is None

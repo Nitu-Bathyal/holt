@@ -6,7 +6,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 import pytest
-from holt_server import crypto, engine, repos
+from holt_server import engine, repos
 from holt_server import report as report_mod
 from holt_server.errors import ApiError
 
@@ -35,25 +35,41 @@ def replay_harness(make_harness, **overrides):
 
 
 def check_report_shape(report: dict, mode: str) -> None:
-    keys = {"repo", "mode", "days", "verdict", "headline", "summary", "stats",
+    keys = {"repo", "mode", "days", "verdict", "headline", "bottom_line", "summary", "stats",
             "decided_by", "unknowns", "landing", "never_landed", "evidence",
-            "evidence_until", "generated_at", "cost"}
+            "evidence_until", "generated_at", "cost", "rule_codes", "tone",
+            "verdict_line", "odds", "sample", "asks", "numbers_line", "first_timer_line",
+            "next_step", "stat_line", "counted", "holt_users", "budget_independent",
+            "outdated"}
     assert set(report) == keys
+    # The committed fixtures are a frozen capture read with the benchmark's
+    # rules, where the budget can move the verdict: never served for another
+    # budget (live reports are; server/tests/test_budget.py).
+    assert report["budget_independent"] is False
+    assert report["sample"]["pull_requests"] >= report["stats"]["outsider_attempts"]
+    for entry in report["counted"]:
+        assert set(entry) == {"topic", "text"}
+    assert len(report["rule_codes"]) == len(report["decided_by"])
     assert report["repo"] == REPO and report["mode"] == mode
     assert report["verdict"] in ("viable", "not_viable", "insufficient_evidence")
     assert set(report["stats"]) == {
         "outsider_attempts", "outsider_merged", "distinct_outsiders",
-        "first_time_merged_authors", "no_reply", "median_first_response_hours", "bot_share"}
+        "first_time_merged_authors", "no_reply", "median_first_response_hours", "bot_share",
+        "still_open", "closed_silently"}
     for item in report["evidence"]:
         assert item["url"].startswith("https://github.com/"), item
         assert set(item) == {"id", "url", "kind", "value", "text", "quote"}
     for area in report["landing"]:
-        assert set(area) == {"path", "merged", "attempted"}
+        assert set(area) == {"path", "merged", "attempted", "is_file"}
     for area in report["never_landed"]:
-        assert set(area) == {"path", "attempted"}
+        assert set(area) == {"path", "attempted", "is_file"}
     assert report["evidence_until"] == "2026-06-01T00:00:00Z"
     # What a beginner reads is plain English. (`kind`/`value` are machine keys.)
-    prose = " ".join([report["headline"], report["summary"] or "", *report["decided_by"],
+    prose = " ".join([report["headline"], report["verdict_line"], report["numbers_line"],
+                      report["next_step"], report["first_timer_line"] or "",
+                      *(c["text"] for c in report["counted"]),
+                      (report["odds"] or {}).get("text", ""), report["bottom_line"] or "",
+                      report["summary"] or "", *report["decided_by"],
                       *report["unknowns"], *(e["text"] for e in report["evidence"])])
     for jargon in ("not_viable", "MCC", "repo_kind", "insufficient_evidence"):
         assert jargon not in prose
@@ -70,8 +86,9 @@ def test_rules_report_end_to_end(make_harness):
     expected, trace = pipeline.analyze_without_model(
         REPO, fixture_provider(), 7, as_of=T_CUTOFF)
     assert report["verdict"] == expected.verdict.value
-    assert report["stats"]["outsider_attempts"] == trace.signals.outsider_threads
+    assert report["stats"]["outsider_attempts"] == trace.signals.outsider_judgeable
     assert report["summary"] is None and report["cost"] is None
+    assert report["bottom_line"] is None  # the verdict block already says it
     assert report["landing"], "nixpkgs has well-known landing areas"
     # Even with no AI, the counts come with pull requests to click through to.
     values = [e["value"] for e in report["evidence"] if e["kind"] == "outsider_pr"]
@@ -90,6 +107,9 @@ def test_ai_report_end_to_end(make_harness):
     assert report["summary"]
     assert report["evidence"], "replayed run cites evidence"
     assert report["cost"]["input_tokens"] > 0
+    assert isinstance(report["cost"]["usd"], float) and report["cost"]["usd"] >= 0
+    assert isinstance(report["cost"]["seconds"], float) and report["cost"]["seconds"] >= 0
+    assert report["bottom_line"] is None or isinstance(report["bottom_line"], str)
     assert any(e["kind"] == "outcome" for e in report["evidence"])
     assert all(e["url"].startswith("https://github.com/NixOS/nixpkgs")
                for e in report["evidence"])
@@ -98,25 +118,34 @@ def test_ai_report_end_to_end(make_harness):
 # --- serializer ---------------------------------------------------------------
 
 
-def test_claim_parsing():
+def test_evidence_cards_read_plainly():
     records = {}
-    item = report_mod.evidence_item(
-        "merged after review — “thanks, merging”", "pr:o/r#5:opened", records)
+    item = report_mod.evidence_item(Claim(
+        "Merged after review — “thanks, merging”", "pr:o/r#5:opened",
+        kind="outcome", value="merged_after_review", quote="thanks, merging"), records)
     assert item == {"id": "pr:o/r#5:opened", "url": "https://github.com/o/r/pull/5",
                     "kind": "outcome", "value": "merged_after_review",
                     "text": "Merged after review", "quote": "thanks, merging"}
-    item = report_mod.evidence_item("ignored, nothing said", "pr:o/r#6:opened", records)
-    assert item["kind"] == "outcome" and item["quote"] is None
-    item = report_mod.evidence_item(
-        "onboarding: substantive (AI's reading, not a quote: CONTRIBUTING explains setup)",
-        "repo:o/r:contributing", records)
+    item = report_mod.evidence_item(Claim(
+        "Closed with no explanation", "pr:o/r#6:opened",
+        kind="outcome", value="closed_dismissive"), records)
+    assert item["quote"] is None and item["text"] == "Closed with no explanation"
+    item = report_mod.evidence_item(Claim(
+        "Contributor guide: generic, with little to follow (AI's reading, not a quote: "
+        "CONTRIBUTING only restates the code of conduct)", "repo:o/r:contributing",
+        kind="onboarding", value="boilerplate",
+        note="CONTRIBUTING only restates the code of conduct"), records)
     assert (item["kind"], item["value"], item["text"]) == (
-        "onboarding", "substantive", "CONTRIBUTING explains setup")
+        "onboarding", "boilerplate",
+        "Generic, with little to follow. CONTRIBUTING only restates the code of conduct")
     assert item["url"] == "https://github.com/o/r"
-    assert report_mod.evidence_item("x", None, records) is None
-    item = report_mod.evidence_item("is archived: True", "repo:o/r:meta", records)
-    assert (item["kind"], item["value"], item["text"]) == (
-        "is_archived", "True", "Is archived: True")
+    assert report_mod.evidence_item(Claim("x", None), records) is None
+    item = report_mod.evidence_item(
+        Claim("Archived: yes", "repo:o/r:meta", kind="is_archived", value="True"), records)
+    assert (item["kind"], item["value"], item["text"]) == ("is_archived", "True", "Yes.")
+    # A hand-built claim with nothing structured is shown as written.
+    item = report_mod.evidence_item(Claim("a note", "repo:o/r:meta"), records)
+    assert (item["kind"], item["value"], item["text"]) == ("claim", None, "a note")
 
 
 def test_ai_all_claims_dropped_is_stated():
@@ -132,8 +161,58 @@ def test_ai_all_claims_dropped_is_stated():
     assert out["headline"] == "Worth your time"
 
 
+def test_bottom_line_only_in_ai_mode():
+    from holt.agent.signals import compute
+
+    a = Assessment(repo="o/r", verdict=Verdict.VIABLE, summary="s",
+                   bottom_line="You'd likely get a reply. Start small.")
+    ai = report_mod.build(repo="o/r", mode="ai", assessment=a, signals=compute({}), records=[])
+    assert ai["bottom_line"] == "You'd likely get a reply. Start small."
+    rules = report_mod.build(repo="o/r", mode="rules", assessment=a, signals=compute({}),
+                             records=[])
+    assert rules["bottom_line"] is None
+    empty = Assessment(repo="o/r", verdict=Verdict.VIABLE, summary="s", bottom_line="")
+    assert report_mod.build(repo="o/r", mode="ai", assessment=empty, signals=compute({}),
+                            records=[])["bottom_line"] is None
+
+
+def test_reports_cached_before_new_fields_still_validate():
+    from holt_server import schema
+
+    old = {"repo": "o/r", "mode": "ai", "days": 7, "verdict": "viable", "summary": "s",
+           "stats": {"outsider_attempts": 1, "outsider_merged": 1, "distinct_outsiders": 1,
+                     "first_time_merged_authors": 1, "no_reply": 0,
+                     "median_first_response_hours": 1.0, "bot_share": 0.0},
+           "generated_at": "2026-09-01T00:00:00Z",
+           "cost": {"model": "m", "input_tokens": 1, "output_tokens": 1}}
+    out = schema.Report.model_validate(old).model_dump(mode="json")
+    assert out["bottom_line"] is None
+    assert out["cost"]["usd"] is None and out["cost"]["seconds"] is None
+
+
+def test_ai_cost_records_dollars_seconds_and_logs_one_line(caplog):
+    from types import SimpleNamespace
+
+    from holt.model import Usage
+
+    m = SimpleNamespace(usage=Usage())
+    m.usage.add("openai/gpt-5-mini", 12000, 3000)
+    m.usage.cost_usd = 0.0123456
+    timings = {"classify": 1.31, "narrate": 3.5, "total": 9.87}
+    with caplog.at_level("INFO", logger="holt_server.engine"):
+        cost = engine.ai_cost("o/r", m, timings)
+    assert cost == {"model": "openai/gpt-5-mini", "input_tokens": 12000,
+                    "output_tokens": 3000, "usd": 0.01235, "seconds": 9.9}
+    (line,) = [r.getMessage() for r in caplog.records]
+    for part in ("o/r", "openai/gpt-5-mini", "input_tokens=12000", "output_tokens=3000",
+                 "usd=0.01235", "total=9.9s", "classify=1.3s", "narrate=3.5s"):
+        assert part in line, line
+    # Before the engine records timings, the report still has the fields.
+    assert engine.ai_cost("o/r", m, {})["seconds"] == 0.0
+
+
 def test_claim_without_url_is_left_out():
-    item = report_mod.evidence_item("a: b", "weird-id", {})
+    item = report_mod.evidence_item(Claim("a: b", "weird-id"), {})
     assert item is None
     a = Assessment(repo="o/r", verdict=Verdict.VIABLE, summary="",
                    claims=[Claim("a: b", "weird-id")])
@@ -212,24 +291,6 @@ def test_repo_rejects(raw):
     with pytest.raises(ApiError) as err:
         repos.normalize(raw)
     assert err.value.code == "invalid_repo"
-
-
-def test_crypto_roundtrip_and_binding():
-    import base64
-    import os
-
-    from cryptography.exceptions import InvalidTag
-
-    for secret in ("a passphrase", base64.b64encode(os.urandom(32)).decode()):
-        token = crypto.encrypt(secret, "sk-live-1", "user-a")
-        assert "sk-live-1" not in token
-        assert crypto.decrypt(secret, token, "user-a") == "sk-live-1"
-        with pytest.raises(InvalidTag):
-            crypto.decrypt(secret, token, "user-b")
-        with pytest.raises(InvalidTag):
-            crypto.decrypt(secret + "x", token, "user-a")
-    with pytest.raises(crypto.SecretKeyMissing):
-        crypto.encrypt("", "k", "u")
 
 
 def test_rate_limiter_window():

@@ -17,8 +17,10 @@ from __future__ import annotations
 import statistics
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from datetime import datetime, timedelta
+from datetime import datetime
 
+from holt.agent import landing_detection, people, rates, replies
+from holt.agent.people import MAINTAINER_ASSOCIATIONS
 from holt.types import EvidenceRecord
 
 
@@ -35,12 +37,10 @@ _BOT_HINTS = ("dependabot", "renovate", "greenkeeper", "imgbot", "allcontributor
               "codecov", "sonarcloud", "netlify", "vercel", "mergify", "stale")
 
 
-# A pull request opened an hour ago has not been ignored; nobody has had the
-# chance to read it. Without this, a busy repository read at any moment looked
-# hostile, because its newest pull requests -- often most of the sample -- had
-# no reply *yet*. Two days covers a weekend's silence without excusing a week.
-MIN_AGE_HOURS = 48.0
-
+# A pull request opened an hour ago has not been ignored, or rejected; nobody
+# has had the chance to read it. Open pull requests younger than this are
+# "still open" and leave every rate (see rates.py, which owns the window).
+MIN_AGE_HOURS = rates.SETTLE_HOURS
 
 def looks_like_bot(login: str, flagged: bool = False) -> bool:
     if flagged:
@@ -66,32 +66,49 @@ class Thread:
     deletions: int = 0
     merged: bool = False
     closed_unmerged: bool = False
+    # When it was merged (or closed, for one landed another way); None when
+    # not merged or when the capture has no time for it.
+    merged_at: object = None
+    # Set when GitHub shows the pull request closed but it landed another way
+    # (a merge bot, an internal sync, Gerrit, a maintainer's push): a VIA key
+    # from landing_detection. `merged` is then True as well.
+    landed_via: str | None = None
+    # Read at fetch time; absent from captures before evidence v2.
+    draft: bool = False
+    labels: list[str] = field(default_factory=list)
     responses: list[tuple[object, str, str]] = field(default_factory=list)
+    # The author's association with the repository (see
+    # people.MAINTAINER_ASSOCIATIONS), or None when the capture predates it.
+    association: str | None = None
+    # (when, who) for each maintainer reply; see agent/replies.py. None on a
+    # thread built by hand, where every non-author response counts.
+    replies: list[tuple[object, str]] | None = None
 
     @property
     def first_response_hours(self) -> float | None:
-        """Hours until someone other than the author first said anything."""
-        others = [t for t, who, _ in self.responses if who != self.author]
-        if not others:
-            return None
-        return (min(others) - self.opened_at).total_seconds() / 3600
+        """Hours until a maintainer first replied."""
+        return replies.first_reply_hours(self)
 
     @property
     def engaged(self) -> bool:
-        return any(who != self.author for _, who, _ in self.responses)
+        return replies.answered(self)
 
-    def awaiting_reply(self, as_of: datetime | None, min_age_hours: float) -> bool:
-        """Still open, unanswered, and too new for that silence to mean anything."""
-        if as_of is None or min_age_hours <= 0:
-            return False
-        if self.engaged or self.merged or self.closed_unmerged:
-            return False
-        return as_of - self.opened_at < timedelta(hours=min_age_hours)
+
+class Threads(dict):
+    """Pull requests by key, and the project's team as the same evidence shows it.
+
+    `team` is `people.maintainers` over the records the threads were built
+    from. A plain dict of hand-built threads has none, and is judged by each
+    thread's own association.
+    """
+
+    team: frozenset[str] = frozenset()
 
 
 def build_threads(records: Iterable[EvidenceRecord]) -> dict[str, Thread]:
-    threads: dict[str, Thread] = {}
+    threads = Threads()
     records = list(records)
+    threads.team = people.maintainers(records, is_automation=replies.looks_like_automation)
 
     for r in records:
         if not r.evidence_id.endswith(":opened"):
@@ -108,8 +125,12 @@ def build_threads(records: Iterable[EvidenceRecord]) -> dict[str, Thread]:
             changed_files=p.get("changed_files") or 0,
             additions=p.get("additions") or 0,
             deletions=p.get("deletions") or 0,
+            draft=bool(p.get("is_draft")),
+            labels=list(p.get("labels") or []),
+            association=p.get("author_association"),
         )
 
+    closed_at: dict[str, object] = {}
     for r in records:
         key = pr_key(r.evidence_id)
         thread = threads.get(key)
@@ -117,8 +138,10 @@ def build_threads(records: Iterable[EvidenceRecord]) -> dict[str, Thread]:
             continue
         if r.evidence_id.endswith(":merged"):
             thread.merged = True
+            thread.merged_at = r.timestamp
         elif r.evidence_id.endswith(":closed"):
             thread.closed_unmerged = True
+            closed_at[key] = r.timestamp
         elif ":review:" in r.evidence_id or ":comment:" in r.evidence_id:
             if not looks_like_bot(
                 r.payload.get("author", ""), bool(r.payload.get("author_is_bot"))
@@ -126,32 +149,88 @@ def build_threads(records: Iterable[EvidenceRecord]) -> dict[str, Thread]:
                 thread.responses.append(
                     (r.timestamp, r.payload.get("author", ""), r.payload.get("body") or "")
                 )
+    landing_detection.mark_landed(threads, records)
+    for key, when in closed_at.items():
+        if threads[key].landed_via and threads[key].merged_at is None:
+            threads[key].merged_at = when
+    replies.attach(threads, records, threads.team)
     return threads
 
 
-def newcomer_threads(threads: dict[str, Thread]) -> list[Thread]:
-    """Threads opened by someone who had not yet landed anything here.
+def _earlier_merges(threads: dict[str, Thread], by_merge_time: bool = False) -> dict[str, list]:
+    """When each author's merged pull requests were opened, or merged.
 
-    The obvious definition -- an outsider is anyone without a merged pull
-    request -- is circular inside a single window: merging is what stops you
-    being an outsider, so "outsider merges" is always zero. That bug produced a
-    column of zeros across the whole pool before it was caught.
-
-    Asked properly, the question is per-thread and time-ordered: at the moment
-    this pull request was opened, had its author ever landed anything here
-    before? That is also the question a newcomer actually has, which is the
-    point of the project.
+    `by_merge_time` is the honest question, "had something of theirs landed
+    before they opened this one?". The opening time is what the legacy
+    outsider rule was recorded with (see `outsider_threads`), so it keeps it:
+    two pull requests opened a day apart and merged in the other order made
+    the second-opened one count as the first-timer's.
     """
     merged_opens: dict[str, list] = {}
     for t in threads.values():
         if t.merged and not t.author_is_bot:
-            merged_opens.setdefault(t.author, []).append(t.opened_at)
+            when = (t.merged_at or t.opened_at) if by_merge_time else t.opened_at
+            merged_opens.setdefault(t.author, []).append(when)
+    return merged_opens
 
+
+def _had_merged_before(t: Thread, merged_opens: dict[str, list]) -> bool:
+    return any(earlier < t.opened_at for earlier in merged_opens.get(t.author, []))
+
+
+def outsider_threads(threads: dict[str, Thread]) -> list[Thread]:
+    """Pull requests opened by people outside the project.
+
+    Outside means not on the project's team: not OWNER, MEMBER or
+    COLLABORATOR, and not shown doing a maintainer's job in the sample (see
+    `people.maintainers`, which the replies share).
+
+    Someone returning with their tenth pull request is still an outsider: the
+    question a would-be contributor has is whether work from people like them
+    lands, and people like them include the ones who came back.
+
+    A capture made before the association was recorded falls back, thread by
+    thread, to the rule that stood in for it: an outsider is someone who had
+    not landed anything in the sample before this pull request was opened.
+    That rule counted maintainers as newcomers (every maintainer's first pull
+    request in the sample was a "first-time" one), which is why it was
+    replaced, but it is what the recorded runs were computed with and keeps
+    them replaying unchanged.
+    """
+    merged_opens = _earlier_merges(threads)
+    team = getattr(threads, "team", frozenset())
+    out = []
+    for t in threads.values():
+        if t.author_is_bot:
+            continue
+        if t.association is None:
+            if not _had_merged_before(t, merged_opens):
+                out.append(t)
+        elif t.association not in MAINTAINER_ASSOCIATIONS and t.author not in team:
+            out.append(t)
+    return out
+
+
+def first_timer_threads(threads: dict[str, Thread]) -> list[Thread]:
+    """Outsider pull requests from people new to this repository.
+
+    New means nothing of theirs had landed here when they opened it: no
+    earlier merge of theirs in the sample, counted by when it was merged. GitHub's association narrows
+    that where it can. It is read at fetch time, so a CONTRIBUTOR (someone
+    whose commit has landed here) with no merge anywhere in the sample landed
+    it before the sample began, and was never new within it. NONE,
+    FIRST_TIME_CONTRIBUTOR and FIRST_TIMER need no special case: nothing of
+    theirs has landed, so the sample finds no earlier merge either.
+
+    What neither can see: a CONTRIBUTOR whose first merge in the sample was not
+    their first here. That merge counts as a first-timer's.
+    """
+    merged_at = _earlier_merges(threads, by_merge_time=True)
     return [
         t
-        for t in threads.values()
-        if not t.author_is_bot
-        and not any(earlier < t.opened_at for earlier in merged_opens.get(t.author, []))
+        for t in outsider_threads(threads)
+        if not (t.association == "CONTRIBUTOR" and t.author not in merged_at)
+        and not _had_merged_before(t, merged_at)
     ]
 
 
@@ -179,19 +258,43 @@ class Signals:
     merged_files_median: float | None = None
     merged_dirs_median: float | None = None
     merged_with_files: int = 0
-    # Outsider attempts too new to judge: unanswered, but opened less than
-    # MIN_AGE_HOURS before the reading. Counted in `outsider_threads` (they are
-    # attempts) and never in `outsider_ignored`.
-    outsider_awaiting_reply: int = 0
-    # How many outsider attempts got any reply. `median_first_response_hours`
-    # is the median over exactly these; the rest never got one, which a median
-    # over replies alone cannot show. Report the two together.
+    # How many decided outsider attempts got any reply.
+    # `median_first_response_hours` is the median over exactly these; the rest
+    # never got one, which a median over replies alone cannot show. Report the
+    # two together.
     outsider_answered: int = 0
+    # The same questions asked of people new to this repository (see
+    # `first_timer_threads`), a subset of the outsiders. Reported, never used
+    # by the verdict: a project that merges returning contributors' work is
+    # still worth a contributor's time, and a first-timer wants to know both.
+    first_timer_threads: int = 0
+    first_timer_merged: int = 0
+    distinct_first_timer_authors: int = 0
+    distinct_first_timer_merged_authors: int = 0
+    # Outsider attempts too recent to count: opened within the settle window
+    # (rates.py), whether or not they are already merged or closed. Counted in `outsider_threads` (they are attempts) and
+    # in no rate. `outsider_ignored` is then only open, settled and unanswered;
+    # closed without a word is `outsider_closed_silently`, which is usually a
+    # maintainer clearing out spam. Drafts and pull requests labelled as spam
+    # are in `outsider_excluded` and nowhere else.
+    outsider_still_open: int = 0
+    outsider_closed_silently: int = 0
+    outsider_excluded: int = 0
+    # The settle window these were counted with, in hours; 0 for the frozen
+    # benchmark's arithmetic. Not a count: kept so anything listing the pull
+    # requests behind a count (the server's examples) buckets them the same way.
+    settle_hours: float = 0.0
+    # `reviewed_share` over the decided outside merges only, and how many
+    # merges it covers: whether *your* pull request would get read. The
+    # all-merges share counts a maintainer merging their own work unreviewed,
+    # which says nothing about how outsiders are treated.
+    outsider_reviewed_share: float | None = None
+    merged_threads: int = 0
 
     @property
     def outsider_judgeable(self) -> int:
-        """Attempts old enough that silence on them means something."""
-        return self.outsider_threads - self.outsider_awaiting_reply
+        """Decided attempts: the denominator of every rate."""
+        return self.outsider_threads - self.outsider_still_open
 
     def as_dict(self) -> dict:
         return {
@@ -208,8 +311,16 @@ class Signals:
             "merged_files_median": self.merged_files_median,
             "merged_dirs_median": self.merged_dirs_median,
             "merged_with_files": self.merged_with_files,
-            "outsider_awaiting_reply": self.outsider_awaiting_reply,
             "outsider_answered": self.outsider_answered,
+            "first_timer_threads": self.first_timer_threads,
+            "first_timer_merged": self.first_timer_merged,
+            "distinct_first_timer_authors": self.distinct_first_timer_authors,
+            "distinct_first_timer_merged_authors": self.distinct_first_timer_merged_authors,
+            "outsider_still_open": self.outsider_still_open,
+            "outsider_closed_silently": self.outsider_closed_silently,
+            "outsider_excluded": self.outsider_excluded,
+            "outsider_reviewed_share": self.outsider_reviewed_share,
+            "merged_threads": self.merged_threads,
         }
 
 
@@ -220,15 +331,18 @@ def compute(
 ) -> Signals:
     """Count what the threads show.
 
-    `as_of` is the moment the evidence is read at. Given one, attempts younger
-    than `min_age_hours` with no reply are "awaiting a reply", not ignored.
-    Without one (or with `min_age_hours=0`) every silent attempt counts, which
-    is how the committed benchmark was computed.
+    `as_of` is the moment the evidence is read at. Given one, open attempts
+    younger than `min_age_hours` are still open and every rate is over the
+    decided rest (rates.py). Without one (or with `min_age_hours=0`) every
+    attempt is decided and every silent one counts as ignored, which is how
+    the committed benchmark was computed.
     """
-    outsiders = newcomer_threads(threads)
-    waiting = [t for t in outsiders if t.awaiting_reply(as_of, min_age_hours)]
-    waiting_keys = {t.key for t in waiting}
+    split = rates.split(outsider_threads(threads), as_of, min_age_hours)
+    outsiders = split.decided
+    decided = {t.key for t in outsiders}
+    firsts = [t for t in first_timer_threads(threads) if t.key in decided]
     merged_threads = [t for t in threads.values() if t.merged]
+    outsider_merges = [t for t in outsiders if t.merged]
     # Every merge with a file list, not only the outsiders': what a merged
     # contribution *is* here is a property of the repository, and narrowing it
     # to newcomers would measure it on a handful of threads in a repository that
@@ -241,22 +355,23 @@ def compute(
 
     return Signals(
         total_threads=len(threads),
-        outsider_threads=len(outsiders),
+        outsider_threads=len(outsiders) + split.still_open,
         outsider_merged=sum(1 for t in outsiders if t.merged),
-        outsider_ignored=sum(
-            1 for t in outsiders
-            if not t.engaged and not t.merged and t.key not in waiting_keys
-        ),
+        outsider_ignored=split.ignored,
         median_first_response_hours=round(statistics.median(latencies), 1) if latencies else None,
         bot_share=(bots / len(threads)) if threads else 0.0,
         distinct_outsider_authors=len({t.author for t in outsiders}),
         # People who actually landed something, as distinct from people who
         # tried. Conflating the two produced a user-visible falsehood: a repo
-        # with 15 merges and 72 first-time attempters was reported as "15
-        # merges from 72 people".
+        # with 15 merges and 72 attempters was reported as "15 merges from 72
+        # people".
         distinct_merged_authors=len({t.author for t in outsiders if t.merged}),
+        # A pull request landed off the button (an internal sync, Gerrit, a merge
+        # bot) was reviewed where it landed; GitHub just doesn't show it. Without
+        # this, rates over decided pull requests alone called react-native's
+        # imported, reviewed-in-house merges "waved through unread".
         reviewed_share=(
-            sum(1 for t in merged_threads if t.engaged) / len(merged_threads)
+            sum(1 for t in merged_threads if t.engaged or t.landed_via) / len(merged_threads)
             if merged_threads else None
         ),
         merge_rate=(len(outsiders) and sum(1 for t in outsiders if t.merged) / len(outsiders))
@@ -264,6 +379,18 @@ def compute(
         merged_files_median=statistics.median(file_counts) if file_counts else None,
         merged_dirs_median=statistics.median(dir_counts) if dir_counts else None,
         merged_with_files=len(shaped),
-        outsider_awaiting_reply=len(waiting),
         outsider_answered=len(latencies),
+        first_timer_threads=len(firsts),
+        first_timer_merged=sum(1 for t in firsts if t.merged),
+        distinct_first_timer_authors=len({t.author for t in firsts}),
+        distinct_first_timer_merged_authors=len({t.author for t in firsts if t.merged}),
+        outsider_still_open=split.still_open,
+        outsider_closed_silently=split.closed_silently,
+        outsider_excluded=split.excluded,
+        settle_hours=min_age_hours if rates.judges_time(as_of, min_age_hours) else 0.0,
+        outsider_reviewed_share=(
+            sum(1 for t in outsider_merges if t.engaged or t.landed_via) / len(outsider_merges)
+            if outsider_merges else None
+        ),
+        merged_threads=len(merged_threads),
     )

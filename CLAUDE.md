@@ -29,6 +29,7 @@ beginners (college students first). Every change should be judged by
 | `website/` | Legacy static landing page. Still serves the live site until `web/` launches; don't extend it. | |
 | `docs/` | All documentation; `docs/README.md` is the index. `docs/research/` holds the evaluation and reproduction guides. | |
 | `eval/`, `fixtures/`, `trajectories/`, `scripts/` | Research/benchmark material from the competition. Large. Don't touch unless the task is about evaluation. | |
+| `golden/` | The golden set: ~50 recorded repos and the engine's approved verdict on each. Engine changes must show and approve their diff (`uv run python -m golden diff`) — `golden/README.md` | |
 | `tests/` | pytest suite (runs from fixtures, no network) | |
 
 `API.md` is the contract between `server/` and `web/`. Change it only in the
@@ -54,6 +55,11 @@ Server: see `server/README.md`. Extension: `cd extension && npm ci && npm test`.
 - Never break the engine's contract: the verdict is computed by rules in
   `agent/verdict.py` from verified findings; the model only interprets and
   explains. Unsupported findings are dropped before the verdict.
+- Bump `ENGINE_VERSION` in `src/holt/engine_version.py` in any PR that changes
+  what a report says for the same evidence (verdict rules, the signals and
+  thresholds they read, or the report's fields and wording). The server then
+  stops serving reports from the old engine; the auto-deploy then starts
+  `warm.sh --stale-only` by itself (`deploy/prod/README.md`).
 - Holt is read-only toward GitHub. It never posts, opens PRs, or contacts anyone.
 - User-facing text is plain English for beginners. No internal enum names
   (`not_viable`), no statistics jargon (MCC, p-values) in product output.
@@ -74,10 +80,28 @@ Server: see `server/README.md`. Extension: `cd extension && npm ci && npm test`.
 
 Production: **https://githolt.com** (domain on Cloudflare). The hook is
 "swap hub for holt": github.com/o/r → githolt.com/o/r. It runs on the home
-server for now (stack `holt-prod`, `deploy/prod/`, deployed only from `main`
-with `deploy/prod/deploy.sh` after the user approves); Hetzner later. Staging
+server for now (stack `holt-prod`, `deploy/prod/`); Hetzner later. Staging
 is https://staging.githolt.com (auto-updates from main plus PRs labelled
-`staging`). PyPI releases go through `.github/workflows/publish.yml` on a
-GitHub release (see `docs/RELEASING.md`).
+`staging`). **Production deploys itself from main**: `deploy/prod/follow.sh`
+(a 2-minute timer) runs `deploy.sh` for each new main commit once its CI is
+all green and staging is live on it, and warms stale reports after an
+`ENGINE_VERSION` bump. **Merging to main is shipping.** The owner can pause
+it (`follow.sh --pause`) and still deploy by hand; a failed deploy rolls back
+and is not retried. See `deploy/prod/README.md`, "Auto-deploy". PyPI releases go through
+`.github/workflows/publish.yml` on a GitHub release (see `docs/RELEASING.md`).
 
 Orchestrator may deploy after a merge: no
+
+## Agent skills
+
+### Issue tracker
+
+Maintainer planning tickets are private local markdown files outside the repo; outside contributors use GitHub Issues. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`), recorded as a `Status:` line in each ticket. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root, created as terms and decisions get settled. See `docs/agents/domain.md`.

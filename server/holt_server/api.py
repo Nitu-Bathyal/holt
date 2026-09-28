@@ -3,18 +3,31 @@
 from __future__ import annotations
 
 import asyncio
-import hmac
 import json
-from datetime import UTC, datetime, timedelta
+import uuid
+from datetime import timedelta
 from typing import Any, Literal
 
-from fastapi import APIRouter, Depends, Header, Query, Request, Response
+from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 
-from holt_server import __version__, badge, crypto, llm, repos, starter
+from holt_server import report as report_mod
+from holt_server import (
+    __version__,
+    badge,
+    budget,
+    credits,
+    discover,
+    entitlements,
+    repo_stats,
+    repos,
+    schema,
+    starter,
+    usage,
+)
 from holt_server.db import (
     ACTIVE,
     BADGE_PRIORITY,
@@ -23,12 +36,15 @@ from holt_server.db import (
     Report,
     StarterCache,
     User,
+    current_engine,
     dedupe_key,
     find_key,
     iso,
     now,
     utc,
 )
+from holt_server.credits import get_user
+from holt_server.deps import Caller, caller, internal, services, signed_in
 from holt_server.errors import ApiError
 from holt_server.jobs import done_payload
 from holt_server.services import Services
@@ -36,52 +52,11 @@ from holt_server.services import Services
 SSE_KEEPALIVE_SECONDS = 15.0
 
 public = APIRouter()
-router = APIRouter(prefix="/v1")
+# Every /v1 error is the envelope in API.md.
+router = APIRouter(prefix="/v1", responses={"default": {"model": schema.ErrorBody}})
 
 
 # --- dependencies -------------------------------------------------------------
-
-
-def services(request: Request) -> Services:
-    return request.app.state.services
-
-
-async def internal(
-    request: Request,
-    x_holt_internal_key: str | None = Header(default=None),
-) -> None:
-    expected = services(request).settings.internal_key
-    if not expected or not x_holt_internal_key or not hmac.compare_digest(
-        x_holt_internal_key.encode(), expected.encode()
-    ):
-        raise ApiError("unauthorized", "This API is only for the Holt website.")
-
-
-class Caller:
-    def __init__(self, user_id: str | None, ip: str | None) -> None:
-        self.user_id = user_id
-        self.ip = ip
-
-    @property
-    def rate_key(self) -> str:
-        return f"user:{self.user_id}" if self.user_id else f"ip:{self.ip}"
-
-    def limit(self, svc: Services) -> int:
-        s = svc.settings
-        return s.user_rate_per_hour if self.user_id else s.anon_rate_per_hour
-
-
-async def caller(
-    request: Request,
-    _: None = Depends(internal),
-    x_holt_user: str | None = Header(default=None),
-    x_holt_client_ip: str | None = Header(default=None),
-) -> Caller:
-    user_id = (x_holt_user or "").strip()[:200] or None
-    # No fallback to the socket address: that is the BFF's, and every anonymous
-    # visitor would share one bucket.
-    ip = (x_holt_client_ip or "").strip()[:64] or None
-    return Caller(user_id, ip)
 
 
 def rate_limit(svc: Services, who: Caller, bucket: str = "work") -> None:
@@ -98,64 +73,24 @@ def rate_limit(svc: Services, who: Caller, bucket: str = "work") -> None:
         svc.limiter.hit(who.rate_key, who.limit(svc))
 
 
-async def get_user(svc: Services, user_id: str) -> User:
-    """The user row, created the first time `web/` sends this id."""
-    async with svc.db.session() as s:
-        user = await s.get(User, user_id)
-        if user is None:
-            user = User(id=user_id, plan="free", ai_used=0, ai_period=period())
-            s.add(user)
-            try:
-                await s.commit()
-            except Exception:  # created concurrently by another request
-                await s.rollback()
-                user = await s.get(User, user_id)
-        return user
+# --- account ------------------------------------------------------------------
 
 
-def signed_in(who: Caller) -> str:
-    if not who.user_id:
-        raise ApiError("unauthorized", "Please sign in first.")
-    return who.user_id
-
-
-# --- quota --------------------------------------------------------------------
-
-
-def period(when: datetime | None = None) -> str:
-    return (when or now()).strftime("%Y-%m")
-
-
-def resets_at(when: datetime | None = None) -> datetime:
-    when = when or now()
-    year, month = (when.year + 1, 1) if when.month == 12 else (when.year, when.month + 1)
-    return datetime(year, month, 1, tzinfo=UTC)
-
-
-def ai_limit(svc: Services, user: User) -> int:
-    s = svc.settings
-    return s.free_ai_limit if user.plan in ("", "free") else s.plan_ai_limit
-
-
-def ai_used(user: User) -> int:
-    return user.ai_used if user.ai_period == period() else 0
-
-
-def me_body(svc: Services, user: User) -> dict[str, Any]:
-    return {
-        "plan": user.plan or "free",
-        "quota": {"ai_used": ai_used(user), "ai_limit": ai_limit(svc, user),
-                  "resets_at": iso(resets_at())},
-        "byok": {"provider": user.byok_provider, "model": user.byok_model or
-                 llm.DEFAULT_MODELS.get(user.byok_provider or "", ""), "set": True}
-        if user.byok_cipher else None,
-    }
+async def me_body(svc: Services, user: User) -> schema.Me:
+    return schema.Me(plan=entitlements.effective_plan(entitlements.catalogue(svc), user),
+                     plan_expires_at=iso(user.plan_expires_at),
+                     credits=await credits.credits_body(svc, user))
 
 
 # --- bodies -------------------------------------------------------------------
 
 
 class AnalysisIn(BaseModel):
+    # Model choice is server configuration (OPENROUTER_MODEL). Clients from
+    # when the web had a model picker still send `model`; unknown keys are
+    # dropped here, so it never reaches the engine, the job or its cache key.
+    model_config = ConfigDict(extra="ignore")
+
     repo: str = Field(max_length=500)
     mode: Literal["rules", "ai"] = "rules"
     days: int = Field(7, ge=1, le=90)
@@ -170,17 +105,11 @@ class FindIn(BaseModel):
     limit: int = Field(20, ge=1, le=50)
 
 
-class ByokIn(BaseModel):
-    provider: Literal["openrouter", "openai", "anthropic", "gemini"]
-    api_key: str = Field(min_length=8, max_length=500)
-    model: str | None = Field(None, max_length=200)
-
-
 # --- health and badge (no internal key) ---------------------------------------
 
 
-@public.get("/health")
-async def health(request: Request) -> dict[str, Any]:
+@public.get("/health", response_model=schema.Health, responses={503: {"model": schema.Health}})
+async def health(request: Request) -> Any:
     svc = services(request)
     body: dict[str, Any] = {"ok": True, "version": __version__}
     if not await svc.db.ping():
@@ -194,7 +123,11 @@ async def badge_svg(owner: str, repo: str, request: Request) -> Response:
     svc = services(request)
     name = repos.normalize(f"{owner}/{repo}")
     latest = await latest_report(svc, name, "rules", 7)
-    verdict = latest.report.get("verdict") if latest else None
+    # An outdated report's verdict is never shown: the badge says it is
+    # updating until the refresh queued below lands.
+    updating = latest is not None and latest.outdated
+    verdict = latest.report.get("verdict") if latest and not updating else None
+    stats = latest.report.get("stats") if latest and not updating else None
     shown = latest.repo if latest else name
     stale = latest is None or not is_fresh(svc, latest)
     if stale:
@@ -208,13 +141,15 @@ async def badge_svg(owner: str, repo: str, request: Request) -> Response:
             pass
     link = f"{svc.settings.web_url.rstrip('/')}/{shown}"
     return Response(
-        badge.render(verdict, link),
+        badge.render(verdict, stats, link, updating=updating),
         media_type="image/svg+xml",
-        headers={"Cache-Control": BADGE_CACHE},
+        headers={"Cache-Control": BADGE_UPDATING_CACHE if updating else BADGE_CACHE},
     )
 
 
 BADGE_CACHE = "public, max-age=3600, stale-while-revalidate=86400"
+# Short, so the new verdict replaces "updating" soon after the refresh lands.
+BADGE_UPDATING_CACHE = "public, max-age=300"
 
 
 def badge_client(request: Request) -> str:
@@ -241,16 +176,44 @@ async def enqueue_badge_refresh(svc: Services, repo: str, client: str) -> None:
 
 
 async def latest_report(svc: Services, repo: str, mode: str, days: int) -> Report | None:
+    """The newest report for this repo, mode and budget.
+
+    A rules report's verdict doesn't depend on the budget (see
+    `report.retime`), so when there is no fresh one for `days`, a fresh one
+    made for another budget answers, with its reply-time note redone. It is
+    not stored: the next read derives it again, and a real run for `days`
+    wins as soon as one exists. Only reports from the current engine count
+    as fresh (`Report.outdated`); an outdated one is still returned when
+    nothing fresher exists, and callers decide what to do with it.
+    """
+    key = repos.key(repo)
     async with svc.db.session() as s:
-        return (await s.execute(
-            select(Report).where(Report.repo_key == repos.key(repo), Report.mode == mode,
+        exact = (await s.execute(
+            select(Report).where(Report.repo_key == key, Report.mode == mode,
                                  Report.days == days)
             .order_by(Report.created_at.desc(), Report.id.desc()).limit(1)
         )).scalar_one_or_none()
+        if mode != "rules" or (exact is not None and is_fresh(svc, exact)):
+            return exact
+        cutoff = now() - timedelta(hours=svc.settings.cache_hours)
+        others = (await s.execute(
+            select(Report).where(Report.repo_key == key, Report.mode == "rules",
+                                 Report.days != days, Report.created_at >= cutoff,
+                                 current_engine())
+            .order_by(Report.created_at.desc(), Report.id.desc()).limit(5)
+        )).scalars().all()
+    for other in others:
+        if (derived := report_mod.retime(other.report, days)) is not None:
+            return Report(id=other.id, repo=other.repo, repo_key=other.repo_key, mode="rules",
+                          days=days, report=derived, created_at=other.created_at,
+                          engine_version=other.engine_version)
+    return exact
 
 
 def is_fresh(svc: Services, report: Report) -> bool:
-    return now() - utc(report.created_at) < timedelta(hours=svc.settings.cache_hours)
+    """Young enough to serve as the answer, and made by the current engine."""
+    return (not report.outdated
+            and now() - utc(report.created_at) < timedelta(hours=svc.settings.cache_hours))
 
 
 async def active_job(svc: Services, key: str, mode: str, days: int) -> Job | None:
@@ -277,12 +240,13 @@ async def insert_or_join(svc: Services, job: Job, before_insert=None) -> tuple[J
 
     Atomic: the partial unique index on `dedupe_key` decides, so two requests
     racing past the `active_job` check still end up with one job. Whatever
-    `before_insert` does in the session (the quota charge) commits with the
+    `before_insert(session, job)` does (spending a credit) commits with the
     insert or rolls back with it. Returns (job, created).
     """
     async with svc.db.session() as s:
         if before_insert is not None:
-            await before_insert(s)
+            job.id = job.id or uuid.uuid4().hex
+            await before_insert(s, job)
         s.add(job)
         try:
             await s.commit()
@@ -306,7 +270,7 @@ def job_copy(job: Job) -> Job:
 
 @router.get("/reports", dependencies=[Depends(internal)])
 async def list_reports(request: Request,
-                       limit: int = Query(500, ge=1, le=5000)) -> dict[str, Any]:
+                       limit: int = Query(500, ge=1, le=5000)) -> schema.ReportList:
     """The latest 7-day rules report per repository, newest first (sitemaps)."""
     svc = services(request)
     latest = (select(func.max(Report.id).label("id"))
@@ -321,29 +285,33 @@ async def list_reports(request: Request,
             .join(latest, Report.id == latest.c.id)
             .order_by(Report.created_at.desc(), Report.id.desc()).limit(limit)
         )).all()
-    return {"reports": [
+    return schema.ReportList.model_validate({"reports": [
         {"repo": repo, "mode": mode, "generated_at": generated or iso(created),
          "verdict": verdict}
         for repo, mode, created, generated, verdict in rows
-    ]}
+    ]})
 
 
 @router.get("/reports/{owner}/{repo}", dependencies=[Depends(internal)])
 async def get_report(owner: str, repo: str, request: Request,
                      mode: Literal["rules", "ai"] = "rules",
-                     days: int = Query(7, ge=1, le=90)) -> dict[str, Any]:
+                     days: int = Query(7, ge=1, le=90)) -> schema.Report:
     svc = services(request)
     name = repos.normalize(f"{owner}/{repo}")
     latest = await latest_report(svc, name, mode, days)
     if latest is None:
         raise ApiError("not_found", f"There's no report for {name} yet.")
-    return latest.report
+    report = schema.Report.model_validate(latest.report)
+    report.holt_users = await repo_stats.for_repo(svc, name)
+    report.outdated = latest.outdated
+    return report
 
 
 # --- analyses -------------------------------------------------------------------
 
 
-@router.post("/analyses")
+@router.post("/analyses", response_model=schema.AnalysisDone,
+             responses={202: {"model": schema.Queued}})
 async def create_analysis(body: AnalysisIn, request: Request,
                           who: Caller = Depends(caller)) -> JSONResponse:
     svc = services(request)
@@ -354,10 +322,19 @@ async def create_analysis(body: AnalysisIn, request: Request,
         raise ApiError("needs_key", "Sign in to get an AI-written report. "
                        "The quick report is free without an account.")
 
+    await usage.record(svc, "analysis", user_id=who.user_id, ip=who.ip, repo_key=key,
+                       mode=body.mode)
+
     if not body.refresh:
         cached = await latest_report(svc, repo, body.mode, body.days)
         if cached is not None and is_fresh(svc, cached):
-            return JSONResponse({"status": "done", "report": cached.report})
+            return JSONResponse(schema.AnalysisDone(
+                report=schema.Report.model_validate(cached.report)).model_dump(mode="json"))
+
+    if body.mode == "ai" and not svc.server_model_available():
+        # Before the rate limit and the credit: nothing is spent or queued.
+        raise ApiError("ai_unavailable", "AI reports aren't switched on yet. "
+                       "The free quick report has the full verdict and evidence.")
 
     rate_limit(svc, who)
 
@@ -370,46 +347,24 @@ async def create_analysis(body: AnalysisIn, request: Request,
               dedupe_key=dedupe_key(key, body.mode, body.days))
     charge = None
     if body.mode == "ai":
-        user = await get_user(svc, who.user_id)
-        if user.byok_cipher:
-            # A saved key is used when there is one: the person chose to set
-            # it, and it leaves their free reports for later.
-            job.key_source = "byok"
-        else:
-            job.key_source, job.charged = "server", True
-            job.params["ai_period"] = period()
-            charge = charge_ai(svc, user)
+        await get_user(svc, who.user_id)  # the welcome credits, on a first visit
+        job.key_source, job.charged = "server", True
+        user_id = who.user_id
+
+        async def charge(s, job: Job) -> None:
+            # The budget first: a run that doesn't fit is refused before any credit moves.
+            await budget.reserve(s, svc.settings, job.id, budget.ANALYSIS)
+            paid = await entitlements.charge(s, svc, user_id, "ai_report", job_id=job.id)
+            params = {k: v for k, v in (job.params or {}).items()
+                      if k not in ("charge", "paid_with")}  # a retry charges again
+            params["charge"] = paid
+            if paid.get("draws") == [{"source": "free", "lot": None, "amount": 1}]:
+                # What the release before entitlements refunds, should it run this job.
+                params["paid_with"] = "credit"
+            job.params = params
+
     job, _created = await insert_or_join(svc, job, charge)
     return queued(job.id)
-
-
-def charge_ai(svc: Services, user: User):
-    """One AI report against the server's key, counted atomically in the same
-    transaction as the job insert: a lost dedupe race refunds itself."""
-    limit = ai_limit(svc, user)
-    if limit <= 0 or not svc.server_model_available():
-        raise ApiError("needs_key", "AI reports need an API key. Add your own key "
-                       "in settings to run one.")
-    month = period()
-
-    async def charge(s) -> None:
-        # New month: start the count again. Guarded so it happens once.
-        await s.execute(update(User).where(User.id == user.id, User.ai_period != month)
-                        .values(ai_period=month, ai_used=0))
-        took = await s.execute(
-            update(User).where(User.id == user.id, User.ai_period == month,
-                               User.ai_used < limit)
-            .values(ai_used=User.ai_used + 1))
-        if took.rowcount != 1:
-            await s.rollback()
-            raise ApiError(
-                "quota_exceeded",
-                f"You've used all {limit} free AI reports this month. They reset on "
-                f"{resets_at().strftime('%-d %B')}. You can add your own API key in "
-                "settings to keep going.",
-            )
-
-    return charge
 
 
 def queued(job_id: str) -> JSONResponse:
@@ -425,6 +380,8 @@ async def load_job(svc: Services, job_id: str, kind: str) -> Job:
 
 
 def job_body(job: Job) -> dict[str, Any]:
+    """The poll body; the endpoints validate it as `schema.JobStatus` or
+    `schema.FindJobStatus`, which also fills in reports' derived fields."""
     body: dict[str, Any] = {
         "status": job.status,
         "stage": job.stage,
@@ -433,14 +390,19 @@ def job_body(job: Job) -> dict[str, Any]:
     }
     if job.kind == "find":
         body["results"] = (job.result or {}).get("results") if job.status == "done" else None
+    elif job.kind == "playbook":
+        body["playbook"] = job.result if job.status == "done" else None
+    elif job.kind == "preflight":
+        body["preflight"] = job.result if job.status == "done" else None
     else:
         body["report"] = job.result if job.status == "done" else None
     return body
 
 
 @router.get("/analyses/{job_id}", dependencies=[Depends(internal)])
-async def get_analysis(job_id: str, request: Request) -> dict[str, Any]:
-    return job_body(await load_job(services(request), job_id, "analysis"))
+async def get_analysis(job_id: str, request: Request) -> schema.JobStatus:
+    return schema.JobStatus.model_validate(
+        job_body(await load_job(services(request), job_id, "analysis")))
 
 
 @router.get("/analyses/{job_id}/events", dependencies=[Depends(internal)])
@@ -457,6 +419,16 @@ def sse_event(event: str, data: dict[str, Any]) -> str:
     return f"event: {event}\ndata: {json.dumps(data, separators=(',', ':'))}\n\n"
 
 
+def drop_queued_stages(queue: asyncio.Queue) -> tuple[str, dict[str, Any]] | None:
+    """Empty a subscriber's queue of stage events. Returns the job's end
+    (`done` or `error`) if it is already waiting there."""
+    while not queue.empty():
+        event, data = queue.get_nowait()
+        if event != "stage":
+            return event, data
+    return None
+
+
 def sse(svc: Services, job_id: str, kind: str, request: Request) -> StreamingResponse:
     async def stream():
         queue = svc.runner.hub.subscribe(job_id)
@@ -471,10 +443,18 @@ def sse(svc: Services, job_id: str, kind: str, request: Request) -> StreamingRes
                     if job.status == "error":
                         yield sse_event("error", {"error": job.error})
                         return
-                    current = (job.stage, round(job.progress or 0.0, 3))
+                    data = await svc.runner.stage_event(job)
+                    # Steps queued before this read finished are in it (bar one
+                    # landing mid-read, which the next step replaces); sending
+                    # them after it would step backwards.
+                    end = drop_queued_stages(queue)
+                    current = (data["stage"], data["progress"])
                     if current != last:
                         last = current
-                        yield sse_event("stage", {"stage": current[0], "progress": current[1]})
+                        yield sse_event("stage", data)
+                    if end is not None:
+                        yield sse_event(*end)
+                        return
                 job = None
                 try:
                     event, data = await asyncio.wait_for(queue.get(), SSE_KEEPALIVE_SECONDS)
@@ -555,16 +535,16 @@ async def _fetch_and_store(svc: Services, repo: str) -> tuple[str, list[dict]]:
 @router.get("/repos/{owner}/{repo}/starter-issues")
 async def starter_issues(owner: str, repo: str, request: Request,
                          limit: int = Query(20, ge=1, le=50),
-                         who: Caller = Depends(caller)) -> dict[str, Any]:
+                         who: Caller = Depends(caller)) -> schema.StarterIssues:
     svc = services(request)
     name = repos.normalize(f"{owner}/{repo}")
     # A cache hit costs nothing: no rate limit, no GitHub.
     if (hit := await cached_starter_issues(svc, name)) is not None:
-        return {"repo": hit.repo, "issues": hit.issues[:limit]}
+        return schema.StarterIssues(repo=hit.repo, issues=hit.issues[:limit])
     starter.function("starter_issues")  # 501 before spending a rate-limit hit
     rate_limit(svc, who, "read")
     canonical, issues = await fetch_starter_issues(svc, name)
-    return {"repo": canonical, "issues": issues[:limit]}
+    return schema.StarterIssues(repo=canonical, issues=issues[:limit])
 
 
 # A search is computed for at least this many results, so the default page
@@ -585,13 +565,14 @@ async def cached_find(svc: Services, key: str, limit: int) -> list[dict] | None:
     cutoff = now() - timedelta(hours=svc.settings.find_cache_hours)
     async with svc.db.session() as s:
         row = await s.get(FindCache, key)
-    if row is None or utc(row.created_at) < cutoff:
-        return None
-    computed_for = int((row.params or {}).get("limit") or 0)
-    # Enough results, or the search ran out before its own limit (so asking
-    # for more would find nothing new).
-    if computed_for >= limit or len(row.results) < computed_for:
-        return row.results[:limit]
+        if row is None or utc(row.created_at) < cutoff or row.outdated:
+            return None
+        computed_for = int((row.params or {}).get("limit") or 0)
+        # Enough results, or the search ran out before its own limit (so asking
+        # for more would find nothing new).
+        if computed_for >= limit or len(row.results) < computed_for:
+            # Details the warm pass fetched since the search ran show up too.
+            return await discover.with_meta(s, row.results[:limit])
     return None
 
 
@@ -602,15 +583,18 @@ async def active_find(svc: Services, key: str) -> Job | None:
         )).scalar_one_or_none()
 
 
-@router.post("/find")
+@router.post("/find", response_model=schema.FindDone,
+             responses={202: {"model": schema.Queued}})
 async def find(body: FindIn, request: Request, who: Caller = Depends(caller)) -> JSONResponse:
     svc = services(request)
     starter.function("find")
     params = find_params(body)
     key = find_key(params["languages"], params["topics"], params["hacktoberfest"], body.days)
+    await usage.record(svc, "find", user_id=who.user_id, ip=who.ip)
     # Cached, or already being searched for someone else: free, no rate limit.
     if (results := await cached_find(svc, key, body.limit)) is not None:
-        return JSONResponse({"status": "done", "results": results})
+        return JSONResponse(schema.FindDone.model_validate(
+            {"results": results}).model_dump(mode="json"))
     if (running := await active_find(svc, key)) is not None:
         return queued(running.id)
     rate_limit(svc, who)
@@ -630,8 +614,9 @@ async def find(body: FindIn, request: Request, who: Caller = Depends(caller)) ->
 
 
 @router.get("/find/{job_id}", dependencies=[Depends(internal)])
-async def get_find(job_id: str, request: Request) -> dict[str, Any]:
-    return job_body(await load_job(services(request), job_id, "find"))
+async def get_find(job_id: str, request: Request) -> schema.FindJobStatus:
+    return schema.FindJobStatus.model_validate(
+        job_body(await load_job(services(request), job_id, "find")))
 
 
 @router.get("/find/{job_id}/events", dependencies=[Depends(internal)])
@@ -645,45 +630,26 @@ async def find_events(job_id: str, request: Request) -> StreamingResponse:
 
 
 @router.get("/me")
-async def me(request: Request, who: Caller = Depends(caller)) -> dict[str, Any]:
+async def me(request: Request, who: Caller = Depends(caller)) -> schema.Me:
     svc = services(request)
-    return me_body(svc, await get_user(svc, signed_in(who)))
+    return await me_body(svc, await get_user(svc, signed_in(who)))
 
 
-@router.put("/me/byok")
-async def put_byok(body: ByokIn, request: Request,
-                   who: Caller = Depends(caller)) -> dict[str, Any]:
+@router.get("/me/entitlements")
+async def me_entitlements(request: Request, who: Caller = Depends(caller)) -> schema.Entitlements:
+    """Each paid feature: can this user use it now, and what would it cost."""
     svc = services(request)
-    user_id = signed_in(who)
-    await get_user(svc, user_id)
-    try:
-        cipher = crypto.encrypt(svc.settings.secret_key, body.api_key.strip(), user_id)
-    except crypto.SecretKeyMissing as exc:
-        raise ApiError("internal", "Saving keys isn't set up on this server yet.") from exc
-    async with svc.db.session() as s:
-        user = await s.get(User, user_id)
-        user.byok_provider = body.provider
-        user.byok_model = (body.model or "").strip() or None
-        user.byok_cipher = cipher
-        await s.commit()
-        return me_body(svc, user)
-
-
-@router.delete("/me/byok")
-async def delete_byok(request: Request, who: Caller = Depends(caller)) -> dict[str, Any]:
-    svc = services(request)
-    user_id = signed_in(who)
-    await get_user(svc, user_id)
-    async with svc.db.session() as s:
-        user = await s.get(User, user_id)
-        user.byok_provider = user.byok_model = user.byok_cipher = None
-        await s.commit()
-        return me_body(svc, user)
+    user = await get_user(svc, signed_in(who))
+    cat = entitlements.catalogue(svc)
+    access = [await entitlements.check(svc, user.id, f) for f in cat.features]
+    return schema.Entitlements(plan=entitlements.effective_plan(cat, user),
+                               plan_expires_at=iso(user.plan_expires_at),
+                               features=[schema.Access(**a.__dict__) for a in access])
 
 
 @router.get("/me/history")
 async def history(request: Request, who: Caller = Depends(caller),
-                  limit: int = Query(50, ge=1, le=200)) -> dict[str, Any]:
+                  limit: int = Query(50, ge=1, le=200)) -> schema.History:
     svc = services(request)
     user_id = signed_in(who)
     async with svc.db.session() as s:
@@ -691,7 +657,7 @@ async def history(request: Request, who: Caller = Depends(caller),
             select(Job).where(Job.user_id == user_id, Job.kind == "analysis")
             .order_by(Job.created_at.desc()).limit(limit)
         )).scalars().all()
-    return {"items": [
+    return schema.History.model_validate({"items": [
         {
             "job_id": j.id,
             "repo": j.repo,
@@ -699,8 +665,7 @@ async def history(request: Request, who: Caller = Depends(caller),
             "days": j.days,
             "status": j.status,
             "verdict": (j.result or {}).get("verdict"),
-            "headline": (j.result or {}).get("headline"),
             "created_at": iso(j.created_at),
         }
         for j in jobs
-    ]}
+    ]})

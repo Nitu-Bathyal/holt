@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ContactEmail, LegalPage } from "@/components/legal-page";
-import { CONTACT_CITY, FREE_AI_QUOTA, GITHUB_REPO_URL, PAYMENT_BRAND } from "@/lib/site";
+import { CLAIM_EVERY_DAYS, CONTACT_CITY, GITHUB_REPO_URL, PAYMENT_BRAND, WELCOME_AI_CREDITS } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
   description: "The rules for using Holt at githolt.com: what the service does, accounts, paid plans, and what we do and don't promise.",
+  alternates: { canonical: "/terms" },
 };
 
 export default function TermsPage() {
@@ -39,8 +40,8 @@ export default function TermsPage() {
 
       <h2>3. Your account</h2>
       <p>
-        You can use most of Holt without an account. Signing in with GitHub or Google gives you a monthly allowance of AI reports,
-        a report history, and a place to store your own model key.
+        You can use most of Holt without an account. Signing in with GitHub or Google gives you free AI reports
+        and a report history.
       </p>
       <ul>
         <li>You must be at least 13 years old to use Holt, and at least 18 (or have a parent or guardian&rsquo;s permission) to buy anything.</li>
@@ -58,21 +59,21 @@ export default function TermsPage() {
       </ul>
       <p>We may slow down, limit, or suspend accounts and IP addresses that do these things.</p>
 
-      <h2>5. Your own model key</h2>
+      <h2>5. Free AI reports</h2>
       <p>
-        You can add your own OpenRouter, OpenAI, Anthropic or Gemini API key so that AI reports run on your account with that
-        provider. If you do:
+        Signed-in users get {WELCOME_AI_CREDITS} free AI reports when they first sign in, and can claim 1 more every {CLAIM_EVERY_DAYS} days
+        from their settings. Unclaimed weeks don&rsquo;t add up. An AI report that fails doesn&rsquo;t use one up.
       </p>
       <ul>
-        <li>The key is yours, and your agreement with that provider governs its use and any charges. You pay the provider directly; Holt adds nothing on top.</li>
-        <li>We store the key encrypted and use it only to request AI reports that you ask for. We never show it back, not even to you. You can delete it at any time from your settings.</li>
-        <li>Keep the key scoped and budgeted at your provider. We can&rsquo;t refund charges a provider bills you.</li>
+        <li>Free AI reports have no cash value and can&rsquo;t be transferred or exchanged.</li>
+        <li>We may change how many are given, or pause AI reports, for example if the model provider is down. Reports already written stay available.</li>
+        <li>The website doesn&rsquo;t accept your own AI API key. The open-source command-line tool does, and runs on your own machine.</li>
       </ul>
 
       <h2>6. Free and paid features</h2>
       <p>
         Rules reports, finding and comparing projects, badges and share images are free, and we intend to keep them free.
-        Signed-in users also get {FREE_AI_QUOTA} AI reports a month on our key at no charge. Some features are paid, or will be:
+        Signed-in users also get free AI reports, as described in section 5. Some features are paid, or will be:
         a subscription for more AI reports, or a pack of report credits.
       </p>
       <ul>

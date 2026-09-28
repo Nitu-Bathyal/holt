@@ -60,6 +60,10 @@ it. Link the issue with `Fixes #123`.
 
 ## Before you start
 
+- **The command line and the terminal interface are feature-frozen.** They
+  stay free and keep getting engine updates, bug fixes and documentation, but
+  new features go to the web app (`web/` and `server/`). A pull request that
+  adds a new `holt` command or flag will be pointed there.
 - Search existing issues and pull requests before opening a duplicate.
 - For a substantial feature or a change to the verdict rules, open a feature
   request first. The evidence model and evaluation design are part of the
@@ -71,6 +75,10 @@ it. Link the issue with `Fixes #123`.
   personal information in an issue, fixture, recording, or pull request.
 
 ## Full development setup
+
+Day-to-day work on the web app or the pipeline (mock data, the full local
+stack, the staging preview, CI, deploys) is in
+[docs/DEV-WORKFLOW.md](docs/DEV-WORKFLOW.md). What follows is the engine setup.
 
 Holt requires Python 3.11 or newer. The repository pins its working Python
 version and dependencies through [`uv`](https://docs.astral.sh/uv/).
@@ -132,6 +140,12 @@ These invariants are load-bearing rather than stylistic:
   enter the agent path.
 - Replayed and synthetic results identify themselves in their own output.
 - A skipped test is not a passing test. Use `pytest -rs` and report skips.
+- A change to what a report says for the same evidence (the verdict rules, the
+  signals and thresholds they read, or the report's fields and wording) bumps
+  `ENGINE_VERSION` in `src/holt/engine_version.py` by one. The web app keeps
+  every report it has made and serves it for a day; the version is how it knows
+  a stored report came from older rules and must be checked again. Refactors
+  that leave every report the same don't bump it.
 
 ## Fixtures and recordings
 
@@ -156,7 +170,16 @@ commit messages or pull-request descriptions.
 
 ## Licensing
 
-Unless you explicitly state otherwise, a contribution intentionally submitted
-for inclusion in Holt is provided under the Apache License, Version 2.0, as
-described in section 5 of the license. You must have the right to submit the
-work and must preserve required third-party attribution.
+Holt splits its license by directory:
+
+- `src/holt/` (the engine, CLI and TUI) and `extension/` are
+  [Apache License 2.0](LICENSE).
+- `web/` and `server/` are [GNU AGPL-3.0](web/LICENSE), because they run as a
+  network service and the AGPL keeps modified versions of that service open.
+
+Unless you explicitly state otherwise, a contribution intentionally
+submitted for inclusion in Holt is provided under the license that already
+covers the directory it lands in — Apache-2.0 for the engine, CLI, TUI and
+extension (as described in section 5 of that license), AGPL-3.0 for `web/`
+and `server/`. You must have the right to submit the work and must preserve
+required third-party attribution.

@@ -1,9 +1,9 @@
 import "server-only";
-import { jobEvents } from "./api";
+import { jobEvents, type JobKind } from "./api";
 import { findCache, observeFindEvents } from "./find-cached";
 
 /** Pipe an upstream job's Server-Sent Events to the browser. */
-export async function proxyJobEvents(kind: "analyses" | "find", jobId: string, signal: AbortSignal): Promise<Response> {
+export async function proxyJobEvents(kind: JobKind, jobId: string, signal: AbortSignal): Promise<Response> {
   const upstream = await jobEvents(kind, jobId, signal);
   const headers = {
     "Content-Type": "text/event-stream; charset=utf-8",

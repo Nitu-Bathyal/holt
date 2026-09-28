@@ -2,43 +2,43 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { ViewTransition } from "react";
 import { notFound, redirect } from "next/navigation";
+import { after } from "next/server";
 import { ErrorPanel } from "@/components/error-panel";
 import { AiStart } from "@/components/report/ai-start";
 import { AnalysisRunner } from "@/components/report/analysis-runner";
+import { BudgetPicker } from "@/components/report/budget-picker";
 import { ReportView } from "@/components/report/report-view";
 import { StarterIssues, StarterIssuesSkeleton } from "@/components/report/starter-issues";
 import { LinkHint } from "@/components/motion/link-hint";
 import { SkeletonReveal } from "@/components/motion/reveal";
-import { getReport, me, starterIssues } from "@/lib/api";
-import type { ModelAccess, ModelProvider } from "@/lib/models";
+import { getReport, me, recordView, savedState, starterIssues } from "@/lib/api";
+import { budgetFrom, reportHref } from "@/lib/budget";
 import { isValidRepo } from "@/lib/repo";
 import { caller, currentUser, type SessionUser } from "@/lib/session";
 import { humanHours } from "@/lib/format";
 import { SITE_URL } from "@/lib/site";
-import type { Mode, Report } from "@/lib/types";
+import type { Credits, Mode, Report } from "@/lib/types";
 import { PageTransition } from "@/components/motion/page-transition";
+import { SaveButton } from "@/components/save-button";
 
 type Props = PageProps<"/[owner]/[repo]">;
 
-/** What the signed-in user may run: their own key, a paid plan, or the free tier. */
-async function modelAccess(userId: string): Promise<ModelAccess> {
+/** The signed-in user's AI credits, for the note on the AI tab's start card. */
+async function aiCredits(userId: string): Promise<Credits | null> {
   const r = await me(userId);
-  if (!r.ok) return { kind: "free" };
-  if (r.data.byok?.set) return { kind: "byok", provider: r.data.byok.provider as ModelProvider, model: r.data.byok.model || null };
-  return r.data.plan && r.data.plan !== "free" ? { kind: "plan" } : { kind: "free" };
+  return r.ok ? r.data.credits : null;
 }
 
 function opts(sp: Record<string, string | string[] | undefined>): { mode: Mode; days: number } {
   const mode: Mode = sp.mode === "ai" ? "ai" : "rules";
-  const d = Math.round(Number(sp.days));
-  return { mode, days: Number.isFinite(d) && d >= 1 && d <= 90 ? d : 7 };
+  return { mode, days: budgetFrom(sp.days) };
 }
 
 function describe(report: Report | null, name: string): string {
-  if (!report) return `Holt reads ${name}'s recent pull requests and tells you whether newcomers get replies and get merged.`;
+  if (!report) return `Do outsiders get replies and get merged at ${name}? Holt checks its recent PRs and tells you.`;
   const s = report.stats;
   const reply = s.median_first_response_hours == null ? "" : `, and the typical first reply takes ${humanHours(s.median_first_response_hours)}`;
-  return `${report.headline}. ${s.outsider_merged} of ${s.outsider_attempts} pull requests from outside contributors were merged${reply}. See the evidence and starter issues.`;
+  return `${report.headline}. ${s.outsider_merged} of ${s.outsider_attempts} outside PRs got merged${reply}. See the evidence and starter issues.`;
 }
 
 const titleFor = (name: string) => `${name}: Worth your time? | Holt`;
@@ -81,21 +81,26 @@ export default async function RepoPage({ params, searchParams }: Props) {
   if (!isValidRepo(owner, repo)) notFound();
   const sp = await searchParams;
   const { mode, days } = opts(sp);
-  const requestedModel = typeof sp.model === "string" ? sp.model : undefined;
   const name = `${owner}/${repo}`;
   const user = await currentUser();
   const signedIn = Boolean(user);
   if (mode === "ai" && !signedIn) redirect(`/signin?callbackUrl=${encodeURIComponent(`/${name}?mode=ai`)}`);
 
-  // Only the report blocks the page; starter issues (a live GitHub call) stream in.
-  const report = await getReport(name, mode, days);
+  // Only the report (and, signed in, whether it's saved: one database read)
+  // blocks the page; starter issues (a live GitHub call) stream in.
+  const [report, saved] = await Promise.all([
+    getReport(name, mode, days),
+    user ? savedState(user.id, name) : null,
+  ]);
 
   // Normalise to GitHub's casing so shared links and caches agree.
   if (report.ok && report.data.repo !== name && report.data.repo.toLowerCase() === name.toLowerCase()) {
-    redirect(`/${report.data.repo}${mode === "ai" ? "?mode=ai" : ""}`);
+    redirect(reportHref(report.data.repo, days, mode));
   }
 
   const display = report.ok ? report.data.repo : name;
+  // For Connect GitHub users' "opened a PR after checking it on Holt" (the server ignores the rest).
+  if (user && report.ok) after(() => recordView(user.id, report.data.repo));
   const [dOwner, dRepo] = display.split("/");
 
   return (
@@ -126,12 +131,15 @@ export default async function RepoPage({ params, searchParams }: Props) {
               github.com/{display} ↗
             </a>
           </div>
+          {/* A failed lookup shows "save"; saving again is harmless. Keyed so
+              moving to another repo's report starts from that repo's state. */}
+          <SaveButton key={display} repo={display} saved={user ? Boolean(saved?.ok && saved.data.saved) : null} />
           <nav aria-label="Report type" className="relative grid w-full grid-cols-2 border border-line-strong text-center text-[0.85rem] sm:w-auto">
             {/* One pill under both tabs; it slides to the current one. */}
             <span aria-hidden="true" className={`tab-pill absolute inset-y-0 left-0 w-1/2 ${mode === "ai" ? "translate-x-full bg-blue" : "bg-ink"}`} />
             {/* No prefetch: one tab is this page, the other is sign-in for most visitors. */}
             <Link
-              href={`/${display}`}
+              href={reportHref(display, days)}
               prefetch={false}
               aria-current={mode === "rules" ? "page" : undefined}
               className={`relative inline-flex min-h-11 items-center justify-center px-3 transition-colors ${mode === "rules" ? "text-bg" : "text-muted hover:text-ink"}`}
@@ -151,10 +159,17 @@ export default async function RepoPage({ params, searchParams }: Props) {
           </nav>
         </div>
 
+        {/* Free report only: on the AI tab another budget would be another paid run. */}
+        {mode === "rules" && <BudgetPicker repo={display} days={days} />}
+
         {/* Switching between the free and AI tabs crossfades the report, not the page. */}
         <ViewTransition key={mode} name="report-body" share="swap" enter="swap" exit="swap" default="none">
           <div>
-            {report.ok ? (
+            {report.ok && report.data.outdated && mode === "rules" ? (
+              // Made by an older version of the rules: check again, with the
+              // normal progress, and fall back to it only if that fails.
+              <AnalysisRunner repo={report.data.repo} mode={mode} days={days} signedIn={signedIn} fallback={report.data} />
+            ) : report.ok ? (
               <ReportView
                 report={report.data}
                 signedIn={signedIn}
@@ -166,12 +181,12 @@ export default async function RepoPage({ params, searchParams }: Props) {
               />
             ) : report.error.code === "not_found" ? (
               mode === "ai" && user ? (
-                <AiStart repo={name} days={days} signedIn={signedIn} access={await modelAccess(user.id)} requested={requestedModel} />
+                <AiStart repo={name} days={days} signedIn={signedIn} credits={await aiCredits(user.id)} />
               ) : (
                 <AnalysisRunner repo={name} mode={mode} days={days} signedIn={signedIn} />
               )
             ) : (
-              <ErrorPanel error={report.error} repo={name} retryHref={`/${name}${mode === "ai" ? "?mode=ai" : ""}`} />
+              <ErrorPanel error={report.error} repo={name} retryHref={reportHref(name, days, mode)} />
             )}
           </div>
         </ViewTransition>

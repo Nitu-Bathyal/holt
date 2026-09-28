@@ -28,9 +28,11 @@ export function UrlTrick() {
         <span className="text-ink">/pallets/flask</span>
       </Bar>
       <p className="pt-4 font-sans text-[0.9rem] text-muted">
-        Lazier still: put <code className="font-mono text-ink">{SITE_HOST}/</code> in front of the whole link.{" "}
-        <Link href="/https://github.com/pallets/flask" prefetch={false} className="text-link font-mono text-[0.89rem]">
-          try it
+        Lazier still: stick <code className="font-mono text-ink">{SITE_HOST}/</code> in front of the whole link.
+      </p>
+      <p className="pt-4">
+        <Link href="/https://github.com/pallets/flask" prefetch={false} className="bracket-link">
+          [ try it on pallets/flask → ]
         </Link>
       </p>
     </div>

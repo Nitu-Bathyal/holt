@@ -11,6 +11,11 @@ module does two things and keeps them apart:
   default screen is `discover`'s free pass (one page of pull-request threads,
   arithmetic only, no model); the web server can pass its cached full verdict
   instead.
+* **Some issues are never listed**: ones someone has already taken (assigned,
+  labelled "taken" or "in progress", or claimed in a recent comment), ones
+  opened more than a year ago, and batches one account filed from a template
+  or a script (the "add a Japanese idiom" pattern). `find` also skips
+  repositories that are both brand new and tiny.
 * **The issue score only orders.** It is a transparent sum over labels,
   recency, discussion size and where outsider work has landed, and every point
   it adds comes with a plain-English line in `why`. It makes no claim beyond
@@ -31,6 +36,8 @@ from collections.abc import Callable, Iterable, Sequence
 from concurrent.futures import FIRST_COMPLETED, Future, ThreadPoolExecutor, wait
 from dataclasses import dataclass, field
 from datetime import UTC, datetime, timedelta
+from difflib import SequenceMatcher
+from itertools import pairwise
 from typing import Any
 
 import httpx
@@ -141,11 +148,12 @@ def _transport(token: str | None, transport: GitHubGraphQL | None) -> GitHubGrap
 ISSUE_FIELDS = """
 fragment StarterFields on Issue {
   number title url createdAt updatedAt body locked
+  author { login }
   repository { nameWithOwner isArchived }
   labels(first:15) { nodes { name } }
   assignees { totalCount }
   comments { totalCount }
-  recent: comments(last:3) { nodes { createdAt body author { login } } }
+  recent: comments(last:10) { nodes { createdAt body author { login } } }
   closedByPullRequestsReferences(first:5, includeClosedPrs:false) { nodes { state } }
   timelineItems(last:10, itemTypes:[CROSS_REFERENCED_EVENT, CONNECTED_EVENT]) {
     nodes {
@@ -182,7 +190,7 @@ query($q:String!) {
     nodes {
       ... on Issue {
         number
-        repository { nameWithOwner isArchived isFork stargazerCount }
+        repository { nameWithOwner isArchived isFork stargazerCount createdAt }
       }
     }
   }
@@ -195,7 +203,7 @@ query($q:String!) {
   search(query:$q, type:REPOSITORY, first:30) {
     nodes {
       ... on Repository {
-        nameWithOwner isArchived isFork stargazerCount
+        nameWithOwner isArchived isFork stargazerCount createdAt
         goodFirstIssues: issues(states:OPEN, labels:["good first issue",
           "good-first-issue", "beginner", "first-timers-only", "easy"]) { totalCount }
       }
@@ -220,8 +228,17 @@ ACTIVE_DAYS = 180
 # Discussion past this size usually means the problem is not a first issue,
 # whatever the label says.
 LONG_DISCUSSION = 12
-# A claim ("can I work on this?") older than this is probably abandoned.
+# A claim ("can I work on this?") younger than this means the issue is taken;
+# older, it is probably abandoned.
 CLAIM_FRESH_DAYS = 45
+# An issue opened longer ago than this has usually been passed over for a
+# reason, whatever its label says.
+MAX_ISSUE_AGE_DAYS = 365
+# This many issues from one account, near-identical or filed seconds apart, are
+# a template or a script, not a maintainer picking out starter work.
+FARM_MIN_ISSUES = 4
+FARM_TITLE_SIMILARITY = 0.6
+FARM_BURST_SECONDS = 120
 MAX_BODY = 20000
 
 
@@ -237,16 +254,28 @@ _BEGINNER = re.compile(r"\b(good first (issue|bug|pr|contribution)|first timers?
 _EASY = re.compile(r"\b(easy|trivial|low hanging fruit|size (xs|s|small)|small)\b")
 _HELP = re.compile(r"\b(help wanted|up for grabs|contributions? welcome|prs? welcome)\b")
 _HACK = re.compile(r"^hacktoberfest$")
+# Labels saying someone already has it, e.g. React's "good first issue (taken)".
+_TAKEN = re.compile(r"(?<!not )(?<!un )\b(taken|claimed|assigned|in progress|"
+                    r"work in progress|wip|being worked on|working on it|has (a )?pr|"
+                    r"pr (open|opened|exists|submitted|pending|in progress)|linked pr)\b")
 # Labels saying the issue is not ready for anyone, let alone a newcomer.
 _NOT_READY = re.compile(r"\b(wontfix|won t fix|invalid|duplicate|question|discussion|"
                         r"blocked|on hold|needs design|needs decision|rfc|proposal|stale)\b")
 _SMALL_TITLE = re.compile(r"\b(typos?|spelling|misspel\w*|docs?|documentation|readme|"
                           r"docstrings?|broken links?|dead links?|grammar|wording|"
                           r"examples?|translation)\b", re.I)
-_CLAIM = re.compile(r"\b(i('d| would) (like|love) to (work on|take|tackle)|"
-                    r"can i (work on|take|pick|tackle)|may i (work on|take)|"
-                    r"i('ll| will) (work on|take|pick)|assign (this|it) to me|"
-                    r"i('m| am) (working on|on) (this|it))\b", re.I)
+# "take", "pick" and "tackle" need an object: "I'll take another look" is no claim.
+_TAKE = r"(take|pick|tackle) (this|it|up|on)"
+_CLAIM = re.compile(rf"\b(i(['’]d| would) (like|love) to (work on|{_TAKE})|"
+                    rf"can i (work on|try|{_TAKE})|may i (work on|take (this|it|up|on))|"
+                    rf"i(['’]ll| will) (work on|{_TAKE})|"
+                    r"(assign|allot) (this|it|the issue) to me|(please )?assign me|"
+                    r"i(['’]m| am) (working on|on|taking|picking up) (this|it))\b", re.I)
+# A later comment handing the issue back ("I'm no longer working on this").
+_RELEASE = re.compile(r"\b(no longer (working|able|have time)|not working on (this|it)|"
+                      r"(un-?assign|unassigning)|feel free to (take|pick|work)|"
+                      r"(free|open|available|up for grabs) (again|for anyone)|"
+                      r"anyone (can|is welcome to) (take|pick|work))\b", re.I)
 
 # Directory names too generic to count as a mention on their own.
 _GENERIC_SEGMENTS = {"src", "lib", "libs", "source", "main", "core", "app", "apps",
@@ -275,7 +304,47 @@ def label_kinds(labels: Iterable[str]) -> set[str]:
             kinds.add("hacktoberfest")
         if _NOT_READY.search(label):
             kinds.add("not_ready")
+        if _TAKEN.search(label):
+            kinds.add("taken")
     return kinds
+
+
+# The kinds of contribution a profile can ask for, and how to spot each on an
+# issue from its labels and title. "code" is everything that isn't one of the
+# others, plus issues labelled as a bug, feature or refactor.
+CONTRIBUTION_TYPES = ("code", "docs", "tests", "design", "translations")
+_AREA_LABELS = {
+    "docs": re.compile(r"\b(docs?|documentation|readme|docstrings?|tutorials?|examples?)\b"),
+    "tests": re.compile(r"\b(tests?|testing|coverage|unit tests?|e2e)\b"),
+    "design": re.compile(r"\b(design|ui|ux|ui ux|css|styling|a11y|accessibility|icons?|logo)\b"),
+    "translations": re.compile(r"\b(translations?|i18n|l10n|locali[sz]ation)\b"),
+}
+_AREA_TITLES = {
+    "docs": re.compile(r"\b(docs?|documentation|readme|docstrings?|typos?|tutorial)\b", re.I),
+    "tests": re.compile(r"\b(tests?|testing|test coverage|unit tests?)\b", re.I),
+    "design": re.compile(r"\b(ui|ux|css|styling|dark mode|layout|icons?|logo)\b", re.I),
+    "translations": re.compile(r"\b(translat\w*|i18n|l10n|locali[sz]\w*)\b", re.I),
+}
+_CODE_LABELS = re.compile(r"\b(bug|feature|enhancement|refactor\w*|performance|type bug|"
+                          r"kind bug|kind feature)\b")
+
+
+def is_beginner_issue(labels: Iterable[str]) -> bool:
+    """True when the maintainers labelled the issue for first-timers ("good
+    first issue" and its spellings). What a newcomer's profile keeps."""
+    return "beginner" in label_kinds(labels)
+
+
+def issue_areas(labels: Iterable[str], title: str = "") -> list[str]:
+    """Which of `CONTRIBUTION_TYPES` an issue looks like, from its labels and
+    title. Ordering only: it never decides whether an issue is shown."""
+    normed = [_norm(label) for label in labels]
+    found = [area for area, pattern in _AREA_LABELS.items()
+             if any(pattern.search(label) for label in normed)
+             or _AREA_TITLES[area].search(title or "")]
+    if not found or any(_CODE_LABELS.search(label) for label in normed):
+        found.insert(0, "code")
+    return found
 
 
 def _ts(value: str) -> datetime:
@@ -291,6 +360,74 @@ def _has_open_pr(node: dict[str, Any]) -> bool:
         if pr.get("state") == "OPEN":
             return True
     return False
+
+
+def _last_claim_age(node: dict[str, Any], as_of: datetime) -> float | None:
+    """Days since the latest recent comment asking to work on this, unless a
+    later comment handed it back."""
+    claimed: datetime | None = None
+    for c in (node.get("recent") or {}).get("nodes") or []:
+        if not c:
+            continue
+        body = c.get("body") or ""
+        if _CLAIM.search(body):
+            claimed = _ts(c["createdAt"])
+        elif claimed and _RELEASE.search(body):
+            claimed = None
+    return None if claimed is None else (as_of - claimed).total_seconds() / 86400
+
+
+def _title_words(title: str) -> list[str]:
+    stop = {"a", "an", "the", "to", "in", "of", "for", "on", "and", "with"}
+    return [w for w in re.sub(r"[^a-z0-9]+", " ", title.lower()).split()
+            if w not in stop and not w.isdigit()]
+
+
+def farmed_issues(nodes: Iterable[dict[str, Any]]) -> set[int]:
+    """Numbers of issues that one account filed as a batch: at least
+    `FARM_MIN_ISSUES` with near-identical titles ("Add a Japanese idiom", "Add
+    a Korean idiom", ...) or created seconds apart by a script. Issues with no
+    known author are never counted."""
+    by_author: dict[str, dict[int, dict[str, Any]]] = {}
+    for node in nodes:
+        login = ((node or {}).get("author") or {}).get("login")
+        if login and "number" in node:
+            by_author.setdefault(login.lower(), {})[node["number"]] = node
+    farmed: set[int] = set()
+    for issues in by_author.values():
+        if len(issues) < FARM_MIN_ISSUES:
+            continue
+        nums = sorted(issues)
+        # Near-identical titles: each joins the first group whose first title
+        # it resembles.
+        groups: list[tuple[list[str], list[int]]] = []
+        for n in nums:
+            words = _title_words(issues[n].get("title") or "")
+            if not words:
+                continue
+            for first, members in groups:
+                if SequenceMatcher(None, first, words).ratio() >= FARM_TITLE_SIMILARITY:
+                    members.append(n)
+                    break
+            else:
+                groups.append((words, [n]))
+        for _, members in groups:
+            if len(members) >= FARM_MIN_ISSUES:
+                farmed.update(members)
+        # Scripted bursts: a run of issues each filed within seconds of the last.
+        timed = sorted(nums, key=lambda n: _ts(issues[n]["createdAt"]))
+        run = [timed[0]]
+        for prev, n in pairwise(timed):
+            gap = _ts(issues[n]["createdAt"]) - _ts(issues[prev]["createdAt"])
+            if gap.total_seconds() <= FARM_BURST_SECONDS:
+                run.append(n)
+                continue
+            if len(run) >= FARM_MIN_ISSUES:
+                farmed.update(run)
+            run = [n]
+        if len(run) >= FARM_MIN_ISSUES:
+            farmed.update(run)
+    return farmed
 
 
 def _mentioned_area(text: str, landing: Sequence[Area], repo: str = "") -> Area | None:
@@ -334,13 +471,18 @@ def score_issue(node: dict[str, Any], as_of: datetime, *,
                 ) -> tuple[float, StarterIssue] | None:
     """Score one open issue for a newcomer, or None if it is not a starter issue.
 
-    Every point comes with a sentence in `why`, positives first.
+    None also covers issues someone has already taken (assignee, a "taken" or
+    "in progress" label, a claim in the last `CLAIM_FRESH_DAYS` days that was
+    not handed back) and issues opened over `MAX_ISSUE_AGE_DAYS` ago. Every
+    point comes with a sentence in `why`, positives first.
     """
     if (node.get("assignees") or {}).get("totalCount"):
         return None
     if node.get("locked") or (node.get("repository") or {}).get("isArchived"):
         return None
     if _has_open_pr(node):
+        return None
+    if (as_of - _ts(node["createdAt"])).days > MAX_ISSUE_AGE_DAYS:
         return None
     updated = _ts(node.get("updatedAt") or node["createdAt"])
     idle = (as_of - updated).total_seconds() / 86400
@@ -349,7 +491,10 @@ def score_issue(node: dict[str, Any], as_of: datetime, *,
 
     labels = [n["name"] for n in (node.get("labels") or {}).get("nodes") or [] if n]
     kinds = label_kinds(labels)
-    if "not_ready" in kinds:
+    if kinds & {"not_ready", "taken"}:
+        return None
+    claim_age = _last_claim_age(node, as_of)
+    if claim_age is not None and claim_age <= CLAIM_FRESH_DAYS:
         return None
     title = node.get("title") or ""
     body = (node.get("body") or "")[:MAX_BODY]
@@ -386,7 +531,7 @@ def score_issue(node: dict[str, Any], as_of: datetime, *,
     if landing and (area := _mentioned_area(f"{title}\n{body}", landing, repo)):
         score += 2
         why.append(f"Mentions {area.path}/, where {area.landed} of {area.attempted} "
-                   "pull requests from first-time contributors were merged")
+                   "pull requests from outside contributors were merged")
 
     if idle <= 14:
         score += 1.5
@@ -410,15 +555,9 @@ def score_issue(node: dict[str, Any], as_of: datetime, *,
         cautions.append(f"Long discussion ({comments} comments): it may be harder than "
                         "it looks")
 
-    for c in (node.get("recent") or {}).get("nodes") or []:
-        if not c or not _CLAIM.search(c.get("body") or ""):
-            continue
-        age = (as_of - _ts(c["createdAt"])).total_seconds() / 86400
-        if age <= CLAIM_FRESH_DAYS:
-            score -= 3
-            cautions.append(f"Someone asked to work on this {_ago(age)}; comment "
-                            "before you start")
-            break
+    if claim_age is not None:
+        cautions.append(f"Someone asked to work on this {_ago(claim_age)}; ask whether "
+                        "it is still free before you start")
 
     number = node["number"]
     issue = StarterIssue(
@@ -436,13 +575,17 @@ def score_issue(node: dict[str, Any], as_of: datetime, *,
 def rank(nodes: Iterable[dict[str, Any]], as_of: datetime, *,
          landing: Sequence[Area] = (), hacktoberfest: bool = False,
          limit: int = 20) -> list[tuple[float, StarterIssue]]:
-    """Deduplicate, score and sort. Ties go to the newer issue, then the number."""
-    seen: set[int] = set()
-    scored: list[tuple[float, StarterIssue]] = []
+    """Deduplicate, drop farmed batches, score and sort. Ties go to the newer
+    issue, then the number. `nodes` are one repository's issues."""
+    unique: dict[int, dict[str, Any]] = {}
     for node in nodes:
-        if not node or "number" not in node or node["number"] in seen:
+        if node and "number" in node:
+            unique.setdefault(node["number"], node)
+    farmed = farmed_issues(unique.values())
+    scored: list[tuple[float, StarterIssue]] = []
+    for number, node in unique.items():
+        if number in farmed:
             continue
-        seen.add(node["number"])
         if result := score_issue(node, as_of, landing=landing, hacktoberfest=hacktoberfest):
             scored.append(result)
     scored.sort(key=lambda pair: (-pair[0], -_ts(pair[1].created_at).timestamp(),
@@ -459,7 +602,8 @@ def _scored_issues(repo: str, transport: GitHubGraphQL, as_of: datetime, limit: 
                    ) -> list[tuple[float, StarterIssue]]:
     owner, _, name = normalise(repo).partition("/")
     labels = ",".join(SEARCH_LABELS)
-    q = f"repo:{owner}/{name} is:issue is:open no:assignee label:{labels}"
+    q = (f"repo:{owner}/{name} is:issue is:open no:assignee label:{labels} "
+         f"created:>{_oldest_issue_date(as_of)}")
     data = transport.query(REPO_ISSUES, owner=owner, name=name, q=q)
     repository = data.get("repository")
     if repository is None:  # the search half answered, so the base class did not raise
@@ -496,7 +640,7 @@ def _stats_subset(signals) -> dict[str, Any]:
         "outsider_attempts": signals.outsider_threads,
         "outsider_merged": signals.outsider_merged,
         "distinct_outsiders": signals.distinct_outsider_authors,
-        "first_time_merged_authors": signals.distinct_merged_authors,
+        "first_time_merged_authors": signals.distinct_first_timer_merged_authors,
         "no_reply": signals.outsider_ignored,
         "median_first_response_hours": signals.median_first_response_hours,
     }
@@ -518,12 +662,17 @@ def rules_screen(transport: GitHubGraphQL, as_of: datetime,
     return screen
 
 
+def _oldest_issue_date(as_of: datetime) -> str:
+    return (as_of - timedelta(days=MAX_ISSUE_AGE_DAYS)).date().isoformat()
+
+
 def issue_source_queries(languages: Sequence[str], hacktoberfest: bool,
                          as_of: datetime) -> list[str]:
     """Issue search, one query per language (GitHub ANDs `language:`)."""
     since = (as_of - timedelta(days=ACTIVE_DAYS // 2)).date().isoformat()
     label = "hacktoberfest" if hacktoberfest else ",".join(SOURCE_LABELS)
-    base = f"is:issue is:open no:assignee -linked:pr archived:false label:{label} updated:>{since}"
+    base = (f"is:issue is:open no:assignee -linked:pr archived:false label:{label} "
+            f"updated:>{since} created:>{_oldest_issue_date(as_of)}")
     return [f"{base} language:{lang}" for lang in languages] or [base]
 
 
@@ -549,6 +698,19 @@ def repo_source_queries(languages: Sequence[str], topics: Sequence[str],
 # Stars below this in issue-search results are usually personal projects whose
 # screen would fail anyway; skipping them saves screening slots.
 MIN_ISSUE_SOURCE_STARS = 20
+# A repository younger than this with fewer stars than that is too new and too
+# small to have a track record with newcomers, whatever one page of pull
+# requests says.
+NEW_REPO_DAYS = 180
+TINY_REPO_STARS = 200
+
+
+def brand_new_and_tiny(repo: dict[str, Any], as_of: datetime) -> bool:
+    created = repo.get("createdAt")
+    if not created:
+        return False
+    young = (as_of - _ts(created)).days < NEW_REPO_DAYS
+    return young and (repo.get("stargazerCount") or 0) < TINY_REPO_STARS
 
 
 def source_candidates(transport: GitHubGraphQL, languages: Sequence[str],
@@ -559,7 +721,7 @@ def source_candidates(transport: GitHubGraphQL, languages: Sequence[str],
     Weight: two per matching issue from issue search (capped), plus the
     repository's open beginner-labelled issue count from repository search
     (capped). Issue search cannot filter by topic, so it is skipped when topics
-    are given.
+    are given. Archived, forked, and brand-new tiny repositories are skipped.
     """
     weight: dict[str, float] = {}
     order: list[str] = []
@@ -588,13 +750,15 @@ def source_candidates(transport: GitHubGraphQL, languages: Sequence[str],
         for node in (n for page in issue_pages for n in page):
             repo = (node or {}).get("repository") or {}
             if (not repo or repo.get("isArchived") or repo.get("isFork")
-                    or (repo.get("stargazerCount") or 0) < MIN_ISSUE_SOURCE_STARS):
+                    or (repo.get("stargazerCount") or 0) < MIN_ISSUE_SOURCE_STARS
+                    or brand_new_and_tiny(repo, as_of)):
                 continue
             hits[repo["nameWithOwner"]] = hits.get(repo["nameWithOwner"], 0) + 1
         for slug, n in hits.items():
             add(slug, 2 * min(n, 5))
     for node in (n for page in repo_pages for n in page):
-        if not node or node.get("isArchived") or node.get("isFork"):
+        if (not node or node.get("isArchived") or node.get("isFork")
+                or brand_new_and_tiny(node, as_of)):
             continue
         add(node["nameWithOwner"],
             min((node.get("goodFirstIssues") or {}).get("totalCount") or 0, 10))
@@ -711,7 +875,7 @@ def _stats_line(stats: dict[str, Any]) -> str:
     parts = []
     tried, merged = stats.get("outsider_attempts"), stats.get("outsider_merged")
     if tried:
-        parts.append(f"{merged} of {tried} recent pull requests from first-time "
+        parts.append(f"{merged} of {tried} recent pull requests from outside "
                      "contributors were merged")
     hours = stats.get("median_first_response_hours")
     if hours is not None:
@@ -738,7 +902,7 @@ def render_find(results: Sequence[FindResult], describe: str) -> str:
                   "open starter issue right now. Try another language or topic, or "
                   "drop --hacktoberfest.", ""]
         return "\n".join(lines)
-    lines += ["Each repository below merges pull requests from first-time contributors "
+    lines += ["Each repository below merges pull requests from outside contributors "
               "(checked from its recent history). Issues are listed best first.", ""]
     for i, result in enumerate(results, 1):
         lines.append(f"{i}. {result.repo}: {result.headline}")

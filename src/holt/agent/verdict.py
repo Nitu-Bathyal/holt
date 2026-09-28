@@ -13,8 +13,9 @@ it cannot change. A test asserts the rendered report and this function agree.
 
 from __future__ import annotations
 
+from holt.agent import rates
 from holt.agent.findings import Findings
-from holt.agent.signals import MIN_AGE_HOURS, Signals
+from holt.agent.signals import Signals
 from holt.report import Verdict
 
 # Kinds where a merged pull request is not a software contribution. Landing work
@@ -83,6 +84,21 @@ DEFAULT_CONTRIBUTOR_DAYS = 7
 # the conjunction that describes work being waved through unread.
 RUBBER_STAMP_REVIEWED_MAX = 0.20
 RUBBER_STAMP_MERGE_RATE_MIN = 0.60
+# On a live reading the rule asks about outside contributors' merges only (a
+# maintainer merging their own work unreviewed says nothing about how yours
+# would be read), and needs this many of them: "0 of 3 merges got a comment"
+# is three data points, not a policy. See docs/research/REVIEW-2026-09-30.md.
+RUBBER_STAMP_MIN_MERGES = 10
+
+# The merge-rate floor (ticket 08, live readings only). Enough merges from
+# enough people used to pass however many attempts they came from: flask
+# merged 5 of 171 outside pull requests and read "Worth your time". Below this
+# share of decided outside attempts, a pull request here is a long shot and
+# the answer is Not worth your time. With MIN_MERGES merges needed to pass at
+# all, a rate under 5% implies at least 41 decided attempts, so the floor
+# never judges a thin sample. The threshold, and why not 10%, is argued from
+# the golden set and the prod re-run in docs/research/REVIEW-2026-09-30.md.
+MERGE_RATE_FLOOR = 0.05
 
 # One merge from one person is an anecdote; two people is a pattern.
 MIN_MERGES = 2
@@ -247,6 +263,24 @@ def contested_kind(
     return None
 
 
+def slow_sentence(median_hours: float, contributor_days: int) -> str:
+    """Why the evidence is thin when replies are slow and merges few."""
+    return (f"Outside contributors who got a reply typically waited "
+            f"{hours_phrase(median_hours)} for it, longer than the "
+            f"{_n(contributor_days, 'day')} you have.")
+
+
+def slow_note(median_hours: float, contributor_days: int) -> Rule:
+    """The note under "Worth your time" when the typical first reply takes
+    longer than the reader's budget. It never decides (rates.INFO_CODES);
+    the server rewrites it for another budget without reading GitHub again."""
+    return Rule(
+        f"Replies are slow here: typically {hours_phrase(median_hours)}, beyond your "
+        f"{contributor_days}-day budget.",
+        code="slow_note",
+    )
+
+
 def _kind_is_cited(findings: Findings) -> bool:
     return any(
         item.field == "repo_kind" and item.evidence_ids for item in findings
@@ -271,7 +305,6 @@ def classify(
     trace: list[str] = []
     slow_response_hours = contributor_days * 24.0
     kind = findings.get("repo_kind")
-    days = _n(contributor_days, "day")
 
     if findings.get("is_archived"):
         trace.append(Rule(
@@ -279,6 +312,16 @@ def classify(
             "contributions.",
             code="archived", legacy="archived: no longer accepting work",
         ))
+        return Verdict.NOT_VIABLE, trace
+
+    # A mirror or a fork, read from GitHub's own fields (landing_detection).
+    if elsewhere := findings.get("contribute_elsewhere"):
+        trace.append(Rule(elsewhere, code="elsewhere"))
+        return Verdict.NOT_VIABLE, trace
+
+    # Nothing merged and nothing pushed in 90 days (rates.dormancy).
+    if inactive := findings.get("inactive"):
+        trace.append(Rule(inactive, code="inactive"))
         return Verdict.NOT_VIABLE, trace
 
     if kind in CLOSED_KINDS:
@@ -306,14 +349,11 @@ def classify(
             ))
             return Verdict.NOT_VIABLE, trace
 
-    if signals.outsider_awaiting_reply:
-        trace.append(Rule(
-            f"{_n(signals.outsider_awaiting_reply, 'pull request')} from newcomers "
-            f"{'was' if signals.outsider_awaiting_reply == 1 else 'were'} opened "
-            f"in the last {MIN_AGE_HOURS:g} hours and haven't had time to get a "
-            "reply yet, so they aren't counted as ignored.",
-            code="awaiting_reply",
-        ))
+    # What the rates leave out, and why (rates.py). They never decide.
+    for text, code in rates.count_sentences(signals.outsider_still_open,
+                                            signals.outsider_closed_silently,
+                                            signals.outsider_excluded):
+        trace.append(Rule(text, code=code))
 
     if signals.outsider_threads == 0:
         # "The period we looked at", not "before the cutoff": the cutoff is an
@@ -337,7 +377,7 @@ def classify(
     ):
         trace.append(Rule(
             f"{signals.outsider_ignored} of {_n(judgeable, 'pull request')} from "
-            "newcomers got no reply at all, and none were merged.",
+            "outside contributors got no reply at all, and none were merged.",
             code="ignored",
             legacy=(
                 f"{signals.outsider_ignored}/{signals.outsider_threads} outsider attempts "
@@ -348,21 +388,27 @@ def classify(
 
     median = signals.median_first_response_hours
     slow = median is not None and median > slow_response_hours
+    # A live reading (or a recording of one) gets ticket 08's rules; the
+    # frozen benchmark keeps the ones it was scored with.
+    live = signals.settle_hours > 0
     if (
         signals.outsider_merged >= MIN_MERGES
-        and signals.distinct_outsider_authors >= MIN_DISTINCT_AUTHORS
-        and not slow
+        and signals.distinct_merged_authors >= MIN_DISTINCT_AUTHORS
+        # Slow replies on a project that merges outside work are a note under
+        # "Worth your time", not a reason to call the evidence thin: the
+        # merges are the evidence. The frozen benchmark kept them apart.
+        and (live or not slow)
     ):
         text = (
-            f"{_n(signals.outsider_merged, 'pull request')} from first-time "
+            f"{_n(signals.outsider_merged, 'pull request')} from outside "
             f"contributors {'was' if signals.outsider_merged == 1 else 'were'} "
             f"merged, by {_n(signals.distinct_merged_authors, 'different person', 'different people')}, "
-            f"out of {_n(signals.outsider_threads, 'attempt')} by "
+            f"out of {_n(judgeable, 'attempt')} by "
             f"{_n(signals.distinct_outsider_authors, 'person', 'people')}."
         )
         if median is not None:
             text += (
-                " Among newcomers who got a reply, half heard back within "
+                " Of those who got a reply, half heard back within "
                 f"{hours_phrase(median)}."
             )
         # The median covers only attempts that got a reply; the ones that never
@@ -370,7 +416,7 @@ def classify(
         if signals.outsider_ignored:
             text += (
                 f" {_n(signals.outsider_ignored, 'attempt')} got no reply at all "
-                "and weren't merged."
+                f"and {'wasn' if signals.outsider_ignored == 1 else 'weren'}'t merged."
             )
         trace.append(Rule(
             text,
@@ -383,16 +429,19 @@ def classify(
                 f"{signals.median_first_response_hours}h"
             ),
         ))
+        reviewed = signals.outsider_reviewed_share if live else signals.reviewed_share
         if (
-            signals.reviewed_share is not None
+            reviewed is not None
             and signals.merge_rate is not None
-            and signals.reviewed_share < RUBBER_STAMP_REVIEWED_MAX
+            and reviewed < RUBBER_STAMP_REVIEWED_MAX
             and signals.merge_rate > RUBBER_STAMP_MERGE_RATE_MIN
+            and (not live or signals.outsider_merged >= RUBBER_STAMP_MIN_MERGES)
         ):
+            whose = "merged pull requests from outside contributors" if live else "merged pull requests"
             trace.append(Rule(
-                f"But only {signals.reviewed_share:.0%} of merged pull requests got "
+                f"But only {reviewed:.0%} of {whose} got "
                 f"any comment from a person, while {signals.merge_rate:.0%} of "
-                "newcomer attempts were merged. Changes here seem to be merged "
+                "outside attempts were merged. Changes here seem to be merged "
                 "without anyone reviewing them, so you wouldn't get feedback on yours.",
                 code="rubber_stamp",
                 legacy=(
@@ -402,12 +451,27 @@ def classify(
                 ),
             ))
             return Verdict.NOT_VIABLE, trace
+        if (
+            live
+            and signals.merge_rate is not None
+            and signals.merge_rate < MERGE_RATE_FLOOR
+        ):
+            # A plain sentence on its own: the web shows it alone as the reason.
+            trace.append(Rule(
+                f"Only {signals.outsider_merged} of {judgeable} pull requests from outside "
+                f"contributors were merged, about 1 in "
+                f"{round(judgeable / signals.outsider_merged)}. Most outside work here "
+                "is never merged, so yours would be a long shot.",
+                code="long_odds",
+            ))
+            return Verdict.NOT_VIABLE, trace
+        if slow:
+            trace.append(slow_note(median, contributor_days))
         return Verdict.VIABLE, trace
 
     if slow:
         trace.append(Rule(
-            f"Newcomers who got a reply typically waited {hours_phrase(median)} for it, "
-            f"longer than the {days} you have.",
+            slow_sentence(median, contributor_days),
             code="slow",
             legacy=(
                 f"median first response {signals.median_first_response_hours}h "
@@ -418,8 +482,8 @@ def classify(
     if signals.outsider_merged == 0 and ignored_share > IGNORED_SHARE:
         trace.append(Rule(
             f"{signals.outsider_ignored} of {_n(judgeable, 'pull request')} from "
-            "newcomers got no reply, but that's too few attempts to be sure the "
-            "project ignores newcomers.",
+            "outside contributors got no reply, but that's too few attempts to be "
+            "sure the project ignores them.",
             code="too_few_attempts",
             legacy=(
                 f"{signals.outsider_ignored}/{signals.outsider_threads} attempts ignored, "
@@ -428,10 +492,28 @@ def classify(
         ))
     elif signals.outsider_merged < MIN_MERGES:
         trace.append(Rule(
-            f"Only {_n(signals.outsider_merged, 'pull request')} from first-time "
-            "contributors got merged in the period we looked at, too few to show "
-            "a pattern.",
+            ("No pull request from an outside contributor got merged in the "
+             "period we looked at, so there's no pattern to go on."
+             if signals.outsider_merged == 0 else
+             f"Only {signals.outsider_merged} "
+             + ("pull request from an outside contributor"
+                if signals.outsider_merged == 1 else
+                "pull requests from outside contributors")
+             + " got merged in the period we looked at, too few to show a pattern."),
             code="few_merges",
             legacy=f"only {signals.outsider_merged} outsider merges in the period read",
+        ))
+    elif live or not slow:
+        # Enough merges, from too few people: without this line the answer
+        # came with no reason at all. On a live reading it is said whether or
+        # not replies are slow, so the budget changes only the slow line
+        # (server/report.retime relies on that).
+        trace.append(Rule(
+            f"{'Both' if signals.outsider_merged == 2 else f'All {signals.outsider_merged}'} "
+            "merged pull requests from outside "
+            f"contributors came from "
+            f"{'one person' if signals.distinct_merged_authors == 1 else _n(signals.distinct_merged_authors, 'person', 'people')}, "
+            "too few people to show a pattern.",
+            code="few_people",
         ))
     return Verdict.INSUFFICIENT_EVIDENCE, trace

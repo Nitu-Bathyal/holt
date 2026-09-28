@@ -565,6 +565,73 @@
     margin-inline: 0.05em;
   }
 
+  /* The header logo cat perks up like the hero cat (^ eyes, ᴗ mouth, ears up,
+     a small curious tilt) while its link is hovered or keyboard-focused.
+     Hover only where hover is real, so a tap never leaves it stuck. Under
+     reduced motion the face still changes, instantly, with no movement. */
+  .cat-face .cat-eye:has(.cat-alt),
+  .cat-face .cat-mouth:has(.cat-alt) {
+    position: relative;
+  }
+  .cat-face .cat-alt {
+    position: absolute;
+    inset: 0;
+    text-align: center;
+    visibility: hidden;
+  }
+  @media (hover: hover) {
+    .cat-perk:hover .cat-rest {
+      visibility: hidden;
+    }
+    .cat-perk:hover .cat-alt {
+      visibility: visible;
+    }
+  }
+  .cat-perk:focus-visible .cat-rest {
+    visibility: hidden;
+  }
+  .cat-perk:focus-visible .cat-alt {
+    visibility: visible;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .cat-perk .cat-face,
+    .cat-perk .cat-ear {
+      transition: transform var(--dur-exit) var(--ease-in);
+    }
+    @media (hover: hover) {
+      .cat-perk:hover .cat-face {
+        transform: scale(1.04);
+        animation: cat-perk var(--dur-slow) var(--ease-out);
+        transition: transform var(--dur-fast) var(--ease-out);
+      }
+      .cat-perk:hover .cat-ear {
+        transform: translateY(-0.14em) rotate(-6deg);
+        transition: transform var(--dur-fast) var(--ease-out);
+      }
+      .cat-perk:hover .cat-eye ~ .cat-ear {
+        transform: translateY(-0.14em) rotate(6deg);
+      }
+      .cat-perk:hover .cat-alt {
+        animation: cat-squint var(--dur-fast) var(--ease-out);
+      }
+    }
+    .cat-perk:focus-visible .cat-face {
+      transform: scale(1.04);
+      animation: cat-perk var(--dur-slow) var(--ease-out);
+      transition: transform var(--dur-fast) var(--ease-out);
+    }
+    .cat-perk:focus-visible .cat-ear {
+      transform: translateY(-0.14em) rotate(-6deg);
+      transition: transform var(--dur-fast) var(--ease-out);
+    }
+    .cat-perk:focus-visible .cat-eye ~ .cat-ear {
+      transform: translateY(-0.14em) rotate(6deg);
+    }
+    .cat-perk:focus-visible .cat-alt {
+      animation: cat-squint var(--dur-fast) var(--ease-out);
+    }
+  }
+
   /* Headline lines slide up on load (CSS only, so it never delays paint). */
   .headline-line {
     display: block;
@@ -670,6 +737,36 @@
   100% {
     top: 100%;
     opacity: 0;
+  }
+}
+@keyframes cat-perk {
+  0% {
+    transform: rotate(-4deg) translateY(0.08em);
+  }
+  100% {
+    transform: scale(1.04);
+  }
+}
+/* The save button's bookmark drops into place when a repo is saved. */
+@media (prefers-reduced-motion: no-preference) {
+  .save-drop {
+    animation: save-drop var(--dur-slow) var(--ease-out);
+  }
+}
+@keyframes save-drop {
+  0% {
+    transform: translateY(-0.3em) scaleY(0.8);
+  }
+  60% {
+    transform: translateY(0.06em) scaleY(1.04);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes cat-squint {
+  from {
+    transform: scaleY(0.1);
   }
 }
 @keyframes blink {

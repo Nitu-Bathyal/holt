@@ -30,6 +30,7 @@ from typing import Any, Callable, Iterable
 
 from holt import model
 from holt.agent import landing as landing_mod
+from holt.agent import rates
 from holt.agent.findings import Findings
 from holt.agent.pipeline import analyze
 from holt.agent.signals import Signals, build_threads, compute
@@ -57,6 +58,7 @@ CAT_NO_LANDING = "nobody outside has landed work in"
 CAT_SLOW = "replies too slow for the day budget"
 CAT_RUBBER_STAMP = "work merged without review (the rubber-stamp rule)"
 CAT_HOSTILE = "outsider attempts went unanswered"
+CAT_LONG_ODDS = "few outsider attempts get merged (the merge-rate floor)"
 
 
 @dataclass(slots=True)
@@ -162,6 +164,8 @@ def _categorise(verdict: Verdict, trace: list[str]) -> str | None:
         return CAT_ARCHIVED
     if "rubber_stamp" in codes or "waved through unread" in joined:
         return CAT_RUBBER_STAMP
+    if "long_odds" in codes:
+        return CAT_LONG_ODDS
     if "slow" in codes or "exceeds the" in joined:
         return CAT_SLOW
     if "ignored" in codes or "drew no response" in joined:
@@ -196,8 +200,9 @@ def screen_slug(slug: str, transport, as_of: datetime, days: int,
     """
     from holt.evidence.github_graphql import LiveGitHubProvider
 
+    # No timeline: it is the slow part of a page, and a screen is a pre-filter.
     provider = LiveGitHubProvider(Window.PRE_T, cutoff=as_of, transport=transport,
-                                  max_pages=SCREEN_PAGES)
+                                  max_pages=SCREEN_PAGES, timeline=False)
     records = list(provider.fetch(slug))
     return screen_records(candidate or Candidate(slug=slug), records, days), records
 
@@ -334,11 +339,11 @@ def analyse_survivor(slug: str, provider: EvidenceProvider, client,
                                 contributor_days=days, as_of=as_of)
     signals = trace.signals
     landing = landing_mod.compute(build_threads(records))
-    why = assessment.rules[0] if assessment.rules else "no rule fired"
+    why = rates.first_deciding(assessment.rules) or "no rule fired"
     return SurvivorRow(
         slug=slug,
         verdict=assessment.verdict.value,
-        landed=f"{signals.outsider_merged}/{signals.outsider_threads}",
+        landed=f"{signals.outsider_merged}/{signals.outsider_judgeable}",
         reply=(f"{signals.median_first_response_hours:.1f}h"
                if signals.median_first_response_hours is not None else "never"),
         why=why if len(why) <= 58 else why[:57].rstrip(" ,;:") + "…",

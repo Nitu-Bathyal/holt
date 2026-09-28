@@ -1,6 +1,5 @@
-import type { Tone } from "@/lib/format";
 import type { CatMood } from "@/lib/cat";
-import type { Verdict } from "@/lib/types";
+import type { Tone } from "@/lib/types";
 
 export const TONE: Record<Tone | "neutral", { text: string; bg: string; border: string; soft: string }> = {
   good: { text: "text-green", bg: "bg-green", border: "border-green", soft: "bg-green/10" },
@@ -9,8 +8,9 @@ export const TONE: Record<Tone | "neutral", { text: string; bg: string; border: 
   neutral: { text: "text-blue", bg: "bg-blue", border: "border-blue", soft: "bg-blue/10" },
 };
 
-export const VERDICT_MOOD: Record<Verdict, CatMood> = {
-  viable: "celebrating",
-  not_viable: "heartbroken",
-  insufficient_evidence: "thinking",
+/** The cat's face for a verdict, by the tone the server gave it. */
+export const TONE_MOOD: Record<Tone, CatMood> = {
+  good: "celebrating",
+  bad: "heartbroken",
+  warn: "thinking",
 };

@@ -28,6 +28,7 @@ export function report(over: Partial<Report> = {}): Report {
     repo: "pallets/flask",
     verdict: "viable",
     headline: "Worth your time",
+    tone: "good",
     stats: { outsider_attempts: 100, outsider_merged: 15 },
     ...over,
   };

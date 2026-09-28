@@ -7,19 +7,34 @@ disagree, the determinism claim would be worth nothing.
 
 from __future__ import annotations
 
+import logging
+import time
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from holt.agent import landing, stages
+from holt.agent import (
+    labels, landing, landing_detection, narration, rates, repo_kind_rules, stages,
+)
 from holt.agent.findings import Finding, Findings
-from holt.agent.signals import MIN_AGE_HOURS, Signals, build_threads, compute
+from holt.agent.signals import (
+    MIN_AGE_HOURS,
+    Signals,
+    Thread,
+    build_threads,
+    compute,
+    outsider_threads,
+)
 from holt.agent.verdict import classify as decide
-from holt.agent.verdict import contested_kind, hours_phrase, headline, legacy_trace
-from holt.agent.verify import check_quotes, verify
+from holt.agent.verdict import Rule, contested_kind, hours_phrase, headline, legacy_trace
+from holt.agent.verify import check_quotes, knows_association, spoken_words, verify
 from holt.evidence.provider import EvidenceProvider
 from holt.model import ModelClient
 from holt.report import Assessment, Claim
+
+log = logging.getLogger("holt.report")
 
 MAX_CLAIM_CHARS = 240
 MAX_QUOTE_CHARS = 180
@@ -37,6 +52,28 @@ MODEL_WRITTEN_FIELDS = ("summary", "bottom_line", "limits")
 # Called with a plain-English stage and overall progress from 0 to 1. The web
 # server streams these to the browser as they happen.
 Progress = Callable[[str, float], None]
+
+
+def claim_for(item: Finding, text: str | None = None, show_note: bool = True) -> Claim:
+    """A verified finding as the evidence list shows it: plain words, never an
+    enum value (labels.py), with what it is about kept apart for code."""
+    if item.field == "thread_outcome":
+        outcome = item.value["outcome"]
+        quote = (item.value.get("quote") or "").strip()
+        # An empty quote used to render as a pair of quotation marks with
+        # nothing between them, which reads as a bug because it is one.
+        text = (f"{labels.outcome(outcome)} — “{clip(quote, MAX_QUOTE_CHARS)}”" if quote
+                else labels.outcome(outcome, quoted=False))
+        return Claim(text=text, evidence_id=item.evidence_ids[0], kind="outcome",
+                     value=outcome, quote=clip(quote, MAX_QUOTE_CHARS) if quote else "")
+    note = clip(item.note, MAX_CLAIM_CHARS) if item.note and show_note else ""
+    if text is None:
+        text = f"{labels.field(item.field)}: {labels.value(item.field, item.value)}" + (
+            f" ({MODEL_NOTE_LABEL}: {note})" if note else "")
+    value = (",".join(map(str, item.value)) if isinstance(item.value, list | tuple)
+             else str(item.value))
+    return Claim(text=text, evidence_id=item.evidence_ids[0], kind=item.field,
+                 value=value, note=note)
 
 
 def _reporter(progress: Progress | None) -> Progress:
@@ -83,6 +120,12 @@ class Trace:
     rules: list[str] = field(default_factory=list)
     # Which Assessment fields a model wrote; empty when no model ran.
     model_written: tuple[str, ...] = ()
+    # Narrated sentences the narration check removed: (field, sentence, why).
+    unsupported_sentences: list[tuple[str, str, str]] = field(default_factory=list)
+    # Seconds per stage ("fetch", "classify", "opportunity", "outcomes",
+    # "narrate") and "total", for AI reports. Classify, opportunity and
+    # outcomes overlap, so the stages add up to more than the total.
+    timings: dict[str, float] = field(default_factory=dict)
 
 
 def analyze(
@@ -110,21 +153,23 @@ def analyze(
             progress=progress, min_age_hours=min_age_hours,
         )
     report = _reporter(progress)
+    started = time.monotonic()
+    timings: dict[str, float] = {}
     report("Fetching pull requests", 0.0)
     records = provider.fetch(repo)
+    timings["fetch"] = round(time.monotonic() - started, 2)
     report("Counting replies and merges", 0.3)
     threads = build_threads(records)
-    signals = compute(
-        threads, as_of or datetime.now(UTC), _min_age(provider, min_age_hours)
-    )
+    read_at = as_of or datetime.now(UTC)
+    signals = compute(threads, read_at, _min_age(provider, min_age_hours))
+    # Live evidence says who is on the team. The model stages then see only the
+    # team's replies and plain words (labels, rule sentences, durations); older
+    # captures keep the prompts their recordings were made with.
+    plain = knows_association(records)
 
-    findings = Findings()
-    report("Working out what kind of project this is", 0.35)
-    stages.classify(repo, records, threads, model, findings)
-    report("Reading the contributing guide", 0.45)
-    stages.assess_opportunity(repo, records, model, findings)
-    report("Reading threads", 0.55)
-    stages.read_outcomes(repo, threads, model, findings)
+    report("Reading threads", 0.35)
+    findings = _read_in_parallel(repo, records, threads, model, timings,
+                                 read_at, signals.settle_hours)
 
     report("Checking evidence", 0.75)
     before = len(findings)
@@ -139,31 +184,24 @@ def analyze(
     contested = contested_kind(findings, signals, meta.payload if meta else None)
     if contested:
         findings.drop("repo_kind")
+    _add_inactive(findings, records, threads, signals, as_of, meta)
 
     verdict, rules = decide(findings, signals, contributor_days)
     if contested:
         rules.insert(0, contested)
-    # The narration prompt is deliberately held to the signal fields that existed
-    # when the trajectories were recorded. New signals reach the *verdict*
-    # immediately but only reach the prose on the next re-record, so adding one
-    # does not invalidate every committed trajectory and break replay for a judge.
-    # When a new signal changes the outcome it still reaches the narrator, via
-    # the rule trace.
-    narrated_signals = {
-        k: v for k, v in signals.as_dict().items()
-        if k not in ("reviewed_share", "merge_rate", "merged_files_median",
-                     "merged_dirs_median", "merged_with_files")
-    }
-    # Likewise the rule trace: the reader sees plain sentences, and the narrator
-    # is handed the wording the recordings were made with.
-    narrated_signals = {
-        k: v for k, v in narrated_signals.items()
-        if k not in ("outsider_awaiting_reply", "outsider_answered")
-    }
     report("Writing the report", 0.85)
-    narrated = stages.narrate(
-        repo, verdict.value, legacy_trace(rules), findings, narrated_signals, model
-    )
+    with _timed(timings, "narrate"):
+        # Live evidence: the narrator reads only findings whose quotes passed
+        # the team-only check, so a bystander's words can't reach the prose.
+        # Older captures keep the order their recordings were made with.
+        told = Findings(check_quotes(findings, records)[0]) if plain else findings
+        checked, unsupported = _narrate(
+            repo, verdict, rules, told, signals, records, model, plain,
+            contributor_days,
+        )
+    # After narration, so the prompt the recordings were made with is unchanged.
+    _say_how_merges_landed(rules, threads)
+    _say_what_was_read(rules, records, threads, as_of, _min_age(provider, min_age_hours))
 
     # The evidence list is built from verified findings, not written by the
     # model. Stage E supplies prose; it cannot introduce a citation.
@@ -178,27 +216,14 @@ def analyze(
     # still replays -- a guarantee that would otherwise cost a re-record of the
     # frozen benchmark to buy.
     quoting, invented = check_quotes(findings, records)
-    claims: list[Claim] = []
-    for item in quoting:
-        if item.field == "thread_outcome":
-            outcome = item.value["outcome"].replace("_", " ")
-            quote = (item.value.get("quote") or "").strip()
-            # An empty quote used to render as a pair of quotation marks with
-            # nothing between them, which reads as a bug because it is one.
-            text = (f"{outcome} — “{clip(quote, MAX_QUOTE_CHARS)}”" if quote
-                    else f"{outcome}, nothing said")
-        else:
-            text = f"{item.field.replace('_', ' ')}: {item.value}" + (
-                f" ({MODEL_NOTE_LABEL}: {clip(item.note, MAX_CLAIM_CHARS)})"
-                if item.note else "")
-        claims.append(Claim(text=text, evidence_id=item.evidence_ids[0]))
+    claims = [claim_for(item) for item in quoting]
 
     assessment = Assessment(
         repo=repo,
         verdict=verdict,
-        summary=narrated["what_the_evidence_shows"],
-        bottom_line=narrated["bottom_line"],
-        limits=narrated["what_could_not_be_determined"],
+        summary=checked["what_the_evidence_shows"] or _counted_summary(signals),
+        bottom_line=checked["bottom_line"] or _computed_bottom_line(verdict, rules),
+        limits=checked["what_could_not_be_determined"],
         rules=list(rules),
         contributor_days=contributor_days,
         as_of=as_of,
@@ -209,6 +234,19 @@ def analyze(
         models=list(model.usage.models),
         dropped_claims=len(dropped) + len(invented),
     )
+    timings["total"] = round(time.monotonic() - started, 2)
+    usage = model.usage
+    log.info(
+        "ai report %s: %.1fs (%s; model %s), %d in / %d out tokens, $%.4f, %s; "
+        "%d claims dropped, %d sentences removed",
+        repo, timings["total"],
+        ", ".join(f"{k} {v:.1f}s" for k, v in timings.items() if k != "total"),
+        ", ".join(f"{k} {v}ms" for k, v in getattr(usage, "stage_ms", dict)().items())
+        or "replayed",
+        usage.input_tokens, usage.output_tokens, usage.cost_usd,
+        ", ".join(usage.models) or "no model", len(dropped) + len(invented),
+        len(unsupported),
+    )
     report("Done", 1.0)
     return assessment, Trace(
         signals=signals,
@@ -218,7 +256,191 @@ def analyze(
         invented=invented,
         rules=rules,
         model_written=MODEL_WRITTEN_FIELDS,
+        unsupported_sentences=unsupported,
+        timings=timings,
     )
+
+
+NARRATED_FIELDS = ("bottom_line", "what_the_evidence_shows", "what_could_not_be_determined")
+
+
+def _narrate(repo, verdict, rules, findings, signals: Signals, records, model,
+             plain: bool, contributor_days: int):
+    """Stage E, then its check: (checked fields, removed sentences).
+
+    The prose is checked like the findings were: a sentence stating a figure
+    that was not measured, quoting words nobody on the team said, or naming an
+    internal field is removed. Where that empties a field, the computed
+    wording stands in, so the reader is never shown a blank.
+
+    On live evidence the narrator is handed what the reader sees: the rule
+    sentences under "What decided it" and the counts in words, durations as
+    "16.2 days". The legacy trace said "37 first-time merges ... out of 99
+    attempts" where the page said "out of 90", and the prose repeated it.
+    When the check removes the bottom line or the lead paragraph's opening,
+    the narrator gets one more try with the reason (about $0.002): on nixpkgs
+    one leaked field name cost the paragraph its main point.
+    """
+    if plain:
+        trace_lines = [str(r) for r in rules]
+        measured = plain_measurements(signals)
+    else:
+        trace_lines = legacy_trace(rules)
+        measured = _legacy_measurements(signals)
+    allowed = [*trace_lines, *map(str, rules)]
+    extra = (contributor_days, signals.outsider_judgeable)
+    spoken = spoken_words(records)
+
+    def attempt(retry_note: str = ""):
+        narrated = stages.narrate(repo, verdict.value, trace_lines, findings, measured,
+                                  model, plain=plain, retry_note=retry_note)
+        return narration.check_narration(
+            {k: narrated[k] for k in NARRATED_FIELDS}, signals.as_dict(), allowed,
+            spoken, extra_numbers=extra if plain else (contributor_days,),
+        ) + (narrated,)
+
+    checked, unsupported, narrated = attempt()
+    lost = _lost_lead(narrated, unsupported)
+    if plain and lost:
+        again, removed, renarrated = attempt(narration.retry_note(lost))
+        if len(_lost_lead(renarrated, removed)) < len(lost):
+            checked, unsupported = again, removed
+    return checked, unsupported
+
+
+def _lost_lead(narrated: dict, unsupported: list[tuple[str, str, str]]) -> list[tuple[str, str]]:
+    """Removed sentences from the bottom line or the lead paragraph: (sentence, why)."""
+    lead = (narrated.get("what_the_evidence_shows") or "").split("\n\n")[0]
+    return [(sentence, why) for name, sentence, why in unsupported
+            if name == "bottom_line"
+            or (name == "what_the_evidence_shows" and sentence in lead)]
+
+
+def _legacy_measurements(signals: Signals) -> dict:
+    """The counts as the committed recordings were made with them.
+
+    Held to the signal fields that existed when the trajectories were recorded:
+    new signals reach the *verdict* immediately but only reach the prose on the
+    next re-record, so adding one does not invalidate every committed trajectory
+    and break replay for a judge.
+    """
+    return {
+        k: v for k, v in signals.as_dict().items()
+        if k not in ("reviewed_share", "merge_rate", "merged_files_median",
+                     "merged_dirs_median", "merged_with_files",
+                     "outsider_answered", "outsider_still_open",
+                     "outsider_closed_silently", "outsider_excluded",
+                     "outsider_reviewed_share", "merged_threads")
+        and not k.startswith(("first_timer_", "distinct_first_timer_"))
+    }
+
+
+def plain_measurements(signals: Signals) -> dict[str, object]:
+    """The counts for the narrator, in the words and units the page uses.
+
+    "Outside contributors", not "first-time": these count everyone outside the
+    team. Attempts are the decided ones, as on the page and in the rules.
+    """
+    median = signals.median_first_response_hours
+    return {
+        "Pull requests read": signals.total_threads,
+        "Pull requests from outside contributors old enough to judge (the attempts)":
+            signals.outsider_judgeable,
+        "Attempts merged": signals.outsider_merged,
+        "Attempts that got no reply at all from the project": signals.outsider_ignored,
+        "Different outside contributors who tried": signals.distinct_outsider_authors,
+        "Different outside contributors whose work was merged":
+            signals.distinct_merged_authors,
+        "Typical wait for a first reply, among attempts that got one":
+            hours_phrase(median) if median is not None else "no replies to measure",
+        "Share of pull request activity from bots": f"{signals.bot_share:.0%}",
+        "Outside pull requests still too new to judge": signals.outsider_still_open,
+        "Outside pull requests closed without a word (not counted as ignored)":
+            signals.outsider_closed_silently,
+    }
+
+
+# Stages A, B and C read different evidence and write different findings, so
+# they run at once: a report waits for the slowest of three calls instead of
+# the sum. Each writes into its own list and the lists are joined in the fixed
+# order A, B, C, so the narration prompt -- and the replay key it hashes to --
+# is the same as when they ran one after another.
+_READERS = (
+    ("classify", lambda repo, records, threads, model, out, *_:
+        stages.classify(repo, records, threads, model, out)),
+    ("opportunity", lambda repo, records, threads, model, out, *_:
+        stages.assess_opportunity(repo, records, model, out)),
+    ("outcomes", lambda repo, records, threads, model, out, as_of, settle_hours:
+        stages.read_outcomes(repo, threads, model, out, records=records,
+                             as_of=as_of, settle_hours=settle_hours)),
+)
+
+
+def _read_in_parallel(repo, records, threads, model, timings: dict[str, float],
+                      as_of: datetime | None = None, settle_hours: float = 0.0) -> Findings:
+    def run(name, stage):
+        out = Findings()
+        with _timed(timings, name):
+            stage(repo, records, threads, model, out, as_of, settle_hours)
+        return out
+
+    with ThreadPoolExecutor(max_workers=len(_READERS)) as pool:
+        futures = [pool.submit(run, name, stage) for name, stage in _READERS]
+        parts = [f.result() for f in futures]
+    merged = Findings()
+    for part in parts:
+        merged.items.extend(part.items)
+    return merged
+
+
+@contextmanager
+def _timed(timings: dict[str, float], name: str):
+    began = time.monotonic()
+    try:
+        yield
+    finally:
+        timings[name] = round(time.monotonic() - began, 2)
+
+
+def _computed_bottom_line(verdict, rules) -> str:
+    # None of these gives the reason: rates.py's lines say what was counted,
+    # and the packaging one says what the work is (repo_kind_rules).
+    deciding = rates.first_deciding(rules, skip=frozenset({"package_updates"})) or ""
+    return f"{headline(verdict)}. {deciding}"
+
+
+def _counted_summary(signals: Signals) -> str:
+    """The counts in a few sentences, computed. Used with no model, and
+    wherever the model's version did not survive the narration check."""
+    s = signals.as_dict()
+    if not signals.outsider_threads:
+        return (
+            "Nobody from outside the project opened a pull request in the period "
+            "we looked at, so there was nothing to count."
+        )
+    summary = (
+        f"{s['outsider_merged']} of {signals.outsider_judgeable} pull requests from "
+        f"outside contributors were merged, by {s['distinct_merged_authors']} of the "
+        f"{s['distinct_outsider_authors']} people who tried."
+    )
+    summary += " " + first_timer_sentence(signals)
+    if s["median_first_response_hours"] is not None:
+        summary += (
+            f" Of the {s['outsider_answered']} that got a reply, half heard "
+            f"back within {hours_phrase(s['median_first_response_hours'])}."
+        )
+    summary += f" {s['outsider_ignored']} got no reply at all."
+    if s["outsider_closed_silently"]:
+        summary += (
+            f" {s['outsider_closed_silently']} were closed without a reply, "
+            "which isn't counted as ignored."
+        )
+    if s["outsider_still_open"]:
+        summary += (
+            f" {s['outsider_still_open']} were opened in the last {rates.SETTLE_DAYS} "
+            "days, too recently to count."
+        )
+    return summary + " These are counts from the pull request history, not an AI's judgement."
 
 
 # --- degraded mode -----------------------------------------------------------
@@ -274,46 +496,41 @@ def analyze_without_model(
     if meta is not None and meta.payload.get("is_archived"):
         findings.add("is_archived", True, (meta.evidence_id,),
                      "GitHub reports this repository as archived")
+    # A mirror or a fork: GitHub's own fields, plus whether anything from a
+    # outsider landed here (a fork that merges outsiders is its own project).
+    if meta is not None and (
+        elsewhere := landing_detection.elsewhere(meta.payload, signals.outsider_merged)
+    ):
+        findings.add("contribute_elsewhere", elsewhere, (meta.evidence_id,),
+                     "read from GitHub's mirror and fork fields and the description")
+
+    _add_inactive(findings, records, threads, signals, as_of, meta)
+
+    # What Stage A would call a registry or a list, measured from the diffs
+    # outside contributors sent instead of asked of a model. The AI report
+    # still takes the model's word (see repo_kind_rules).
+    kind = repo_kind_rules.read(records)
+    if kind.catalogue is not None:
+        repo_kind_rules.add_finding(findings, kind.catalogue)
 
     report("Applying the rules", 0.9)
     verdict, rules = decide(findings, signals, contributor_days)
-
-    s = signals.as_dict()
-    if signals.outsider_threads:
-        summary = (
-            f"{s['outsider_merged']} of {s['outsider_threads']} pull requests from "
-            f"newcomers were merged, by {s['distinct_merged_authors']} of the "
-            f"{s['distinct_outsider_authors']} people who tried."
-        )
-        if s["median_first_response_hours"] is not None:
-            summary += (
-                f" Of the {s['outsider_answered']} that got a reply, half heard "
-                f"back within {hours_phrase(s['median_first_response_hours'])}."
-            )
-        summary += f" {s['outsider_ignored']} got no reply at all."
-        if s["outsider_awaiting_reply"]:
-            summary += (
-                f" {s['outsider_awaiting_reply']} are too new to have had a reply "
-                "yet and weren't counted as ignored."
-            )
-        summary += " These are counts from the pull request history, not an AI's judgement."
-    else:
-        summary = (
-            "Nobody from outside the project opened a pull request in the period "
-            "we looked at, so there was nothing to count."
-        )
-    deciding = next((r for r in rules if getattr(r, "code", "") != "awaiting_reply"),
-                    rules[0] if rules else "")
+    _say_how_merges_landed(rules, threads)
+    # After the line above, which the generic kind rule silences: the measured
+    # sentence replaces it and stays last, where the web reads the reason.
+    rules = repo_kind_rules.explain(rules, kind, verdict)
+    _say_what_was_read(rules, records, threads, as_of, _min_age(provider, min_age_hours))
 
     return Assessment(
         repo=repo,
         verdict=verdict,
-        summary=summary,
-        bottom_line=f"{headline(verdict)}. " + deciding,
+        summary=_counted_summary(signals),
+        bottom_line=_computed_bottom_line(verdict, rules),
         limits=(
             "No model ran. This answer comes from counting the pull request "
-            "history, so it can't tell you what specific threads said, who was "
-            "welcoming, or what kind of project this is, and it cites no specific "
+            "history, so it can't tell you what specific threads said or who was "
+            "welcoming, and beyond spotting catalogues and lists it can't tell what "
+            "kind of project this is. It cites no specific "
             "threads, where a full AI report cites about 12. In our testing on "
             "repositories it hadn't seen, counting alone predicted how newcomers "
             "would fare a little less well than the full report (a score of 0.55 "
@@ -324,8 +541,11 @@ def analyze_without_model(
         contributor_days=contributor_days,
         as_of=as_of,
         landing=landing.render(landing.compute(threads)),
+        # Rules-only findings (a catalogue detected, archived, inactive): the
+        # detector's own sentence says more than "Kind of project: ...".
         claims=[
-            Claim(text=f"{i.field.replace('_', ' ')}: {i.value}", evidence_id=i.evidence_ids[0])
+            claim_for(i, text=i.note if i.field == "repo_kind" else None,
+                      show_note=i.field == "repo_kind")
             for i in findings
         ],
         method=NO_MODEL_METHOD,
@@ -333,6 +553,84 @@ def analyze_without_model(
         models=[],
         dropped_claims=0,
     ), _done(report, Trace(signals=signals, rules=rules))
+
+
+def first_timer_sentence(signals: Signals) -> str:
+    """The first-timers among the outsiders, in one sentence.
+
+    Their own numbers because they answer a different question: whether this
+    project lands a stranger's *first* pull request, not only a regular's.
+    """
+    tried = signals.first_timer_threads
+    if not tried:
+        return "None of them came from someone new to this repo."
+    merged = signals.first_timer_merged
+    people = signals.distinct_first_timer_authors
+    return (
+        f"{tried} of them came from {people} "
+        f"{'person' if people == 1 else 'people'} new to this repo, "
+        f"and {merged} of those {'was' if merged == 1 else 'were'} merged."
+    )
+
+
+# Rules after which how the merges happened is beside the point.
+_NOT_ABOUT_MERGES = {"archived", "elsewhere", "closed_kind", "non_software_kind", "inactive"}
+# Rules that follow the merge count and turn the repository down.
+_TURNED_DOWN = rates.OVERRULING_CODES
+
+
+def _add_inactive(findings: Findings, records: list, threads: dict[str, Thread],
+                  signals: Signals, as_of: datetime | None, meta) -> None:
+    """No merge and no push in 90 days: a finding the verdict turns down on.
+
+    Only for a reading that knows its moment (live, or a recording of one), as
+    the dormancy line; the frozen benchmark never had it.
+    """
+    if meta is None or not signals.settle_hours:
+        return
+    line = rates.inactive_sentence(records, threads, as_of or datetime.now(UTC), meta.payload)
+    if line:
+        findings.add("inactive", line, (meta.evidence_id,),
+                     "no merge in the sample and no push on GitHub in 90 days")
+
+
+def _say_how_merges_landed(rules: list[str], threads: dict[str, Thread]) -> None:
+    """Add a line saying which merges GitHub shows as closed, and how they landed.
+
+    Counting a pull request GitHub calls "closed" as merged is a claim the
+    reader can check, so it is said next to the rules rather than done quietly.
+    """
+    if any(getattr(r, "code", "") in _NOT_ABOUT_MERGES for r in rules):
+        return
+    if line := landing_detection.landed_sentence(outsider_threads(threads)):
+        # Never after a rule that turned the repository down: the web reads
+        # the reason from the last line.
+        at = len(rules) - 1 if rules and getattr(rules[-1], "code", "") in _TURNED_DOWN else len(rules)
+        rules.insert(at, Rule(line, code="landed_off_button"))
+
+
+def _say_what_was_read(rules: list[str], records: list, threads: dict[str, Thread],
+                       as_of: datetime | None, settle_hours: float) -> None:
+    """Put the dates the sample covers, and a dormancy warning, at the top.
+
+    Only for a reading that knows its moment (live, or a recording of one): the
+    frozen benchmark keeps the trace it was scored with. No dormancy line when
+    the answer is that pull requests aren't the way in at all (archived, a
+    mirror): it would only repeat that.
+    """
+    as_of = as_of or datetime.now(UTC)
+    if not rates.judges_time(as_of, settle_hours):
+        return
+    meta = next((r for r in records if r.evidence_id.endswith(":meta")), None)
+    dormant = None
+    if not any(getattr(r, "code", "") in _NOT_ABOUT_MERGES for r in rules):
+        dormant = rates.dormant_sentence(records, threads, as_of,
+                                         meta.payload if meta else None)
+    lines = [Rule(line, code=code) for line, code in (
+        (rates.period_sentence(threads, as_of), "sample_period"),
+        (dormant, "dormant"),
+    ) if line]
+    rules[:0] = lines
 
 
 def _done(report: Progress, trace: Trace) -> Trace:

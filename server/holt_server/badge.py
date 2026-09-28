@@ -1,24 +1,35 @@
-"""The README badge: `Holt | newcomer-friendly`, shields.io style."""
+"""The README badge, shields.io style.
+
+A repo that passes gets a positive, factual line: `Holt | merges outsiders ·
+replies in ~6h`. Anything else is neutral (`Holt | see report`), never a red
+verdict: the badge sits in a maintainer's own README, and the report page is
+where the full answer lives.
+"""
 
 from __future__ import annotations
 
 from html import escape
+from typing import Any
 
 LABEL = "Holt"
 
 # Opaque fills on both halves, dark label, white text: readable on light and
 # dark README backgrounds alike. Each colour holds white text at 4.5:1 or better.
 LABEL_COLOR = "#555"
-MESSAGES = {
-    "viable": ("newcomer-friendly", "#1a7f37"),
-    "not_viable": ("not newcomer-friendly", "#bc4c00"),
-    "insufficient_evidence": ("not enough evidence", "#57606a"),
-    None: ("not checked yet", "#57606a"),
-}
+POSITIVE_COLOR = "#1a7f37"
+NEUTRAL_COLOR = "#57606a"
+NEUTRAL = "see report"
+UNCHECKED = "not checked yet"
+# The latest report is from an older engine; a fresh one is on its way.
+UPDATING = "updating"
+
+# Only a quick first reply is worth putting on the badge; a slow one is still
+# in the report.
+REPLY_SHOWN_HOURS = 72
 
 # Verdana 11px advance widths, roughly. Enough to size a badge; shields.io does
 # the same with a measured table.
-_NARROW = set("fijlrt1 .,:;'!|()-")
+_NARROW = set("fijlrt1 .,:;'!|()-·")
 _WIDE = set("mwMW@%")
 
 
@@ -36,12 +47,41 @@ def text_width(text: str) -> int:
     return int(round(width))
 
 
-def render(verdict: str | None, link: str) -> str:
-    message, color = MESSAGES.get(verdict, MESSAGES[None])
+def short_hours(hours: float) -> str:
+    """0.8 -> "~48m", 6.2 -> "~6h", 50 -> "~2d"."""
+    if hours < 1:
+        return f"~{max(1, round(hours * 60))}m"
+    if hours < 24:
+        return f"~{round(hours)}h"
+    return f"~{round(hours / 24)}d"
+
+
+def message(verdict: str | None, stats: dict[str, Any] | None,
+            updating: bool = False) -> tuple[str, str]:
+    """The badge's right half and its colour, from the latest rules report."""
+    if updating:
+        return UPDATING, NEUTRAL_COLOR
+    if verdict is None:
+        return UNCHECKED, NEUTRAL_COLOR
+    if verdict != "viable":
+        return NEUTRAL, NEUTRAL_COLOR
+    stats = stats or {}
+    parts = []
+    if (stats.get("outsider_merged") or 0) > 0:
+        parts.append("merges outsiders")
+    hours = stats.get("median_first_response_hours")
+    if isinstance(hours, (int, float)) and 0 <= hours <= REPLY_SHOWN_HOURS:
+        parts.append(f"replies in {short_hours(hours)}")
+    return " · ".join(parts) or "worth your time", POSITIVE_COLOR
+
+
+def render(verdict: str | None, stats: dict[str, Any] | None, link: str,
+           updating: bool = False) -> str:
+    msg, color = message(verdict, stats, updating)
     lw = text_width(LABEL) + 12
-    mw = text_width(message) + 12
+    mw = text_width(msg) + 12
     total = lw + mw
-    title = escape(f"{LABEL}: {message}")
+    title = escape(f"{LABEL}: {msg}")
     link = escape(link, quote=True)
     return f"""<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="{total}" height="20" role="img" aria-label="{title}">
 <title>{title}</title>
@@ -51,7 +91,7 @@ def render(verdict: str | None, link: str) -> str:
 <g clip-path="url(#r)"><rect width="{lw}" height="20" fill="{LABEL_COLOR}"/><rect x="{lw}" width="{mw}" height="20" fill="{color}"/><rect width="{total}" height="20" fill="url(#s)"/></g>
 <g fill="#fff" text-anchor="middle" font-family="Verdana,Geneva,DejaVu Sans,sans-serif" font-size="11">
 <text x="{lw / 2:.1f}" y="15" fill="#010101" fill-opacity=".3">{LABEL}</text><text x="{lw / 2:.1f}" y="14">{LABEL}</text>
-<text x="{lw + mw / 2:.1f}" y="15" fill="#010101" fill-opacity=".3">{escape(message)}</text><text x="{lw + mw / 2:.1f}" y="14">{escape(message)}</text>
+<text x="{lw + mw / 2:.1f}" y="15" fill="#010101" fill-opacity=".3">{escape(msg)}</text><text x="{lw + mw / 2:.1f}" y="14">{escape(msg)}</text>
 </g>
 </a>
 </svg>

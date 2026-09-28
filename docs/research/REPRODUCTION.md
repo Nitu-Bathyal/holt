@@ -131,11 +131,12 @@ See the changelog.
 ## 4. Run both solutions on one repository — still no key
 
 The benchmark compares Holt with a one-prompt baseline. Both are
-runnable, on the same repository, from the same evidence:
+runnable, on the same repository, from the same evidence. The baseline is
+benchmark material, so it lives in `eval/` rather than in the `holt` command:
 
 ```sh
 # baseline: one prompt over README and metadata
-PYTHONPATH=. uv run holt analyze NixOS/nixpkgs --baseline --replay
+PYTHONPATH=. uv run python -m eval.baseline NixOS/nixpkgs
 
 # the full pipeline
 PYTHONPATH=. uv run holt analyze NixOS/nixpkgs --replay
@@ -148,8 +149,8 @@ The disagreement worth looking at is `is-a-dev/register`, a domain registry with
 hundreds of merged outsider pull requests and no software contributions:
 
 ```sh
-PYTHONPATH=. uv run holt analyze is-a-dev/register --baseline --replay   # viable
-PYTHONPATH=. uv run holt analyze is-a-dev/register --replay              # not_viable
+PYTHONPATH=. uv run python -m eval.baseline is-a-dev/register         # viable
+PYTHONPATH=. uv run holt analyze is-a-dev/register --replay             # not_viable
 ```
 
 To watch verification remove unsupported findings:

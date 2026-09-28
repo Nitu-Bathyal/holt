@@ -9,8 +9,8 @@ from typing import Any
 
 import httpx
 
-from holt_server import crypto, engine, llm
-from holt_server.db import Database, Job, User
+from holt_server import budget, engine, llm, payments, pro
+from holt_server.db import Database, Job
 from holt_server.errors import ApiError
 from holt_server.github import GitHubLookup, TokenPool
 from holt_server.jobs import JobRunner
@@ -28,6 +28,10 @@ class Services:
         # One connection pool for every GitHub call this process makes.
         self.http = httpx.Client(timeout=30.0)
         self.lookup = GitHubLookup(self.pool, self.http)
+        # Paid features: None when HOLT_PRO_URL is not set.
+        self.pro: pro.ProClient | None = pro.build(settings)
+        # Credit-pack checkout: None when the Razorpay keys are not set.
+        self.razorpay: payments.Razorpay | None = payments.build(settings)
         # Work (new analyses, find) and reads (cache misses on starter issues)
         # draw on separate counters.
         self.limiter = RateLimiter()
@@ -42,10 +46,15 @@ class Services:
         self.provider_factory: Callable[[str, datetime], Any] = self._live_provider
         self.model_factory: Callable[[llm.ModelSpec], Any] = llm.build
         self.analysis_fn: Callable[..., dict[str, Any]] = engine.analyze
+        # What each running AI job's model work cost, when the job learns it
+        # (budget.py): playbook and pre-flight jobs put it here for `_finish`.
+        self.ai_costs: dict[str, float | None] = {}
 
     def _live_provider(self, repo: str, as_of: datetime):
-        return engine.live_provider(self.pool.next(), as_of, self.settings.max_pages,
-                                    http=self.http)
+        # The pool's transport: it skips dead or used-up tokens and hears back
+        # how many points each one has left.
+        return engine.live_provider(None, as_of, self.settings.max_pages,
+                                    transport=self.pool.transport(self.http))
 
     async def canonical(self, repo: str) -> str:
         """GitHub's casing for `repo`, or `not_found`. Remembered per process."""
@@ -59,31 +68,28 @@ class Services:
             self._canonical.popitem(last=False)
         return name
 
+    def require_pro(self) -> pro.ProClient:
+        """The paid-feature client, or the "not available yet" error."""
+        if self.pro is None:
+            raise pro.not_available()
+        return self.pro
+
+    def ai_on(self) -> bool:
+        """AI work may be queued at all: there is a budget (budget.py)."""
+        return budget.limit_usd(self.settings) > 0
+
     def server_model_available(self) -> bool:
-        return bool(self.settings.openrouter_api_key)
+        s = self.settings
+        return (bool(s.openrouter_api_key) and self.ai_on()
+                and budget.resolve_price(s.openrouter_model)[0] is not None)
 
     async def model_spec_for(self, job: Job) -> llm.ModelSpec:
         s = self.settings
-        if job.key_source == "byok" and job.user_id:
-            async with self.db.session() as session:
-                user = await session.get(User, job.user_id)
-            if user is None or not user.byok_cipher:
-                raise ApiError("needs_key", "Your saved API key was removed before "
-                               "this report could run. Add a key or use a free report.")
-            try:
-                key = crypto.decrypt(s.secret_key, user.byok_cipher, user.id)
-            except Exception as exc:
-                raise ApiError("needs_key", "We couldn't read your saved API key. "
-                               "Please save it again in your settings.") from exc
-            provider = user.byok_provider or "openrouter"
-            return llm.ModelSpec(
-                provider=provider,
-                model=user.byok_model or llm.DEFAULT_MODELS.get(provider, ""),
-                api_key=key,
-                byok=True,
-            )
-        if not s.openrouter_api_key:
-            raise ApiError("needs_key", "AI reports aren't available on this server "
-                           "right now. Add your own API key in settings to run one.")
-        return llm.ModelSpec(provider="openrouter", model=s.openrouter_model,
-                             api_key=s.openrouter_api_key, base_url=s.openrouter_base_url)
+        if not self.server_model_available():
+            # Refused before queueing too; this covers a key removed since.
+            raise ApiError("ai_unavailable", "AI reports aren't switched on yet. "
+                           "Your free AI report was not used up.")
+        return llm.ModelSpec(
+            provider=s.model_provider or llm.provider_for(s.openrouter_base_url),
+            model=s.openrouter_model, api_key=s.openrouter_api_key,
+            base_url=s.openrouter_base_url, reasoning_effort=s.model_reasoning_effort)

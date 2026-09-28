@@ -1,5 +1,14 @@
 # How Holt is evaluated
 
+> **Historical:** this benchmark was the competition-era evaluation. It was
+> retired as a gate on 27 Sep 2026: it was expensive to run and shared the
+> engine's blind spot (its label counted maintainers as outsiders too). What
+> gates an engine change now is the golden set (`golden/README.md`): 52
+> recorded repositories, 10 of them hand-checked, replayed offline in CI.
+> The verdict rules and the evidence for each threshold are in
+> [REVIEW-2026-09-30.md](REVIEW-2026-09-30.md). This page is kept as the
+> history and method of the competition result.
+
 Holt's product output is a recommendation, so its quality has to be inspectable.
 This document explains how the benchmark pool was built, how ground truth is
 computed, what the result is sensitive to, and what it does not cover. Exact

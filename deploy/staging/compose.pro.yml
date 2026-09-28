@@ -1,0 +1,48 @@
+# The optional paid-features service, next to the staging stack.
+#
+# preview.sh runs it when ~/projects/holt-pro exists (a private repository;
+# without it staging runs with paid features off). It is its own compose
+# project, stage-holt-pro, NOT a service in compose.yml: the staging stack
+# is brought up with --remove-orphans and is public, this service is not.
+# It joins stage-holt-new's network as `pro`, so the staging server reaches
+# it at http://pro:8000, and publishes no port.
+#
+# From the environment (preview.sh sets them):
+#   HOLT_PRO_SRC      the dedicated clone to build from (its origin/main)
+#   HOLT_PRO_KEY      STAGING_HOLT_PRO_KEY from ~/.config/holt/secrets.env
+#   HOLT_PRO_MODEL_*  OPENAI_API_KEY from the same file, provider openai,
+#                     gpt-5-mini. Its spend counts against the staging
+#                     server's budget (HOLT_AI_BUDGET_USD): only the server's
+#                     jobs call this service, and each holds its cost first.
+#   HOLT_DB_PASSWORD  from staging/.env; the database is holt_pro in the
+#                     staging Postgres (deploy/README.md, "Paid features")
+#
+#   docker compose -p stage-holt-pro -f deploy/staging/compose.pro.yml \
+#     --env-file deploy/staging/.env up -d --build
+services:
+  pro:
+    build:
+      context: ${HOLT_PRO_SRC:?set HOLT_PRO_SRC to the holt-pro checkout to build}
+      labels:
+        holt.stage: holt-new
+    image: stage-holt-pro:latest
+    labels:
+      holt.stage: holt-new
+    environment:
+      HOLT_PRO_ENV: production
+      HOLT_PRO_KEY: ${HOLT_PRO_KEY:?STAGING_HOLT_PRO_KEY in ~/.config/holt/secrets.env (preview.sh maps it)}
+      DATABASE_URL: postgresql+asyncpg://holt:${HOLT_DB_PASSWORD:?pass --env-file deploy/staging/.env}@db:5432/holt_pro
+      HOLT_PRO_MODEL_KEY: ${HOLT_PRO_MODEL_KEY:-}
+      HOLT_PRO_MODEL_PROVIDER: ${HOLT_PRO_MODEL_PROVIDER:-openrouter}
+      HOLT_PRO_PLAYBOOK_MODEL: ${HOLT_PRO_PLAYBOOK_MODEL:-openai/gpt-5-mini}
+      LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    networks:
+      stage:
+        aliases: [pro]
+    mem_limit: 256m
+    restart: unless-stopped
+
+networks:
+  stage:
+    name: ${HOLT_STAGE_NETWORK:-stage-holt-new_default}
+    external: true

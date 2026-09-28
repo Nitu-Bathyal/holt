@@ -5,6 +5,8 @@
 #   deploy/prod/warm.sh                 start a full pass in the background
 #   deploy/prod/warm.sh --dry-run       what it would do (foreground)
 #   deploy/prod/warm.sh --limit 50 --no-find
+#   deploy/prod/warm.sh --stale-only    after a deploy that bumps ENGINE_VERSION:
+#                                       re-run only reports an older engine made
 #   deploy/prod/warm.sh --logs          follow the running pass
 #   deploy/prod/warm.sh --status        is it running? last lines
 #
@@ -34,7 +36,7 @@ esac
 load_prod_env
 
 if [[ "${1:-}" == --dry-run ]]; then
-    compose run --rm --no-deps server python -m holt_server.warm --dry-run; exit $?
+    compose run --rm --no-deps server python -m holt_server.warm "$@"; exit $?
 fi
 
 if docker ps -q --filter "name=^$NAME$" | grep -q .; then

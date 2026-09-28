@@ -48,8 +48,8 @@ export default async function HistoryPage() {
                         {h.mode === "ai" ? "AI report" : "free report"} · <time dateTime={h.created_at}>{timeAgo(h.created_at)}</time>
                       </span>
                     </span>
-                    {h.verdict ? (
-                      <VerdictPill verdict={h.verdict} className="justify-self-end" />
+                    {h.headline && h.tone ? (
+                      <VerdictPill headline={h.headline} tone={h.tone} className="justify-self-end" />
                     ) : (
                       <span className={`justify-self-end text-[0.82rem] ${h.status === "error" ? "text-orange" : "text-faint"}`}>
                         {h.status === "error" ? "didn't finish" : "still running"}

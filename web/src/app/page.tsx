@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { CatFace } from "@/components/cat-face";
 import { CopyButton } from "@/components/copy-button";
@@ -9,8 +10,16 @@ import { UrlTrick } from "@/components/url-trick";
 import { LiveSample } from "@/components/sample-report";
 import { SampleReportSkeleton } from "@/components/sample-report-skeleton";
 import { SkeletonReveal } from "@/components/motion/reveal";
-import { GITHUB_REPO_URL, SITE_HOST, hacktoberfest } from "@/lib/site";
+import { EXAMPLE_PATH } from "@/lib/example-report";
+import { currentUser } from "@/lib/session";
+import { GITHUB_REPO_URL, SITE_HOST, WELCOME_AI_CREDITS, hacktoberfest } from "@/lib/site";
 import { PageTransition } from "@/components/motion/page-transition";
+import { ProfileOnboarding } from "@/components/profile-onboarding";
+import { Suspense } from "react";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 function Rail({ n, label, className = "" }: { n: string; label: string; className?: string }) {
   return (
@@ -23,6 +32,22 @@ function Rail({ n, label, className = "" }: { n: string; label: string; classNam
 
 function Grid({ children }: { children: React.ReactNode }) {
   return <div className="wrap grid grid-cols-1 gap-6 md:grid-cols-[148px_minmax(0,1fr)] md:gap-10">{children}</div>;
+}
+
+// Section 06's call to action. Signed-in people already have their free AI
+// reports, so they get their history instead of a sign-in button.
+async function AiReportsCta() {
+  if (await currentUser()) {
+    return (
+      <Link href="/me/history" className="bracket-link">[ your reports → ]</Link>
+    );
+  }
+  return (
+    <>
+      <Link href="/signin" className="bracket-link">[ sign in for {WELCOME_AI_CREDITS} free AI reports → ]</Link>
+      <Link href={EXAMPLE_PATH} className="text-link inline-flex min-h-11 items-center text-[0.89rem]">[ read an example first ]</Link>
+    </>
+  );
 }
 
 export default function Home() {
@@ -39,30 +64,30 @@ export default function Home() {
             <div className="relative z-10 max-w-[860px]">
               <div className="fade-up mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 short:mb-2" style={{ ["--d" as string]: ".1s" }}>
                 {hf && <HacktoberfestPill year={hf.year} short={hf.short} />}
-                <p className="text-[0.85rem] text-muted">holt / free / for first-time contributors</p>
+                <p className="text-[0.85rem] text-muted">holt / free / for your first PR or your fiftieth</p>
               </div>
               <h1 className="display mb-5 text-[clamp(2rem,8.9vw,3.15rem)] short:mb-3 short:text-[2rem]">
-                <span className="headline-line"><span>Find an open-source</span></span>
-                <span className="headline-line"><span>project that will</span></span>
-                <span className="headline-line"><span className="text-orange"><span className="marker">actually merge</span> your first PR.</span></span>
+                <span className="headline-line"><span>Will this repo</span></span>
+                <span className="headline-line"><span className="text-orange"><span className="marker">actually merge</span></span></span>
+                <span className="headline-line"><span className="text-orange">your PR?</span></span>
               </h1>
               <p className="prose-sans fade-up mb-6 max-w-[680px] text-[clamp(1rem,1.45vw,1.12rem)] short:mb-4" style={{ ["--d" as string]: ".3s" }}>
-                Paste any GitHub repo. Holt reads its recent pull requests and tells you, in plain English, whether
-                newcomers get replies, get merged, and where your work has a real chance of landing.
+                Paste a repo. Holt checks what happened to the outsiders who tried before you: did anyone reply, and
+                did anything get merged?
               </p>
               <div className="fade-up max-w-[760px]" style={{ ["--d" as string]: ".38s" }}>
                 <PasteBox />
               </div>
-              <p className="fade-up mt-3 font-sans text-[0.89rem] text-faint" style={{ ["--d" as string]: ".42s" }}>
+              <div className="fade-up mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 sm:mt-4 sm:gap-x-5" style={{ ["--d" as string]: ".42s" }}>
+                <span className="font-sans text-[0.95rem] text-muted">No repo in mind?</span>
+                <Link href="/find" className="bracket-link bracket-link--orange min-h-11 px-3 text-center text-[0.88rem] sm:min-h-12 sm:px-5 sm:text-[0.9rem]">
+                  [ find a project&nbsp;→&nbsp;]
+                </Link>
+              </div>
+              <p className="fade-up mt-4 font-sans text-[0.89rem] text-faint" style={{ ["--d" as string]: ".45s" }}>
                 Already on GitHub? Swap <strong className="text-muted">hub</strong> for <strong className="text-muted">holt</strong>:{" "}
                 <code className="font-mono">github.com</code> → <code className="font-mono text-muted">{SITE_HOST}</code>
               </p>
-              <div className="fade-up mt-5 flex flex-wrap items-center gap-x-5 gap-y-3" style={{ ["--d" as string]: ".45s" }}>
-                <span className="font-sans text-[0.95rem] text-muted">No repo in mind yet?</span>
-                <Link href="/find" prefetch className="bracket-link bracket-link--orange min-h-12 w-full px-4 text-center text-balance text-[0.88rem] sm:w-auto sm:px-5 sm:text-[0.9rem]">
-                  [ find my first contribution&nbsp;→&nbsp;]
-                </Link>
-              </div>
               <div className="fade-up mt-8 flex flex-wrap items-center gap-x-3 gap-y-2" style={{ ["--d" as string]: ".5s" }}>
                 <span className="award-badge">
                   <span>micro1 winner</span>
@@ -74,15 +99,19 @@ export default function Home() {
           </Grid>
         </section>
 
+        {/* After sign-in: the profile card, for people who haven't saved or skipped it. */}
+        <Suspense fallback={null}>
+          <ProfileOnboarding back="/" className="wrap py-8" />
+        </Suspense>
+
         {/* 02 — see the answer */}
         <section data-cat-section="startled" className="py-14 md:py-28">
           <Grid>
             <Rail n="02" label="see the answer" />
             <div>
-              <h2 className="h2 mb-6 max-w-[770px]" data-reveal>See the answer before you spend the week.</h2>
+              <h2 className="h2 mb-6 max-w-[770px]" data-reveal>The answer, with receipts.</h2>
               <p className="prose-sans mb-12 max-w-[740px] text-[1.05rem]" data-reveal>
-                Holt returns a clear verdict, the numbers behind it, the folders where outside work actually gets merged,
-                and open issues you could pick up today. Every claim links to the exact GitHub conversation it came from.
+                Every claim in a report links to the GitHub thread it came from. Check our work.
               </p>
 
               <SkeletonReveal fallback={<SampleReportSkeleton />}>
@@ -92,32 +121,56 @@ export default function Home() {
           </Grid>
         </section>
 
-        {/* 03 — the URL trick */}
-        <section data-cat-section="determined" className="border-t border-line bg-section-alt py-14 md:py-28">
+        {/* 03 — who it's for */}
+        <section data-cat-section="thinking" className="border-t border-line bg-section-alt py-14 md:py-28">
           <Grid>
-            <Rail n="03" label="the url trick" />
+            <Rail n="03" label="who it's for" />
+            <div>
+              <h2 className="h2 mb-10 max-w-[770px]" data-reveal>Don&apos;t write your PR into the void.</h2>
+              <ul className="grid gap-px border border-line bg-line md:grid-cols-3">
+                {[
+                  { title: "Your first PR", body: "Skip the repos where outside PRs sit in silence. Start where someone answers." },
+                  { title: "Your next project", body: "Spend your evenings where outside work gets merged, and see which folders it lands in." },
+                  { title: "A fix you need upstream", body: "Hit a bug at work? Find out if they take outside patches before you tell your team it'll land by Friday." },
+                ].map((a) => (
+                  <li key={a.title} className="bg-panel p-6" data-reveal>
+                    <p className="text-[1.1rem] font-semibold tracking-tight">{a.title}</p>
+                    <p className="mt-2 font-sans text-[0.95rem] text-muted">{a.body}</p>
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-10 flex flex-wrap items-center gap-x-4 gap-y-2" data-reveal>
+                <span className="font-sans text-[0.95rem] text-muted">Starting from zero?</span>
+                <Link href="/find" className="bracket-link">[ find a project in your language → ]</Link>
+              </div>
+            </div>
+          </Grid>
+        </section>
+
+        {/* 04 — the URL trick */}
+        <section data-cat-section="determined" className="border-t border-line py-14 md:py-28">
+          <Grid>
+            <Rail n="04" label="the url trick" />
             <div>
               <h2 className="h2 mb-6 max-w-[770px]" data-reveal>Already on GitHub? Swap hub for holt.</h2>
               <p className="prose-sans mb-10 max-w-[740px] text-[1.05rem]" data-reveal>
-                In any repository URL, change <code className="font-mono text-ink">github.com</code> to{" "}
-                <code className="font-mono text-ink">{SITE_HOST}</code> and press enter. You&apos;ll land on that
-                repo&apos;s Holt report. Works on phones too.
+                Change <code className="font-mono text-ink">github.com</code> to{" "}
+                <code className="font-mono text-ink">{SITE_HOST}</code> in any repo link and hit enter. Works on your
+                phone too.
               </p>
               <UrlTrick />
             </div>
           </Grid>
         </section>
 
-        {/* 04 — what it checks */}
-        <section data-cat-section="heartbroken" className="border-t border-line py-14 md:py-28">
+        {/* 05 — what it checks */}
+        <section data-cat-section="heartbroken" className="border-t border-line bg-section-alt py-14 md:py-28">
           <Grid>
-            <Rail n="04" label="what it checks" />
+            <Rail n="05" label="what it checks" />
             <div>
-              <h2 className="h2 mb-6 max-w-[770px]" data-reveal>Stars don&apos;t tell you what happens to newcomers.</h2>
+              <h2 className="h2 mb-6 max-w-[770px]" data-reveal>Stars won&apos;t tell you who gets merged.</h2>
               <p className="prose-sans mb-12 max-w-[740px] text-[1.05rem]" data-reveal>
-                Stars and issue counts describe how popular a project is. Holt looks at the path you will actually take:
-                first-time pull requests, how fast someone replies, what gets merged, and which parts of the code outside
-                work lands in.
+                So Holt skips them and reads what happened to the outsiders who tried.
               </p>
               <div className="border-t border-line-strong">
                 {[
@@ -133,27 +186,31 @@ export default function Home() {
                 ))}
               </div>
               <p className="mt-6 text-[0.82rem] text-faint" data-reveal>
-                <span className="text-blue">evidence:</span> same status, opposite outcome for the contributor.
+                <span className="text-blue">evidence:</span> both say &ldquo;closed&rdquo; on GitHub. Only one is good news.
               </p>
+              <div className="mt-10 flex flex-wrap items-center gap-x-4 gap-y-2" data-reveal>
+                <span className="font-sans text-[0.95rem] text-muted">Rather browse a ranked list?</span>
+                <Link href="/discover" className="bracket-link">[ discover repos → ]</Link>
+              </div>
             </div>
           </Grid>
         </section>
 
-        {/* 05 — three answers */}
-        <section data-cat-section="celebrating" className="border-t border-line bg-section-alt py-14 md:py-28">
+        {/* 06 — three answers */}
+        <section data-cat-section="celebrating" className="border-t border-line py-14 md:py-28">
           <Grid>
-            <Rail n="05" label="three answers" />
+            <Rail n="06" label="three answers" />
             <div>
               <h2 className="h2 mb-6 max-w-[770px]" data-reveal>Three possible answers. No hedging.</h2>
               <p className="prose-sans mb-12 max-w-[740px] text-[1.05rem]" data-reveal>
-                The verdict comes from the same written rules for every repository. An AI can explain the evidence to you,
-                but it can&apos;t change the answer.{" "}
+                The same written rules judge every repo. An AI can explain the evidence to you. It can&apos;t change the
+                answer.{" "}
                 <Link href="/how-it-works" className="text-link font-mono text-[0.9rem]">[ how it decides ]</Link>
               </p>
               <ul className="grid gap-px border border-line bg-line md:grid-cols-3">
                 {[
                   { mood: "celebrating" as const, title: "Worth your time", tone: "text-green", body: "Outsiders get replies and get merged. Holt shows you where to start." },
-                  { mood: "heartbroken" as const, title: "Not worth your time", tone: "text-orange", body: "Outside pull requests mostly go unanswered or unmerged. Save your week." },
+                  { mood: "heartbroken" as const, title: "Not worth your time", tone: "text-orange", body: "Outside PRs mostly go unanswered or unmerged. Save your week." },
                   { mood: "thinking" as const, title: "Not enough evidence", tone: "text-amber", body: "Too few people have tried recently to say. Holt won't guess." },
                 ].map((v) => (
                   <li key={v.title} className="bg-panel p-6" data-reveal>
@@ -163,21 +220,27 @@ export default function Home() {
                   </li>
                 ))}
               </ul>
+              <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3" data-reveal>
+                <span className="w-full font-sans text-[0.95rem] text-muted">Want the evidence explained in plain English, with citations?</span>
+                <Suspense fallback={null}>
+                  <AiReportsCta />
+                </Suspense>
+              </div>
             </div>
           </Grid>
         </section>
 
-        {/* 06 — open source */}
+        {/* 07 — open source */}
         <section data-cat-section="adoring" className="relative overflow-clip border-t border-line bg-panel py-14 md:py-28">
           <ScrollMarquee text="OPEN / SOURCE / OPEN / SOURCE / OPEN / SOURCE / OPEN / SOURCE / OPEN / SOURCE /" />
           <div className="relative">
             <Grid>
-              <Rail n="06" label="open source" />
+              <Rail n="07" label="open source" />
               <div>
-                <h2 className="h2 mb-6 max-w-[770px]" data-reveal>Use it, inspect it, improve it.</h2>
+                <h2 className="h2 mb-6 max-w-[770px]" data-reveal>Open source. We merge outsiders too.</h2>
                 <p className="prose-sans mb-8 max-w-[740px] text-[1.05rem]" data-reveal>
-                  Holt is open source (Apache-2.0) and built in the open. It&apos;s also a good place for a first
-                  contribution: the web app, the rules behind the verdicts, docs, or the terminal app.
+                  Fix a typo in the docs or rework the verdict rules. There&apos;s room at every level. Prefer the
+                  terminal? Holt runs there too.
                 </p>
                 <div className="grid max-w-[760px] grid-cols-[auto_1fr_auto] items-center border border-line-strong bg-bg" data-reveal>
                   <span aria-hidden="true" className="pl-4 text-amber">$</span>
@@ -186,12 +249,31 @@ export default function Home() {
                 </div>
                 <div className="mt-8 flex flex-wrap items-center gap-x-7 gap-y-4" data-reveal>
                   <a className="bracket-link" href={`${GITHUB_REPO_URL}/blob/main/CONTRIBUTING.md`}>[ start contributing → ]</a>
-                  <a className="text-link inline-flex min-h-11 items-center text-[0.89rem]" href={GITHUB_REPO_URL}>[ view source ]</a>
+                  <a className="text-link inline-flex min-h-11 items-center text-[0.89rem]" href={GITHUB_REPO_URL}>[ star it on GitHub ]</a>
                   <span className="text-[0.82rem] text-faint">Apache-2.0</span>
                 </div>
               </div>
             </Grid>
           </div>
+        </section>
+        {/* 08 — your turn: no scrolling to a dead end */}
+        <section data-cat-section="ready" className="border-t border-line py-14 md:py-28">
+          <Grid>
+            <Rail n="08" label="your turn" />
+            <div>
+              <h2 className="h2 mb-6 max-w-[770px]" data-reveal>Got a repo in mind?</h2>
+              <p className="prose-sans mb-8 max-w-[740px] text-[1.05rem]" data-reveal>
+                Paste it. You&apos;ll know before you write a line of code.
+              </p>
+              <div className="max-w-[760px]" data-reveal>
+                <PasteBox id="repo-input-end" label="Repo to check" examples={false} />
+              </div>
+              <p className="mt-5 font-sans text-[0.95rem] text-muted" data-reveal>
+                No repo yet?{" "}
+                <Link href="/find" className="text-link font-mono text-[0.9rem]">[ find a project ]</Link>
+              </p>
+            </div>
+          </Grid>
         </section>
       </>
     </PageTransition>

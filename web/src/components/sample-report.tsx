@@ -2,18 +2,23 @@
 // otherwise a static figure that is labelled as an example, never as real.
 import Link from "next/link";
 import { getReport, MOCK, starterIssues } from "@/lib/api";
-import { humanHours, nextStep, VERDICT_HEADLINE, VERDICT_TONE } from "@/lib/format";
+import { humanHours, nextStep } from "@/lib/format";
+import { areaLabel } from "@/lib/landing";
 import { caller } from "@/lib/session";
-import type { Verdict } from "@/lib/types";
+import type { Tone } from "@/lib/types";
 import { CatFace } from "./cat-face";
-import { TONE, VERDICT_MOOD } from "./report/tone";
+import { TONE, TONE_MOOD } from "./report/tone";
 import { VerdictPill } from "./report/verdict-pill";
 
-const REPO = "pallets/flask";
+// A repo the current engine rates Worth your time. The example below is its
+// real report from githolt.com on 28 Sep 2026, trimmed; Holt listed no
+// starter issues for it that day, so the example shows none either.
+const REPO = "home-assistant/core";
 
 interface Sample {
   repo: string;
-  verdict: Verdict;
+  headline: string;
+  tone: Tone;
   stats: [string, string][];
   lands: [path: string, merged: number, attempted: number][];
   issue: { n: number; title: string; label: string; step: string } | null;
@@ -22,18 +27,19 @@ interface Sample {
 
 const EXAMPLE: Sample = {
   repo: REPO,
-  verdict: "viable",
+  headline: "Worth your time",
+  tone: "good",
   stats: [
-    ["17 of 64", "outside pull requests merged"],
-    ["3 hours", "typical wait for a first reply"],
-    ["12", "people's first PR merged here"],
+    ["43 of 58", "outside PRs merged"],
+    ["15 hours", "typical wait for a first reply"],
+    ["30", "people's first PR merged here"],
   ],
   lands: [
-    ["docs/", 8, 14],
-    ["src/flask/", 6, 31],
-    ["tests/", 3, 9],
+    ["homeassistant/components/", 41, 55],
+    ["tests/components/", 27, 38],
+    ["(root)", 14, 18],
   ],
-  issue: { n: 1234, title: "Document how to test streaming responses", label: "good first issue", step: "Comment on the issue to ask if you can take it." },
+  issue: null,
   caption: "an example report",
 };
 
@@ -45,13 +51,14 @@ async function load(): Promise<Sample> {
   const issue = i.ok ? i.data.issues[0] : undefined;
   return {
     repo: r.data.repo,
-    verdict: r.data.verdict,
+    headline: r.data.headline,
+    tone: r.data.tone,
     stats: [
-      [`${s.outsider_merged} of ${s.outsider_attempts}`, "outside pull requests merged"],
+      [`${s.outsider_merged} of ${s.outsider_attempts}`, "outside PRs merged"],
       [s.median_first_response_hours == null ? "none" : humanHours(s.median_first_response_hours), "typical wait for a first reply"],
       [String(s.first_time_merged_authors), "people's first PR merged here"],
     ],
-    lands: r.data.landing.slice(0, 3).map((l) => [`${l.path}/`, l.merged, l.attempted]),
+    lands: r.data.landing.slice(0, 3).map((l) => [areaLabel(l), l.merged, l.attempted]),
     issue: issue ? { n: issue.number, title: issue.title, label: issue.labels[0] ?? "starter issue", step: nextStep(issue) } : null,
     caption: "a real report, trimmed",
   };
@@ -62,7 +69,7 @@ export async function LiveSample() {
 }
 
 function SampleFigure({ sample }: { sample: Sample }) {
-  const t = TONE[VERDICT_TONE[sample.verdict]];
+  const t = TONE[sample.tone];
   const max = Math.max(1, ...sample.lands.map(([, , a]) => a));
   return (
     <figure className="relative m-0 border border-line-strong bg-panel shadow-card">
@@ -73,11 +80,11 @@ function SampleFigure({ sample }: { sample: Sample }) {
       <div className="grid gap-8 p-5 sm:p-8 lg:grid-cols-[1.1fr_1fr]">
         <div>
           <div className="flex items-center justify-between">
-            <VerdictPill verdict={sample.verdict} />
-            <CatFace mood={VERDICT_MOOD[sample.verdict]} className="text-[1.3rem]" />
+            <VerdictPill headline={sample.headline} tone={sample.tone} />
+            <CatFace mood={TONE_MOOD[sample.tone]} className="text-[1.3rem]" />
           </div>
           <p className={`display mt-4 text-[clamp(2rem,5vw,3.2rem)] ${t.text}`}>
-            {VERDICT_HEADLINE[sample.verdict]}
+            {sample.headline}
             <span className="text-ink">.</span>
           </p>
           <ul className="mt-6 grid gap-px border border-line bg-line sm:grid-cols-3">

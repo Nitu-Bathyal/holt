@@ -1,3 +1,4 @@
+import { areaLabel } from "@/lib/landing";
 import type { Report } from "@/lib/types";
 
 export function LandingMap({ landing, neverLanded }: { landing: Report["landing"]; neverLanded: Report["never_landed"] }) {
@@ -12,7 +13,7 @@ export function LandingMap({ landing, neverLanded }: { landing: Report["landing"
           {landing.map((l) => (
             <li key={l.path}>
               <div className="flex items-baseline justify-between gap-4 text-[0.89rem]">
-                <code className="truncate text-ink">{l.path}/</code>
+                <code className="truncate text-ink">{areaLabel(l)}</code>
                 <span className="shrink-0 font-sans text-muted">
                   <strong className="font-semibold text-green">{l.merged}</strong> of {l.attempted} merged
                 </span>
@@ -31,7 +32,7 @@ export function LandingMap({ landing, neverLanded }: { landing: Report["landing"
           <ul className="flex flex-wrap gap-2">
             {neverLanded.map((l) => (
               <li key={l.path} className="chip border-orange/40">
-                <code className="text-ink">{l.path}/</code>
+                <code className="text-ink">{areaLabel(l)}</code>
                 <span className="text-muted">{l.attempted} tried</span>
               </li>
             ))}

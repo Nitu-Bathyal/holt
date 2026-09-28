@@ -1,18 +1,15 @@
 import { reportPageUrl } from "./config";
-import type { Lookup, Report, Repo, Verdict } from "./types";
+import type { Lookup, Report, Repo, Tone } from "./types";
 
 export const CHIP_CLASS = "holt-chip";
 
-const HEADLINES: Record<Verdict, string> = {
-  viable: "Worth your time",
-  not_viable: "Not worth your time",
-  insufficient_evidence: "Not enough evidence",
-};
+const TONES: readonly string[] = ["good", "bad", "warn"] satisfies Tone[];
+const MAX_HEADLINE = 60;
 
 export type ChipState = { state: "loading" } | Lookup<Report>;
 
 export interface ChipView {
-  tone: "viable" | "not_viable" | "insufficient_evidence" | "unknown";
+  tone: Tone | "unknown";
   label: string;
   stat: string | null;
   title: string;
@@ -24,11 +21,24 @@ export function chipView(s: ChipState, r: Repo): ChipView {
   if (s.state === "loading") {
     return { tone: "unknown", label: "Holt", stat: "checking…", title: `Looking up ${name} on Holt` };
   }
-  if (s.state === "found" && s.data.verdict in HEADLINES) {
-    const v = s.data.verdict;
+  // An older version of Holt's rules made this report: its verdict may be out
+  // of date, so it isn't shown. The report page checks again.
+  if (s.state === "found" && s.data.outdated === true) {
     return {
-      tone: v,
-      label: `Holt: ${HEADLINES[v]}`,
+      tone: "unknown",
+      label: "Holt: updating",
+      stat: null,
+      title: `Holt's rules were updated. Click to check ${name} again.`,
+    };
+  }
+  // The server words and colours the verdict; the chip only shows it. Anything
+  // that isn't a short headline is treated as no answer.
+  const headline = s.state === "found" ? s.data.headline : undefined;
+  if (s.state === "found" && typeof headline === "string" && headline && headline.length <= MAX_HEADLINE) {
+    const tone = s.data.tone;
+    return {
+      tone: typeof tone === "string" && TONES.includes(tone) ? tone : "unknown",
+      label: `Holt: ${headline}`,
       stat: statLine(s.data),
       title: `Holt's verdict for newcomers to ${name}. Click for the full report.`,
     };
@@ -41,12 +51,22 @@ export function chipView(s: ChipState, r: Repo): ChipView {
   };
 }
 
-/** One short stat, e.g. "15 of 100 newcomer PRs merged". Null when there is nothing to count. */
+const MAX_STAT = 60;
+
+/**
+ * One short stat, e.g. "15 of 100 outside PRs merged": the server's
+ * `stat_line`, so the chip and the report page use the same words. Responses
+ * from before the server sent it get the same sentence built here. Null when
+ * there is nothing to count.
+ */
 export function statLine(report: Report): string | null {
+  const line = report.stat_line;
+  if (typeof line === "string" && line && line.length <= MAX_STAT) return line;
+  if (line === null) return null;
   const attempts = report.stats?.outsider_attempts;
   const merged = report.stats?.outsider_merged;
   if (!isCount(attempts) || !isCount(merged) || attempts === 0) return null;
-  const noun = attempts === 1 ? "newcomer PR" : "newcomer PRs";
+  const noun = attempts === 1 ? "outside PR" : "outside PRs";
   return `${merged} of ${attempts} ${noun} merged`;
 }
 

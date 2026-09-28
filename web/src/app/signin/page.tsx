@@ -3,8 +3,10 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { devSignInEnabled, oauthProviders, signIn } from "@/auth";
 import { CatFace } from "@/components/cat-face";
-import { safeCallback } from "@/lib/safe-url";
+import { EXAMPLE_PATH } from "@/lib/example-report";
+import { afterSignIn } from "@/lib/home";
 import { currentUser } from "@/lib/session";
+import { WELCOME_AI_CREDITS } from "@/lib/site";
 import { PageTransition } from "@/components/motion/page-transition";
 
 export const metadata: Metadata = { title: "Sign in", robots: { index: false } };
@@ -27,7 +29,8 @@ const ICONS: Record<string, React.ReactNode> = {
 
 export default async function SignInPage({ searchParams }: PageProps<"/signin">) {
   const sp = await searchParams;
-  const callbackUrl = safeCallback(sp.callbackUrl);
+  // Back to where you signed in from, else your home (/me).
+  const callbackUrl = afterSignIn(sp.callbackUrl);
   if (await currentUser()) redirect(callbackUrl);
   const configured = new Set(oauthProviders.map((p) => p.id));
 
@@ -40,7 +43,10 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           <CatFace mood="adoring" blink className="text-[2rem]" />
           <h1 className="display mt-6 text-[2.2rem] sm:text-[2.6rem]">Sign in to Holt</h1>
           <p className="prose-sans mt-3">
-            Free reports don&apos;t need an account. Sign in for AI reports, your history, and to use your own API key.
+            Get {WELCOME_AI_CREDITS} free AI reports and keep your history. Checking a repo never needs an account.
+          </p>
+          <p className="mt-2 font-sans text-[0.9rem] text-muted">
+            Not sure yet? <Link href={EXAMPLE_PATH} className="text-link">Read an example AI report</Link> first.
           </p>
 
           <div className="mt-8 space-y-3">
@@ -56,7 +62,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
                     await signIn(p.id, { redirectTo: callbackUrl });
                   }}
                 >
-                  <button type="submit" className="flex min-h-13 w-full items-center justify-center gap-3 border border-line-strong bg-panel text-[0.92rem] font-semibold transition-colors hover:border-blue">
+                  <button type="submit" data-umami-event="sign-in" data-umami-event-provider={p.id} className="flex min-h-13 w-full items-center justify-center gap-3 border border-line-strong bg-panel text-[0.92rem] font-semibold transition-colors hover:border-blue">
                     {ICONS[p.id]} continue with {p.name}
                   </button>
                 </form>
@@ -87,7 +93,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           )}
 
           <p className="mt-8 font-sans text-[0.87rem] text-faint">
-            Holt only asks for your name, email and avatar. It never gets access to your repositories and never posts anything.
+            Holt gets your name, email and avatar. Nothing else. It can&apos;t see your repos and never posts.
           </p>
         </div>
       </div>

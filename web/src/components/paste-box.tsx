@@ -2,11 +2,26 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { track } from "@/lib/analytics";
 import { parseRepoInput } from "@/lib/repo";
 
-const EXAMPLES = ["pallets/flask", "NixOS/nixpkgs", "pytorch/pytorch"];
+const EXAMPLES = ["home-assistant/core", "NixOS/nixpkgs", "pallets/flask"];
 
-export function PasteBox({ autoFocus = false, examples = true, size = "lg" }: { autoFocus?: boolean; examples?: boolean; size?: "lg" | "md" }) {
+// `id` and `label` let a page hold a second box: ids stay unique, and the
+// smoke test's getByLabel("GitHub repository or URL") still finds one input.
+export function PasteBox({
+  autoFocus = false,
+  examples = true,
+  size = "lg",
+  id = "repo-input",
+  label = "GitHub repository or URL",
+}: {
+  autoFocus?: boolean;
+  examples?: boolean;
+  size?: "lg" | "md";
+  id?: string;
+  label?: string;
+}) {
   const router = useRouter();
   const [value, setValue] = useState("");
   const [error, setError] = useState("");
@@ -15,11 +30,12 @@ export function PasteBox({ autoFocus = false, examples = true, size = "lg" }: { 
   function go(input: string) {
     const ref = parseRepoInput(input);
     if (!ref) {
-      setError("Paste a GitHub repository, like pallets/flask or https://github.com/pallets/flask");
+      setError("That doesn't look like a repo. Try pallets/flask or a github.com link.");
       return;
     }
     setError("");
     setBusy(true);
+    track("paste-submit", { repo: `${ref.owner}/${ref.repo}` });
     router.push(`/${ref.owner}/${ref.repo}`);
   }
 
@@ -33,10 +49,10 @@ export function PasteBox({ autoFocus = false, examples = true, size = "lg" }: { 
         className="group relative grid grid-cols-1 border border-line-strong bg-panel shadow-card transition-colors focus-within:border-blue sm:grid-cols-[auto_1fr_auto]"
       >
         <span aria-hidden="true" className="absolute inset-y-0 left-0 w-0.5 origin-top scale-y-0 bg-amber transition-transform group-focus-within:scale-y-100" />
-        <label htmlFor="repo-input" className="sr-only">GitHub repository or URL</label>
+        <label htmlFor={id} className="sr-only">{label}</label>
         <span aria-hidden="true" className="hidden items-center pl-5 text-amber sm:flex">$</span>
         <input
-          id="repo-input"
+          id={id}
           name="repo"
           value={value}
           onChange={(e) => {
@@ -59,7 +75,7 @@ export function PasteBox({ autoFocus = false, examples = true, size = "lg" }: { 
           enterKeyHint="go"
           placeholder="owner/name or a GitHub URL"
           aria-invalid={Boolean(error)}
-          aria-describedby={error ? "repo-error" : undefined}
+          aria-describedby={error ? `${id}-error` : undefined}
           className={`min-w-0 bg-transparent px-4 text-ink outline-none placeholder:text-faint sm:px-3 ${size === "lg" ? "h-16 text-[1rem] sm:text-[1.05rem]" : "h-13 text-[0.95rem]"}`}
         />
         <button
@@ -71,7 +87,7 @@ export function PasteBox({ autoFocus = false, examples = true, size = "lg" }: { 
         </button>
       </form>
       {error && (
-        <p id="repo-error" role="alert" className="mt-2 font-sans text-[0.89rem] text-orange">
+        <p id={`${id}-error`} role="alert" className="mt-2 font-sans text-[0.89rem] text-orange">
           {error}
         </p>
       )}

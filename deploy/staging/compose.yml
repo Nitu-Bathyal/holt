@@ -59,6 +59,19 @@ services:
     mem_limit: 64m
     restart: "no"
 
+  # Brings the API's schema up to date (holt_server/migrations), then exits.
+  # The server starts only after it succeeds.
+  migrate-server:
+    image: stage-holt-new-server:latest
+    labels: *stage-label
+    environment:
+      DATABASE_URL: postgresql+asyncpg://holt:${HOLT_DB_PASSWORD}@db:5432/holt
+    command: ["python", "-m", "holt_server.migrate"]
+    depends_on:
+      db: { condition: service_healthy }
+    mem_limit: 256m
+    restart: "no"
+
   server:
     build:
       context: ../..
@@ -73,13 +86,32 @@ services:
       HOLT_SECRET_KEY: ${HOLT_SECRET_KEY:?run make-env.sh}
       HOLT_WEB_URL: https://${STAGING_HOST:-staging.githolt.com}
       GITHUB_TOKENS: ${GITHUB_TOKENS}
+      # AI (preview.sh sets these from OPENAI_API_KEY): the model, and the
+      # hard budget for all AI on staging, holt-pro's included. 0 = AI off.
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-5-mini}
+      HOLT_AI_BUDGET_USD: ${HOLT_AI_BUDGET_USD:-0}
+      # Paid features (compose.pro.yml). preview.sh sets both, empty when
+      # the service isn't running, which turns paid features off.
+      HOLT_PRO_URL: ${HOLT_PRO_URL:-}
+      HOLT_PRO_KEY: ${HOLT_PRO_KEY:-}
       HOLT_JOB_CONCURRENCY: ${HOLT_JOB_CONCURRENCY:-1}
       # Warm pass (python -m holt_server.warm) fills this cache for a day.
       HOLT_STARTER_CACHE_HOURS: ${HOLT_STARTER_CACHE_HOURS:-24}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
     depends_on:
       db: { condition: service_healthy }
+      migrate-server: { condition: service_completed_successfully }
+    # The image's own check, polled every second while it starts so
+    # deploy/swap.sh can retire the old server as soon as this one is ready.
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 90s
+      start_interval: 1s
     mem_limit: 512m
     restart: unless-stopped
 
@@ -123,17 +155,34 @@ services:
     depends_on:
       server: { condition: service_healthy }
       migrate-web: { condition: service_completed_successfully }
+    # deploy/swap.sh starts the new web beside the old one and waits for
+    # this before retiring the old one. robots.txt is rendered by Next.js
+    # but never calls the API.
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/robots.txt').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 90s
+      start_interval: 1s
     mem_limit: 512m
     restart: unless-stopped
 
   # Front door: serves /__build (what's live) and proxies the rest to web.
+  # Its config is a directory: preview.sh copies edge.conf into
+  # $HOLT_STAGE_EDGE_DIR/default.conf (~/.local/share/holt-staging/edge),
+  # checks it with nginx -t and reloads, so config changes go live without
+  # restarting the edge. (A single-file mount of ./edge.conf kept the old
+  # file after git replaced it.) Required, so a timer copy of preview.sh
+  # from before this change stops at `compose up` instead of starting an
+  # edge with no config: re-run install.sh.
   edge:
     image: nginx:1.27-alpine
     labels: *stage-label
     ports:
       - "127.0.0.1:${HOLT_STAGE_PORT:-9110}:8080"
     volumes:
-      - ./edge.conf:/etc/nginx/conf.d/default.conf:ro
+      - ${HOLT_STAGE_EDGE_DIR:?set by preview.sh; re-run deploy/staging/install.sh}:/etc/nginx/conf.d:ro
       - ./build:/srv/build:ro
     depends_on: [web]
     mem_limit: 32m

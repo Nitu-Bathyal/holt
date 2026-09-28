@@ -4,6 +4,7 @@ import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { RouteFallback } from "@/components/motion/route-fallback";
 import { themeScript } from "@/components/theme-toggle";
+import { ANALYTICS } from "@/lib/analytics";
 import { SITE_URL } from "@/lib/site";
 import "./globals.css";
 
@@ -18,15 +19,15 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Holt — find an open-source project that will actually merge your first PR",
+    default: "Holt — will this repo merge your PR?",
     template: "%s · Holt",
   },
   description:
-    "Paste any GitHub repo. Holt reads its recent pull requests and tells you, in plain English, whether newcomers get replies, get merged, and where their work lands.",
+    "Paste any GitHub repo. Holt reads its recent pull requests and tells you, in plain English, whether outside contributors get replies, get merged, and where their work lands.",
   openGraph: {
     siteName: "Holt",
     type: "website",
-    title: "Holt — find an open-source project that will actually merge your first PR",
+    title: "Holt — check whether a repo actually merges outsiders' PRs",
     description: "See how a project treats outside contributors before you spend your week on it. Swap hub for holt in any GitHub link.",
   },
   twitter: { card: "summary_large_image" },
@@ -46,6 +47,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html lang="en" className={mono.variable} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
+        {ANALYTICS && <script defer src={ANALYTICS.src} data-website-id={ANALYTICS.websiteId} />}
       </head>
       {/* Extensions such as Grammarly add attributes to <body> before React
           hydrates. This only silences attribute mismatches on <body> itself. */}

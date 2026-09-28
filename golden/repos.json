@@ -1,0 +1,298 @@
+{
+ "repos": {
+  "pytorch/pytorch": {
+   "shape": "audit problem case",
+   "note": "bot-merge monorepo: pytorchmergebot lands PRs by commit, so merges read as closes; staff read as outsiders",
+   "expected": {
+    "verdict": "viable",
+    "reason": "19 non-member PRs were landed by pytorchmergebot (closed with a commit) in the two days the recording covers, from 14 people, including some who look like real outsiders (e.g. AMD engineers, first-time authors).",
+    "judgment_call": "The 200-PR sample covers only ~2 days and many of the landed CONTRIBUTOR authors are PyTorch staff whose org membership isn't public (huydhn, drisspg, eellison…). 'Worth' rests on PyTorch's well-known record of merging outside work, which this sample shows only faintly; 'Not enough evidence' from this sample alone would also be defensible."
+   }
+  },
+  "react/react-native": {
+   "shape": "audit problem case",
+   "note": "internal sync: PRs are imported and landed by facebook-github-bot, closed by commit",
+   "expected": {
+    "verdict": "viable",
+    "reason": "79 of the 145 closed PRs from non-members in the recording were landed: closed by the meta-codesync bot with a commit in this repo, which is how Meta syncs an accepted PR. Outside work lands; it just never shows as 'merged'."
+   }
+  },
+  "openssl/openssl": {
+   "shape": "audit problem case",
+   "note": "merged by hand (cherry-picked by a maintainer), PRs closed rather than merged",
+   "expected": {
+    "verdict": "viable",
+    "reason": "42 of the 64 closed PRs from non-members carry a maintainer's 'Merged to 3.x. Thank you!' comment: OpenSSL merges by pushing the commits itself and then closing the PR.",
+    "judgment_call": "Many of these are backports by regular contributors, not first-timers; a CLA and slow review make it a long road for a true beginner."
+   }
+  },
+  "facebook/fresco": {
+   "shape": "audit problem case",
+   "note": "internal sync: landed by facebook-github-bot, closed by commit"
+  },
+  "pallets/flask": {
+   "shape": "audit problem case",
+   "note": "busy triage: most closes are spam or low-effort PRs closed fast; 5 of ~190 newcomer PRs merged",
+   "expected": {
+    "verdict": "not_viable",
+    "reason": "5 of 184 outside PRs in 11 months were merged (all by one maintainer); the rest were closed, half of them within 22 minutes, several labelled 'rejected AI'.",
+    "judgment_call": "Most closed PRs were unrequested drive-by or AI-generated changes, so a careful contributor who opens an issue first may do much better than 3%. But the history shows no working path for newcomers, and the audit's 5% merge-rate floor would fail it."
+   }
+  },
+  "excalidraw/excalidraw": {
+   "shape": "audit problem case",
+   "note": "popular app with a very low newcomer merge rate"
+  },
+  "material-components/material-components-android": {
+   "shape": "audit problem case",
+   "note": "internal sync (copybara); very low newcomer merge rate"
+  },
+  "monicahq/monica": {
+   "shape": "audit problem case",
+   "note": "a CLA bot on a user account replies within a minute, so replies look instant"
+  },
+  "plantuml/plantuml": {
+   "shape": "audit problem case",
+   "note": "maintainer-led; audit problem case"
+  },
+  "is-a-dev/register": {
+   "shape": "audit problem case",
+   "note": "registry: every PR is one JSON file claiming a subdomain",
+   "expected": {
+    "verdict": "not_viable",
+    "reason": "A registry: every PR adds one JSON file to claim a subdomain (a review bot closed 22 of the 74 closed ones). Getting one merged isn't a software contribution, so Holt should not call it worth a contributor's time."
+   }
+  },
+  "Homebrew/homebrew-cask": {
+   "shape": "audit problem case",
+   "note": "registry: one cask file per PR, heavy automation"
+  },
+  "microsoft/winget-pkgs": {
+   "shape": "audit problem case",
+   "note": "registry: manifests in one package directory, validated by a user-account bot",
+   "expected": {
+    "verdict": "not_viable",
+    "reason": "A package-manifest registry: 134 of the non-member PRs in the recording were merged by microsoft-github-policy-service after automated validation. Submitting a manifest isn't contributing to software.",
+    "judgment_call": "It is easy to get merged here, which is exactly why the merge counts look good; the verdict follows the product rule that registries are 'Not worth' (ticket 07)."
+   }
+  },
+  "termux/termux-packages": {
+   "shape": "audit problem case",
+   "note": "package registry: build recipes, many automated bumps"
+  },
+  "ollama/ollama": {
+   "shape": "audit extra",
+   "note": "popular, Worth today with a newcomer merge rate under 5%"
+  },
+  "zephyrproject-rtos/zephyr": {
+   "shape": "audit extra",
+   "note": "huge RTOS monorepo, Worth today with a newcomer merge rate under 5%"
+  },
+  "dotnet/efcore": {
+   "shape": "audit extra",
+   "note": "company staff counted as newcomers"
+  },
+  "semgrep/semgrep": {
+   "shape": "audit extra",
+   "note": "internal sync: off-button merges count as rejections"
+  },
+  "PostHog/posthog": {
+   "shape": "audit extra",
+   "note": "staff-heavy product monorepo with staff bots posting in threads"
+  },
+  "tensorflow/tensorflow": {
+   "shape": "off-button merges",
+   "note": "copybara: PRs land internally and are closed by a bot with a commit"
+  },
+  "golang/go": {
+   "shape": "off-button merges",
+   "note": "PRs are imported to Gerrit by a bot; the GitHub PR is closed, never merged",
+   "expected": {
+    "verdict": "viable",
+    "reason": "52 PRs were closed by gopherbot with 'This PR is being closed because golang.org/cl/… has been merged', 49 of them from CONTRIBUTOR (non-member) authors. Go takes PRs through Gerrit, and they land.",
+    "judgment_call": "Gerrit review is a harder path than a GitHub PR, and the maintainers ask for an issue first, so 'Worth' assumes the reader will follow the Gerrit flow."
+   }
+  },
+  "rust-lang/rust": {
+   "shape": "off-button merges",
+   "note": "bors and rollups: merges come from a bot"
+  },
+  "git/git": {
+   "shape": "off-button merges",
+   "note": "PRs are not the way in (the mailing list is); GitGitGadget forwards them"
+  },
+  "v8/v8": {
+   "shape": "mirror",
+   "note": "GitHub-flagged mirror of Chromium's Git; PRs are not accepted",
+   "expected": {
+    "verdict": "not_viable",
+    "reason": "GitHub flags it as a mirror, and the README sends contributors to v8.dev/docs/contribute (Chromium's review system). None of the 108 outside PRs recorded (2014–2026) was merged; 107 were closed."
+   }
+  },
+  "mirror/busybox": {
+   "shape": "mirror",
+   "note": "unofficial mirror, not flagged by GitHub; a handful of stray PRs"
+  },
+  "torvalds/linux": {
+   "shape": "mirror",
+   "note": "pull requests turned off; nothing to count"
+  },
+  "vercel/next.js": {
+   "shape": "monorepo",
+   "note": "company monorepo with many outside PRs"
+  },
+  "microsoft/vscode": {
+   "shape": "monorepo",
+   "note": "company monorepo; outside PRs often wait a long time"
+  },
+  "kubernetes/kubernetes": {
+   "shape": "monorepo",
+   "note": "prow bots merge through the button after /lgtm /approve"
+  },
+  "llvm/llvm-project": {
+   "shape": "monorepo",
+   "note": "huge community monorepo, many first-time contributors"
+  },
+  "home-assistant/core": {
+   "shape": "monorepo",
+   "note": "integration monorepo with a large contributor community",
+   "expected": {
+    "verdict": "viable",
+    "reason": "63 non-member PRs merged by human maintainers in the four days recorded, with a median first reply of about 6 hours.",
+    "judgment_call": "Most merged authors are returning CONTRIBUTORs rather than first-timers; that still counts as outsiders getting work in."
+   }
+  },
+  "python/cpython": {
+   "shape": "big welcoming",
+   "note": "large community project with a documented path for newcomers"
+  },
+  "astral-sh/ruff": {
+   "shape": "big welcoming",
+   "note": "fast-moving company-run tool that merges outside PRs"
+  },
+  "sindresorhus/awesome": {
+   "shape": "registry or list",
+   "note": "awesome list: strict about additions"
+  },
+  "DefinitelyTyped/DefinitelyTyped": {
+   "shape": "registry or list",
+   "note": "type registry: one package folder per PR, bot-driven merges"
+  },
+  "NixOS/nixpkgs": {
+   "shape": "registry or list",
+   "note": "package set: huge volume, many automated bumps"
+  },
+  "tldr-pages/tldr": {
+   "shape": "registry or list",
+   "note": "one page per command; beginner-friendly but catalogue-shaped"
+  },
+  "EbookFoundation/free-programming-books": {
+   "shape": "registry or list",
+   "note": "list of links"
+  },
+  "hacs/default": {
+   "shape": "registry or list",
+   "note": "registry of Home Assistant integrations, one line per PR"
+  },
+  "firstcontributions/first-contributions": {
+   "shape": "beginner magnet",
+   "note": "practice repo: everyone gets merged, which says nothing about real projects"
+  },
+  "TheAlgorithms/Python": {
+   "shape": "beginner magnet",
+   "note": "student-heavy, many low-quality PRs closed"
+  },
+  "request/request": {
+   "shape": "quiet or dormant",
+   "note": "deprecated in 2020; last push 2024",
+   "expected": {
+    "verdict": "not_viable",
+    "reason": "The README opens with 'Deprecated! As of Feb 11th 2020, request is fully deprecated. No new changes are expected to land.' The last merge in the recording is from 2020-02-11; the PRs since then were closed by the stale bot or left open."
+   }
+  },
+  "jashkenas/backbone": {
+   "shape": "quiet or dormant",
+   "note": "quiet, occasional activity"
+  },
+  "pallets/itsdangerous": {
+   "shape": "quiet or dormant",
+   "note": "small and quiet; last push mid-2025"
+  },
+  "httpie/cli": {
+   "shape": "quiet or dormant",
+   "note": "popular but quiet since 2024"
+  },
+  "pallets/click": {
+   "shape": "small or medium welcoming",
+   "note": "small maintainer team that does merge outside fixes"
+  },
+  "encode/httpx": {
+   "shape": "small or medium welcoming",
+   "note": "small team, slower lately"
+  },
+  "sharkdp/bat": {
+   "shape": "small or medium welcoming",
+   "note": "one-maintainer-led tool that merges outside PRs"
+  },
+  "jesseduffield/lazygit": {
+   "shape": "small or medium welcoming",
+   "note": "active maintainer, many outside PRs merged"
+  },
+  "charmbracelet/bubbletea": {
+   "shape": "small or medium welcoming",
+   "note": "small company library that merges outside PRs"
+  },
+  "rust-lang/rustlings": {
+   "shape": "small or medium welcoming",
+   "note": "beginner-facing, small exercises"
+  },
+  "zulip/zulip": {
+   "shape": "small or medium welcoming",
+   "note": "explicitly newcomer-friendly, heavy review"
+  },
+  "fastapi/fastapi": {
+   "shape": "small or medium welcoming",
+   "note": "one lead maintainer; a big backlog of outside PRs"
+  },
+  "freeCodeCamp/freeCodeCamp": {
+   "shape": "student favourite (ticket 08)",
+   "note": "beginner magnet: the most-starred learning repo; curriculum and platform PRs"
+  },
+  "appwrite/appwrite": {
+   "shape": "student favourite (ticket 08)",
+   "note": "Hacktoberfest favourite: backend platform with a company team"
+  },
+  "processing/p5.js": {
+   "shape": "student favourite (ticket 08)",
+   "note": "GSoC org: creative-coding library that courts first-time contributors"
+  },
+  "oppia/oppia": {
+   "shape": "student favourite (ticket 08)",
+   "note": "GSoC org: learning platform with a structured onboarding path"
+  },
+  "CircuitVerse/CircuitVerse": {
+   "shape": "student favourite (ticket 08)",
+   "note": "GSoC org: student-run circuit simulator"
+  },
+  "keploy/keploy": {
+   "shape": "student favourite (ticket 08)",
+   "note": "GSSoC and Hacktoberfest regular: company-backed testing tool"
+  },
+  "layer5io/layer5": {
+   "shape": "student favourite (ticket 08)",
+   "note": "Hacktoberfest regular: community website with many first PRs"
+  },
+  "mozilla/pdf.js": {
+   "shape": "student favourite (ticket 08)",
+   "note": "popular library with a strict review culture"
+  },
+  "django/django": {
+   "shape": "student favourite (ticket 08)",
+   "note": "big welcoming project whose PRs pair with Trac tickets"
+  },
+  "public-apis/public-apis": {
+   "shape": "student favourite (ticket 08)",
+   "note": "a list students add entries to during Hacktoberfest"
+  }
+ }
+}

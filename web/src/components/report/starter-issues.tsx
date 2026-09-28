@@ -16,7 +16,7 @@ export function StarterIssueCard({ issue, compact = false }: { issue: StarterIss
         </span>
       </div>
       <h3 className="mt-2 font-sans text-[1rem] font-semibold leading-snug text-ink">
-        <a href={issue.url} target="_blank" rel="noopener noreferrer" className="after:absolute after:inset-0 group-hover:text-blue">
+        <a href={issue.url} target="_blank" rel="noopener noreferrer" data-umami-event="starter-issue-click" className="after:absolute after:inset-0 group-hover:text-blue">
           {issue.title}
           <span className="sr-only"> (opens GitHub)</span>
         </a>

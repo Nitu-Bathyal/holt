@@ -1,0 +1,2836 @@
+{
+ "CircuitVerse/CircuitVerse": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 108,
+   "outsider_merged": 15,
+   "outsider_ignored": 49,
+   "median_first_response_hours": 167.2,
+   "bot_share": 0.28,
+   "distinct_outsider_authors": 25,
+   "distinct_merged_authors": 6,
+   "reviewed_share": 0.54,
+   "merge_rate": 0.165,
+   "merged_files_median": 4,
+   "merged_dirs_median": 2,
+   "merged_with_files": 49,
+   "outsider_answered": 33,
+   "first_timer_threads": 70,
+   "first_timer_merged": 8,
+   "distinct_first_timer_authors": 25,
+   "distinct_first_timer_merged_authors": 6,
+   "outsider_still_open": 17,
+   "outsider_closed_silently": 4,
+   "outsider_excluded": 1,
+   "outsider_reviewed_share": 0.667,
+   "merged_threads": 50
+  },
+  "history": [
+   {
+    "date": "2026-09-28",
+    "from": null,
+    "to": "viable",
+    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+   }
+  ]
+ },
+ "DefinitelyTyped/DefinitelyTyped": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 164,
+   "outsider_merged": 96,
+   "outsider_ignored": 17,
+   "median_first_response_hours": 26.0,
+   "bot_share": 0.055,
+   "distinct_outsider_authors": 68,
+   "distinct_merged_authors": 53,
+   "reviewed_share": 0.615,
+   "merge_rate": 0.75,
+   "merged_files_median": 3,
+   "merged_dirs_median": 1,
+   "merged_with_files": 129,
+   "outsider_answered": 64,
+   "first_timer_threads": 74,
+   "first_timer_merged": 60,
+   "distinct_first_timer_authors": 62,
+   "distinct_first_timer_merged_authors": 53,
+   "outsider_still_open": 36,
+   "outsider_closed_silently": 8,
+   "outsider_excluded": 2,
+   "outsider_reviewed_share": 0.594,
+   "merged_threads": 130
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "EbookFoundation/free-programming-books": {
+  "verdict": "not_viable",
+  "rules": [
+   "sample_period",
+   "catalogue_shape"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 190,
+   "outsider_merged": 89,
+   "outsider_ignored": 8,
+   "median_first_response_hours": 19.4,
+   "bot_share": 0.03,
+   "distinct_outsider_authors": 130,
+   "distinct_merged_authors": 75,
+   "reviewed_share": 0.838,
+   "merge_rate": 0.511,
+   "merged_files_median": 1,
+   "merged_dirs_median": 1,
+   "merged_with_files": 99,
+   "outsider_answered": 122,
+   "first_timer_threads": 154,
+   "first_timer_merged": 76,
+   "distinct_first_timer_authors": 129,
+   "distinct_first_timer_merged_authors": 75,
+   "outsider_still_open": 16,
+   "outsider_closed_silently": 30,
+   "outsider_excluded": 2,
+   "outsider_reviewed_share": 0.843,
+   "merged_threads": 99
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "not_viable",
+    "reason": "Catalogue detection from diff shape (ticket 07): most outside pull requests here add one data file or package manifest, or a line to a list, which isn't a software contribution"
+   }
+  ]
+ },
+ "Homebrew/homebrew-cask": {
+  "verdict": "not_viable",
+  "rules": [
+   "sample_period",
+   "catalogue_shape"
+  ],
+  "numbers": {
+   "total_threads": 400,
+   "outsider_threads": 44,
+   "outsider_merged": 24,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 4.1,
+   "bot_share": 0.85,
+   "distinct_outsider_authors": 22,
+   "distinct_merged_authors": 16,
+   "reviewed_share": 1.0,
+   "merge_rate": 0.774,
+   "merged_files_median": 1.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 384,
+   "outsider_answered": 28,
+   "first_timer_threads": 21,
+   "first_timer_merged": 17,
+   "distinct_first_timer_authors": 19,
+   "distinct_first_timer_merged_authors": 16,
+   "outsider_still_open": 13,
+   "outsider_closed_silently": 3,
+   "outsider_excluded": 2,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 384
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "not_viable",
+    "reason": "Catalogue detection from diff shape (ticket 07): most outside pull requests here add one data file or package manifest, or a line to a list, which isn't a software contribution"
+   }
+  ]
+ },
+ "NixOS/nixpkgs": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges",
+   "package_updates"
+  ],
+  "numbers": {
+   "total_threads": 300,
+   "outsider_threads": 191,
+   "outsider_merged": 35,
+   "outsider_ignored": 9,
+   "median_first_response_hours": 16.8,
+   "bot_share": 0.083,
+   "distinct_outsider_authors": 23,
+   "distinct_merged_authors": 12,
+   "reviewed_share": 0.558,
+   "merge_rate": 0.614,
+   "merged_files_median": 1.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 138,
+   "outsider_answered": 31,
+   "first_timer_threads": 26,
+   "first_timer_merged": 20,
+   "distinct_first_timer_authors": 15,
+   "distinct_first_timer_merged_authors": 12,
+   "outsider_still_open": 134,
+   "outsider_closed_silently": 1,
+   "outsider_excluded": 7,
+   "outsider_reviewed_share": 0.543,
+   "merged_threads": 138
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "PostHog/posthog": {
+  "verdict": "not_viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges",
+   "rubber_stamp"
+  ],
+  "numbers": {
+   "total_threads": 400,
+   "outsider_threads": 30,
+   "outsider_merged": 13,
+   "outsider_ignored": 4,
+   "median_first_response_hours": 80.2,
+   "bot_share": 0.58,
+   "distinct_outsider_authors": 12,
+   "distinct_merged_authors": 9,
+   "reviewed_share": 0.381,
+   "merge_rate": 0.684,
+   "merged_files_median": 6,
+   "merged_dirs_median": 1,
+   "merged_with_files": 113,
+   "outsider_answered": 3,
+   "first_timer_threads": 16,
+   "first_timer_merged": 13,
+   "distinct_first_timer_authors": 11,
+   "distinct_first_timer_merged_authors": 9,
+   "outsider_still_open": 11,
+   "outsider_closed_silently": 1,
+   "outsider_excluded": 4,
+   "outsider_reviewed_share": 0.154,
+   "merged_threads": 113
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "not_viable",
+    "reason": "rubber stamp over outside merges only (ticket 08): 13 outside merges, 15% with a comment. Caveat: most are PostHog staff who read CONTRIBUTOR and merge through a queue bot (known limit)"
+   }
+  ]
+ },
+ "TheAlgorithms/Python": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 103,
+   "outsider_merged": 24,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 2.9,
+   "bot_share": 0.125,
+   "distinct_outsider_authors": 19,
+   "distinct_merged_authors": 18,
+   "reviewed_share": 1.0,
+   "merge_rate": 0.615,
+   "merged_files_median": 1.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 124,
+   "outsider_answered": 33,
+   "first_timer_threads": 22,
+   "first_timer_merged": 18,
+   "distinct_first_timer_authors": 18,
+   "distinct_first_timer_merged_authors": 18,
+   "outsider_still_open": 64,
+   "outsider_closed_silently": 6,
+   "outsider_excluded": 35,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 124
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "appwrite/appwrite": {
+  "verdict": "insufficient_evidence",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "few_merges"
+  ],
+  "numbers": {
+   "total_threads": 400,
+   "outsider_threads": 31,
+   "outsider_merged": 1,
+   "outsider_ignored": 11,
+   "median_first_response_hours": 84.7,
+   "bot_share": 0.025,
+   "distinct_outsider_authors": 11,
+   "distinct_merged_authors": 1,
+   "reviewed_share": 0.716,
+   "merge_rate": 0.059,
+   "merged_files_median": 3.0,
+   "merged_dirs_median": 2.0,
+   "merged_with_files": 280,
+   "outsider_answered": 1,
+   "first_timer_threads": 16,
+   "first_timer_merged": 1,
+   "distinct_first_timer_authors": 11,
+   "distinct_first_timer_merged_authors": 1,
+   "outsider_still_open": 14,
+   "outsider_closed_silently": 5,
+   "outsider_excluded": 1,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 282
+  },
+  "history": [
+   {
+    "date": "2026-09-28",
+    "from": null,
+    "to": "insufficient_evidence",
+    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+   }
+  ]
+ },
+ "astral-sh/ruff": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 400,
+   "outsider_threads": 65,
+   "outsider_merged": 5,
+   "outsider_ignored": 6,
+   "median_first_response_hours": 25.9,
+   "bot_share": 0.07,
+   "distinct_outsider_authors": 23,
+   "distinct_merged_authors": 5,
+   "reviewed_share": 0.627,
+   "merge_rate": 0.185,
+   "merged_files_median": 3,
+   "merged_dirs_median": 1,
+   "merged_with_files": 217,
+   "outsider_answered": 20,
+   "first_timer_threads": 18,
+   "first_timer_merged": 5,
+   "distinct_first_timer_authors": 17,
+   "distinct_first_timer_merged_authors": 5,
+   "outsider_still_open": 38,
+   "outsider_closed_silently": 1,
+   "outsider_excluded": 14,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 217
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "charmbracelet/bubbletea": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 122,
+   "outsider_merged": 23,
+   "outsider_ignored": 53,
+   "median_first_response_hours": 58.6,
+   "bot_share": 0.16,
+   "distinct_outsider_authors": 79,
+   "distinct_merged_authors": 21,
+   "reviewed_share": 0.542,
+   "merge_rate": 0.207,
+   "merged_files_median": 2.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 72,
+   "outsider_answered": 34,
+   "first_timer_threads": 103,
+   "first_timer_merged": 21,
+   "distinct_first_timer_authors": 77,
+   "distinct_first_timer_merged_authors": 21,
+   "outsider_still_open": 11,
+   "outsider_closed_silently": 22,
+   "outsider_excluded": 1,
+   "outsider_reviewed_share": 0.913,
+   "merged_threads": 72
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "django/django": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 161,
+   "outsider_merged": 9,
+   "outsider_ignored": 23,
+   "median_first_response_hours": 44.7,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 47,
+   "distinct_merged_authors": 6,
+   "reviewed_share": 1.0,
+   "merge_rate": 0.082,
+   "merged_files_median": 2.0,
+   "merged_dirs_median": 2.0,
+   "merged_with_files": 30,
+   "outsider_answered": 35,
+   "first_timer_threads": 94,
+   "first_timer_merged": 7,
+   "distinct_first_timer_authors": 41,
+   "distinct_first_timer_merged_authors": 6,
+   "outsider_still_open": 51,
+   "outsider_closed_silently": 52,
+   "outsider_excluded": 9,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 30
+  },
+  "history": [
+   {
+    "date": "2026-09-28",
+    "from": null,
+    "to": "viable",
+    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+   }
+  ]
+ },
+ "dotnet/efcore": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges",
+   "slow_note"
+  ],
+  "numbers": {
+   "total_threads": 396,
+   "outsider_threads": 64,
+   "outsider_merged": 41,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 277.5,
+   "bot_share": 0.705,
+   "distinct_outsider_authors": 21,
+   "distinct_merged_authors": 19,
+   "reviewed_share": 0.961,
+   "merge_rate": 0.932,
+   "merged_files_median": 2,
+   "merged_dirs_median": 2,
+   "merged_with_files": 315,
+   "outsider_answered": 41,
+   "first_timer_threads": 26,
+   "first_timer_merged": 24,
+   "distinct_first_timer_authors": 21,
+   "distinct_first_timer_merged_authors": 19,
+   "outsider_still_open": 20,
+   "outsider_closed_silently": 3,
+   "outsider_excluded": 3,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 332
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "insufficient_evidence",
+    "reason": "settled sample (ticket 08): over PRs two weeks old, first replies take a median 11.6 days, past the 7-day budget (it read 38h when only fast replies had come in); 41 of 44 merged"
+   },
+   {
+    "date": "2026-09-28",
+    "from": "insufficient_evidence",
+    "to": "viable",
+    "reason": "slow replies are a note, not a reason (user decision, 28 Sep): outside work is merged (efcore 41/44, keploy 17/51, monica 8/61, each from 5+ people) but first replies take 9-12 days, past the 7-day budget, so Worth with 'Replies are slow here'"
+   }
+  ]
+ },
+ "encode/httpx": {
+  "verdict": "not_viable",
+  "rules": [
+   "sample_period",
+   "inactive"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 136,
+   "outsider_merged": 26,
+   "outsider_ignored": 47,
+   "median_first_response_hours": 40.5,
+   "bot_share": 0.095,
+   "distinct_outsider_authors": 99,
+   "distinct_merged_authors": 23,
+   "reviewed_share": 0.6,
+   "merge_rate": 0.191,
+   "merged_files_median": 2.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 60,
+   "outsider_answered": 59,
+   "first_timer_threads": 127,
+   "first_timer_merged": 24,
+   "distinct_first_timer_authors": 97,
+   "distinct_first_timer_merged_authors": 23,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 29,
+   "outsider_excluded": 3,
+   "outsider_reviewed_share": 0.962,
+   "merged_threads": 60
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "not_viable",
+    "reason": "inactive (ticket 08): nothing merged and nothing pushed in 90 days, so a pull request may never be read"
+   }
+  ]
+ },
+ "excalidraw/excalidraw": {
+  "verdict": "insufficient_evidence",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "slow",
+   "few_merges"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 161,
+   "outsider_merged": 1,
+   "outsider_ignored": 100,
+   "median_first_response_hours": 453.7,
+   "bot_share": 0.01,
+   "distinct_outsider_authors": 79,
+   "distinct_merged_authors": 1,
+   "reviewed_share": 0.28,
+   "merge_rate": 0.008,
+   "merged_files_median": 10,
+   "merged_dirs_median": 1,
+   "merged_with_files": 25,
+   "outsider_answered": 4,
+   "first_timer_threads": 121,
+   "first_timer_merged": 1,
+   "distinct_first_timer_authors": 79,
+   "distinct_first_timer_merged_authors": 1,
+   "outsider_still_open": 40,
+   "outsider_closed_silently": 17,
+   "outsider_excluded": 7,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 25
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "viable",
+    "to": "insufficient_evidence",
+    "reason": "Ticket 03 (outsiders by association): the 4 'first-time' merges that made it Worth were by the maintainers (dwelle, MEMBER, merged 20; mtolmacs and zsviczian, COLLABORATOR). Counted as outsiders, 1 of 168 outside PRs was merged."
+   }
+  ]
+ },
+ "facebook/fresco": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges",
+   "landed_off_button"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 134,
+   "outsider_merged": 75,
+   "outsider_ignored": 6,
+   "median_first_response_hours": 73.6,
+   "bot_share": 0.005,
+   "distinct_outsider_authors": 90,
+   "distinct_merged_authors": 57,
+   "reviewed_share": 0.98,
+   "merge_rate": 0.568,
+   "merged_files_median": 1.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 100,
+   "outsider_answered": 83,
+   "first_timer_threads": 111,
+   "first_timer_merged": 67,
+   "distinct_first_timer_authors": 86,
+   "distinct_first_timer_merged_authors": 57,
+   "outsider_still_open": 2,
+   "outsider_closed_silently": 20,
+   "outsider_excluded": 2,
+   "outsider_reviewed_share": 0.987,
+   "merged_threads": 100
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "insufficient_evidence",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "insufficient_evidence",
+    "to": "viable",
+    "reason": "ticket 05: PRs landed off the merge button (merge bot / internal sync commit, Gerrit, GitGitGadget, maintainer 'Merged to' comments) now count as merged; outside work visibly lands here"
+   }
+  ]
+ },
+ "fastapi/fastapi": {
+  "verdict": "insufficient_evidence",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "few_merges"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 121,
+   "outsider_merged": 0,
+   "outsider_ignored": 3,
+   "median_first_response_hours": 13.7,
+   "bot_share": 0.155,
+   "distinct_outsider_authors": 59,
+   "distinct_merged_authors": 0,
+   "reviewed_share": 0.147,
+   "merge_rate": 0.0,
+   "merged_files_median": 2.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 68,
+   "outsider_answered": 66,
+   "first_timer_threads": 84,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 56,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 29,
+   "outsider_closed_silently": 23,
+   "outsider_excluded": 3,
+   "outsider_reviewed_share": null,
+   "merged_threads": 68
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "viable",
+    "to": "insufficient_evidence",
+    "reason": "Ticket 03: the 3 'first-time' merges that made it Worth were the maintainers' own PRs (tiangolo, YuriiMotov, alejsdev, all MEMBER). No outside PR of the 124 in the sample was merged."
+   }
+  ]
+ },
+ "firstcontributions/first-contributions": {
+  "verdict": "not_viable",
+  "rules": [
+   "sample_period",
+   "catalogue_shape"
+  ],
+  "numbers": {
+   "total_threads": 275,
+   "outsider_threads": 274,
+   "outsider_merged": 63,
+   "outsider_ignored": 10,
+   "median_first_response_hours": null,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 68,
+   "distinct_merged_authors": 59,
+   "reviewed_share": 0.0,
+   "merge_rate": 0.84,
+   "merged_files_median": 1,
+   "merged_dirs_median": 1,
+   "merged_with_files": 233,
+   "outsider_answered": 0,
+   "first_timer_threads": 67,
+   "first_timer_merged": 59,
+   "distinct_first_timer_authors": 66,
+   "distinct_first_timer_merged_authors": 59,
+   "outsider_still_open": 199,
+   "outsider_closed_silently": 2,
+   "outsider_excluded": 1,
+   "outsider_reviewed_share": 0.0,
+   "merged_threads": 233
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "not_viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "freeCodeCamp/freeCodeCamp": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 275,
+   "outsider_threads": 251,
+   "outsider_merged": 32,
+   "outsider_ignored": 1,
+   "median_first_response_hours": 4.6,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 41,
+   "distinct_merged_authors": 23,
+   "reviewed_share": 0.993,
+   "merge_rate": 0.516,
+   "merged_files_median": 1.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 150,
+   "outsider_answered": 56,
+   "first_timer_threads": 51,
+   "first_timer_merged": 25,
+   "distinct_first_timer_authors": 41,
+   "distinct_first_timer_merged_authors": 23,
+   "outsider_still_open": 189,
+   "outsider_closed_silently": 5,
+   "outsider_excluded": 3,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 150
+  },
+  "history": [
+   {
+    "date": "2026-09-28",
+    "from": null,
+    "to": "viable",
+    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+   }
+  ]
+ },
+ "git/git": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges",
+   "landed_off_button"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 181,
+   "outsider_merged": 16,
+   "outsider_ignored": 34,
+   "median_first_response_hours": 4.4,
+   "bot_share": 0.005,
+   "distinct_outsider_authors": 93,
+   "distinct_merged_authors": 9,
+   "reviewed_share": 1.0,
+   "merge_rate": 0.096,
+   "merged_files_median": 1.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 16,
+   "outsider_answered": 49,
+   "first_timer_threads": 120,
+   "first_timer_merged": 12,
+   "distinct_first_timer_authors": 81,
+   "distinct_first_timer_merged_authors": 9,
+   "outsider_still_open": 14,
+   "outsider_closed_silently": 70,
+   "outsider_excluded": 18,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 16
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "insufficient_evidence",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "insufficient_evidence",
+    "to": "viable",
+    "reason": "ticket 05: PRs landed off the merge button (merge bot / internal sync commit, Gerrit, GitGitGadget, maintainer 'Merged to' comments) now count as merged; outside work visibly lands here"
+   }
+  ]
+ },
+ "golang/go": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges",
+   "landed_off_button"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 192,
+   "outsider_merged": 44,
+   "outsider_ignored": 85,
+   "median_first_response_hours": 0.3,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 87,
+   "distinct_merged_authors": 27,
+   "reviewed_share": 1.0,
+   "merge_rate": 0.289,
+   "merged_files_median": 2.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 52,
+   "outsider_answered": 2,
+   "first_timer_threads": 120,
+   "first_timer_merged": 40,
+   "distinct_first_timer_authors": 74,
+   "distinct_first_timer_merged_authors": 27,
+   "outsider_still_open": 40,
+   "outsider_closed_silently": 21,
+   "outsider_excluded": 4,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 52
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "not_viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "not_viable",
+    "to": "viable",
+    "reason": "ticket 05: PRs landed off the merge button (merge bot / internal sync commit, Gerrit, GitGitGadget, maintainer 'Merged to' comments) now count as merged; outside work visibly lands here"
+   }
+  ]
+ },
+ "hacs/default": {
+  "verdict": "not_viable",
+  "rules": [
+   "sample_period",
+   "catalogue_shape"
+  ],
+  "numbers": {
+   "total_threads": 275,
+   "outsider_threads": 268,
+   "outsider_merged": 0,
+   "outsider_ignored": 56,
+   "median_first_response_hours": null,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 33,
+   "distinct_merged_authors": 0,
+   "reviewed_share": null,
+   "merge_rate": 0.0,
+   "merged_files_median": null,
+   "merged_dirs_median": null,
+   "merged_with_files": 0,
+   "outsider_answered": 0,
+   "first_timer_threads": 54,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 26,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 194,
+   "outsider_closed_silently": 18,
+   "outsider_excluded": 7,
+   "outsider_reviewed_share": null,
+   "merged_threads": 0
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "not_viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "home-assistant/core": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 325,
+   "outsider_threads": 133,
+   "outsider_merged": 43,
+   "outsider_ignored": 8,
+   "median_first_response_hours": 14.7,
+   "bot_share": 0.052,
+   "distinct_outsider_authors": 40,
+   "distinct_merged_authors": 30,
+   "reviewed_share": 0.978,
+   "merge_rate": 0.741,
+   "merged_files_median": 2,
+   "merged_dirs_median": 2,
+   "merged_with_files": 183,
+   "outsider_answered": 45,
+   "first_timer_threads": 44,
+   "first_timer_merged": 35,
+   "distinct_first_timer_authors": 35,
+   "distinct_first_timer_merged_authors": 30,
+   "outsider_still_open": 75,
+   "outsider_closed_silently": 4,
+   "outsider_excluded": 27,
+   "outsider_reviewed_share": 0.977,
+   "merged_threads": 183
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "httpie/cli": {
+  "verdict": "not_viable",
+  "rules": [
+   "sample_period",
+   "inactive"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 188,
+   "outsider_merged": 0,
+   "outsider_ignored": 125,
+   "median_first_response_hours": null,
+   "bot_share": 0.005,
+   "distinct_outsider_authors": 127,
+   "distinct_merged_authors": 0,
+   "reviewed_share": null,
+   "merge_rate": 0.0,
+   "merged_files_median": null,
+   "merged_dirs_median": null,
+   "merged_with_files": 0,
+   "outsider_answered": 0,
+   "first_timer_threads": 180,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 126,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 7,
+   "outsider_closed_silently": 56,
+   "outsider_excluded": 11,
+   "outsider_reviewed_share": null,
+   "merged_threads": 0
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "not_viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "not_viable",
+    "to": "insufficient_evidence",
+    "reason": "ticket 06: 'ignored' is now only an open PR past the 14-day settle window with no reply; its 60 PRs closed without a reply (triage) and PRs under 14 days old no longer count as ignored, so the ignored rule no longer fires"
+   },
+   {
+    "date": "2026-09-28",
+    "from": "insufficient_evidence",
+    "to": "not_viable",
+    "reason": "inactive (ticket 08): nothing merged and nothing pushed in 90 days, so a pull request may never be read"
+   }
+  ]
+ },
+ "is-a-dev/register": {
+  "verdict": "not_viable",
+  "rules": [
+   "sample_period",
+   "catalogue_shape"
+  ],
+  "numbers": {
+   "total_threads": 275,
+   "outsider_threads": 272,
+   "outsider_merged": 18,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 0.1,
+   "bot_share": 0.004,
+   "distinct_outsider_authors": 50,
+   "distinct_merged_authors": 17,
+   "reviewed_share": 1.0,
+   "merge_rate": 0.247,
+   "merged_files_median": 1,
+   "merged_dirs_median": 1,
+   "merged_with_files": 19,
+   "outsider_answered": 39,
+   "first_timer_threads": 58,
+   "first_timer_merged": 17,
+   "distinct_first_timer_authors": 41,
+   "distinct_first_timer_merged_authors": 17,
+   "outsider_still_open": 199,
+   "outsider_closed_silently": 34,
+   "outsider_excluded": 0,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 19
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "insufficient_evidence",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "insufficient_evidence",
+    "to": "not_viable",
+    "reason": "Ticket 03: its one merge was a MEMBER's (linuskang). 0 of 199 outside PRs merged and nearly all got no reply, so the 'ignored' rule decides. Matches the hand check (a registry; ticket 07 adds the registry reason)."
+   }
+  ]
+ },
+ "jashkenas/backbone": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges",
+   "landed_off_button"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 156,
+   "outsider_merged": 74,
+   "outsider_ignored": 2,
+   "median_first_response_hours": 19.5,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 97,
+   "distinct_merged_authors": 45,
+   "reviewed_share": 0.645,
+   "merge_rate": 0.477,
+   "merged_files_median": 1.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 106,
+   "outsider_answered": 110,
+   "first_timer_threads": 117,
+   "first_timer_merged": 48,
+   "distinct_first_timer_authors": 96,
+   "distinct_first_timer_merged_authors": 45,
+   "outsider_still_open": 1,
+   "outsider_closed_silently": 15,
+   "outsider_excluded": 9,
+   "outsider_reviewed_share": 0.622,
+   "merged_threads": 107
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "jesseduffield/lazygit": {
+  "verdict": "insufficient_evidence",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "few_people"
+  ],
+  "numbers": {
+   "total_threads": 249,
+   "outsider_threads": 65,
+   "outsider_merged": 2,
+   "outsider_ignored": 33,
+   "median_first_response_hours": 4.5,
+   "bot_share": 0.108,
+   "distinct_outsider_authors": 47,
+   "distinct_merged_authors": 1,
+   "reviewed_share": 0.122,
+   "merge_rate": 0.032,
+   "merged_files_median": 6.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 148,
+   "outsider_answered": 12,
+   "first_timer_threads": 56,
+   "first_timer_merged": 1,
+   "distinct_first_timer_authors": 43,
+   "distinct_first_timer_merged_authors": 1,
+   "outsider_still_open": 3,
+   "outsider_closed_silently": 17,
+   "outsider_excluded": 8,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 148
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "insufficient_evidence",
+    "reason": "distinct merged authors (ticket 08): both merges are one person's; the pass rule used to count people who tried"
+   }
+  ]
+ },
+ "keploy/keploy": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges",
+   "slow_note"
+  ],
+  "numbers": {
+   "total_threads": 349,
+   "outsider_threads": 63,
+   "outsider_merged": 17,
+   "outsider_ignored": 19,
+   "median_first_response_hours": 212.9,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 32,
+   "distinct_merged_authors": 14,
+   "reviewed_share": 0.266,
+   "merge_rate": 0.333,
+   "merged_files_median": 5.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 222,
+   "outsider_answered": 23,
+   "first_timer_threads": 44,
+   "first_timer_merged": 16,
+   "distinct_first_timer_authors": 30,
+   "distinct_first_timer_merged_authors": 14,
+   "outsider_still_open": 12,
+   "outsider_closed_silently": 8,
+   "outsider_excluded": 1,
+   "outsider_reviewed_share": 0.941,
+   "merged_threads": 222
+  },
+  "history": [
+   {
+    "date": "2026-09-28",
+    "from": null,
+    "to": "insufficient_evidence",
+    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+   },
+   {
+    "date": "2026-09-28",
+    "from": "insufficient_evidence",
+    "to": "viable",
+    "reason": "slow replies are a note, not a reason (user decision, 28 Sep): outside work is merged (efcore 41/44, keploy 17/51, monica 8/61, each from 5+ people) but first replies take 9-12 days, past the 7-day budget, so Worth with 'Replies are slow here'"
+   }
+  ]
+ },
+ "kubernetes/kubernetes": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 275,
+   "outsider_threads": 182,
+   "outsider_merged": 13,
+   "outsider_ignored": 28,
+   "median_first_response_hours": 32.6,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 40,
+   "distinct_merged_authors": 13,
+   "reviewed_share": 0.914,
+   "merge_rate": 0.228,
+   "merged_files_median": 5.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 70,
+   "outsider_answered": 27,
+   "first_timer_threads": 40,
+   "first_timer_merged": 13,
+   "distinct_first_timer_authors": 28,
+   "distinct_first_timer_merged_authors": 13,
+   "outsider_still_open": 125,
+   "outsider_closed_silently": 2,
+   "outsider_excluded": 3,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 70
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "layer5io/layer5": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 121,
+   "outsider_merged": 42,
+   "outsider_ignored": 9,
+   "median_first_response_hours": 12.4,
+   "bot_share": 0.015,
+   "distinct_outsider_authors": 44,
+   "distinct_merged_authors": 23,
+   "reviewed_share": 0.929,
+   "merge_rate": 0.488,
+   "merged_files_median": 2,
+   "merged_dirs_median": 1,
+   "merged_with_files": 113,
+   "outsider_answered": 69,
+   "first_timer_threads": 41,
+   "first_timer_merged": 30,
+   "distinct_first_timer_authors": 25,
+   "distinct_first_timer_merged_authors": 23,
+   "outsider_still_open": 35,
+   "outsider_closed_silently": 6,
+   "outsider_excluded": 0,
+   "outsider_reviewed_share": 0.952,
+   "merged_threads": 113
+  },
+  "history": [
+   {
+    "date": "2026-09-28",
+    "from": null,
+    "to": "viable",
+    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+   }
+  ]
+ },
+ "llvm/llvm-project": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 300,
+   "outsider_threads": 120,
+   "outsider_merged": 5,
+   "outsider_ignored": 15,
+   "median_first_response_hours": 20.5,
+   "bot_share": 0.007,
+   "distinct_outsider_authors": 31,
+   "distinct_merged_authors": 5,
+   "reviewed_share": 0.483,
+   "merge_rate": 0.147,
+   "merged_files_median": 2.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 120,
+   "outsider_answered": 17,
+   "first_timer_threads": 13,
+   "first_timer_merged": 5,
+   "distinct_first_timer_authors": 12,
+   "distinct_first_timer_merged_authors": 5,
+   "outsider_still_open": 86,
+   "outsider_closed_silently": 2,
+   "outsider_excluded": 9,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 120
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "material-components/material-components-android": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "dormant",
+   "excluded",
+   "closed_silently",
+   "merges",
+   "landed_off_button"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 181,
+   "outsider_merged": 81,
+   "outsider_ignored": 43,
+   "median_first_response_hours": 132.1,
+   "bot_share": 0.075,
+   "distinct_outsider_authors": 32,
+   "distinct_merged_authors": 11,
+   "reviewed_share": 0.988,
+   "merge_rate": 0.448,
+   "merged_files_median": 1.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 86,
+   "outsider_answered": 77,
+   "first_timer_threads": 49,
+   "first_timer_merged": 12,
+   "distinct_first_timer_authors": 31,
+   "distinct_first_timer_merged_authors": 11,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 20,
+   "outsider_excluded": 2,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 86
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "microsoft/vscode": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 400,
+   "outsider_threads": 103,
+   "outsider_merged": 11,
+   "outsider_ignored": 20,
+   "median_first_response_hours": 121.5,
+   "bot_share": 0.092,
+   "distinct_outsider_authors": 23,
+   "distinct_merged_authors": 4,
+   "reviewed_share": 1.0,
+   "merge_rate": 0.282,
+   "merged_files_median": 4,
+   "merged_dirs_median": 1,
+   "merged_with_files": 223,
+   "outsider_answered": 13,
+   "first_timer_threads": 36,
+   "first_timer_merged": 11,
+   "distinct_first_timer_authors": 21,
+   "distinct_first_timer_merged_authors": 4,
+   "outsider_still_open": 64,
+   "outsider_closed_silently": 6,
+   "outsider_excluded": 3,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 223
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "microsoft/winget-pkgs": {
+  "verdict": "not_viable",
+  "rules": [
+   "sample_period",
+   "catalogue_shape"
+  ],
+  "numbers": {
+   "total_threads": 275,
+   "outsider_threads": 245,
+   "outsider_merged": 48,
+   "outsider_ignored": 8,
+   "median_first_response_hours": 1.2,
+   "bot_share": 0.109,
+   "distinct_outsider_authors": 30,
+   "distinct_merged_authors": 20,
+   "reviewed_share": 0.994,
+   "merge_rate": 0.75,
+   "merged_files_median": 3,
+   "merged_dirs_median": 1,
+   "merged_with_files": 175,
+   "outsider_answered": 48,
+   "first_timer_threads": 44,
+   "first_timer_merged": 32,
+   "distinct_first_timer_authors": 29,
+   "distinct_first_timer_merged_authors": 20,
+   "outsider_still_open": 181,
+   "outsider_closed_silently": 8,
+   "outsider_excluded": 0,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 175
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "not_viable",
+    "reason": "Catalogue detection from diff shape (ticket 07): most outside pull requests here add one data file or package manifest, or a line to a list, which isn't a software contribution"
+   }
+  ]
+ },
+ "mirror/busybox": {
+  "verdict": "not_viable",
+  "rules": [
+   "sample_period",
+   "elsewhere"
+  ],
+  "numbers": {
+   "total_threads": 26,
+   "outsider_threads": 26,
+   "outsider_merged": 0,
+   "outsider_ignored": 14,
+   "median_first_response_hours": null,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 25,
+   "distinct_merged_authors": 0,
+   "reviewed_share": null,
+   "merge_rate": 0.0,
+   "merged_files_median": null,
+   "merged_dirs_median": null,
+   "merged_with_files": 0,
+   "outsider_answered": 0,
+   "first_timer_threads": 26,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 25,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 12,
+   "outsider_excluded": 0,
+   "outsider_reviewed_share": null,
+   "merged_threads": 0
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "insufficient_evidence",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "insufficient_evidence",
+    "to": "not_viable",
+    "reason": "ticket 05: mirror detection in rules mode (GitHub's mirror flag, or a self-described mirror where nothing from outside landed)"
+   }
+  ]
+ },
+ "monicahq/monica": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "closed_silently",
+   "merges",
+   "slow_note"
+  ],
+  "numbers": {
+   "total_threads": 343,
+   "outsider_threads": 61,
+   "outsider_merged": 8,
+   "outsider_ignored": 40,
+   "median_first_response_hours": 253.0,
+   "bot_share": 0.691,
+   "distinct_outsider_authors": 49,
+   "distinct_merged_authors": 7,
+   "reviewed_share": 0.096,
+   "merge_rate": 0.131,
+   "merged_files_median": 1.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 114,
+   "outsider_answered": 12,
+   "first_timer_threads": 60,
+   "first_timer_merged": 8,
+   "distinct_first_timer_authors": 49,
+   "distinct_first_timer_merged_authors": 7,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 9,
+   "outsider_excluded": 0,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 114
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "viable",
+    "to": "insufficient_evidence",
+    "reason": "ticket 04: only maintainer replies count. monica's first reply came from CLAassistant within a minute; without it the maintainers' own replies decide."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "insufficient_evidence",
+    "to": "viable",
+    "reason": "slow replies are a note, not a reason (user decision, 28 Sep): outside work is merged (efcore 41/44, keploy 17/51, monica 8/61, each from 5+ people) but first replies take 9-12 days, past the 7-day budget, so Worth with 'Replies are slow here'"
+   }
+  ]
+ },
+ "mozilla/pdf.js": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 223,
+   "outsider_threads": 32,
+   "outsider_merged": 4,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 2.4,
+   "bot_share": 0.108,
+   "distinct_outsider_authors": 18,
+   "distinct_merged_authors": 4,
+   "reviewed_share": 0.852,
+   "merge_rate": 0.222,
+   "merged_files_median": 2.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 182,
+   "outsider_answered": 14,
+   "first_timer_threads": 17,
+   "first_timer_merged": 4,
+   "distinct_first_timer_authors": 17,
+   "distinct_first_timer_merged_authors": 4,
+   "outsider_still_open": 14,
+   "outsider_closed_silently": 4,
+   "outsider_excluded": 0,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 182
+  },
+  "history": [
+   {
+    "date": "2026-09-28",
+    "from": null,
+    "to": "viable",
+    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+   }
+  ]
+ },
+ "ollama/ollama": {
+  "verdict": "not_viable",
+  "rules": [
+   "sample_period",
+   "still_open",
+   "closed_silently",
+   "ignored"
+  ],
+  "numbers": {
+   "total_threads": 243,
+   "outsider_threads": 171,
+   "outsider_merged": 0,
+   "outsider_ignored": 57,
+   "median_first_response_hours": 16.6,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 43,
+   "distinct_merged_authors": 0,
+   "reviewed_share": 1.0,
+   "merge_rate": 0.0,
+   "merged_files_median": 3.5,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 52,
+   "outsider_answered": 1,
+   "first_timer_threads": 62,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 43,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 109,
+   "outsider_closed_silently": 4,
+   "outsider_excluded": 0,
+   "outsider_reviewed_share": null,
+   "merged_threads": 52
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "not_viable",
+    "reason": "settled sample (ticket 08): of 41 outside PRs two weeks old, none merged and 37 unanswered; the 2 merges it had were fast ones on days-old PRs (and their authors merge their own work, so are staff)"
+   }
+  ]
+ },
+ "openssl/openssl": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges",
+   "landed_off_button"
+  ],
+  "numbers": {
+   "total_threads": 262,
+   "outsider_threads": 95,
+   "outsider_merged": 6,
+   "outsider_ignored": 5,
+   "median_first_response_hours": 13.0,
+   "bot_share": 0.004,
+   "distinct_outsider_authors": 19,
+   "distinct_merged_authors": 4,
+   "reviewed_share": 1.0,
+   "merge_rate": 0.231,
+   "merged_files_median": 2.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 96,
+   "outsider_answered": 20,
+   "first_timer_threads": 19,
+   "first_timer_merged": 6,
+   "distinct_first_timer_authors": 12,
+   "distinct_first_timer_merged_authors": 4,
+   "outsider_still_open": 69,
+   "outsider_closed_silently": 1,
+   "outsider_excluded": 7,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 96
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "insufficient_evidence",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "insufficient_evidence",
+    "to": "viable",
+    "reason": "ticket 05: PRs landed off the merge button (merge bot / internal sync commit, Gerrit, GitGitGadget, maintainer 'Merged to' comments) now count as merged; outside work visibly lands here"
+   }
+  ]
+ },
+ "oppia/oppia": {
+  "verdict": "not_viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges",
+   "long_odds"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 79,
+   "outsider_merged": 2,
+   "outsider_ignored": 4,
+   "median_first_response_hours": 26.9,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 35,
+   "distinct_merged_authors": 2,
+   "reviewed_share": 0.965,
+   "merge_rate": 0.037,
+   "merged_files_median": 10,
+   "merged_dirs_median": 2,
+   "merged_with_files": 57,
+   "outsider_answered": 25,
+   "first_timer_threads": 50,
+   "first_timer_merged": 2,
+   "distinct_first_timer_authors": 32,
+   "distinct_first_timer_merged_authors": 2,
+   "outsider_still_open": 25,
+   "outsider_closed_silently": 25,
+   "outsider_excluded": 1,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 57
+  },
+  "history": [
+   {
+    "date": "2026-09-28",
+    "from": null,
+    "to": "not_viable",
+    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+   }
+  ]
+ },
+ "pallets/click": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 10,
+   "outsider_merged": 5,
+   "outsider_ignored": 1,
+   "median_first_response_hours": 4.4,
+   "bot_share": 0.005,
+   "distinct_outsider_authors": 8,
+   "distinct_merged_authors": 5,
+   "reviewed_share": 0.776,
+   "merge_rate": 0.625,
+   "merged_files_median": 3,
+   "merged_dirs_median": 3,
+   "merged_with_files": 49,
+   "outsider_answered": 6,
+   "first_timer_threads": 8,
+   "first_timer_merged": 5,
+   "distinct_first_timer_authors": 8,
+   "distinct_first_timer_merged_authors": 5,
+   "outsider_still_open": 2,
+   "outsider_closed_silently": 1,
+   "outsider_excluded": 140,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 49
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "pallets/flask": {
+  "verdict": "not_viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "closed_silently",
+   "merges",
+   "long_odds"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 171,
+   "outsider_merged": 5,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 0.7,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 147,
+   "distinct_merged_authors": 4,
+   "reviewed_share": 0.133,
+   "merge_rate": 0.029,
+   "merged_files_median": 3,
+   "merged_dirs_median": 2,
+   "merged_with_files": 15,
+   "outsider_answered": 69,
+   "first_timer_threads": 169,
+   "first_timer_merged": 4,
+   "distinct_first_timer_authors": 146,
+   "distinct_first_timer_merged_authors": 4,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 99,
+   "outsider_excluded": 18,
+   "outsider_reviewed_share": 0.4,
+   "merged_threads": 15
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "not_viable",
+    "reason": "merge-rate floor (ticket 08): 5 of 171 decided outside pull requests merged (3%), under the 5% floor"
+   }
+  ]
+ },
+ "pallets/itsdangerous": {
+  "verdict": "not_viable",
+  "rules": [
+   "sample_period",
+   "inactive"
+  ],
+  "numbers": {
+   "total_threads": 299,
+   "outsider_threads": 75,
+   "outsider_merged": 34,
+   "outsider_ignored": 1,
+   "median_first_response_hours": 2.5,
+   "bot_share": 0.535,
+   "distinct_outsider_authors": 69,
+   "distinct_merged_authors": 31,
+   "reviewed_share": 0.071,
+   "merge_rate": 0.459,
+   "merged_files_median": 1.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 226,
+   "outsider_answered": 33,
+   "first_timer_threads": 68,
+   "first_timer_merged": 31,
+   "distinct_first_timer_authors": 66,
+   "distinct_first_timer_merged_authors": 31,
+   "outsider_still_open": 1,
+   "outsider_closed_silently": 15,
+   "outsider_excluded": 3,
+   "outsider_reviewed_share": 0.265,
+   "merged_threads": 226
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "not_viable",
+    "reason": "inactive (ticket 08): nothing merged and nothing pushed in 90 days, so a pull request may never be read"
+   }
+  ]
+ },
+ "plantuml/plantuml": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 248,
+   "outsider_threads": 62,
+   "outsider_merged": 48,
+   "outsider_ignored": 4,
+   "median_first_response_hours": 14.9,
+   "bot_share": 0.456,
+   "distinct_outsider_authors": 39,
+   "distinct_merged_authors": 33,
+   "reviewed_share": 0.193,
+   "merge_rate": 0.814,
+   "merged_files_median": 2,
+   "merged_dirs_median": 1,
+   "merged_with_files": 207,
+   "outsider_answered": 25,
+   "first_timer_threads": 42,
+   "first_timer_merged": 34,
+   "distinct_first_timer_authors": 39,
+   "distinct_first_timer_merged_authors": 33,
+   "outsider_still_open": 3,
+   "outsider_closed_silently": 4,
+   "outsider_excluded": 1,
+   "outsider_reviewed_share": 0.458,
+   "merged_threads": 207
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "not_viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "not_viable",
+    "to": "viable",
+    "reason": "rubber stamp over outside merges only (ticket 08): 47% of outside merges got a comment; the 19% was the owner merging his own commits"
+   }
+  ]
+ },
+ "processing/p5.js": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 93,
+   "outsider_merged": 34,
+   "outsider_ignored": 4,
+   "median_first_response_hours": 44.8,
+   "bot_share": 0.185,
+   "distinct_outsider_authors": 41,
+   "distinct_merged_authors": 26,
+   "reviewed_share": 0.617,
+   "merge_rate": 0.442,
+   "merged_files_median": 2,
+   "merged_dirs_median": 2,
+   "merged_with_files": 115,
+   "outsider_answered": 64,
+   "first_timer_threads": 67,
+   "first_timer_merged": 29,
+   "distinct_first_timer_authors": 41,
+   "distinct_first_timer_merged_authors": 26,
+   "outsider_still_open": 16,
+   "outsider_closed_silently": 6,
+   "outsider_excluded": 5,
+   "outsider_reviewed_share": 0.912,
+   "merged_threads": 115
+  },
+  "history": [
+   {
+    "date": "2026-09-28",
+    "from": null,
+    "to": "viable",
+    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+   }
+  ]
+ },
+ "public-apis/public-apis": {
+  "verdict": "not_viable",
+  "rules": [
+   "sample_period",
+   "catalogue_shape"
+  ],
+  "numbers": {
+   "total_threads": 247,
+   "outsider_threads": 246,
+   "outsider_merged": 50,
+   "outsider_ignored": 11,
+   "median_first_response_hours": 28.2,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 53,
+   "distinct_merged_authors": 41,
+   "reviewed_share": 0.007,
+   "merge_rate": 0.746,
+   "merged_files_median": 1,
+   "merged_dirs_median": 1,
+   "merged_with_files": 149,
+   "outsider_answered": 4,
+   "first_timer_threads": 58,
+   "first_timer_merged": 44,
+   "distinct_first_timer_authors": 51,
+   "distinct_first_timer_merged_authors": 41,
+   "outsider_still_open": 179,
+   "outsider_closed_silently": 3,
+   "outsider_excluded": 1,
+   "outsider_reviewed_share": 0.02,
+   "merged_threads": 149
+  },
+  "history": [
+   {
+    "date": "2026-09-28",
+    "from": null,
+    "to": "not_viable",
+    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+   }
+  ]
+ },
+ "python/cpython": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 325,
+   "outsider_threads": 199,
+   "outsider_merged": 45,
+   "outsider_ignored": 6,
+   "median_first_response_hours": 2.0,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 12,
+   "distinct_merged_authors": 6,
+   "reviewed_share": 0.355,
+   "merge_rate": 0.726,
+   "merged_files_median": 3,
+   "merged_dirs_median": 2,
+   "merged_with_files": 183,
+   "outsider_answered": 29,
+   "first_timer_threads": 19,
+   "first_timer_merged": 14,
+   "distinct_first_timer_authors": 7,
+   "distinct_first_timer_merged_authors": 6,
+   "outsider_still_open": 137,
+   "outsider_closed_silently": 2,
+   "outsider_excluded": 1,
+   "outsider_reviewed_share": 0.444,
+   "merged_threads": 183
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "pytorch/pytorch": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges",
+   "landed_off_button"
+  ],
+  "numbers": {
+   "total_threads": 300,
+   "outsider_threads": 97,
+   "outsider_merged": 4,
+   "outsider_ignored": 10,
+   "median_first_response_hours": 163.6,
+   "bot_share": 0.037,
+   "distinct_outsider_authors": 25,
+   "distinct_merged_authors": 4,
+   "reviewed_share": 0.973,
+   "merge_rate": 0.114,
+   "merged_files_median": 2.0,
+   "merged_dirs_median": 2.0,
+   "merged_with_files": 74,
+   "outsider_answered": 18,
+   "first_timer_threads": 18,
+   "first_timer_merged": 4,
+   "distinct_first_timer_authors": 15,
+   "distinct_first_timer_merged_authors": 4,
+   "outsider_still_open": 62,
+   "outsider_closed_silently": 7,
+   "outsider_excluded": 42,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 74
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "insufficient_evidence",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "insufficient_evidence",
+    "to": "viable",
+    "reason": "ticket 05: PRs landed off the merge button (merge bot / internal sync commit, Gerrit, GitGitGadget, maintainer 'Merged to' comments) now count as merged; outside work visibly lands here"
+   }
+  ]
+ },
+ "react/react-native": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges",
+   "landed_off_button"
+  ],
+  "numbers": {
+   "total_threads": 238,
+   "outsider_threads": 51,
+   "outsider_merged": 5,
+   "outsider_ignored": 5,
+   "median_first_response_hours": 52.9,
+   "bot_share": 0.055,
+   "distinct_outsider_authors": 14,
+   "distinct_merged_authors": 5,
+   "reviewed_share": 1.0,
+   "merge_rate": 0.278,
+   "merged_files_median": 5.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 142,
+   "outsider_answered": 7,
+   "first_timer_threads": 17,
+   "first_timer_merged": 5,
+   "distinct_first_timer_authors": 13,
+   "distinct_first_timer_merged_authors": 5,
+   "outsider_still_open": 33,
+   "outsider_closed_silently": 5,
+   "outsider_excluded": 6,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 142
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "not_viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "not_viable",
+    "to": "viable",
+    "reason": "ticket 05: PRs landed off the merge button (merge bot / internal sync commit, Gerrit, GitGitGadget, maintainer 'Merged to' comments) now count as merged; outside work visibly lands here"
+   }
+  ]
+ },
+ "request/request": {
+  "verdict": "not_viable",
+  "rules": [
+   "sample_period",
+   "inactive"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 184,
+   "outsider_merged": 27,
+   "outsider_ignored": 17,
+   "median_first_response_hours": 186.5,
+   "bot_share": 0.03,
+   "distinct_outsider_authors": 159,
+   "distinct_merged_authors": 27,
+   "reviewed_share": 0.342,
+   "merge_rate": 0.148,
+   "merged_files_median": 1.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 38,
+   "outsider_answered": 22,
+   "first_timer_threads": 181,
+   "first_timer_merged": 27,
+   "distinct_first_timer_authors": 157,
+   "distinct_first_timer_merged_authors": 27,
+   "outsider_still_open": 1,
+   "outsider_closed_silently": 129,
+   "outsider_excluded": 4,
+   "outsider_reviewed_share": 0.444,
+   "merged_threads": 38
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "insufficient_evidence",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "insufficient_evidence",
+    "to": "not_viable",
+    "reason": "inactive (ticket 08): nothing merged and nothing pushed in 90 days, so a pull request may never be read"
+   }
+  ]
+ },
+ "rust-lang/rust": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 350,
+   "outsider_threads": 148,
+   "outsider_merged": 41,
+   "outsider_ignored": 3,
+   "median_first_response_hours": 6.4,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 48,
+   "distinct_merged_authors": 30,
+   "reviewed_share": 0.701,
+   "merge_rate": 0.621,
+   "merged_files_median": 4,
+   "merged_dirs_median": 1,
+   "merged_with_files": 177,
+   "outsider_answered": 53,
+   "first_timer_threads": 53,
+   "first_timer_merged": 39,
+   "distinct_first_timer_authors": 40,
+   "distinct_first_timer_merged_authors": 30,
+   "outsider_still_open": 82,
+   "outsider_closed_silently": 1,
+   "outsider_excluded": 17,
+   "outsider_reviewed_share": 0.78,
+   "merged_threads": 177
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "rust-lang/rustlings": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 167,
+   "outsider_merged": 45,
+   "outsider_ignored": 4,
+   "median_first_response_hours": 65.5,
+   "bot_share": 0.005,
+   "distinct_outsider_authors": 136,
+   "distinct_merged_authors": 44,
+   "reviewed_share": 0.901,
+   "merge_rate": 0.271,
+   "merged_files_median": 1,
+   "merged_dirs_median": 1,
+   "merged_with_files": 71,
+   "outsider_answered": 106,
+   "first_timer_threads": 159,
+   "first_timer_merged": 44,
+   "distinct_first_timer_authors": 134,
+   "distinct_first_timer_merged_authors": 44,
+   "outsider_still_open": 1,
+   "outsider_closed_silently": 54,
+   "outsider_excluded": 1,
+   "outsider_reviewed_share": 0.956,
+   "merged_threads": 71
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "semgrep/semgrep": {
+  "verdict": "insufficient_evidence",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "few_merges",
+   "landed_off_button"
+  ],
+  "numbers": {
+   "total_threads": 322,
+   "outsider_threads": 70,
+   "outsider_merged": 1,
+   "outsider_ignored": 38,
+   "median_first_response_hours": 128.7,
+   "bot_share": 0.73,
+   "distinct_outsider_authors": 38,
+   "distinct_merged_authors": 1,
+   "reviewed_share": 0.915,
+   "merge_rate": 0.017,
+   "merged_files_median": 20,
+   "merged_dirs_median": 5,
+   "merged_with_files": 79,
+   "outsider_answered": 12,
+   "first_timer_threads": 51,
+   "first_timer_merged": 1,
+   "distinct_first_timer_authors": 35,
+   "distinct_first_timer_merged_authors": 1,
+   "outsider_still_open": 12,
+   "outsider_closed_silently": 8,
+   "outsider_excluded": 4,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 82
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "insufficient_evidence",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "sharkdp/bat": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 170,
+   "outsider_merged": 18,
+   "outsider_ignored": 133,
+   "median_first_response_hours": 13.3,
+   "bot_share": 0.125,
+   "distinct_outsider_authors": 63,
+   "distinct_merged_authors": 15,
+   "reviewed_share": 0.5,
+   "merge_rate": 0.11,
+   "merged_files_median": 2.0,
+   "merged_dirs_median": 2.0,
+   "merged_with_files": 38,
+   "outsider_answered": 20,
+   "first_timer_threads": 75,
+   "first_timer_merged": 15,
+   "distinct_first_timer_authors": 63,
+   "distinct_first_timer_merged_authors": 15,
+   "outsider_still_open": 7,
+   "outsider_closed_silently": 10,
+   "outsider_excluded": 5,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 38
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "sindresorhus/awesome": {
+  "verdict": "not_viable",
+  "rules": [
+   "sample_period",
+   "catalogue_shape"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 196,
+   "outsider_merged": 8,
+   "outsider_ignored": 35,
+   "median_first_response_hours": 3.9,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 170,
+   "distinct_merged_authors": 7,
+   "reviewed_share": 0.125,
+   "merge_rate": 0.041,
+   "merged_files_median": 1.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 8,
+   "outsider_answered": 74,
+   "first_timer_threads": 194,
+   "first_timer_merged": 8,
+   "distinct_first_timer_authors": 168,
+   "distinct_first_timer_merged_authors": 7,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 80,
+   "outsider_excluded": 4,
+   "outsider_reviewed_share": 0.125,
+   "merged_threads": 8
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "not_viable",
+    "reason": "Catalogue detection from diff shape (ticket 07): most outside pull requests here add one data file or package manifest, or a line to a list, which isn't a software contribution"
+   }
+  ]
+ },
+ "tensorflow/tensorflow": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 400,
+   "outsider_threads": 45,
+   "outsider_merged": 6,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 24.9,
+   "bot_share": 0.882,
+   "distinct_outsider_authors": 10,
+   "distinct_merged_authors": 5,
+   "reviewed_share": 0.05,
+   "merge_rate": 0.4,
+   "merged_files_median": 2,
+   "merged_dirs_median": 1,
+   "merged_with_files": 119,
+   "outsider_answered": 14,
+   "first_timer_threads": 10,
+   "first_timer_merged": 6,
+   "distinct_first_timer_authors": 6,
+   "distinct_first_timer_merged_authors": 5,
+   "outsider_still_open": 30,
+   "outsider_closed_silently": 1,
+   "outsider_excluded": 2,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 119
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "insufficient_evidence",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "insufficient_evidence",
+    "to": "viable",
+    "reason": "settled sample (ticket 08): read past the busy two weeks, tensorflow shows 6 of 15 outside PRs merged by 5 people, and zephyr 31 of 52 by 22"
+   }
+  ]
+ },
+ "termux/termux-packages": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges",
+   "package_updates"
+  ],
+  "numbers": {
+   "total_threads": 325,
+   "outsider_threads": 115,
+   "outsider_merged": 61,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 7.3,
+   "bot_share": 0.003,
+   "distinct_outsider_authors": 23,
+   "distinct_merged_authors": 16,
+   "reviewed_share": 0.397,
+   "merge_rate": 0.847,
+   "merged_files_median": 2.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 286,
+   "outsider_answered": 70,
+   "first_timer_threads": 29,
+   "first_timer_merged": 20,
+   "distinct_first_timer_authors": 22,
+   "distinct_first_timer_merged_authors": 16,
+   "outsider_still_open": 43,
+   "outsider_closed_silently": 1,
+   "outsider_excluded": 6,
+   "outsider_reviewed_share": 0.984,
+   "merged_threads": 287
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "tldr-pages/tldr": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 375,
+   "outsider_threads": 88,
+   "outsider_merged": 31,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 1.0,
+   "bot_share": 0.005,
+   "distinct_outsider_authors": 17,
+   "distinct_merged_authors": 6,
+   "reviewed_share": 1.0,
+   "merge_rate": 0.508,
+   "merged_files_median": 5.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 306,
+   "outsider_answered": 40,
+   "first_timer_threads": 29,
+   "first_timer_merged": 6,
+   "distinct_first_timer_authors": 15,
+   "distinct_first_timer_merged_authors": 6,
+   "outsider_still_open": 27,
+   "outsider_closed_silently": 21,
+   "outsider_excluded": 0,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 306
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "torvalds/linux": {
+  "verdict": "insufficient_evidence",
+  "rules": [
+   "no_attempts"
+  ],
+  "numbers": {
+   "total_threads": 0,
+   "outsider_threads": 0,
+   "outsider_merged": 0,
+   "outsider_ignored": 0,
+   "median_first_response_hours": null,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 0,
+   "distinct_merged_authors": 0,
+   "reviewed_share": null,
+   "merge_rate": null,
+   "merged_files_median": null,
+   "merged_dirs_median": null,
+   "merged_with_files": 0,
+   "outsider_answered": 0,
+   "first_timer_threads": 0,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 0,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 0,
+   "outsider_excluded": 0,
+   "outsider_reviewed_share": null,
+   "merged_threads": 0
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "insufficient_evidence",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "v8/v8": {
+  "verdict": "not_viable",
+  "rules": [
+   "sample_period",
+   "elsewhere"
+  ],
+  "numbers": {
+   "total_threads": 166,
+   "outsider_threads": 107,
+   "outsider_merged": 0,
+   "outsider_ignored": 1,
+   "median_first_response_hours": 2.8,
+   "bot_share": 0.343,
+   "distinct_outsider_authors": 87,
+   "distinct_merged_authors": 0,
+   "reviewed_share": null,
+   "merge_rate": 0.0,
+   "merged_files_median": null,
+   "merged_dirs_median": null,
+   "merged_with_files": 0,
+   "outsider_answered": 37,
+   "first_timer_threads": 97,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 78,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 69,
+   "outsider_excluded": 0,
+   "outsider_reviewed_share": null,
+   "merged_threads": 0
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "insufficient_evidence",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "insufficient_evidence",
+    "to": "not_viable",
+    "reason": "ticket 05: mirror detection in rules mode (GitHub's mirror flag, or a self-described mirror where nothing from outside landed)"
+   }
+  ]
+ },
+ "vercel/next.js": {
+  "verdict": "insufficient_evidence",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "few_merges"
+  ],
+  "numbers": {
+   "total_threads": 350,
+   "outsider_threads": 64,
+   "outsider_merged": 1,
+   "outsider_ignored": 23,
+   "median_first_response_hours": 24.3,
+   "bot_share": 0.04,
+   "distinct_outsider_authors": 26,
+   "distinct_merged_authors": 1,
+   "reviewed_share": 0.887,
+   "merge_rate": 0.033,
+   "merged_files_median": 6.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 124,
+   "outsider_answered": 5,
+   "first_timer_threads": 26,
+   "first_timer_merged": 1,
+   "distinct_first_timer_authors": 22,
+   "distinct_first_timer_merged_authors": 1,
+   "outsider_still_open": 34,
+   "outsider_closed_silently": 2,
+   "outsider_excluded": 26,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 124
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "insufficient_evidence",
+    "reason": "ticket 06: the 200 newest PRs span 4 days; of 33 outside PRs, 31 are still open and 18 more are drafts, leaving 2 decided (both merged, one author): too little to judge"
+   }
+  ]
+ },
+ "zephyrproject-rtos/zephyr": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 300,
+   "outsider_threads": 146,
+   "outsider_merged": 31,
+   "outsider_ignored": 7,
+   "median_first_response_hours": 24.8,
+   "bot_share": 0.033,
+   "distinct_outsider_authors": 33,
+   "distinct_merged_authors": 22,
+   "reviewed_share": 0.972,
+   "merge_rate": 0.596,
+   "merged_files_median": 1,
+   "merged_dirs_median": 1,
+   "merged_with_files": 71,
+   "outsider_answered": 44,
+   "first_timer_threads": 46,
+   "first_timer_merged": 31,
+   "distinct_first_timer_authors": 27,
+   "distinct_first_timer_merged_authors": 22,
+   "outsider_still_open": 94,
+   "outsider_closed_silently": 0,
+   "outsider_excluded": 21,
+   "outsider_reviewed_share": 0.968,
+   "merged_threads": 71
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-27",
+    "from": "viable",
+    "to": "insufficient_evidence",
+    "reason": "Ticket 03: 6 of its 7 'outside' merges were by the team: MEMBERs' first PRs in the sample, a maintainer who merges others' work (teburd), and vendor area maintainers (mathieuchopstm, tpambor) who read CONTRIBUTOR but approve or request changes on other people's PRs. 1 of 109 outside PRs merged."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "insufficient_evidence",
+    "to": "viable",
+    "reason": "settled sample (ticket 08): read past the busy two weeks, tensorflow shows 6 of 15 outside PRs merged by 5 people, and zephyr 31 of 52 by 22"
+   }
+  ]
+ },
+ "zulip/zulip": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges"
+  ],
+  "numbers": {
+   "total_threads": 318,
+   "outsider_threads": 78,
+   "outsider_merged": 7,
+   "outsider_ignored": 4,
+   "median_first_response_hours": 22.5,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 32,
+   "distinct_merged_authors": 5,
+   "reviewed_share": 0.823,
+   "merge_rate": 0.132,
+   "merged_files_median": 2,
+   "merged_dirs_median": 1,
+   "merged_with_files": 113,
+   "outsider_answered": 43,
+   "first_timer_threads": 47,
+   "first_timer_merged": 5,
+   "distinct_first_timer_authors": 30,
+   "distinct_first_timer_merged_authors": 5,
+   "outsider_still_open": 25,
+   "outsider_closed_silently": 6,
+   "outsider_excluded": 2,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 113
+  },
+  "history": [
+   {
+    "date": "2026-09-27",
+    "from": null,
+    "to": "viable",
+    "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ }
+}

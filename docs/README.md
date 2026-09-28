@@ -16,6 +16,7 @@ Start with the [README](../README.md). Everything else is here.
 | Page | What it is for |
 |---|---|
 | [../CONTRIBUTING.md](../CONTRIBUTING.md) | Your first pull request in 15 minutes, then the full setup |
+| [DEV-WORKFLOW.md](DEV-WORKFLOW.md) | Working on Holt every day: local web with mock or real data, engine changes, branch to staging to production, the rules that bite |
 | [../web/README.md](../web/README.md) | The web app (Next.js): run it locally, routes, mock API |
 | [../server/README.md](../server/README.md) | The HTTP API server (FastAPI): run it, environment |
 | [../API.md](../API.md) | The contract between the server and the web app |
@@ -29,8 +30,11 @@ Start with the [README](../README.md). Everything else is here.
 | Page | What it is for |
 |---|---|
 | [DESIGN.md](DESIGN.md) | Why the verdict is a pipeline of rules and not a prompt |
-| [research/EVALUATION.md](research/EVALUATION.md) | How the benchmark was built, the numbers, and what they depend on |
+| [research/REVIEW-2026-09-30.md](research/REVIEW-2026-09-30.md) | The verdict rules in plain English, the evidence for each threshold, and the 30 Sep go/no-go review |
+| [research/EVALUATION.md](research/EVALUATION.md) | How the competition benchmark was built (retired as a gate), the numbers, and what they depend on |
 | [research/REPRODUCTION.md](research/REPRODUCTION.md) | Reproduce every published number from a clone, with no key and no spend |
+| [research/LIVE-AI-TEST-2026-09-28.md](research/LIVE-AI-TEST-2026-09-28.md) | First run of every AI feature on a real model: honesty checks, cost and latency, fixes |
+| [../golden/README.md](../golden/README.md) | The golden set: 62 recorded repositories, the engine's approved answer on each, and the before/after table every engine change is checked with |
 | [../eval/](../eval/) | The benchmark itself: pools, labels, recorded runs and their pre-registration notes |
 
 ## Plans and drafts
@@ -40,4 +44,6 @@ Start with the [README](../README.md). Everything else is here.
 | [launch/posts.md](launch/posts.md) | Launch post drafts |
 | [launch/good-first-issues.md](launch/good-first-issues.md) | Issues to open for Hacktoberfest |
 | [design/MOTION.md](design/MOTION.md) | The web app's motion and loading plan |
+| [design/VOICE.md](design/VOICE.md) | How the site sounds: voice, do/don't lines, words we use and avoid |
+| [design/SIGNED-IN-HOME.md](design/SIGNED-IN-HOME.md) | Where sign-in lands and what the signed-in home (`/me`) shows |
 | [strategy/BUSINESS.md](strategy/BUSINESS.md) | Costs, pricing and the break-even plan |

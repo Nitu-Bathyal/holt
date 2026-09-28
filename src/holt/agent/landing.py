@@ -25,7 +25,7 @@ from __future__ import annotations
 from collections import Counter
 from dataclasses import dataclass
 
-from holt.agent.signals import Thread, newcomer_threads
+from holt.agent.signals import Thread, outsider_threads
 
 # Two path segments. One is too coarse to act on in a monorepo (`pkgs`, `src`);
 # three splits the same area into a dozen near-identical rows.
@@ -46,6 +46,9 @@ class Area:
     path: str
     landed: int
     attempted: int
+    # True when the area is one file (`tests/conftest.py` at two segments), so
+    # a reader doesn't show it as a folder.
+    is_file: bool = False
 
     @property
     def rate(self) -> float:
@@ -74,26 +77,30 @@ def area_of(path: str, depth: int = DEPTH) -> str:
     return "/".join(parts[:depth])
 
 
-def _tally(outsiders: list[Thread], depth: int) -> tuple[Counter, Counter]:
+def _tally(outsiders: list[Thread], depth: int) -> tuple[Counter, Counter, set[str]]:
     landed: Counter = Counter()
     attempted: Counter = Counter()
+    files: set[str] = set()
     for thread in outsiders:
+        paths = thread.files or []
+        # An area that is some pull request's whole path is a file, not a folder.
+        files.update(f for f in paths if area_of(f, depth) == f)
         # Count each area once per pull request. A change touching forty files in
         # one directory is one attempt at that directory, not forty.
-        for area in sorted({area_of(f, depth) for f in (thread.files or [])}):
+        for area in sorted({area_of(f, depth) for f in paths}):
             attempted[area] += 1
             if thread.merged:
                 landed[area] += 1
-    return landed, attempted
+    return landed, attempted, files
 
 
 def compute(threads: dict[str, Thread]) -> Landing:
-    outsiders = newcomer_threads(threads)
+    outsiders = outsider_threads(threads)
     depth = DEPTH
-    landed, attempted = _tally(outsiders, depth)
+    landed, attempted, files = _tally(outsiders, depth)
     if outsiders and len(attempted) > REGROUP_ABOVE * len(outsiders):
         depth = 1
-        landed, attempted = _tally(outsiders, depth)
+        landed, attempted, files = _tally(outsiders, depth)
 
     # `Counter.most_common` breaks ties by insertion order, and insertion order
     # here was set-iteration order, which varies with the process hash seed. Two
@@ -102,14 +109,14 @@ def compute(threads: dict[str, Thread]) -> Landing:
     # explicitly instead: most merges first, then the better odds, then the
     # larger sample, then alphabetically, so the order is total.
     got_in = [
-        Area(a, landed[a], attempted[a])
+        Area(a, landed[a], attempted[a], a in files)
         for a in sorted(
             landed,
             key=lambda a: (-landed[a], -landed[a] / attempted[a], -attempted[a], a),
         )[:TOP_N]
     ]
     never = [
-        Area(a, 0, attempted[a])
+        Area(a, 0, attempted[a], a in files)
         for a in sorted(attempted, key=lambda a: (-attempted[a], a))
         if landed.get(a, 0) == 0 and attempted[a] >= MIN_ATTEMPTS
     ][:TOP_N]

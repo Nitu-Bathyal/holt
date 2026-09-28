@@ -1,48 +1,46 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { odds, statLines, verdictLine } from "./format.ts";
+import { creditsNote, evidenceLabel, mergeTone, noReplyTone, statLines } from "./format.ts";
 
 const stats = (attempts: number, merged: number, noReply: number) => ({
   outsider_attempts: attempts, outsider_merged: merged, no_reply: noReply,
   distinct_outsiders: attempts, first_time_merged_authors: merged, median_first_response_hours: 5, bot_share: 0,
 });
-const viable = (a: number, m: number, n: number) => verdictLine({ verdict: "viable", stats: stats(a, m, n) });
 
-test("flask-like numbers: honest about long odds", () => {
-  const line = viable(189, 5, 100);
-  assert.match(line, /5 of 189/);
-  assert.match(line, /most pull requests don't land/);
-  assert.match(line, /about half get no reply/);
-  assert.match(line, /starter issues/);
-  assert.doesNotMatch(line, /real replies/);
-  assert.equal(odds(stats(189, 5, 100)), "long");
+// The server's odds (server/tests/test_server_schema.py) use these thresholds too.
+test("tile thresholds match the server's odds", () => {
+  assert.equal(mergeTone(12), "good");
+  assert.equal(mergeTone(11), "warn");
+  assert.equal(mergeTone(5), "warn");
+  assert.equal(mergeTone(4), "bad");
+  assert.equal(noReplyTone(25), "good");
+  assert.equal(noReplyTone(50), "warn");
+  assert.equal(noReplyTone(51), "bad");
 });
 
-test("strong numbers: upbeat, and claims replies", () => {
-  const line = viable(100, 40, 10);
-  assert.match(line, /real replies/);
-  assert.match(line, /40 of 100/);
-  assert.equal(odds(stats(100, 40, 10)), "good");
+test("flask-like numbers colour the tiles honestly", () => {
+  const tones = Object.fromEntries(statLines(stats(189, 5, 100)).map((l) => [l.key, l.tone]));
+  assert.equal(tones.merged, "bad");
+  assert.equal(tones.noreply, "bad");
 });
 
-test("borderlines", () => {
-  // exactly 10% merged and 40% silent is not "weak", but 40% silent may not claim replies
-  assert.doesNotMatch(viable(100, 10, 40), /don't land|no reply|real replies/);
-  assert.match(viable(100, 10, 40), /10 of 100 of their recent pull requests landed/);
-  assert.match(viable(100, 9, 10), /most pull requests don't land/);
-  assert.doesNotMatch(viable(100, 9, 10), /no reply/);
-  assert.match(viable(100, 30, 41), /about 41% get no reply/);
-  assert.doesNotMatch(viable(100, 30, 41), /don't land/);
-  assert.match(viable(100, 30, 29), /real replies/);
-  assert.doesNotMatch(viable(100, 30, 30), /real replies/);
-  assert.equal(odds(stats(100, 10, 40)), "fair");
-  assert.equal(odds({ outsider_attempts: 0, outsider_merged: 0, no_reply: 0 }), null);
+test("partial stats (find results) only show what they have", () => {
+  const keys = statLines({ outsider_merged: 4, outsider_attempts: 10 }).map((l) => l.key);
+  assert.deepEqual(keys, ["merged"]);
 });
 
-test("odds agree with the stat tiles' tones", () => {
-  for (const [a, m, n] of [[189, 5, 100], [100, 40, 10], [100, 10, 40], [100, 12, 25], [100, 4, 5], [100, 20, 51]]) {
-    const tones = statLines(stats(a, m, n)).filter((l) => l.key === "merged" || l.key === "noreply").map((l) => l.tone);
-    const expect = tones.includes("bad") ? "long" : tones.includes("warn") ? "fair" : "good";
-    assert.equal(odds(stats(a, m, n)), expect, `${a}/${m}/${n}`);
-  }
+test("evidence labels are plain words, never the engine's values", () => {
+  assert.deepEqual(evidenceLabel({ kind: "outcome", value: "closed_dismissive" }),
+    { label: "Closed with no way forward", bad: true });
+  assert.deepEqual(evidenceLabel({ kind: "outcome", value: "merged_after_review" }),
+    { label: "Merged after review", bad: false });
+  assert.equal(evidenceLabel({ kind: "repo_kind", value: "real_software" }).label, "Kind of project");
+  assert.equal(evidenceLabel({ kind: "onboarding", value: "boilerplate" }).label, "Contributor guide");
+});
+
+test("creditsNote says free only when every credit is free", () => {
+  const c = { ai_available: true, balance: 13, can_claim: false, claim_every_days: 7, free: 3, next_claim_at: null, purchased: 10 };
+  assert.equal(creditsNote(c), "13 AI reports left. This one uses 1. A failed report doesn't count.");
+  assert.equal(creditsNote({ ...c, balance: 3, purchased: 0 }), "3 free AI reports left. This one uses 1. A failed report doesn't count.");
+  assert.equal(creditsNote({ ...c, balance: 1, free: 1, purchased: 0 }).startsWith("1 free AI report left."), true);
 });

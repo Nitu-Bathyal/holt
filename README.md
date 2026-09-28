@@ -32,8 +32,8 @@ link and **swap hub for holt**: `github.com` becomes `githolt.com`, and you
 land on the report.
 
 ```text
-https://github.com/pallets/flask
-https://githolt.com/pallets/flask
+https://github.com/home-assistant/core
+https://githolt.com/home-assistant/core
 ```
 
 No repository in mind? **Find a project** asks which languages you read and how
@@ -41,7 +41,7 @@ much time you have, then lists welcoming repositories with open starter issues.
 
 <table>
   <tr>
-    <td><img src="https://raw.githubusercontent.com/holt-oss/holt/main/assets/web-report-light-desktop.jpg" alt="The report for pallets/flask: Worth your time, with the counts behind it and a first issue to try" width="640"></td>
+    <td><img src="https://raw.githubusercontent.com/holt-oss/holt/main/assets/web-report-light-desktop.jpg" alt="The report for home-assistant/core: Worth your time, with the counts behind it and where to start" width="640"></td>
     <td><img src="https://raw.githubusercontent.com/holt-oss/holt/main/assets/web-find-dark-phone.jpg" alt="Find a project on a phone: pick languages and time, get welcoming repositories" width="200"></td>
   </tr>
 </table>
@@ -64,7 +64,7 @@ CLI, Holt picks up `gh auth token` and you can skip this.
 
 ```sh
 holt start --lang python          # starter issues in repositories that merge newcomers
-holt analyze pallets/flask        # is this one worth your time?
+holt analyze home-assistant/core  # is this one worth your time?
 holt                              # the interactive terminal interface
 ```
 
@@ -149,16 +149,12 @@ The model never chooses the answer.
 [docs/DESIGN.md](https://github.com/holt-oss/holt/blob/main/docs/DESIGN.md)
 has the argument.
 
-## How well it works, and where it doesn't
+## Where it doesn't work
 
-Holt was tested on repositories it had never seen, with the outcome hidden
-from it. It got **about four in five calls right** (balanced accuracy 0.82). A
-single AI prompt over the same repositories' READMEs and metadata got 0.61.
+Holt is a filter, not an oracle. Know the limits:
 
-That is evidence, not a guarantee. Know the limits:
-
-- **It is a filter, not an oracle.** One call in five is wrong. Open the
-  linked pull requests before you commit a week.
+- **It isn't always right.** Open the linked pull requests before you commit
+  a week; the evidence is there so you can check it yourself.
 - **It reads the past.** Repository cultures change, and a quiet month can
   look worse than it is.
 - **It is about your time, not their quality.** A superb project with a deep
@@ -166,6 +162,8 @@ That is evidence, not a guarantee. Know the limits:
 - **Counts, not conversations.** Without a model, Holt can't tell you what a
   thread said or who was welcoming, only what happened.
 
+Holt started as a benchmarked competition entry; that evaluation is now
+historical research rather than a live product claim.
 [docs/research/EVALUATION.md](https://github.com/holt-oss/holt/blob/main/docs/research/EVALUATION.md)
 has the design and the full numbers, and
 [docs/research/REPRODUCTION.md](https://github.com/holt-oss/holt/blob/main/docs/research/REPRODUCTION.md)
@@ -192,9 +190,28 @@ are sized for it. Participation is governed by the
 security reports follow
 [SECURITY.md](https://github.com/holt-oss/holt/blob/main/SECURITY.md).
 
+Working on Holt regularly? [docs/DEV-WORKFLOW.md](https://github.com/holt-oss/holt/blob/main/docs/DEV-WORKFLOW.md)
+is the one-page guide: run the web app locally, preview a branch on staging,
+and what CI and deploys expect.
+
 > Holt started as the winner of **Most useful real-world workflow** at the
 > micro1 Frontier Engineering Challenge.
 
-## License
+## Licensing
 
-[Apache License 2.0](https://github.com/holt-oss/holt/blob/main/LICENSE).
+Holt uses two licenses, split by directory:
+
+- **The engine, CLI, terminal interface and browser extension**
+  (`src/holt/`, `extension/`, everything else at the repo root) are
+  [Apache License 2.0](https://github.com/holt-oss/holt/blob/main/LICENSE).
+  Install the CLI from PyPI, embed the engine, or fork it under Apache terms.
+- **The web app and its server** (`web/`, `server/`) are
+  [GNU AGPL-3.0](https://github.com/holt-oss/holt/blob/main/web/LICENSE). If
+  you run a modified version of the web app or server as a network service,
+  the AGPL requires you to make your modified source available to the
+  people using it.
+
+Apache-licensed contributions from before the split remain Apache-2.0 and
+are compatible with the AGPL side, so nothing already in the project needed
+anyone's permission to move. If you're contributing new code, see
+[CONTRIBUTING.md](https://github.com/holt-oss/holt/blob/main/CONTRIBUTING.md#licensing).

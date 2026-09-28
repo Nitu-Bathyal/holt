@@ -24,11 +24,13 @@ HOLT_SECRET_KEY=$(rand)
 AUTH_SECRET=$(rand)
 HOLT_DB_PASSWORD=$(hex)
 GITHUB_TOKENS=$token
-# No model key yet: AI reports answer needs_key.
+# No model key here: preview.sh sets it (OPENAI_API_KEY in secrets.env) and
+# the AI budget (1.00 USD) on every run.
 OPENROUTER_API_KEY=
 # The policy pages' contact details and the sign-in keys are not here:
 # preview.sh reads CONTACT_EMAIL / CONTACT_CITY and the optional
-# STAGING_*_OAUTH_* from ~/.config/holt/secrets.env on every run.
+# STAGING_*_OAUTH_* from ~/.config/holt/secrets.env on every run. It also
+# overrides GITHUB_TOKENS above with a fresh one (secrets.env, else gh).
 HOLT_JOB_CONCURRENCY=1
 ENV
 echo "wrote $(pwd)/.env"

@@ -1,4 +1,4 @@
-import type { Report, StarterIssue, Stats, Verdict } from "./types";
+import type { Credits, StarterIssue, Stats, Tone } from "./types";
 
 export function pct(n: number, d: number): number {
   return d > 0 ? Math.round((n / d) * 100) : 0;
@@ -43,6 +43,19 @@ export function shortDate(iso: string): string {
   return t.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
 }
 
+/**
+ * "N free AI reports left", and what to do when there are none. Credits bought
+ * or granted aren't free, so a balance that includes any is just "AI reports".
+ */
+export function creditsNote(c: Credits): string {
+  if (!c.ai_available) return "AI reports aren't switched on yet. Your free ones will be waiting when they are.";
+  const kind = c.purchased > 0 ? "AI report" : "free AI report";
+  const left = `${c.balance} ${kind}${c.balance === 1 ? "" : "s"} left.`;
+  if (c.balance > 0) return `${left} This one uses 1. A failed report doesn't count.`;
+  if (c.can_claim) return `${left} Claim 1 more in your settings now.`;
+  return `${left} You can claim 1 more${c.next_claim_at ? ` on ${shortDate(c.next_claim_at)}` : " each week"}.`;
+}
+
 export function daysLabel(days: number): string {
   if (days <= 1) return "an evening";
   if (days <= 3) return "a weekend";
@@ -51,78 +64,14 @@ export function daysLabel(days: number): string {
   return "a month";
 }
 
-export type Tone = "good" | "bad" | "warn";
-
-export const VERDICT_TONE: Record<Verdict, Tone> = {
-  viable: "good",
-  not_viable: "bad",
-  insufficient_evidence: "warn",
-};
-
-export const VERDICT_HEADLINE: Record<Verdict, string> = {
-  viable: "Worth your time",
-  not_viable: "Not worth your time",
-  insufficient_evidence: "Not enough evidence",
-};
-
-// Thresholds shared by the stat tiles and the "Your odds" hint, so they agree.
+// Tile colours. The server's `odds` (server/holt_server/schema.py, MERGE_*
+// and NO_REPLY_*) uses the same thresholds, so a tile and the odds never pull
+// different ways.
 export function mergeTone(mergedPct: number): Tone {
   return mergedPct >= 12 ? "good" : mergedPct >= 5 ? "warn" : "bad";
 }
 export function noReplyTone(noReplyPct: number): Tone {
   return noReplyPct <= 25 ? "good" : noReplyPct <= 50 ? "warn" : "bad";
-}
-
-export type Odds = "good" | "fair" | "long";
-
-/** A newcomer's chances here: the worse of merge rate and reply rate. */
-export function odds(s: Pick<Stats, "outsider_attempts" | "outsider_merged" | "no_reply">): Odds | null {
-  if (!s.outsider_attempts) return null;
-  const tones = [mergeTone(pct(s.outsider_merged, s.outsider_attempts)), noReplyTone(pct(s.no_reply, s.outsider_attempts))];
-  return tones.includes("bad") ? "long" : tones.includes("warn") ? "fair" : "good";
-}
-
-export const ODDS_TONE: Record<Odds, Tone> = { good: "good", fair: "warn", long: "bad" };
-
-/**
- * One sentence under the headline, for beginners. The verdict comes from the
- * rules; this sentence must not oversell it. "Worth your time" with a low
- * merge rate or many ignored PRs says so plainly.
- */
-export function verdictLine(r: Pick<Report, "verdict" | "stats">): string {
-  const s = r.stats;
-  const merged = `${s.outsider_merged} of ${s.outsider_attempts}`;
-  switch (r.verdict) {
-    case "viable": {
-      const rate = s.outsider_attempts ? s.outsider_merged / s.outsider_attempts : 0;
-      const silent = s.outsider_attempts ? s.no_reply / s.outsider_attempts : 0;
-      const lowMerge = rate < 0.1;
-      const manySilent = silent > 0.4;
-      if (lowMerge || manySilent) {
-        const buts = [
-          lowMerge ? "most pull requests don't land" : "",
-          manySilent ? `${silentPhrase(silent)} get no reply` : "",
-        ].filter(Boolean);
-        return `Newcomers do get merged here (${merged} recently), but ${buts.join(" and ")}, so start with one of the starter issues below.`;
-      }
-      return silent < 0.3
-        ? `Outside contributors get real replies here, and ${merged} of their recent pull requests were merged.`
-        : `Outside contributors get merged here: ${merged} of their recent pull requests landed.`;
-    }
-    case "not_viable":
-      return s.outsider_merged === 0
-        ? `None of the last ${s.outsider_attempts} pull requests from outside contributors were merged.`
-        : `Only ${merged} pull requests from outside contributors were merged, and most never got a useful reply.`;
-    default:
-      return `Too few outside contributors have tried recently for Holt to say either way.`;
-  }
-}
-
-function silentPhrase(share: number): string {
-  if (share >= 0.45 && share <= 0.6) return "about half";
-  if (share > 0.6 && share < 0.72) return "about two in three";
-  if (share >= 0.72) return "most";
-  return `about ${Math.round(share * 100)}%`;
 }
 
 export interface StatLine {
@@ -141,7 +90,7 @@ export function statLines(s: Partial<Stats>): StatLine[] {
     out.push({
       key: "merged",
       big: `${s.outsider_merged} of ${s.outsider_attempts}`,
-      label: `pull requests from outside contributors were merged (${p}%)`,
+      label: `outside PRs merged (${p}%)`,
       tone: mergeTone(p),
       meter: s.outsider_attempts ? s.outsider_merged / s.outsider_attempts : 0,
     });
@@ -151,7 +100,7 @@ export function statLines(s: Partial<Stats>): StatLine[] {
     out.push({
       key: "reply",
       big: h == null ? "No replies" : humanHours(h),
-      label: h == null ? "to measure: outside pull requests were not answered" : "is the typical wait for a first reply",
+      label: h == null ? "to measure: no outside PR got an answer" : "is the typical wait for a first reply",
       tone: h == null ? "bad" : h <= 48 ? "good" : h <= 24 * 7 ? "warn" : "bad",
     });
   }
@@ -159,7 +108,7 @@ export function statLines(s: Partial<Stats>): StatLine[] {
     out.push({
       key: "first",
       big: String(s.first_time_merged_authors),
-      label: s.first_time_merged_authors === 1 ? "person got their first pull request merged here" : "people got their first pull request merged here",
+      label: s.first_time_merged_authors === 1 ? "person got their first PR merged here" : "people got their first PR merged here",
       tone: s.first_time_merged_authors > 0 ? "good" : "bad",
     });
   }
@@ -168,7 +117,7 @@ export function statLines(s: Partial<Stats>): StatLine[] {
     out.push({
       key: "noreply",
       big: `${p}%`,
-      label: `of outside pull requests never got a reply (${s.no_reply})`,
+      label: `of outside PRs never got a reply (${s.no_reply})`,
       tone: noReplyTone(p),
       meter: s.no_reply / s.outsider_attempts,
     });
@@ -177,7 +126,7 @@ export function statLines(s: Partial<Stats>): StatLine[] {
     out.push({
       key: "people",
       big: String(s.distinct_outsiders),
-      label: "different outside contributors tried recently",
+      label: "different outsiders tried recently",
       tone: "neutral",
     });
   }
@@ -186,7 +135,7 @@ export function statLines(s: Partial<Stats>): StatLine[] {
     out.push({
       key: "bots",
       big: `${p}%`,
-      label: "of pull request activity came from bots",
+      label: "of PR activity came from bots",
       tone: "neutral",
     });
   }
@@ -196,18 +145,39 @@ export function statLines(s: Partial<Stats>): StatLine[] {
 const humanize = (k: string) => k.replace(/[_-]+/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 const NEGATIVE = /no_reply|ignored|closed|reject|stale|declin|abandon|negative|hostile/;
 
+// Plain labels for the engine's values. The same table as the engine's
+// src/holt/agent/labels.py (tests/test_labels.py holds the two together).
+const OUTCOME_LABELS: Record<string, string> = {
+  merged_after_review: "Merged after review",
+  merged_without_engagement: "Merged without review comments",
+  changes_requested: "Changes requested",
+  closed_with_guidance: "Closed, with a pointer elsewhere",
+  closed_dismissive: "Closed with no way forward",
+  ignored: "No reply",
+};
+const FIELD_LABELS: Record<string, string> = {
+  repo_kind: "Kind of project",
+  onboarding: "Contributor guide",
+  outsider_posture: "How outside contributors are treated",
+  governance_flags: "Before you contribute",
+  is_archived: "Archived",
+  inactive: "Activity",
+  contribute_elsewhere: "Where to contribute",
+};
+
 /**
  * Label and tone for an evidence item. Rules mode lists newcomer PRs as
  * kind "outsider_pr" (value "merged" | "no_reply"); AI mode uses "outcome"
  * (value like "merged_after_review") or the engine field a claim is about.
  */
-export function evidenceLabel(e: { kind: string; value: string }): { label: string; bad: boolean } {
-  const bad = NEGATIVE.test(e.value);
+export function evidenceLabel(e: { kind: string; value: string | null }): { label: string; bad: boolean } {
+  const value = e.value ?? "";
+  const bad = NEGATIVE.test(value);
   if (e.kind === "outsider_pr") {
-    return { label: e.value === "merged" ? "Newcomer PR merged" : e.value === "no_reply" ? "Newcomer PR, no reply" : `Newcomer PR: ${humanize(e.value).toLowerCase()}`, bad };
+    return { label: e.value === "merged" ? "Newcomer PR merged" : e.value === "no_reply" ? "Newcomer PR, no reply" : `Newcomer PR: ${humanize(value).toLowerCase()}`, bad };
   }
-  if (e.kind === "outcome") return { label: humanize(e.value), bad };
-  return { label: humanize(e.kind), bad };
+  if (e.kind === "outcome") return { label: OUTCOME_LABELS[value] ?? humanize(value), bad };
+  return { label: FIELD_LABELS[e.kind] ?? humanize(e.kind), bad };
 }
 
 /** "#526518" or a short id for an evidence link. */

@@ -18,8 +18,9 @@ import logging
 import os
 import time
 from collections.abc import Callable, Iterable, Iterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -59,10 +60,15 @@ MAX_BODY_CHARS = 4000
 
 REPO_META = """
 query($owner:String!, $name:String!, $until:GitTimestamp!) {
-  rateLimit { remaining resetAt }
+  rateLimit { cost remaining resetAt }
   repository(owner:$owner, name:$name) {
     createdAt pushedAt isArchived isMirror isFork stargazerCount
     description homepageUrl primaryLanguage { name }
+    nameWithOwner mirrorUrl parent { nameWithOwner }
+    releases(first:10, orderBy:{field:CREATED_AT, direction:DESC}) {
+      totalCount
+      nodes { tagName name createdAt publishedAt isPrerelease }
+    }
     defaultBranchRef {
       name
       target {
@@ -112,7 +118,7 @@ def docs_query(oid: str) -> tuple[str, dict[str, tuple[str, str]]]:
             )
     document = (
         "query($owner:String!, $name:String!) {\n"
-        "  rateLimit { remaining resetAt }\n"
+        "  rateLimit { cost remaining resetAt }\n"
         "  repository(owner:$owner, name:$name) {\n    "
         + "\n    ".join(fields)
         + "\n  }\n}\n"
@@ -123,25 +129,64 @@ def docs_query(oid: str) -> tuple[str, dict[str, tuple[str, str]]]:
 # Date filtering happens server-side. Ordering by newest and paging until the
 # timestamps fall past the cutoff would burn most of the rate-limit budget on
 # records the window filter then discards.
+#
+# What it costs: GitHub charges one point per hundred connections a query asks
+# for, rounded. A page of 25 pull requests asks for the search plus five
+# connections per PR (files, reviews, comments, labels, timeline) -- 126, so
+# one point a page. A sixth per-PR connection would make it 151 and two
+# points, doubling a report's spend. That is why the close event and commit
+# references share one timeline window instead of having one each; the price is
+# that ten or more commit references after a close can crowd the close event
+# out, and then how the PR was closed is recorded as unknown.
+#
+# The timeline is also the slow part: it added seven to twelve seconds to a
+# report's fetch when measured. The one-page screen that `discover` and `find`
+# run over many repositories at once is only a pre-filter, so it uses
+# PR_SEARCH_SCREEN, which leaves the timeline out; its closes then carry no
+# `closed_by` keys at all, as in a capture that never asked.
+_PR_TIMELINE = """\
+        timelineItems(last:10, itemTypes:[CLOSED_EVENT, REFERENCED_EVENT]) {
+          nodes {
+            __typename
+            ... on ClosedEvent {
+              createdAt actor { login __typename }
+              closer { __typename ... on Commit { oid } ... on PullRequest { number } }
+            }
+            ... on ReferencedEvent {
+              createdAt actor { login __typename }
+              commit { oid } commitRepository { nameWithOwner }
+            }
+          }
+        }
+"""
 PR_SEARCH = """
 query($q:String!, $cursor:String) {
-  rateLimit { remaining resetAt }
+  rateLimit { cost remaining resetAt }
   search(query:$q, type:ISSUE, first:25, after:$cursor) {
     issueCount
     pageInfo { hasNextPage endCursor }
     nodes {
       ... on PullRequest {
         number title createdAt mergedAt closedAt merged
-        additions deletions changedFiles
+        additions deletions changedFiles isDraft authorAssociation
         author { login __typename }
+        mergedBy { login __typename }
+        labels(first:10) { nodes { name } }
         files(first:20) { nodes { path additions deletions } }
-        reviews(first:20) { nodes { createdAt state body author { login __typename } } }
-        comments(first:30) { nodes { createdAt body author { login __typename } } }
+        reviews(first:20) {
+          nodes { createdAt state body authorAssociation author { login __typename } }
+        }
+        comments(first:30) {
+          nodes { createdAt body authorAssociation author { login __typename } }
+        }
+""" + _PR_TIMELINE + """\
       }
     }
   }
 }
 """
+PR_SEARCH_SCREEN = PR_SEARCH.replace(_PR_TIMELINE, "")
+PAGE_SIZE = 25  # PR_SEARCH's `first:25`
 
 
 # Issues, for Path Finder. Decomposed the same way pull requests are: an issue
@@ -149,7 +194,7 @@ query($q:String!, $cursor:String) {
 # pull request is a post-cutoff one. The two must not travel together.
 ISSUE_SEARCH = """
 query($q:String!, $cursor:String) {
-  rateLimit { remaining resetAt }
+  rateLimit { cost remaining resetAt }
   search(query:$q, type:ISSUE, first:50, after:$cursor) {
     issueCount
     pageInfo { hasNextPage endCursor }
@@ -176,7 +221,7 @@ MAX_ISSUE_BODY = 4000
 # contribution history.
 REPO_SEARCH = """
 query($q:String!, $cursor:String) {
-  rateLimit { remaining resetAt }
+  rateLimit { cost remaining resetAt }
   search(query:$q, type:REPOSITORY, first:25, after:$cursor) {
     repositoryCount
     pageInfo { hasNextPage endCursor }
@@ -283,6 +328,9 @@ class GitHubGraphQL:
         self._client = client or httpx.Client(timeout=TIMEOUT_S)
         self._sleep = sleep
         self.remaining: int | None = None
+        # Rate-limit points GitHub charged this transport, summed over every
+        # query. What one report costs is the difference across its fetch.
+        self.points_used = 0
         self.partial_errors: list[dict[str, Any]] = []
 
     def query(
@@ -348,6 +396,7 @@ class GitHubGraphQL:
             self.partial_errors.extend(errors)
         if limit := (data or {}).get("rateLimit"):
             self.remaining = limit["remaining"]
+            self.points_used += limit.get("cost") or 0
         return data or {}
 
     def _delay(self, attempt: int) -> float:
@@ -398,11 +447,15 @@ class GitHubGraphQL:
                 return
             cursor = page["endCursor"]
 
-    def search_pull_requests(self, q: str, max_pages: int = 8) -> Iterator[dict[str, Any]]:
+    def search_pull_requests(
+        self, q: str, max_pages: int = 8, timeline: bool = True
+    ) -> Iterator[dict[str, Any]]:
+        """Pull request pages; `timeline=False` is the faster screening query."""
+        document = PR_SEARCH if timeline else PR_SEARCH_SCREEN
         cursor: str | None = None
         for _ in range(max_pages):
             search = self.query(
-                PR_SEARCH, timeout=HEAVY_TIMEOUT_S, q=q, cursor=cursor
+                document, timeout=HEAVY_TIMEOUT_S, q=q, cursor=cursor
             )["search"]
             yield from (n for n in search["nodes"] if n)
             page = search["pageInfo"]
@@ -416,6 +469,56 @@ def search_query(repo_slug: str, window: Window, cutoff: datetime) -> str:
     day = cutoff.date().isoformat()
     bound = f"created:<{day}" if window is Window.PRE_T else f"created:>={day}"
     return f"repo:{repo_slug} is:pr {bound} sort:created-desc"
+
+
+# --- the settled sample -------------------------------------------------------
+#
+# A busy repository's newest 200 pull requests span a day or two (pytorch,
+# llvm, nixpkgs, cpython), and the engine's rates only count pull requests
+# opened at least SETTLE_DAYS before the read (agent/rates.py), because what
+# has already happened to a two-day-old pull request is mostly the fast
+# outcomes: quick merges and quick triage closes. Rates over those read
+# pytorch's merge rate as 39% and openssl's as 40%, where the pull requests
+# that had two weeks to get an answer show 11% for openssl.
+#
+# So when the newest pages hold fewer than SETTLED_TARGET outside pull requests
+# old enough to count, a second search reads further back: pull requests
+# opened before the settle window (or before the oldest one already read),
+# newest first, one page at a time until the target is met, at most
+# SETTLED_MAX_PAGES pages. Each page is the same query, one point.
+SETTLE_DAYS = 14
+SETTLED_TARGET = 60
+SETTLED_MAX_PAGES = 8
+
+_TEAM = {"OWNER", "MEMBER", "COLLABORATOR"}
+
+
+def settled_query(repo_slug: str, cutoff: datetime, oldest: datetime | None) -> str:
+    """Pull requests old enough to count, from where the newest pages stopped."""
+    settle_day = (cutoff - timedelta(days=SETTLE_DAYS)).date()
+    if oldest is not None and oldest.date() < settle_day:
+        # The newest pages already reach past the window; carry on from their
+        # last day (inclusive: the rest of that day wasn't read; repeats are
+        # dropped by number).
+        bound = f"created:<={oldest.date().isoformat()}"
+    else:
+        bound = f"created:<{settle_day.isoformat()}"
+    return f"repo:{repo_slug} is:pr {bound} sort:created-desc"
+
+
+def _outside_and_settled(node: dict[str, Any], before: datetime) -> bool:
+    """Roughly what the engine will count: an outside, non-draft pull request
+    opened before `before`. Only steers how far to read; the engine decides."""
+    author = node.get("author") or {}
+    login = (author.get("login") or "").lower()
+    created = _ts(node.get("createdAt"))
+    return bool(
+        created is not None and created < before
+        and author.get("__typename") != "Bot" and not login.endswith("bot")
+        and not login.endswith("[bot]")
+        and node.get("authorAssociation") not in _TEAM
+        and not node.get("isDraft")
+    )
 
 
 def _nodes(connection: dict[str, Any] | None) -> list[dict[str, Any]]:
@@ -439,36 +542,142 @@ def _with_body(payload: dict[str, Any], raw: str | None) -> dict[str, Any]:
     return payload
 
 
-def project(repo_slug: str, nodes: Iterable[dict[str, Any]]) -> Iterator[EvidenceRecord]:
-    """Turn pull requests into timestamped, individually-addressable evidence."""
+def _with_association(payload: dict[str, Any], node: dict[str, Any]) -> dict[str, Any]:
+    """The author's relationship to the repository, when the capture asked for it.
+
+    GitHub's CommentAuthorAssociation: OWNER, MEMBER, COLLABORATOR,
+    CONTRIBUTOR, FIRST_TIME_CONTRIBUTOR, FIRST_TIMER, MANNEQUIN or NONE. It is
+    GitHub's view at fetch time, not when the comment was written, so a
+    first-timer whose pull request has since been merged can read CONTRIBUTOR.
+    Captures made before this field existed do not carry the key at all, so
+    every reader must treat it as optional; that is also what keeps their
+    recorded runs replaying unchanged.
+    """
+    if "authorAssociation" in node:
+        payload["author_association"] = node["authorAssociation"]
+    return payload
+
+
+def _actor(prefix: str, actor: dict[str, Any] | None) -> dict[str, Any]:
+    """`{prefix}` login and `{prefix}_is_bot`, or None when GitHub gave nobody."""
+    return {
+        prefix: _login(actor) if actor else None,
+        f"{prefix}_is_bot": _is_bot(actor),
+    }
+
+
+def _closer(node: dict[str, Any] | None) -> dict[str, Any] | None:
+    """What closed a pull request, when it was a commit or another pull request.
+
+    A commit closing a pull request that was never merged through the button is
+    how projects that land work outside GitHub (an internal sync, a merge bot,
+    a maintainer pushing by hand) show up in the timeline.
+    """
+    if not node:
+        return None
+    kind = node.get("__typename")
+    if kind == "Commit":
+        return {"kind": "commit", "oid": node.get("oid")}
+    if kind == "PullRequest":
+        return {"kind": "pull_request", "number": node.get("number")}
+    return None
+
+
+def _closure(pr: dict[str, Any]) -> dict[str, Any]:
+    """Who or what closed an unmerged pull request, from its last close event.
+
+    Empty for a capture that did not ask for the timeline, so old fixtures stay
+    as they were. When the timeline was asked for but the close event was not
+    in the window (see PR_SEARCH), the fields are present and None: unknown,
+    which is different from absent.
+    """
+    if "timelineItems" not in pr:
+        return {}
+    closes = [n for n in _nodes(pr["timelineItems"]) if n.get("__typename") == "ClosedEvent"]
+    last = closes[-1] if closes else {}
+    return {
+        **_actor("closed_by", last.get("actor")),
+        "closer": _closer(last.get("closer")),
+    }
+
+
+def _same_repo_references(repo_slug: str, pr: dict[str, Any]) -> list[dict[str, Any]]:
+    """Commits *in this repository* that mention the pull request.
+
+    Contributors pushing to their own forks generate most reference events, and
+    those say nothing about whether the project landed the work, so they are
+    dropped at capture. What is kept is a commit on the project itself naming
+    the pull request -- often the only trace that a maintainer applied it by
+    hand and then closed it. It is evidence for a merge, not proof: a commit on
+    a work branch of the same repository mentions the PR too.
+    """
+    out = []
+    for node in _nodes(pr.get("timelineItems")):
+        if node.get("__typename") != "ReferencedEvent":
+            continue
+        where = (node.get("commitRepository") or {}).get("nameWithOwner") or ""
+        if where.lower() != repo_slug.lower() or not node.get("createdAt"):
+            continue
+        out.append(node)
+    return out
+
+
+def project(
+    repo_slug: str, nodes: Iterable[dict[str, Any]], home: str | None = None
+) -> Iterator[EvidenceRecord]:
+    """Turn pull requests into timestamped, individually-addressable evidence.
+
+    `home` is the name GitHub currently uses for the repository, when it
+    differs from `repo_slug` (the name asked for, which the evidence ids keep).
+    Links and same-repository commit references use it.
+
+    The fields the v2 capture added -- `author_association`, `is_draft`,
+    `labels`, `merged_by`, `closed_by`/`closer` and the `:reference:` records --
+    are written only when the query asked for them. Every reader must treat them
+    as optional: committed fixtures predate them.
+
+    Draft state and labels are read at fetch time, like the association: a pull
+    request labelled `spam` after the cutoff carries the label here.
+    """
+    home = home or repo_slug
     for pr in nodes:
         number = pr["number"]
         base = f"pr:{repo_slug}#{number}"
-        url = f"https://github.com/{repo_slug}/pull/{number}"
-        shared = {"author": _login(pr["author"]), "author_is_bot": _is_bot(pr["author"])}
+        url = f"https://github.com/{home}/pull/{number}"
+        shared = _with_association(
+            {"author": _login(pr["author"]), "author_is_bot": _is_bot(pr["author"])}, pr
+        )
 
+        opened: dict[str, Any] = {
+            **shared,
+            "title": pr["title"],
+            "additions": pr["additions"],
+            "deletions": pr["deletions"],
+            "changed_files": pr["changedFiles"],
+            "files": [f["path"] for f in _nodes(pr["files"])],
+        }
+        if "isDraft" in pr:
+            opened["is_draft"] = bool(pr["isDraft"])
+        if "labels" in pr:
+            opened["labels"] = [n["name"] for n in _nodes(pr["labels"])]
         yield EvidenceRecord(
             evidence_id=f"{base}:opened",
             source="github",
             url=url,
             timestamp=_ts(pr["createdAt"]),
-            payload={
-                **shared,
-                "title": pr["title"],
-                "additions": pr["additions"],
-                "deletions": pr["deletions"],
-                "changed_files": pr["changedFiles"],
-                "files": [f["path"] for f in _nodes(pr["files"])],
-            },
+            payload=opened,
         )
 
         if merged_at := _ts(pr["mergedAt"]):
+            merged: dict[str, Any] = {**shared, "merged": True}
+            if "mergedBy" in pr:
+                merged.update(_actor("merged_by", pr["mergedBy"]))
             yield EvidenceRecord(
                 evidence_id=f"{base}:merged",
                 source="github",
                 url=url,
                 timestamp=merged_at,
-                payload={**shared, "merged": True},
+                payload=merged,
             )
         elif (closed_at := _ts(pr["closedAt"])) and not pr["merged"]:
             yield EvidenceRecord(
@@ -476,7 +685,7 @@ def project(repo_slug: str, nodes: Iterable[dict[str, Any]]) -> Iterator[Evidenc
                 source="github",
                 url=url,
                 timestamp=closed_at,
-                payload={**shared, "merged": False},
+                payload={**shared, "merged": False, **_closure(pr)},
             )
 
         for i, review in enumerate(_nodes(pr["reviews"])):
@@ -486,11 +695,14 @@ def project(repo_slug: str, nodes: Iterable[dict[str, Any]]) -> Iterator[Evidenc
                 url=url,
                 timestamp=_ts(review["createdAt"]),
                 payload=_with_body(
-                    {
-                        "author": _login(review["author"]),
-                        "author_is_bot": _is_bot(review["author"]),
-                        "state": review["state"],
-                    },
+                    _with_association(
+                        {
+                            "author": _login(review["author"]),
+                            "author_is_bot": _is_bot(review["author"]),
+                            "state": review["state"],
+                        },
+                        review,
+                    ),
                     review["body"],
                 ),
             )
@@ -502,12 +714,30 @@ def project(repo_slug: str, nodes: Iterable[dict[str, Any]]) -> Iterator[Evidenc
                 url=url,
                 timestamp=_ts(comment["createdAt"]),
                 payload=_with_body(
-                    {
-                        "author": _login(comment["author"]),
-                        "author_is_bot": _is_bot(comment["author"]),
-                    },
+                    _with_association(
+                        {
+                            "author": _login(comment["author"]),
+                            "author_is_bot": _is_bot(comment["author"]),
+                        },
+                        comment,
+                    ),
                     comment["body"],
                 ),
+            )
+
+        # Each reference is its own dated fact: a commit can land after the
+        # cutoff on a pull request opened before it, and must be sliced off
+        # like any other later event.
+        for i, ref in enumerate(_same_repo_references(home, pr)):
+            yield EvidenceRecord(
+                evidence_id=f"{base}:reference:{i}",
+                source="github",
+                url=url,
+                timestamp=_ts(ref["createdAt"]),
+                payload={
+                    "commit": (ref.get("commit") or {}).get("oid"),
+                    **_actor("actor", ref.get("actor")),
+                },
             )
 
 
@@ -519,23 +749,61 @@ def project_repo_meta(repo_slug: str, repo: dict[str, Any]) -> EvidenceRecord:
     payload says so. Holt's own reasoning must not lean on them; the popularity
     diagnostic does, and that limitation is published rather than hidden.
     """
+    payload: dict[str, Any] = {
+        "pushed_at": repo["pushedAt"],
+        "is_archived": repo["isArchived"],
+        "is_mirror": repo["isMirror"],
+        "is_fork": repo["isFork"],
+        "description": repo["description"],
+        "homepage_url": repo["homepageUrl"],
+        "primary_language": (repo["primaryLanguage"] or {}).get("name"),
+        "stargazer_count": repo["stargazerCount"],
+        "_counters_are_as_of_fetch_not_cutoff": True,
+    }
+    # Added with the v2 capture; absent from older fixtures. `parent` is the
+    # repository this one was forked from, `mirror_url` where a mirror copies
+    # from: both say "the real project is elsewhere".
+    if "nameWithOwner" in repo:
+        payload["name_with_owner"] = repo["nameWithOwner"]
+    if "parent" in repo:
+        payload["parent"] = (repo["parent"] or {}).get("nameWithOwner")
+    if "mirrorUrl" in repo:
+        payload["mirror_url"] = repo["mirrorUrl"]
+    if "releases" in repo:
+        payload["release_count"] = (repo["releases"] or {}).get("totalCount", 0)
     return EvidenceRecord(
         evidence_id=f"repo:{repo_slug}:meta",
         source="github",
         url=f"https://github.com/{repo_slug}",
         timestamp=_ts(repo["createdAt"]),
-        payload={
-            "pushed_at": repo["pushedAt"],
-            "is_archived": repo["isArchived"],
-            "is_mirror": repo["isMirror"],
-            "is_fork": repo["isFork"],
-            "description": repo["description"],
-            "homepage_url": repo["homepageUrl"],
-            "primary_language": (repo["primaryLanguage"] or {}).get("name"),
-            "stargazer_count": repo["stargazerCount"],
-            "_counters_are_as_of_fetch_not_cutoff": True,
-        },
+        payload=payload,
     )
+
+
+def project_releases(repo_slug: str, repo: dict[str, Any]) -> Iterator[EvidenceRecord]:
+    """The newest releases, one dated record each, so they slice at the cutoff.
+
+    Only the newest ten are asked for: enough to tell a project that ships
+    monthly from one that last shipped years ago. A reading as of a past cutoff
+    may find all ten after it and keep none; the count on the meta record is
+    as-of-fetch, like the other counters there.
+    """
+    for i, rel in enumerate(_nodes(repo.get("releases"))):
+        when = _ts(rel.get("publishedAt") or rel.get("createdAt"))
+        if when is None:
+            continue
+        tag = rel.get("tagName") or ""
+        yield EvidenceRecord(
+            evidence_id=f"repo:{repo_slug}:release:{i}",
+            source="github",
+            url=f"https://github.com/{repo_slug}/releases/tag/{quote(tag, safe='')}",
+            timestamp=when,
+            payload={
+                "tag": tag,
+                "name": rel.get("name"),
+                "is_prerelease": bool(rel.get("isPrerelease")),
+            },
+        )
 
 
 MAX_DOC_CHARS = 12000
@@ -638,32 +906,82 @@ class LiveGitHubProvider(EvidenceProvider):
         cutoff: datetime | None = None,
         transport: GitHubGraphQL | None = None,
         max_pages: int = 8,
+        timeline: bool = True,
+        settled_pages: int | None = None,
     ) -> None:
         super().__init__(window, cutoff or datetime.now(UTC))
         self.transport = transport or GitHubGraphQL()
         self.max_pages = max_pages
+        # How far past the newest pages a full report may read for pull
+        # requests old enough to count (see SETTLED_TARGET). A screen doesn't.
+        self.settled_pages = (
+            (SETTLED_MAX_PAGES if timeline else 0) if settled_pages is None else settled_pages
+        )
+        # False for a quick screen: no close events or commit references (see
+        # PR_SEARCH_SCREEN). A full report always reads them.
+        self.timeline = timeline
         self._seen: dict[str, EvidenceRecord] = {}
 
     def _fetch_raw(self, request: str, /, **params: object) -> Iterable[EvidenceRecord]:
         owner, _, name = request.partition("/")
         meta = self.transport.repo_meta(owner, name, self.cutoff)
         records: list[EvidenceRecord] = [project_repo_meta(request, meta)]
+        records.extend(project_releases(request, meta))
 
         branch = meta.get("defaultBranchRef") or {}
         history = ((branch.get("target") or {}).get("history") or {}).get("nodes") or []
         if history:
             docs = self.transport.docs_at(owner, name, history[0]["oid"])
             records.extend(project_docs(request, docs, history[0]))
-        nodes = self.transport.search_pull_requests(
-            search_query(request, self.window, self.cutoff), self.max_pages
+        # A search under a repository's old name finds nothing, although
+        # GitHub answers the lookup above under either name and redirects its
+        # pages: facebook/react-native, now react/react-native, read as a
+        # project with no pull requests at all. So the search uses the name
+        # GitHub gives back. The evidence ids keep the name asked for, which
+        # is the one every caller looks them up by.
+        home = meta.get("nameWithOwner") or request
+        query = search_query(home, self.window, self.cutoff)
+        # The keyword only when screening, so a transport written before it
+        # existed (the tests have several) still serves full fetches.
+        nodes = list(
+            self.transport.search_pull_requests(query, self.max_pages)
+            if self.timeline
+            else self.transport.search_pull_requests(query, self.max_pages, timeline=False)
         )
-        records.extend(project(request, nodes))
+        if self.window is Window.PRE_T:
+            nodes += self._settled(home, nodes)
+        records.extend(project(request, nodes, home=home))
 
         # Slice at the source; the base-class assertion is the safety net, not
         # the filter. A PR created before T can still carry a merge after it.
         kept = [r for r in records if self._in_window(r)]
         self._seen.update({r.evidence_id: r for r in kept})
         return kept
+
+    def _settled(self, home: str, nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Older pull requests, when the newest pages hold too few that count."""
+        # Fewer than the pages could hold means the repository has no more.
+        if not self.settled_pages or len(nodes) < self.max_pages * PAGE_SIZE:
+            return []
+        before = self.cutoff - timedelta(days=SETTLE_DAYS)
+        have = sum(1 for n in nodes if _outside_and_settled(n, before))
+        if have >= SETTLED_TARGET:
+            return []
+        seen = {n.get("number") for n in nodes}
+        oldest = min((t for n in nodes if (t := _ts(n.get("createdAt")))), default=None)
+        query = settled_query(home, self.cutoff, oldest)
+        more: list[dict[str, Any]] = []
+        for i, node in enumerate(
+            self.transport.search_pull_requests(query, self.settled_pages), 1
+        ):
+            if node.get("number") not in seen:
+                seen.add(node.get("number"))
+                more.append(node)
+                have += _outside_and_settled(node, before)
+            # Stop at a page boundary, so no page is paid for and left unread.
+            if i % PAGE_SIZE == 0 and have >= SETTLED_TARGET:
+                break
+        return more
 
     def _in_window(self, record: EvidenceRecord) -> bool:
         if self.window is Window.PRE_T:

@@ -21,26 +21,36 @@ STATUS = {
     "invalid_request": 400,
     "rate_limited": 429,
     "quota_exceeded": 402,
+    "needs_plan": 402,
     "needs_key": 403,
+    "claim_not_ready": 409,
+    "ai_unavailable": 503,
     "upstream": 502,
     "internal": 500,
     "not_implemented": 501,
+    "payments_off": 403,
+    "payment_unconfirmed": 400,
+    "already_subscribed": 409,
 }
 
 
 class ApiError(Exception):
     def __init__(self, code: str, message: str, retry_after: int | None = None,
-                 status: int | None = None) -> None:
+                 status: int | None = None, reason: str | None = None) -> None:
         super().__init__(message)
         self.code = code
         self.message = message
         self.retry_after = retry_after
         self.status = status or STATUS.get(code, 400)
+        # A finer case of `code` the web words differently (schema.ErrorReason).
+        self.reason = reason
 
     def body(self) -> dict[str, Any]:
         err: dict[str, Any] = {"code": self.code, "message": self.message}
         if self.retry_after is not None:
             err["retry_after"] = self.retry_after
+        if self.reason is not None:
+            err["reason"] = self.reason
         return err
 
 
