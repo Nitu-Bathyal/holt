@@ -507,6 +507,31 @@ pro_settings() {   # sets pro_on and HOLT_PRO_KEY from pro_sha; run after resolv
 }
 pro_settings
 
+# AI on staging: OpenAI directly, on OPENAI_API_KEY from $SECRETS, for the
+# server's AI reports and holt-pro's playbooks and pre-flight summaries, under
+# ONE hard budget of $1.00 for both. The server holds it (server/holt_server/
+# budget.py): holt-pro is only reached through the server's jobs, and each of
+# them holds its most possible cost from the budget before it is queued.
+# Production never reads OPENAI_API_KEY (deploy/prod/compose.yml). Always
+# exported, empty when off, so nothing in .env can turn AI on instead.
+STAGING_AI_BUDGET_USD=1.00
+ai_settings() {
+    OPENROUTER_API_KEY="$(secret OPENAI_API_KEY)"
+    OPENROUTER_BASE_URL=https://api.openai.com/v1 OPENROUTER_MODEL=gpt-5-mini
+    HOLT_PRO_MODEL_KEY="$OPENROUTER_API_KEY" HOLT_PRO_MODEL_PROVIDER=openai
+    HOLT_PRO_PLAYBOOK_MODEL=gpt-5-mini
+    if [[ -n "$OPENROUTER_API_KEY" ]]; then
+        HOLT_AI_BUDGET_USD="$STAGING_AI_BUDGET_USD"
+        log "AI: on (OpenAI gpt-5-mini), budget \$$HOLT_AI_BUDGET_USD for the server and holt-pro together"
+    else
+        HOLT_AI_BUDGET_USD=0
+        log "AI: off (no OPENAI_API_KEY in $SECRETS)"
+    fi
+    export OPENROUTER_API_KEY OPENROUTER_BASE_URL OPENROUTER_MODEL HOLT_AI_BUDGET_USD \
+        HOLT_PRO_MODEL_KEY HOLT_PRO_MODEL_PROVIDER HOLT_PRO_PLAYBOOK_MODEL
+}
+ai_settings
+
 export BUILDX_BUILDER="$BUILDER" COMPOSE_PROJECT_NAME="$PROJECT"
 compose() { docker compose -p "$PROJECT" -f "$DEPLOY/compose.yml" --env-file "$DEPLOY/.env" "$@"; }
 pro_compose() {

@@ -664,3 +664,37 @@ class Preflight(Base):
     __table_args__ = (
         Index("ix_preflights_target", "user_id", "repo_key", "target", "created_at"),
     )
+
+
+class AiBudget(Base):
+    """One row, id 1: what this environment has committed to AI models, in
+    micro-dollars (budget.py). It is the sum over `ai_runs` of each run's
+    cost, or of what it holds while it runs. Raised only by a guarded
+    `UPDATE`, so racing runs can't take it past `HOLT_AI_BUDGET_USD`."""
+
+    __tablename__ = "ai_budget"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    committed_micros: Mapped[int] = mapped_column(BigInteger, default=0)
+
+
+class AiRun(Base):
+    """One AI run's claim on the budget: an AI report, or a playbook or
+    pre-flight summary from the paid-features service. `reserved_micros` is
+    held when the job is queued; `cost_micros` is what the run cost, recorded
+    when it ends (`estimated` when it isn't known, e.g. a run that timed out,
+    and it is then counted at the reservation)."""
+
+    __tablename__ = "ai_runs"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    job_id: Mapped[str] = mapped_column(String(32))
+    kind: Mapped[str] = mapped_column(String(20))
+    reserved_micros: Mapped[int] = mapped_column(BigInteger)
+    cost_micros: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
+    estimated: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    settled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (Index("ix_ai_runs_job", "job_id"),)

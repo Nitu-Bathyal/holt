@@ -1130,6 +1130,18 @@ class AdminUsers(Model):
     users: list[AdminUserSummary]
 
 
+class AdminAiSpend(Model):
+    """GET /v1/admin/ai-spend: this environment's AI spend against its budget."""
+
+    budget_usd: float = Field(description="The cap in force; 0 means AI is off.")
+    spent_usd: float = Field(description="What finished AI runs cost (a run whose cost "
+                             "isn't known counts at the most it could cost).")
+    held_usd: float = Field(description="What running AI jobs hold until they finish.")
+    runs: int = Field(description="Finished AI runs.")
+    running: int = Field(description="AI jobs holding part of the budget.")
+    line: str = Field(description="`AI spend: $x of $y`, for people.")
+
+
 class HistoryItem(Model):
     job_id: str
     status: JobState
