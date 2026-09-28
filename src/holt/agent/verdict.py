@@ -486,7 +486,8 @@ def classify(
         # Enough merges, from too few people: without this line the answer
         # came with no reason at all.
         trace.append(Rule(
-            f"All {signals.outsider_merged} merged pull requests from outside "
+            f"{'Both' if signals.outsider_merged == 2 else f'All {signals.outsider_merged}'} "
+            "merged pull requests from outside "
             f"contributors came from "
             f"{'one person' if signals.distinct_merged_authors == 1 else _n(signals.distinct_merged_authors, 'person', 'people')}, "
             "too few people to show a pattern.",

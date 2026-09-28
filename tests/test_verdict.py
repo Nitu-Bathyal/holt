@@ -243,3 +243,58 @@ def test_a_real_mirror_keeps_its_verdict():
     assert contested_kind(
         f, signals(outsider_merged=15, distinct_merged_authors=15), {"is_mirror": True}
     ) is None
+
+
+# --- ticket 08: rules for live readings ---------------------------------------
+
+LIVE = 14 * 24.0  # a live reading carries the settle window it counted with
+
+
+def test_the_merge_rate_floor_turns_a_long_shot_down():
+    """flask: 5 of 171 decided outside pull requests merged."""
+    s = signals(outsider_threads=171, outsider_merged=5, distinct_merged_authors=4,
+                distinct_outsider_authors=147, merge_rate=5 / 171, settle_hours=LIVE)
+    v, trace = classify(findings(), s)
+    assert v is Verdict.NOT_VIABLE
+    assert rule_codes(trace)[-2:] == ["merges", "long_odds"]
+    assert trace[-1].startswith("Only 5 of 171 pull requests") and "1 in 34" in trace[-1]
+
+
+def test_the_floor_is_not_applied_to_the_frozen_benchmark():
+    s = signals(outsider_threads=171, outsider_merged=5, merge_rate=5 / 171)
+    assert classify(findings(), s)[0] is Verdict.VIABLE
+
+
+def test_five_percent_or_more_passes():
+    s = signals(outsider_threads=40, outsider_merged=2, distinct_merged_authors=2,
+                merge_rate=0.05, settle_hours=LIVE)
+    assert classify(findings(), s)[0] is Verdict.VIABLE
+
+
+def test_the_rubber_stamp_reads_outside_merges_only_on_a_live_reading():
+    """plantuml: the owner merges his own commits unreviewed (19% overall),
+    while 47% of outside merges got a comment."""
+    s = signals(outsider_threads=53, outsider_merged=43, merge_rate=43 / 53,
+                reviewed_share=0.19, outsider_reviewed_share=0.47, settle_hours=LIVE)
+    assert classify(findings(), s)[0] is Verdict.VIABLE
+    waved = signals(outsider_threads=53, outsider_merged=43, merge_rate=43 / 53,
+                    reviewed_share=0.5, outsider_reviewed_share=0.1, settle_hours=LIVE)
+    v, trace = classify(findings(), waved)
+    assert v is Verdict.NOT_VIABLE and rule_codes(trace)[-1] == "rubber_stamp"
+    assert "from outside contributors" in trace[-1]
+
+
+def test_the_rubber_stamp_needs_ten_outside_merges():
+    few = signals(outsider_threads=4, outsider_merged=3, merge_rate=0.75,
+                  reviewed_share=0.0, outsider_reviewed_share=0.0, settle_hours=LIVE)
+    assert classify(findings(), few)[0] is Verdict.VIABLE
+    # The frozen benchmark keeps the rule it was scored with.
+    frozen = signals(outsider_threads=4, outsider_merged=3, merge_rate=0.75, reviewed_share=0.0)
+    assert classify(findings(), frozen)[0] is Verdict.NOT_VIABLE
+
+
+def test_an_inactive_project_is_not_worth_it():
+    line = "The last pull request merged here was on 11 Feb 2020, so this project looks inactive."
+    v, trace = classify(findings(inactive=line), signals(settle_hours=LIVE))
+    assert v is Verdict.NOT_VIABLE
+    assert rule_codes(trace) == ["inactive"] and trace[0] == line

@@ -302,3 +302,16 @@ def test_the_reason_is_the_rule_that_overruled_the_merge_count():
              Rule("Only 5 of 171.", code="long_odds")]
     assert rates.first_deciding(rules).code == "long_odds"
     assert rates.first_deciding(rules[:2]).code == "merges"
+
+
+def test_inactive_only_without_a_recent_push():
+    """No merge in 90 days decides only when nothing was pushed either."""
+    _, threads = threads_of(pr(1, hours_ago=24 * 400, outcome="merged"),
+                            pr(2, hours_ago=24 * 200))
+    records = [r for p in (pr(1, hours_ago=24 * 400, outcome="merged"),
+                           pr(2, hours_ago=24 * 200)) for r in p]
+    old_push = {"pushed_at": (NOW - timedelta(days=200)).isoformat()}
+    new_push = {"pushed_at": (NOW - timedelta(days=3)).isoformat()}
+    assert "looks inactive" in rates.inactive_sentence(records, threads, NOW, old_push)
+    assert rates.inactive_sentence(records, threads, NOW, new_push) is None
+    assert "some other way" in rates.dormant_sentence(records, threads, NOW, new_push)
