@@ -86,7 +86,7 @@ def test_a_small_lucky_sample_does_not_top_the_board(h):
 def test_card_reason_does_not_point_at_starter_issues(h):
     add(h, report("octo/busy", outsider_attempts=100, outsider_merged=6, no_reply=55))
     reason = get(h)["repos"][0]["reason"]
-    assert reason.startswith("Newcomers do get merged here (6 of 100 recently)")
+    assert reason.startswith("Outside contributors do get merged here (6 of 100 recently)")
     assert "below" not in reason and reason.endswith("pick your first issue carefully.")
 
 

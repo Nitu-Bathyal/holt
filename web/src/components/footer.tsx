@@ -18,6 +18,7 @@ export function Footer() {
           <Link href="/find" className="inline-flex min-h-11 items-center hover:text-ink sm:min-h-0 sm:py-1 sm:justify-end">find a project</Link>
           <Link href="/discover" className="inline-flex min-h-11 items-center hover:text-ink sm:min-h-0 sm:py-1 sm:justify-end">discover repos</Link>
           <Link href="/how-it-works" className="inline-flex min-h-11 items-center hover:text-ink sm:min-h-0 sm:py-1 sm:justify-end">how it works</Link>
+          <Link href="/badge" className="inline-flex min-h-11 items-center hover:text-ink sm:min-h-0 sm:py-1 sm:justify-end">badge for maintainers</Link>
           <Link href="/pricing" className="inline-flex min-h-11 items-center hover:text-ink sm:min-h-0 sm:py-1 sm:justify-end">pricing</Link>
           <a href={`${GITHUB_REPO_URL}/blob/main/docs/USAGE.md`} className="inline-flex min-h-11 items-center hover:text-ink sm:min-h-0 sm:py-1 sm:justify-end">the CLI</a>
           <a href={GITHUB_REPO_URL} className="inline-flex min-h-11 items-center hover:text-ink sm:min-h-0 sm:py-1 sm:justify-end">holt-oss / 2026</a>

@@ -24,6 +24,10 @@ export type FeedbackOut = S.FeedbackOut;
 export type DiscoverOut = S.DiscoverOut;
 export type DiscoverRepo = S.DiscoverRepo;
 export type DiscoverSort = S.DiscoverOut["sort"];
+export type ProfileOut = S.ProfileOut;
+export type ProfilePrefs = S.ProfilePrefs;
+export type ContributionType = ProfilePrefs["contributions"][number];
+export type Level = ProfilePrefs["level"];
 
 export type Mode = Report["mode"];
 export type Verdict = Report["verdict"];

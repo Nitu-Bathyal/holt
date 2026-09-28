@@ -3,7 +3,7 @@
 import "server-only";
 import { cache } from "react";
 import type {
-  AnalysisStart, ApiError, Contributions, Credits, DiscoverOut, DiscoverSort, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection, HistoryItem, JobStatus, Me, Mode,
+  AnalysisStart, ApiError, Contributions, Credits, DiscoverOut, DiscoverSort, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection, HistoryItem, JobStatus, Me, Mode, ProfileOut, ProfilePrefs,
   Report, Result, StarterIssue,
 } from "./types";
 import type { FeedbackInput } from "./feedback";
@@ -77,10 +77,10 @@ function repoOk(repo: string) {
   return rest.length === 0 && Boolean(o && r) && isValidRepo(o, r);
 }
 
-/** `model` is a web model id (lib/models.ts); the server ignores it until it supports model choice. */
-export function startAnalysis(repo: string, mode: Mode, days: number, refresh: boolean, caller: Caller, model?: string): Promise<Result<AnalysisStart>> {
-  if (MOCK) return mock.startAnalysis(repo, mode, days, refresh, caller.userId ?? undefined, model);
-  return call("/v1/analyses", { method: "POST", body: JSON.stringify({ repo, mode, days, refresh, ...(model ? { model } : {}) }), caller });
+/** The model for AI reports is server configuration; the web never picks one. */
+export function startAnalysis(repo: string, mode: Mode, days: number, refresh: boolean, caller: Caller): Promise<Result<AnalysisStart>> {
+  if (MOCK) return mock.startAnalysis(repo, mode, days, refresh, caller.userId ?? undefined);
+  return call("/v1/analyses", { method: "POST", body: JSON.stringify({ repo, mode, days, refresh }), caller });
 }
 
 export async function jobStatus(jobId: string): Promise<Result<JobStatus>> {
@@ -209,6 +209,23 @@ export function disconnectGitHub(userId: string): Promise<Result<GitHubConnectio
   return call("/v1/me/github", { method: "DELETE", caller: { userId } });
 }
 
+// Profile (API.md, "Profile"). `adult_confirmed` is only sent when the user
+// ticked the 18+ box on this save.
+export function getProfile(userId: string): Promise<Result<ProfileOut>> {
+  if (MOCK) return mock.getProfile(userId);
+  return call("/v1/me/profile", { caller: { userId } });
+}
+
+export function saveProfile(userId: string, body: Omit<ProfilePrefs, "updated_at"> & { adult_confirmed: boolean }): Promise<Result<ProfileOut>> {
+  if (MOCK) return mock.saveProfile(userId, body);
+  return call("/v1/me/profile", { method: "PUT", body: JSON.stringify(body), caller: { userId } });
+}
+
+export function deleteProfile(userId: string): Promise<Result<ProfileOut>> {
+  if (MOCK) return mock.deleteProfile(userId);
+  return call("/v1/me/profile", { method: "DELETE", caller: { userId } });
+}
+
 // My Contributions (API.md). The first read, and a refresh past its 15-minute
 // cooldown, make the server search GitHub, so they get more time.
 export function contributions(userId: string): Promise<Result<Contributions>> {
@@ -235,7 +252,8 @@ export async function badge(owner: string, repo: string): Promise<Response> {
     const res = await fetch(`${BASE}/badge/${enc(owner)}/${enc(repo)}.svg`, { next: { revalidate: 3600 } });
     return new Response(res.body, {
       status: res.status,
-      headers: { "Content-Type": "image/svg+xml; charset=utf-8", "Cache-Control": "public, max-age=86400" },
+      // The server's cache policy, so a badge that turns neutral isn't held for a day.
+      headers: { "Content-Type": "image/svg+xml; charset=utf-8", "Cache-Control": res.headers.get("Cache-Control") ?? "public, max-age=3600" },
     });
   } catch {
     return mock.badge("");

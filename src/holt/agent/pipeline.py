@@ -7,19 +7,32 @@ disagree, the determinism claim would be worth nothing.
 
 from __future__ import annotations
 
+import logging
+import time
 from collections.abc import Callable
+from concurrent.futures import ThreadPoolExecutor
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
-from holt.agent import landing, landing_detection, stages
+from holt.agent import landing, landing_detection, narration, stages
 from holt.agent.findings import Finding, Findings
-from holt.agent.signals import MIN_AGE_HOURS, Signals, Thread, build_threads, compute, newcomer_threads
+from holt.agent.signals import (
+    MIN_AGE_HOURS,
+    Signals,
+    Thread,
+    build_threads,
+    compute,
+    outsider_threads,
+)
 from holt.agent.verdict import classify as decide
 from holt.agent.verdict import Rule, contested_kind, hours_phrase, headline, legacy_trace
-from holt.agent.verify import check_quotes, verify
+from holt.agent.verify import check_quotes, spoken_words, verify
 from holt.evidence.provider import EvidenceProvider
 from holt.model import ModelClient
 from holt.report import Assessment, Claim
+
+log = logging.getLogger("holt.report")
 
 MAX_CLAIM_CHARS = 240
 MAX_QUOTE_CHARS = 180
@@ -83,6 +96,12 @@ class Trace:
     rules: list[str] = field(default_factory=list)
     # Which Assessment fields a model wrote; empty when no model ran.
     model_written: tuple[str, ...] = ()
+    # Narrated sentences the narration check removed: (field, sentence, why).
+    unsupported_sentences: list[tuple[str, str, str]] = field(default_factory=list)
+    # Seconds per stage ("fetch", "classify", "opportunity", "outcomes",
+    # "narrate") and "total", for AI reports. Classify, opportunity and
+    # outcomes overlap, so the stages add up to more than the total.
+    timings: dict[str, float] = field(default_factory=dict)
 
 
 def analyze(
@@ -110,21 +129,19 @@ def analyze(
             progress=progress, min_age_hours=min_age_hours,
         )
     report = _reporter(progress)
+    started = time.monotonic()
+    timings: dict[str, float] = {}
     report("Fetching pull requests", 0.0)
     records = provider.fetch(repo)
+    timings["fetch"] = round(time.monotonic() - started, 2)
     report("Counting replies and merges", 0.3)
     threads = build_threads(records)
     signals = compute(
         threads, as_of or datetime.now(UTC), _min_age(provider, min_age_hours)
     )
 
-    findings = Findings()
-    report("Working out what kind of project this is", 0.35)
-    stages.classify(repo, records, threads, model, findings)
-    report("Reading the contributing guide", 0.45)
-    stages.assess_opportunity(repo, records, model, findings)
-    report("Reading threads", 0.55)
-    stages.read_outcomes(repo, threads, model, findings)
+    report("Reading threads", 0.35)
+    findings = _read_in_parallel(repo, records, threads, model, timings)
 
     report("Checking evidence", 0.75)
     before = len(findings)
@@ -159,10 +176,24 @@ def analyze(
     narrated_signals = {
         k: v for k, v in narrated_signals.items()
         if k not in ("outsider_awaiting_reply", "outsider_answered")
+        and not k.startswith(("first_timer_", "distinct_first_timer_"))
     }
     report("Writing the report", 0.85)
-    narrated = stages.narrate(
-        repo, verdict.value, legacy_trace(rules), findings, narrated_signals, model
+    trace_lines = legacy_trace(rules)
+    with _timed(timings, "narrate"):
+        narrated = stages.narrate(
+            repo, verdict.value, trace_lines, findings, narrated_signals, model
+        )
+
+    # The prose is checked like the findings were: a sentence stating a figure
+    # that was not measured, quoting words nobody but the author (or a program)
+    # wrote, or naming an internal field is removed. Where that empties a field,
+    # the computed wording stands in, so the reader is never shown a blank.
+    checked, unsupported = narration.check_narration(
+        {k: narrated[k] for k in ("bottom_line", "what_the_evidence_shows",
+                                  "what_could_not_be_determined")},
+        signals.as_dict(), [*trace_lines, *map(str, rules)], spoken_words(records),
+        extra_numbers=(contributor_days,),
     )
     # After narration, so the prompt the recordings were made with is unchanged.
     _say_how_merges_landed(rules, threads)
@@ -198,9 +229,9 @@ def analyze(
     assessment = Assessment(
         repo=repo,
         verdict=verdict,
-        summary=narrated["what_the_evidence_shows"],
-        bottom_line=narrated["bottom_line"],
-        limits=narrated["what_could_not_be_determined"],
+        summary=checked["what_the_evidence_shows"] or _counted_summary(signals),
+        bottom_line=checked["bottom_line"] or _computed_bottom_line(verdict, rules),
+        limits=checked["what_could_not_be_determined"],
         rules=list(rules),
         contributor_days=contributor_days,
         as_of=as_of,
@@ -211,6 +242,17 @@ def analyze(
         models=list(model.usage.models),
         dropped_claims=len(dropped) + len(invented),
     )
+    timings["total"] = round(time.monotonic() - started, 2)
+    usage = model.usage
+    log.info(
+        "ai report %s: %.1fs (%s), %d in / %d out tokens, $%.4f, %s; "
+        "%d claims dropped, %d sentences removed",
+        repo, timings["total"],
+        ", ".join(f"{k} {v:.1f}s" for k, v in timings.items() if k != "total"),
+        usage.input_tokens, usage.output_tokens, usage.cost_usd,
+        ", ".join(usage.models) or "no model", len(dropped) + len(invented),
+        len(unsupported),
+    )
     report("Done", 1.0)
     return assessment, Trace(
         signals=signals,
@@ -220,7 +262,84 @@ def analyze(
         invented=invented,
         rules=rules,
         model_written=MODEL_WRITTEN_FIELDS,
+        unsupported_sentences=unsupported,
+        timings=timings,
     )
+
+
+# Stages A, B and C read different evidence and write different findings, so
+# they run at once: a report waits for the slowest of three calls instead of
+# the sum. Each writes into its own list and the lists are joined in the fixed
+# order A, B, C, so the narration prompt -- and the replay key it hashes to --
+# is the same as when they ran one after another.
+_READERS = (
+    ("classify", lambda repo, records, threads, model, out:
+        stages.classify(repo, records, threads, model, out)),
+    ("opportunity", lambda repo, records, threads, model, out:
+        stages.assess_opportunity(repo, records, model, out)),
+    ("outcomes", lambda repo, records, threads, model, out:
+        stages.read_outcomes(repo, threads, model, out, records=records)),
+)
+
+
+def _read_in_parallel(repo, records, threads, model, timings: dict[str, float]) -> Findings:
+    def run(name, stage):
+        out = Findings()
+        with _timed(timings, name):
+            stage(repo, records, threads, model, out)
+        return out
+
+    with ThreadPoolExecutor(max_workers=len(_READERS)) as pool:
+        futures = [pool.submit(run, name, stage) for name, stage in _READERS]
+        parts = [f.result() for f in futures]
+    merged = Findings()
+    for part in parts:
+        merged.items.extend(part.items)
+    return merged
+
+
+@contextmanager
+def _timed(timings: dict[str, float], name: str):
+    began = time.monotonic()
+    try:
+        yield
+    finally:
+        timings[name] = round(time.monotonic() - began, 2)
+
+
+def _computed_bottom_line(verdict, rules) -> str:
+    deciding = next((r for r in rules if getattr(r, "code", "") != "awaiting_reply"),
+                    rules[0] if rules else "")
+    return f"{headline(verdict)}. {deciding}"
+
+
+def _counted_summary(signals: Signals) -> str:
+    """The counts in a few sentences, computed. Used with no model, and
+    wherever the model's version did not survive the narration check."""
+    s = signals.as_dict()
+    if not signals.outsider_threads:
+        return (
+            "Nobody from outside the project opened a pull request in the period "
+            "we looked at, so there was nothing to count."
+        )
+    summary = (
+        f"{s['outsider_merged']} of {s['outsider_threads']} pull requests from "
+        f"outside contributors were merged, by {s['distinct_merged_authors']} of the "
+        f"{s['distinct_outsider_authors']} people who tried."
+    )
+    summary += " " + first_timer_sentence(signals)
+    if s["median_first_response_hours"] is not None:
+        summary += (
+            f" Of the {s['outsider_answered']} that got a reply, half heard "
+            f"back within {hours_phrase(s['median_first_response_hours'])}."
+        )
+    summary += f" {s['outsider_ignored']} got no reply at all."
+    if s["outsider_awaiting_reply"]:
+        summary += (
+            f" {s['outsider_awaiting_reply']} are too new to have had a reply "
+            "yet and weren't counted as ignored."
+        )
+    return summary + " These are counts from the pull request history, not an AI's judgement."
 
 
 # --- degraded mode -----------------------------------------------------------
@@ -277,7 +396,7 @@ def analyze_without_model(
         findings.add("is_archived", True, (meta.evidence_id,),
                      "GitHub reports this repository as archived")
     # A mirror or a fork: GitHub's own fields, plus whether anything from a
-    # newcomer landed here (a fork that merges outsiders is its own project).
+    # outsider landed here (a fork that merges outsiders is its own project).
     if meta is not None and (
         elsewhere := landing_detection.elsewhere(meta.payload, signals.outsider_merged)
     ):
@@ -288,38 +407,11 @@ def analyze_without_model(
     verdict, rules = decide(findings, signals, contributor_days)
     _say_how_merges_landed(rules, threads)
 
-    s = signals.as_dict()
-    if signals.outsider_threads:
-        summary = (
-            f"{s['outsider_merged']} of {s['outsider_threads']} pull requests from "
-            f"newcomers were merged, by {s['distinct_merged_authors']} of the "
-            f"{s['distinct_outsider_authors']} people who tried."
-        )
-        if s["median_first_response_hours"] is not None:
-            summary += (
-                f" Of the {s['outsider_answered']} that got a reply, half heard "
-                f"back within {hours_phrase(s['median_first_response_hours'])}."
-            )
-        summary += f" {s['outsider_ignored']} got no reply at all."
-        if s["outsider_awaiting_reply"]:
-            summary += (
-                f" {s['outsider_awaiting_reply']} are too new to have had a reply "
-                "yet and weren't counted as ignored."
-            )
-        summary += " These are counts from the pull request history, not an AI's judgement."
-    else:
-        summary = (
-            "Nobody from outside the project opened a pull request in the period "
-            "we looked at, so there was nothing to count."
-        )
-    deciding = next((r for r in rules if getattr(r, "code", "") != "awaiting_reply"),
-                    rules[0] if rules else "")
-
     return Assessment(
         repo=repo,
         verdict=verdict,
-        summary=summary,
-        bottom_line=f"{headline(verdict)}. " + deciding,
+        summary=_counted_summary(signals),
+        bottom_line=_computed_bottom_line(verdict, rules),
         limits=(
             "No model ran. This answer comes from counting the pull request "
             "history, so it can't tell you what specific threads said, who was "
@@ -345,6 +437,24 @@ def analyze_without_model(
     ), _done(report, Trace(signals=signals, rules=rules))
 
 
+def first_timer_sentence(signals: Signals) -> str:
+    """The first-timers among the outsiders, in one sentence.
+
+    Their own numbers because they answer a different question: whether this
+    project lands a stranger's *first* pull request, not only a regular's.
+    """
+    tried = signals.first_timer_threads
+    if not tried:
+        return "None of them came from someone new to this repo."
+    merged = signals.first_timer_merged
+    people = signals.distinct_first_timer_authors
+    return (
+        f"{tried} of them came from {people} "
+        f"{'person' if people == 1 else 'people'} new to this repo, "
+        f"and {merged} of those {'was' if merged == 1 else 'were'} merged."
+    )
+
+
 # Rules after which how the merges happened is beside the point.
 _NOT_ABOUT_MERGES = {"archived", "elsewhere", "closed_kind", "non_software_kind"}
 
@@ -357,7 +467,7 @@ def _say_how_merges_landed(rules: list[str], threads: dict[str, Thread]) -> None
     """
     if any(getattr(r, "code", "") in _NOT_ABOUT_MERGES for r in rules):
         return
-    if line := landing_detection.landed_sentence(newcomer_threads(threads)):
+    if line := landing_detection.landed_sentence(outsider_threads(threads)):
         rules.append(Rule(line, code="landed_off_button"))
 
 

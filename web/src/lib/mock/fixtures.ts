@@ -16,7 +16,7 @@ interface Seed {
   landing: Report["landing"];
   never_landed: Report["never_landed"];
   evidence: [kind: string, pr: number, text: string, quote: string | null][];
-  issues: Omit<StarterIssue, "url" | "created_at">[];
+  issues: Omit<StarterIssue, "url" | "created_at" | "beginner" | "areas">[];
   summary: string;
 }
 
@@ -287,9 +287,19 @@ function hoursAgo(h: number): string {
   return new Date(Date.now() - h * 3_600_000).toISOString();
 }
 
+// A rough copy of the server's `beginner` and `areas` (holt.starter), enough for mock pages.
+const AREAS: [StarterIssue["areas"][number], RegExp][] = [
+  ["docs", /\b(docs?|documentation|readme|typo)/i],
+  ["tests", /\btests?\b/i],
+  ["design", /\b(ui|ux|design|css|screenshots?)\b/i],
+  ["translations", /\b(translations?|i18n)\b/i],
+];
+
 function toIssues(repo: string, seed: Seed["issues"]): StarterIssue[] {
   return seed.map((i, n) => ({
     ...i,
+    beginner: i.labels.some((l) => /good first|first-timers|beginner/i.test(l)),
+    areas: ((a) => (a.length ? a : ["code" as const]))(AREAS.filter(([, re]) => i.labels.some((l) => re.test(l)) || re.test(i.title)).map(([k]) => k)),
     url: `https://github.com/${repo}/issues/${i.number}`,
     created_at: hoursAgo(30 + n * 41),
   }));
@@ -329,12 +339,20 @@ function toEvidence(repo: string, ev: Seed["evidence"], mode: "rules" | "ai"): E
   });
 }
 
+// The AI report's two-sentence lead, as the model writes it (addressed to "you").
+const BOTTOM_LINE: Record<Verdict, string> = {
+  viable: "You'd likely get a reply and a real review here. Start with something small, like a docs or test fix.",
+  not_viable: "Your pull request would probably sit without an answer here. Your time is better spent on a more responsive project.",
+  insufficient_evidence: "Too few outsiders have tried here lately to say how you'd be treated. If you try, keep your first change very small.",
+};
+
 function fromSeed(seed: Seed, mode: "rules" | "ai", days: number): Report {
   return withDerived({
     repo: seed.repo,
     mode,
     days,
     verdict: seed.verdict,
+    bottom_line: mode === "ai" ? BOTTOM_LINE[seed.verdict] : null,
     summary: mode === "ai" ? seed.summary : null,
     stats: seed.stats,
     decided_by: seed.decided_by,
@@ -344,7 +362,7 @@ function fromSeed(seed: Seed, mode: "rules" | "ai", days: number): Report {
     evidence: toEvidence(seed.repo, seed.evidence, mode),
     evidence_until: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10) + "T00:00:00Z",
     generated_at: hoursAgo(2),
-    cost: mode === "ai" ? { model: "anthropic/claude-sonnet-5", input_tokens: 9120, output_tokens: 1480 } : null,
+    cost: mode === "ai" ? { model: "openai/gpt-5-mini", input_tokens: 9120, output_tokens: 1480, usd: 0.00524, seconds: 41.3 } : null,
   });
 }
 

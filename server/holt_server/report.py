@@ -17,7 +17,7 @@ from typing import Any
 from holt.agent import landing as landing_mod
 from holt.agent.landing_detection import VIA
 from holt.agent.pipeline import MODEL_NOTE_LABEL
-from holt.agent.signals import Signals, Thread, build_threads, newcomer_threads
+from holt.agent.signals import Signals, Thread, build_threads, outsider_threads
 from holt.agent.verdict import rule_codes
 from holt.report import Assessment
 from holt.types import EvidenceRecord
@@ -101,14 +101,14 @@ RULES_EVIDENCE_EACH = 4
 
 def counted_examples(threads: dict[str, Thread],
                      records: dict[str, EvidenceRecord]) -> list[dict[str, Any]]:
-    """Recent first-timer pull requests behind the counts, for a report with no AI.
+    """Recent outsider pull requests behind the counts, for a report with no AI.
 
     Without a model the engine cites nothing, which leaves a beginner with
     numbers and no way to look for themselves. These are picked by arithmetic
     only (newest merged, newest with no reply), so they say nothing the counts
     do not already say; they just make the counts clickable.
     """
-    outsiders = sorted(newcomer_threads(threads), key=lambda t: t.opened_at, reverse=True)
+    outsiders = sorted(outsider_threads(threads), key=lambda t: t.opened_at, reverse=True)
     picks = [("merged", t) for t in outsiders if t.merged][:RULES_EVIDENCE_EACH]
     picks += [("no_reply", t) for t in outsiders
               if not t.merged and not t.engaged][:RULES_EVIDENCE_EACH]
@@ -124,7 +124,7 @@ def counted_examples(threads: dict[str, Thread],
         if value == "merged":
             # GitHub shows an off-button landing as closed; say how it went in.
             what = f"landed {VIA[t.landed_via]}" if t.landed_via else "was merged"
-        text = f"First-time contributor's pull request #{t.number} {what}"
+        text = f"Outside contributor's pull request #{t.number} {what}"
         out.append({"id": evidence_id, "url": url, "kind": "outsider_pr", "value": value,
                     "text": text + (f": “{title}”" if title else ""), "quote": None})
     return out
@@ -144,7 +144,7 @@ def stats(signals: Signals) -> dict[str, Any]:
         "outsider_attempts": signals.outsider_threads,
         "outsider_merged": signals.outsider_merged,
         "distinct_outsiders": signals.distinct_outsider_authors,
-        "first_time_merged_authors": signals.distinct_merged_authors,
+        "first_time_merged_authors": signals.distinct_first_timer_merged_authors,
         "no_reply": signals.outsider_ignored,
         "median_first_response_hours": signals.median_first_response_hours,
         "bot_share": round(signals.bot_share, 3),
@@ -192,6 +192,9 @@ def build(
         "mode": mode,
         "days": assessment.contributor_days,
         "verdict": assessment.verdict.value,
+        # Rules mode computes a bottom line too ("headline. deciding rule"), but
+        # the verdict block already says exactly that, so only AI mode sends it.
+        "bottom_line": (assessment.bottom_line or None) if mode == "ai" else None,
         "summary": (assessment.summary or None) if mode == "ai" else None,
         "stats": stats(signals),
         "decided_by": [str(r) for r in assessment.rules],

@@ -296,32 +296,56 @@ class _Serve(EvidenceProvider):
         return None
 
 
+# The v2 fields that say who is on the project's team (people.maintainers):
+# the association, who merged or closed other people's work, and labels.
+READ_BY_THE_TEAM = {"author_association", "merged_by", "merged_by_is_bot",
+                    "closed_by", "closed_by_is_bot", "labels"}
+
+
+def _without(records: list[EvidenceRecord], keys: set[str]) -> list[EvidenceRecord]:
+    return [
+        EvidenceRecord(r.evidence_id, r.source, r.url, r.timestamp,
+                       {k: v for k, v in r.payload.items() if k not in keys})
+        for r in records if ":reference:" not in r.evidence_id and ":release:" not in r.evidence_id
+    ]
+
+
 @pytest.mark.parametrize("slug", ["pytorch/pytorch", "react/react-native",
                                   "openssl/openssl", "pallets/flask"])
-def test_v2_fields_only_add_to_what_older_captures_show(slug):
-    # Same evidence with and without the v2 additions. The v2 fields (how a
-    # pull request was closed, its labels) can only reveal more landings than
-    # an older capture sees; where nothing landed off the button (flask) the
-    # two read identically, and an older capture still replays.
+def test_the_rest_of_v2_only_adds_to_what_a_capture_shows(slug):
+    # Same evidence with every v2 addition, and with only the ones that decide
+    # who is on the team. The rest (how a pull request was closed) can only
+    # reveal more landings; where nothing landed off the button (flask) the
+    # two read identically. Older captures, without the association either,
+    # are test_signals' test_every_committed_fixture_counts_outsiders_exactly_as_before.
     as_of = RECORDED_AT
     meta = RECORDED[slug]["meta"]
     v2 = [gql.project_repo_meta(slug, meta), *gql.project_releases(slug, meta),
           *gql.project(slug, RECORDED[slug]["pull_requests"])]
-    v1 = [
-        EvidenceRecord(r.evidence_id, r.source, r.url, r.timestamp,
-                       {k: v for k, v in r.payload.items() if k not in V2_KEYS})
-        for r in v2 if ":reference:" not in r.evidence_id and ":release:" not in r.evidence_id
-    ]
-    t2, t1 = build_threads(v2), build_threads(v1)
+    some = _without(v2, V2_KEYS - READ_BY_THE_TEAM)
+    t2, t1 = build_threads(v2), build_threads(some)
     assert t2.keys() == t1.keys()
     assert {k for k, t in t1.items() if t.merged} <= {k for k, t in t2.items() if t.merged}
 
     a2, _ = analyze_without_model(slug, _Serve(v2, as_of), as_of=as_of)
-    a1, _ = analyze_without_model(slug, _Serve(v1, as_of), as_of=as_of)
+    a1, _ = analyze_without_model(slug, _Serve(some, as_of), as_of=as_of)
     if slug == "pallets/flask":
         assert compute(t2, as_of).as_dict() == compute(t1, as_of).as_dict()
         assert classify(Findings(), compute(t2, as_of)) == classify(Findings(), compute(t1, as_of))
         assert a2 == a1
+
+
+def test_maintainers_stop_counting_as_outsiders_once_association_is_known():
+    # flask's own maintainers open pull requests too. Without the association
+    # each one's first PR in the sample counted as a newcomer's; with it, none.
+    slug = "pallets/flask"
+    v2 = list(gql.project(slug, RECORDED[slug]["pull_requests"]))
+    known = compute(build_threads(v2), RECORDED_AT)
+    legacy = compute(build_threads(_without(v2, V2_KEYS)), RECORDED_AT)
+    staff = {r.payload["author"] for r in v2 if r.evidence_id.endswith(":opened")
+             and r.payload["author_association"] in {"OWNER", "MEMBER", "COLLABORATOR"}}
+    assert staff, "the recording has maintainer pull requests to test with"
+    assert known.outsider_threads < legacy.outsider_threads
 
 
 def test_v2_records_survive_a_fixture_round_trip(tmp_path):
@@ -439,3 +463,83 @@ def _node(timeline: list[dict], closed_at: str = "2026-09-02T00:00:00Z") -> dict
 def _project_one(node: dict) -> dict[str, EvidenceRecord]:
     return {r.evidence_id: r for r in gql.project("a/b", [node])}
 
+
+
+# --- renamed repositories ----------------------------------------------------
+
+
+def test_a_renamed_repository_is_searched_under_the_name_github_uses_now():
+    # facebook/react-native is react/react-native now. GitHub answers the
+    # repository lookup under either name, but a pull request search under the
+    # old one finds nothing: the report read as a project nobody contributes to.
+    meta = {**_meta(), "nameWithOwner": "react/react-native"}
+    node = _node(closed_at="2026-08-20T00:00:00Z", timeline=[
+        {"__typename": "ReferencedEvent", "createdAt": "2026-08-10T00:00:00Z",
+         "actor": {"login": "m", "__typename": "User"}, "commit": {"oid": "a" * 40},
+         "commitRepository": {"nameWithOwner": "react/react-native"}},
+    ])
+    queries = []
+
+    class Transport:
+        def repo_meta(self, owner, name, until):
+            assert (owner, name) == ("facebook", "react-native")
+            return meta
+
+        def search_pull_requests(self, q, max_pages):
+            queries.append(q)
+            return [node] if q.startswith("repo:react/react-native ") else []
+
+    provider = gql.LiveGitHubProvider(
+        Window.PRE_T, cutoff=datetime(2026, 9, 1, tzinfo=UTC), transport=Transport())
+    ids = {r.evidence_id: r for r in provider.fetch("facebook/react-native")}
+    assert [q.split()[0] for q in queries] == ["repo:react/react-native"]
+    # Ids keep the name asked for, which callers look them up by; links go
+    # straight to where the pull request lives now.
+    opened = ids["pr:facebook/react-native#1:opened"]
+    assert opened.url == "https://github.com/react/react-native/pull/1"
+    assert ids["repo:facebook/react-native:meta"].payload["name_with_owner"] == "react/react-native"
+    # A commit in the repository under its new name is still "this repository".
+    assert "pr:facebook/react-native#1:reference:0" in ids
+
+
+def test_a_lookup_without_a_canonical_name_searches_as_asked():
+    # Older transports and captures give no nameWithOwner.
+    meta = {k: v for k, v in _meta().items() if k != "nameWithOwner"}
+    queries = []
+
+    class Transport:
+        def repo_meta(self, owner, name, until):
+            return meta
+
+        def search_pull_requests(self, q, max_pages):
+            queries.append(q)
+            return []
+
+    gql.LiveGitHubProvider(Window.PRE_T, cutoff=datetime(2026, 9, 1, tzinfo=UTC),
+                           transport=Transport()).fetch("a/b")
+    assert queries[0].startswith("repo:a/b ")
+
+
+# --- people new to this repo, in the report ----------------------------------
+
+
+def test_the_report_and_cli_say_how_many_attempts_came_from_people_new_to_the_repo():
+    from holt.cli import stats_from
+
+    slug = "pallets/flask"
+    recs = list(gql.project(slug, RECORDED[slug]["pull_requests"]))
+    assessment, trace = analyze_without_model(slug, _Serve(recs, RECORDED_AT),
+                                              as_of=RECORDED_AT)
+    s = trace.signals
+    assert 0 < s.first_timer_threads <= s.outsider_threads
+    assert (f"{s.first_timer_threads} of them came from "
+            f"{s.distinct_first_timer_authors} ") in assessment.summary
+    assert "new to this repo" in assessment.summary
+    for jargon in ("first_timer", "FIRST_TIME", "CONTRIBUTOR", "association"):
+        assert jargon not in assessment.summary and jargon not in " ".join(assessment.rules)
+
+    stats = stats_from(s)
+    assert stats["first_timer_attempts"] == s.first_timer_threads
+    assert stats["first_timer_merged"] == s.first_timer_merged
+    # "people got their first pull request merged here", as the web app says.
+    assert stats["first_time_merged_authors"] == s.distinct_first_timer_merged_authors

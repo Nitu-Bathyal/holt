@@ -91,9 +91,9 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `holt_server/pricing.py` | Loads and checks the catalogue (`pricing.json`). |
 | `holt_server/admin.py` | The read-only `/v1/admin/*` view (balances, ledger, plans). |
 | `holt_server/jobs.py` | The runner: claims queued jobs from Postgres (user jobs before badge refreshes), runs them in threads, publishes progress for SSE. Each runner heartbeats the jobs it holds every 15s; a `running` job with no heartbeat for 90s belonged to a dead process and is queued again. Several processes can share one database. |
-| `holt_server/engine.py` | Calls `holt.agent.pipeline.analyze` / `analyze_without_model`. Wraps the provider and model to report stages; uses the engine's own progress callback when it has one. Maps failures to API error codes. |
+| `holt_server/engine.py` | Calls `holt.agent.pipeline.analyze` / `analyze_without_model`. Wraps the provider and model to report stages; uses the engine's own progress callback when it has one. Maps failures to API error codes. Logs one line per AI report (`holt_server.engine`: repo, model, tokens, dollars, seconds per stage; never evidence text or keys). |
 | `holt_server/report.py` | `Assessment` + `Trace` → the Report JSON. Landing areas and evidence URLs come from the records the run read. |
-| `holt_server/llm.py` | Model clients (OpenRouter over the OpenAI API; an Anthropic-native client too) built per job from the server key. Nothing is written to disk. |
+| `holt_server/llm.py` | Model clients (OpenRouter over the OpenAI API; an Anthropic-native client too) built per job from the server key. Every call carries the engine's per-stage output cap (`holt.model.max_output_tokens`); an answer cut off at the cap fails the job as an `upstream` error, never half a report. Nothing is written to disk. |
 | `holt_server/starter.py` | Lazy adapter over `holt.starter`; the endpoints return 501 until that module exists. |
 | `holt_server/pro.py` | Client for the optional paid-features service (`HOLT_PRO_URL`): the key header, 2 s connect / 10 s read timeouts, one retry on a failed connection or a 503, and its error envelope turned into this API's errors with plain messages. `Services.pro` is None when it is off, and `Services.require_pro()` then answers 501 "not available yet". |
 | `holt_server/badge.py` | The README badge SVG. |

@@ -286,7 +286,7 @@ LANDING = [Area("docs", 8, 10), Area("src/widgets", 4, 6), Area("src", 9, 20),
 def test_landing_boost_for_a_named_area():
     points, result = score(issue(title="Fix wording in the docs"), landing=LANDING)
     assert points > score(issue(title="Fix wording in the docs"))[0]
-    assert ("Mentions docs/, where 8 of 10 pull requests from first-time "
+    assert ("Mentions docs/, where 8 of 10 pull requests from outside "
             "contributors were merged") in result.why
 
 
@@ -549,7 +549,7 @@ def test_cli_start_find_text_and_json(monkeypatch, capsys):
     assert seen == {"languages": ["python", "rust"], "topics": ["cli"],
                     "hacktoberfest": True}
     assert "1. o/r: Worth your time" in out
-    assert "4 of 10 recent pull requests from first-time contributors" in out
+    assert "4 of 10 recent pull requests from outside contributors" in out
     assert "https://github.com/o/r/issues/7" in out
 
     assert cli.main(["start", "--lang", "python", "--json"]) == 0
@@ -623,3 +623,23 @@ def test_discover_table_shows_headlines_not_enum_values():
                           replayed=False, as_of=AS_OF, skipped=[], unanalysed=0)
     assert "| Not worth your time |" in out
     assert "not_viable" not in out
+
+
+def test_beginner_issue_means_a_first_timer_label():
+    assert starter.is_beginner_issue(["Good First Issue"])
+    assert starter.is_beginner_issue(["first-timers-only"])
+    assert not starter.is_beginner_issue(["help wanted"])
+    assert not starter.is_beginner_issue([])
+
+
+def test_issue_areas_from_labels_and_title():
+    assert starter.issue_areas(["documentation"], "Clarify install steps") == ["docs"]
+    assert starter.issue_areas([], "Fix typo in README") == ["docs"]
+    assert starter.issue_areas(["area: testing"], "x") == ["tests"]
+    assert starter.issue_areas(["UI/UX"], "Button overlaps") == ["design"]
+    assert starter.issue_areas(["i18n"], "Add German") == ["translations"]
+    assert starter.issue_areas([], "Crash on empty config") == ["code"]
+    # A bug label makes it code as well as whatever else it touches.
+    assert starter.issue_areas(["bug", "docs"], "x") == ["code", "docs"]
+    # A language label is not a translation.
+    assert starter.issue_areas(["language: python"], "x") == ["code"]

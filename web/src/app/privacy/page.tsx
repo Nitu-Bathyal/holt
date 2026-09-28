@@ -49,6 +49,7 @@ export default function PrivacyPage() {
         <li><strong>Your name, email address and profile-picture link</strong> from GitHub or Google, and nothing else from either account. Sections 3 and 4 say exactly what each provider gives us and how to take it back.</li>
         <li><strong>The sign-in library&rsquo;s records:</strong> the provider&rsquo;s ID for your account, so it can recognise you next time. The access tokens GitHub or Google return at sign-in are thrown away, not stored.</li>
         <li><strong>Your analyses and history:</strong> which repositories you checked, when, in which mode, and the resulting reports, so your history page works.</li>
+        <li id="profile"><strong>Your profile, if you fill one in:</strong> the languages, topics, time, kinds of contribution and experience you choose, and when you confirmed you&rsquo;re 18 or older, used only to pre-fill your searches; delete it any time in <Link href="/settings#profile" className="text-link">settings</Link>.</li>
         <li><strong>Your free AI reports:</strong> how many you have left, when you last claimed one, a record of each one given, used or given back, and your plan.</li>
       </ul>
 
@@ -155,7 +156,7 @@ export default function PrivacyPage() {
 
       <h2>5. Cookies and browser storage</h2>
       <ul>
-        <li><strong>One session cookie</strong>, set only when you sign in, so you stay signed in. It contains a random token, not your details.</li>
+        <li><strong>One session cookie</strong>, set only when you sign in, so you stay signed in. It contains a random token, not your details. If you skip the profile card, a second cookie remembers that for a year.</li>
         <li><strong>Small settings in your browser&rsquo;s local storage:</strong> your light or dark theme choice, and whether you closed the Hacktoberfest banner. These never leave your browser.</li>
       </ul>
       <p>That&rsquo;s all. There are no advertising cookies, no third-party analytics scripts, and no tracking pixels.</p>
@@ -190,7 +191,7 @@ export default function PrivacyPage() {
         analysed, plus Holt&rsquo;s own findings. <strong>Nothing about you</strong> (no name, email or account information) is included.
       </p>
       <ul>
-        <li>Requests go through <strong>OpenRouter</strong>, on Holt&rsquo;s own account, which routes them to the model vendor for the chosen model (currently OpenAI, Google or Anthropic models). OpenRouter&rsquo;s and that vendor&rsquo;s policies apply to those requests.</li>
+        <li>Requests go through <strong>OpenRouter</strong>, on Holt&rsquo;s own account, which routes them to the vendor of the model Holt uses (currently an OpenAI, Google or Anthropic model). OpenRouter&rsquo;s and that vendor&rsquo;s policies apply to those requests.</li>
       </ul>
 
       <h2>8. Who else sees data</h2>

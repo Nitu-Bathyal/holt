@@ -6,6 +6,7 @@ import { SITE_URL } from "@/lib/site";
 import type { Odds, Report } from "@/lib/types";
 import { CatFace } from "../cat-face";
 import { Track } from "../track";
+import { badgeOffered } from "@/lib/badge";
 import { BadgeSnippet } from "./badge-snippet";
 import { EvidenceList } from "./evidence-list";
 import { LandingMap } from "./landing-map";
@@ -100,10 +101,15 @@ export function ReportView({
       <div className="min-w-0 space-y-10">
         <VerdictHero report={report} reveal={reveal} />
 
-        {report.summary && (
-          <div className="border-l-2 border-blue pl-5">
+        {(report.bottom_line || report.summary) && (
+          <div className="border-l-2 border-blue pl-5" data-ai-explanation>
             <p className="text-[0.72rem] uppercase tracking-[0.08em] text-blue">AI explanation</p>
-            <p className="mt-2 font-sans text-[1.02rem] leading-relaxed text-ink">{report.summary}</p>
+            {report.bottom_line && (
+              <p className="mt-2 font-sans text-[1.12rem] font-medium leading-relaxed text-ink" data-bottom-line>
+                {report.bottom_line}
+              </p>
+            )}
+            {report.summary && <p className="mt-2 font-sans text-[1.02rem] leading-relaxed text-ink">{report.summary}</p>}
             <p className="mt-2 text-[0.72rem] text-faint">
               Written by {report.cost?.model ?? "a model"} from the evidence below. The verdict itself comes from fixed rules.
             </p>
@@ -165,7 +171,7 @@ export function ReportView({
 
         <div className="lg:hidden space-y-4">
           {report.mode === "rules" && <UpgradeCard repo={repo} signedIn={signedIn} />}
-          <BadgeSnippet repo={repo} />
+          <BadgeSnippet repo={repo} offered={badgeOffered(report)} />
         </div>
       </div>
 
@@ -176,7 +182,7 @@ export function ReportView({
             <ShareBar url={url} text={shareText} />
           </div>
           {report.mode === "rules" && <UpgradeCard repo={repo} signedIn={signedIn} />}
-          <BadgeSnippet repo={repo} />
+          <BadgeSnippet repo={repo} offered={badgeOffered(report)} />
           <Link href={`/compare?repos=${repo}`} className="block text-[0.8rem] text-muted hover:text-ink">
             [ compare with another repo → ]
           </Link>

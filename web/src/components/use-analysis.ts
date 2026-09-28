@@ -12,7 +12,7 @@ export type AnalysisState =
 const LOST: ApiError = { code: "upstream", message: "We lost the connection while the report was running. It may have finished; try again." };
 
 /** Start (or reuse) an analysis and follow its progress over SSE. */
-export function useAnalysis(repo: string, mode: Mode, days: number, enabled = true, model?: string) {
+export function useAnalysis(repo: string, mode: Mode, days: number, enabled = true) {
   const [state, setState] = useState<AnalysisState>({ phase: "starting" });
   const [attempt, setAttempt] = useState(0);
   const es = useRef<EventSource | null>(null);
@@ -26,7 +26,7 @@ export function useAnalysis(repo: string, mode: Mode, days: number, enabled = tr
         res = await fetch("/api/analyses", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ repo, mode, days, ...(mode === "ai" && model ? { model } : {}) }),
+          body: JSON.stringify({ repo, mode, days }),
         });
       } catch {
         if (!cancelled) setState({ phase: "error", error: LOST });
@@ -72,7 +72,7 @@ export function useAnalysis(repo: string, mode: Mode, days: number, enabled = tr
       cancelled = true;
       es.current?.close();
     };
-  }, [repo, mode, days, attempt, enabled, model]);
+  }, [repo, mode, days, attempt, enabled]);
 
   const retry = useCallback(() => {
     setState({ phase: "starting" });

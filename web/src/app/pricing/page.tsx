@@ -28,7 +28,7 @@ const PLANS = [
     items: [
       `${WELCOME_AI_CREDITS} AI reports when you sign in`,
       `Claim 1 more every ${CLAIM_EVERY_DAYS} days`,
-      "Cited, mentor-style explanation",
+      "A written explanation, with checked quotes linked to GitHub",
       "Your report history",
     ],
     cta: { href: "/signin", label: "sign in" },
@@ -38,7 +38,7 @@ const PLANS = [
 ];
 
 const SOON = [
-  { name: "Student Pro", body: "More AI reports, and the pro models." },
+  { name: "Student Pro", body: "More AI reports each month." },
   { name: "Clubs & classrooms", body: "Shared quota for a college club or a course." },
 ];
 
