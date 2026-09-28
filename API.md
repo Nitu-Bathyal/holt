@@ -30,8 +30,9 @@ with codes: `unauthorized`, `not_found` (repo missing or private),
 `invalid_repo`, `rate_limited` (ours or GitHub's; include `retry_after` seconds),
 `quota_exceeded` (not enough credits, or a plan's monthly allowance is used up),
 `needs_plan` (the feature comes only with a paid plan), `needs_key` (AI report requested without
-signing in), `ai_unavailable` (AI reports are switched off: the server has no
-model key), `claim_not_ready` (a weekly claim before it is due),
+signing in), `ai_unavailable` (AI is switched off: the server has no
+model key or no AI budget, or the environment's AI budget is used up, which
+also sends `"reason": "ai_budget_used_up"`; nothing is charged), `claim_not_ready` (a weekly claim before it is due),
 `payments_off` (credit packs or plans aren't on sale), `payment_unconfirmed` (a
 payment's signature didn't check out; nothing was credited),
 `already_subscribed` (the user already has a paid plan),
@@ -559,6 +560,9 @@ gets 404 `not_found`. There is no admin UI.
   (uses per feature and month) and `access` (an `Access` per feature). 404
   for an unknown user.
 - `GET /v1/admin/pricing` → the catalogue this server loaded.
+- `GET /v1/admin/ai-spend` → `AdminAiSpend`: `{"budget_usd", "spent_usd",
+  "held_usd", "runs", "running", "line"}`, this environment's AI spend against
+  `HOLT_AI_BUDGET_USD` (0 = AI off); `line` is `"AI spend: $0.23 of $1.00"`.
 
 ### Connect GitHub
 

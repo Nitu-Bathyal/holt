@@ -39,7 +39,7 @@ from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import delete, select, update
 
-from holt_server import entitlements, starter
+from holt_server import budget, entitlements, starter
 from holt_server.db import (
     BADGE_PRIORITY,
     ENGINE_VERSION,
@@ -131,6 +131,7 @@ class JobRunner:
         self._wake = asyncio.Event()
         self._tasks: list[asyncio.Task] = []
         self._running: dict[str, int] = {}  # job id -> priority, jobs this runner holds
+        self._models: dict[str, budget.Capped] = {}  # running AI reports' model clients
         self._stopping = False
 
     # --- lifecycle ----------------------------------------------------------
@@ -315,6 +316,8 @@ class JobRunner:
         limit = self.timeout_for(job)
         try:
             try:
+                # AI work claims its hold on the budget, or fails (refunded) without one.
+                await budget.start(self.services, job)
                 if job.kind == "find":
                     result = await self._in_thread(stop, limit, self._find_sync, job, emit, loop)
                 elif job.kind == "playbook":
@@ -339,6 +342,8 @@ class JobRunner:
         except JobTimedOut:
             log.warning("job %s timed out after %.0fs (%s %s)", job.id, limit, what,
                         job.repo or "")
+            # It may still be running, and spending: it keeps its whole hold.
+            self.services.ai_costs[job.id] = None
             await self._fail(job, timed_out())
         except ApiError as err:
             log.warning("job %s failed after %.1fs: %s", job.id,
@@ -389,7 +394,10 @@ class JobRunner:
         provider = svc.provider_factory(job.repo, as_of)
         model = None
         if job.mode == "ai":
-            model = svc.model_factory(spec)
+            model = budget.Capped(svc.model_factory(spec), spec.model,
+                                  budget.run_max_usd(svc.settings, budget.ANALYSIS))
+            # What it has spent so far, for `_fail` if the run stops early.
+            self._models[job.id] = model
         return svc.analysis_fn(repo=job.repo, mode=job.mode, days=job.days,
                               provider=provider, model=model, emit=emit,
                               as_of=getattr(provider, "cutoff", as_of))
@@ -438,6 +446,7 @@ class JobRunner:
         # Here, not at the top: these import the API module, which imports this one.
         from holt_server import playbook, preflight
 
+        cost = self._ai_cost(job, result)
         async with self.services.db.session() as s:
             done = await s.execute(self._mine(job.id).values(
                 status="done", stage="Done", progress=1.0, result=result,
@@ -454,13 +463,32 @@ class JobRunner:
                 await playbook.store(s, job, result)
             elif job.kind == "preflight":
                 await preflight.store(s, job, result)
+            if budget.kind_of(job):
+                await budget.settle(s, job.id, cost)
             await s.commit()
         self.hub.publish(job.id, "done", done_payload(job.kind, result))
+
+    def _ai_cost(self, job: Job, result: dict[str, Any] | None = None) -> float | None:
+        """What the job's model work cost, for `budget.settle`: the report's
+        own `cost`, what its model spent before it failed, or what the service
+        said. None when unknown (it timed out, or the service didn't answer)."""
+        model = self._models.pop(job.id, None)
+        if job.id in self.services.ai_costs:
+            return self.services.ai_costs.pop(job.id)
+        if job.kind != "analysis":
+            return None
+        usd = ((result or {}).get("cost") or {}).get("usd")
+        if isinstance(usd, int | float):
+            return float(usd)
+        if model is None:
+            return None
+        return float(getattr(getattr(model.inner, "usage", None), "cost_usd", 0.0) or 0.0)
 
     async def _fail(self, job: Job, err: ApiError) -> None:
         # Here, not at the top: playbook.py imports the API module, which imports this one.
         from holt_server import playbook
 
+        cost = self._ai_cost(job)
         async with self.services.db.session() as s:
             failed = await s.execute(self._mine(job.id).values(
                 status="error", stage="Failed", error=err.body(), finished_at=now()))
@@ -472,6 +500,8 @@ class JobRunner:
             await entitlements.refund_job(s, job)
             if job.kind == "playbook":
                 await playbook.refund_unlocks(s, job.id)
+            if budget.kind_of(job):
+                await budget.settle(s, job.id, cost)
             await s.commit()
         self.hub.publish(job.id, "error", {"error": err.body()})
 

@@ -299,11 +299,11 @@ def test_ai_needs_sign_in(h):
 
 
 def test_ai_uses_the_server_model(make_harness):
-    h = make_harness(OPENROUTER_API_KEY="sk-or-server", OPENROUTER_MODEL="some/model")
+    h = make_harness(OPENROUTER_API_KEY="sk-or-server", OPENROUTER_MODEL="openai/gpt-5")
     job = h.post("/v1/analyses", {"repo": "octo/one", "mode": "ai"}, user="u1").json()["job_id"]
     assert h.wait(job)["status"] == "done"
     spec = h.model_specs[0]
-    assert (spec.provider, spec.model, spec.api_key) == ("openrouter", "some/model", "sk-or-server")
+    assert (spec.provider, spec.model, spec.api_key) == ("openrouter", "openai/gpt-5", "sk-or-server")
     # A cached AI report costs nothing.
     assert h.post("/v1/analyses", {"repo": "octo/one", "mode": "ai"},
                   user="u1").status_code == 200
@@ -312,7 +312,7 @@ def test_ai_uses_the_server_model(make_harness):
 def test_a_model_in_the_request_is_ignored(make_harness):
     # Model choice is server configuration. Old clients that still send one
     # aren't refused, and the field changes nothing: not the model, not the job.
-    h = make_harness(OPENROUTER_API_KEY="sk-or-server", OPENROUTER_MODEL="some/model")
+    h = make_harness(OPENROUTER_API_KEY="sk-or-server", OPENROUTER_MODEL="openai/gpt-5")
     h.engine.gate.clear()
     picked = h.post("/v1/analyses", {"repo": "octo/one", "mode": "ai", "model": "claude-opus-5",
                                      "params": {"model": "claude-opus-5"}}, user="u1")
@@ -322,7 +322,7 @@ def test_a_model_in_the_request_is_ignored(make_harness):
     assert plain.json()["job_id"] == picked.json()["job_id"]  # same cache key, one job
     h.engine.gate.set()
     assert h.wait(picked.json()["job_id"])["status"] == "done"
-    assert [s.model for s in h.model_specs] == ["some/model"]
+    assert [s.model for s in h.model_specs] == ["openai/gpt-5"]
     (row,) = db_rows(h, Job)
     assert "claude-opus-5" not in json.dumps({"p": row.params, "k": row.dedupe_key})
     # And the cached report answers either request.

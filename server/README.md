@@ -60,6 +60,10 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `OPENROUTER_MODEL` | `openai/gpt-5-mini` | Model id on OpenRouter for server-paid AI reports. |
 | `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | OpenAI-compatible endpoint. Point it at `https://api.openai.com/v1` (with `OPENROUTER_MODEL=gpt-5-mini` and an OpenAI key) to use OpenAI directly. |
 | `HOLT_MODEL_PROVIDER` | *(read from the endpoint)* | `openrouter`, `openai` or `gemini`: which parameter names the endpoint takes (`max_tokens` and `reasoning` for OpenRouter; `max_completion_tokens` and `reasoning_effort` for OpenAI). Set it only for a proxy whose URL doesn't say. |
+| `HOLT_AI_BUDGET_USD` | `0` (AI off) | The most this environment may ever spend on AI models, in USD: AI reports and the paid-features service's playbooks and summaries together. See [AI budget](#ai-budget). `0` turns every AI feature off (they answer `ai_unavailable` and charge nothing). |
+| `HOLT_AI_BUDGET_OWNER_OK` | `0` | With `HOLT_ENV=production`, a budget counts only when this is `1` too: the owner's explicit say-so. Without it AI stays off and startup logs an error. |
+| `HOLT_AI_RUN_MAX_USD` | `0.10` | The most one AI report may cost. Held from the budget while it runs; its model calls are refused once the next could pass it. |
+| `HOLT_AI_PRO_RUN_MAX_USD` | `0.05` | The same for a playbook or pre-flight summary from the paid-features service. |
 | `HOLT_MODEL_REASONING_EFFORT` | *(empty)* | `minimal`, `low`, `medium` or `high` for reasoning models (gpt-5, o-series). Empty sends nothing and the provider's default applies. |
 | `HOLT_JOB_CONCURRENCY` | `2` | User lane: people's analyses and finds running at once in this process. Each holds a thread and some memory. |
 | `HOLT_JOB_TIMEOUT_RULES` | `180` | Seconds a rules report may run before it is stopped and fails with a plain "took too long" error. |
@@ -106,6 +110,7 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `holt_server/engine.py` | Calls `holt.agent.pipeline.analyze` / `analyze_without_model`. Wraps the provider and model to report stages; uses the engine's own progress callback when it has one. Maps failures to API error codes. Logs one line per AI report (`holt_server.engine`: repo, model, tokens, dollars, seconds per stage; never evidence text or keys). |
 | `holt_server/report.py` | `Assessment` + `Trace` → the Report JSON. Landing areas and evidence URLs come from the records the run read. |
 | `holt_server/llm.py` | Model clients (OpenRouter over the OpenAI API; an Anthropic-native client too) built per job from the server key. Every call carries the engine's per-stage output cap (`holt.model.max_output_tokens`); an answer cut off at the cap fails the job as an `upstream` error, never half a report. Nothing is written to disk. |
+| `holt_server/budget.py` | The environment's hard cap on AI spend (`HOLT_AI_BUDGET_USD`): holds per run, the per-call check on an AI report's model, settling on the real cost, `/v1/admin/ai-spend` and `python -m holt_server.budget`. |
 | `holt_server/starter.py` | Lazy adapter over `holt.starter`; the endpoints return 501 until that module exists. |
 | `holt_server/pro.py` | Client for the optional paid-features service (`HOLT_PRO_URL`): the key header, 2 s connect / 10 s read timeouts, one retry on a failed connection or a 503, and its error envelope turned into this API's errors with plain messages. `Services.pro` is None when it is off, and `Services.require_pro()` then answers 501 "not available yet". |
 | `holt_server/playbook.py` | The paid playbook: the teaser and unlock routes, charging (`entitlements.charge`) with a per-user unlock, the `playbook` job that calls the service, the per-repo cache, and refunds for everyone waiting on a job that fails. |
@@ -121,6 +126,48 @@ AI reports run on the server's OpenRouter key and cost the user one credit.
 Signed-in users get `HOLT_SIGNUP_AI_CREDITS` free credits once, on their first
 visit, and can claim one more every `HOLT_CLAIM_EVERY_DAYS`; claims don't pile
 up. The website doesn't take users' own API keys (the CLI does).
+
+## AI budget
+
+`holt_server/budget.py`. `HOLT_AI_BUDGET_USD` is a hard cap on everything
+this environment spends on models, over its whole life: AI reports on the
+server's key, and the playbooks and pre-flight summaries the paid-features
+service writes. The service is only ever called by this server's jobs, so
+its spend is counted here too; it has no budget of its own. `0`, the
+default, turns AI off; production also needs `HOLT_AI_BUDGET_OWNER_OK=1`
+(and `deploy/prod` passes neither unless the owner sets the `HOLT_PROD_*`
+names).
+
+- **Queueing** an AI job holds its most possible cost (`HOLT_AI_RUN_MAX_USD`,
+  or `HOLT_AI_PRO_RUN_MAX_USD` for the service) from the budget, in the
+  transaction that charges the user's credit, with a guarded `UPDATE` on the
+  single `ai_budget` row. A job that doesn't fit is refused with
+  `ai_unavailable` ("The AI budget for this environment is used up ... Nothing
+  was charged"), rolled back, and logged. Racing requests can't pass the
+  budget: the holds already cover every run in flight.
+- **Running** it claims that hold. A job run again (its process died and it
+  was queued again) takes a new one, or fails and is refunded.
+- An AI report's model client is wrapped (`budget.Capped`): a call is refused
+  when what the run has spent, plus the worst case of calls still out, plus
+  this call's worst case (its output cap from `holt.model.max_output_tokens`
+  and a generous guess at its prompt's tokens) would pass the run's hold. A
+  model with no known price (`holt.model.PRICES`) can't be capped, so AI stays
+  off with it.
+- **Ending** it records the real cost in `ai_runs` (the report's `cost.usd`;
+  the service's `usage` when it sends one, else nothing for a cached answer)
+  and gives back the rest of the hold. When the cost isn't known (a timeout:
+  the run may still be going; a service answer that doesn't say) the whole
+  hold is kept, marked `estimated`.
+
+The spend so far, against the budget:
+
+```sh
+python -m holt_server.budget          # AI spend: $0.23 of $1.00
+curl -s localhost:20130/v1/admin/ai-spend -H "$K" -H "X-Holt-User: <admin id>"
+```
+
+Staging runs with $1.00 for the server and the service together
+(`deploy/staging/preview.sh`); production with 0.
 
 ## Credits and plans
 

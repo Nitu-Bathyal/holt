@@ -53,7 +53,7 @@ n=$(cat "$STUB_DIR/containers" 2>/dev/null || echo 0)
 case " $* " in
     *" up "*)
         case " $* " in *" --scale "*) echo $((n + 1)) > "$STUB_DIR/containers" ;; esac
-        cp "$HOLT_STAGE_HOME/now.json" "$STUB_DIR/now-while-starting"; env | grep -E '^(STAGING_HOST|HOLT_WEB_URL|AUTH_|NEXT_PUBLIC_|GITHUB_TOKENS=)' | sort > "$STUB_DIR/compose.env" ;;
+        cp "$HOLT_STAGE_HOME/now.json" "$STUB_DIR/now-while-starting"; env | grep -E '^(STAGING_HOST|HOLT_WEB_URL|AUTH_|NEXT_PUBLIC_|GITHUB_TOKENS=|OPENROUTER_|HOLT_AI_|HOLT_PRO_MODEL_|HOLT_PRO_PLAYBOOK_)' | sort > "$STUB_DIR/compose.env" ;;
     *" ps "*) i=1; while [ "$i" -le "$n" ]; do echo "c$i"; i=$((i + 1)); done ;;
     *" config --hash "*) echo "$last stub-hash" ;;
     *" config "*)
@@ -325,6 +325,31 @@ def test_secrets_are_not_logged(sandbox: Sandbox) -> None:
     assert done.returncode == 0, done.stdout + done.stderr
     assert "GitHub sign-in: on" in done.stdout
     assert "stage-secret" not in done.stdout + done.stderr
+
+
+def test_ai_runs_on_openai_under_one_dollar_for_everything(sandbox: Sandbox) -> None:
+    sandbox.write_secrets(OPENAI_API_KEY="sk-openai-value")
+    done = sandbox.run()
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "AI: on (OpenAI gpt-5-mini), budget $1.00" in done.stdout
+    env = dict(line.split("=", 1) for line in
+               (sandbox.stub_dir / "compose.env").read_text(encoding="utf-8").splitlines())
+    assert env["OPENROUTER_API_KEY"] == env["HOLT_PRO_MODEL_KEY"] == "sk-openai-value"
+    assert env["OPENROUTER_BASE_URL"] == "https://api.openai.com/v1"
+    assert env["OPENROUTER_MODEL"] == env["HOLT_PRO_PLAYBOOK_MODEL"] == "gpt-5-mini"
+    assert env["HOLT_PRO_MODEL_PROVIDER"] == "openai"
+    assert env["HOLT_AI_BUDGET_USD"] == "1.00"
+    logs = "".join(p.read_text(encoding="utf-8") for p in (sandbox.state / "logs").glob("*.log"))
+    assert "sk-openai-value" not in done.stdout + done.stderr + logs
+
+
+def test_without_an_openai_key_ai_is_off(sandbox: Sandbox) -> None:
+    done = sandbox.run()
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "AI: off (no OPENAI_API_KEY" in done.stdout
+    env = dict(line.split("=", 1) for line in
+               (sandbox.stub_dir / "compose.env").read_text(encoding="utf-8").splitlines())
+    assert env["HOLT_AI_BUDGET_USD"] == "0" and env["OPENROUTER_API_KEY"] == ""
 
 
 def test_the_smoke_run_gets_the_access_token_and_nothing_logs_it(sandbox: Sandbox) -> None:

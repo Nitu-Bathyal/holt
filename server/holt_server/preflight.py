@@ -33,7 +33,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
-from holt_server import entitlements, pro, repos, schema
+from holt_server import budget, entitlements, pro, repos, schema
 from holt_server.api import job_body, load_job, queued, rate_limit, sse
 from holt_server.credits import get_user
 from holt_server.db import ACTIVE, Job, Preflight, iso, now
@@ -263,6 +263,7 @@ async def run(svc: Services, job: Job, emit) -> dict[str, Any]:
                                       user_id=job.user_id, request_id=job.id)
     except pro.ProError as err:
         raise pro_failure(err, job.repo) from None
+    svc.ai_costs[job.id] = budget.pro_cost(body)
     try:
         result = from_pro(job.repo, body)
     except ValueError:  # pydantic's ValidationError included
@@ -379,6 +380,8 @@ async def start_preflight(body: PreflightIn, request: Request,
         try:
             s.add(job)
             await s.flush()
+            if body.summary:  # the summary is the model's part; the checks cost nothing
+                await budget.reserve(s, svc.settings, job.id, budget.PREFLIGHT)
             paid = await entitlements.charge(s, svc, user_id, FEATURE, job_id=job.id)
             job.params = {**job.params, "charge": paid}
             await s.commit()
