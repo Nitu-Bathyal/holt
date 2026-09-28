@@ -11,6 +11,11 @@ DEST="${HOLT_BACKUP_DIR:-$HOME/backups/holt}"
 KEEP_DAYS="${HOLT_BACKUP_KEEP_DAYS:-14}"
 PROJECT="${HOLT_PROD_PROJECT:-holt-prod}"
 log() { printf '%s %s\n' "$(date -u +%FT%TZ)" "$*"; }
+# warm-meta.sh waits on this, so the daily details pass never runs during a dump.
+STATE="${HOLT_PROD_HOME:-$HOME/.local/share/holt-prod}"
+mkdir -p "$STATE"
+exec 7>"$STATE/backup.lock"
+flock -w 3600 7 || { log "ERROR: $STATE/backup.lock held for an hour"; exit 1; }
 
 db="$(docker ps -q --filter "label=com.docker.compose.project=$PROJECT" --filter "label=com.docker.compose.service=db" --filter status=running | head -1)"
 [[ -n "$db" ]] || { log "ERROR: the $PROJECT db container is not running"; exit 1; }

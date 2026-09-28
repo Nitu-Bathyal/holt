@@ -52,6 +52,7 @@ from holt_server.db import (
 )
 from holt_server.errors import ApiError
 from holt_server.github import JobStopped, job_stop
+from holt_server.meta_refresh import MetaRefresher
 
 if TYPE_CHECKING:
     from holt_server.services import Services
@@ -132,6 +133,8 @@ class JobRunner:
         self._tasks: list[asyncio.Task] = []
         self._running: dict[str, int] = {}  # job id -> priority, jobs this runner holds
         self._models: dict[str, budget.Capped] = {}  # running AI reports' model clients
+        # Reads a reported repo's details (Discover) after its report is stored.
+        self.meta = MetaRefresher(services)
         self._stopping = False
 
     # --- lifecycle ----------------------------------------------------------
@@ -191,6 +194,7 @@ class JobRunner:
             task.cancel()
         await asyncio.gather(*self._tasks, return_exceptions=True)
         self._tasks = []
+        await self.meta.stop()
         if self._executor is not None:
             # Don't wait: a leftover thread notices its stop flag on its own.
             self._executor.shutdown(wait=False, cancel_futures=True)
@@ -470,6 +474,8 @@ class JobRunner:
                 await budget.settle(s, job.id, cost)
             await s.commit()
         self.hub.publish(job.id, "done", done_payload(job.kind, result))
+        if job.kind == "analysis" and job.repo:
+            self.meta.note(job.repo)
 
     def _ai_cost(self, job: Job, result: dict[str, Any] | None = None) -> float | None:
         """What the job's model work cost, for `budget.settle`: the report's

@@ -21,10 +21,11 @@ repository, never from a model, and ranks repositories, never people:
 for) that aren't archived, under any sort. The language chips then count those
 repos only.
 
-Language, stars, topics and descriptions live in `repo_meta`, which the warm
-pass fills (`refresh_meta`): one GraphQL query per hundred repositories, for
-every reported repo and every repo a recent find returned. Find results take
-their description, language and stars from it too (`with_meta`).
+Language, stars, topics and descriptions live in `repo_meta`: read right
+after a repo's report is stored (meta_refresh.py), and daily by the warm pass
+(`warm_meta`), one GraphQL query per hundred repositories, for every reported
+repo and every repo a find returned in the last day. Find results take their
+description, language and stars from it too (`with_meta`).
 """
 
 from __future__ import annotations

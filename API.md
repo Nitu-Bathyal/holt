@@ -381,10 +381,13 @@ people. Reads only the database: no GitHub call and no rate limit.
 ```
 
 `description`, `language`, `stars`, `topics` (all of them, up to GitHub's 20)
-and `pushed_at` come from `repo_meta`, which the warm pass fills from GitHub
-(one GraphQL query per hundred repositories; each run re-reads rows over a day
-old); they are null or empty until then, so a repo checked for the first time
-joins the Hacktoberfest filter after the next warm pass.
+and `pushed_at` come from `repo_meta`, read from GitHub right after a
+repository's report is stored (when it has none, or they are more than a day
+old) and again once a day for every reported repository. The read after a
+report is best effort and happens a few seconds after the report is done, so
+they can be null or empty for a moment (a repo checked for the first time
+joins the Hacktoberfest filter a few seconds after its report), or until the
+next report or daily read if GitHub didn't answer.
 
 ### `GET /badge/{owner}/{repo}.svg` (no internal key; public; `Cache-Control: public, max-age=3600, stale-while-revalidate=86400`)
 Shields-style SVG badge. Maintainers embed it in READMEs; it links back to the

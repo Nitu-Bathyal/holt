@@ -6,6 +6,7 @@ app's default pages make.
     python -m holt_server.warm --dry-run       # what would run, no GitHub calls
     python -m holt_server.warm --no-find --limit 50
     python -m holt_server.warm --stale-only    # after a deploy: redo reports from an older engine
+    python -m holt_server.warm --no-reports --no-starter --no-find   # details only (daily timer)
 
 Or in the API process on a schedule: HOLT_WARM_INTERVAL_HOURS=6.
 
@@ -21,7 +22,10 @@ How it stays out of the way:
   older engine, however young, and nothing else. Run it after a deploy that
   bumps ENGINE_VERSION.
 * Repository details (discover.py) are read for every reported repo at once,
-  a hundred per GraphQL query (about a point each), once a day.
+  a hundred per GraphQL query (about a point each), once a day. A repo's
+  first report reads its own details right away (meta_refresh.py); the
+  details-only pass (`deploy/prod/warm-meta.sh`, a daily timer) keeps the
+  rest from going stale. The summary says how many GitHub points it used.
 * Before each step it checks the GitHub GraphQL points left on every token
   and stops below HOLT_WARM_MIN_POINTS, so a warm pass can never starve the
   requests people make.
@@ -71,6 +75,8 @@ MAX_TIMEOUTS_IN_A_ROW = 3
 REFRESH_AFTER = 0.8
 FIND_LIMIT = 20
 LOCK_ID = 7_406_111
+# Exit status when another process is warming (as deploy.sh: try again later).
+BUSY = 75
 
 # The searches the web app makes on its own pages (web/src/app/hacktoberfest
 # and web/src/app/find): languages as the web sends them, lower-cased.
@@ -128,6 +134,7 @@ class Result:
     starter_run: int = 0
     starter_fresh: int = 0
     meta_run: int = 0
+    meta_points: int = 0
     finds_run: int = 0
     finds_fresh: int = 0
     stopped: str | None = None
@@ -137,7 +144,7 @@ class Result:
         parts = [f"reports {self.reports_run} run, {self.reports_fresh} fresh, "
                  f"{self.reports_failed} failed",
                  f"starter issues {self.starter_run} run, {self.starter_fresh} fresh",
-                 f"repo details {self.meta_run} read",
+                 f"repo details {self.meta_run} read ({self.meta_points} GitHub points)",
                  f"finds {self.finds_run} run, {self.finds_fresh} fresh"]
         if self.stopped:
             parts.append(f"stopped: {self.stopped}")
@@ -320,6 +327,7 @@ class Warmer:
             return
         for batch in batches:
             await self.check_budget()
+            before = getattr(self.svc.lookup, "points_used", 0)
             try:
                 details = await self.svc.lookup.details(batch)
             except ApiError as err:
@@ -327,6 +335,9 @@ class Warmer:
                 if err.code == "rate_limited":
                     raise OutOfBudget("GitHub rate limit reached") from err
                 return
+            finally:
+                self.result.meta_points += (
+                    getattr(self.svc.lookup, "points_used", 0) - before)
             self.result.meta_run += await discover.store_meta(self.svc, details)
 
     async def warm_find(self, profile: Profile) -> None:
@@ -447,8 +458,12 @@ def main(argv: list[str] | None = None) -> int:
     async def run() -> int:
         svc = Services(get_settings())
         await svc.db.migrate()
-        if not args.dry_run:
-            await svc.runner.start()  # this process works the queue too
+        # Reports and finds are jobs, which this process works too. Starter
+        # issues and details are read directly, so a details-only pass
+        # never picks up anyone's job.
+        works_queue = not args.dry_run and not (args.no_reports and args.no_find)
+        if works_queue:
+            await svc.runner.start()
         try:
             seeds = load_seeds(args.seeds or svc.settings.warm_seeds_file or None)
             if args.limit:
@@ -460,13 +475,13 @@ def main(argv: list[str] | None = None) -> int:
                                      max_profiles=args.profiles,
                                      stale_only=args.stale_only)
             if result is None:
-                return 1
+                return BUSY
             print(result.summary())
             for failure in result.failures:
                 print(f"  failed: {failure}")
             return 0
         finally:
-            if not args.dry_run:
+            if works_queue:
                 await svc.runner.stop()
             svc.http.close()
             await svc.db.dispose()

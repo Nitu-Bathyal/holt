@@ -270,6 +270,8 @@ class GitHubLookup:
     def __init__(self, pool: TokenPool, http: httpx.Client) -> None:
         self.pool = pool
         self.http = http
+        # GraphQL points the `details` queries have cost, as GitHub reported.
+        self.points_used = 0
 
     async def repo(self, repo: str) -> RepoInfo:
         return await asyncio.to_thread(self._repo, repo)
@@ -316,15 +318,17 @@ class GitHubLookup:
                     + f"fragment details on Repository {{{DETAILS_FIELDS}}}")
         from holt_server.engine import translate
 
+        transport = self.pool.transport(self.http)
         try:
-            data = self.pool.transport(self.http).query(
-                document, timeout=LOOKUP_TIMEOUT_S * 2, **variables)
+            data = transport.query(document, timeout=LOOKUP_TIMEOUT_S * 2, **variables)
         except RepoNotFound:
             data = {}  # every one of them is gone
         except ApiError:
             raise
         except Exception as exc:  # noqa: BLE001
             raise translate(exc, repos[0]) from exc
+        finally:
+            self.points_used += getattr(transport, "points_used", 0) or 0
         out: dict[str, dict[str, Any] | None] = {}
         for i, repo in enumerate(repos):
             node = data.get(f"r{i}")
