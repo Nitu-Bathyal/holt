@@ -1,31 +1,19 @@
-// /find while it loads: the form at its real size, then result cards.
+// /find while it loads: the filter bar at its real size, then result cards.
 import { Skeleton, SkeletonCard, SkeletonText } from "../skeleton";
 
-export function FindFormSkeleton() {
+export function FindFiltersSkeleton() {
   return (
-    <div aria-hidden="true" className="mt-10 space-y-8 border border-line-strong bg-panel p-5 shadow-soft sm:p-8">
-      <div>
-        <Skeleton className="mb-3 h-3 w-48" />
-        <div className="flex flex-wrap gap-2">
-          {[6, 10, 10, 2, 4, 4, 3, 4, 3, 3].map((w, i) => (
-            <Skeleton key={i} className="h-11" style={{ width: `calc(${w}ch + 34px)` }} />
-          ))}
-        </div>
-        <Skeleton className="mt-2 h-3 w-40" />
+    <div aria-hidden="true" className="border border-line-strong bg-panel shadow-soft">
+      <div className="flex gap-2 overflow-hidden p-3 sm:flex-wrap sm:p-4 sm:pb-3">
+        {[12, 6, 10, 10, 2, 4, 4, 3, 4, 3, 3].map((w, i) => (
+          <Skeleton key={i} className="h-10 shrink-0" style={{ width: `calc(${w}ch + 28px)` }} />
+        ))}
       </div>
-      <div>
-        <Skeleton className="mb-3 h-3 w-32" />
-        <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-          {[0, 1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-12" />
-          ))}
-        </div>
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line px-3 py-3 sm:px-4">
+        <Skeleton className="h-10 w-full sm:w-80" />
+        <Skeleton className="h-6 w-56" />
+        <Skeleton className="ml-auto h-4 w-28" />
       </div>
-      <div className="flex items-center gap-3">
-        <Skeleton className="h-6 w-11 shrink-0 rounded-full" />
-        <SkeletonText lines={2} lineHeight="1.4rem" bar="0.7rem" last="80%" className="w-72 max-w-full" />
-      </div>
-      <Skeleton className="h-12 w-full sm:w-72" />
     </div>
   );
 }

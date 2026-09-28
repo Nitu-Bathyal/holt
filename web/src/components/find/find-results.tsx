@@ -9,7 +9,8 @@ function compact(n: number) {
   return n >= 1000 ? `${(n / 1000).toFixed(n >= 10000 ? 0 : 1)}k` : String(n);
 }
 
-export function FindResults({ results, days }: { results: FindResult[]; days: number }) {
+/** Each project with its best starter issues (`issues` of them) and a way into the full report. */
+export function FindResults({ results, days, issues = 4 }: { results: FindResult[]; days: number; issues?: number }) {
   if (!results.length) {
     return (
       <div className="border border-dashed border-line-strong p-8 text-center">
@@ -23,6 +24,7 @@ export function FindResults({ results, days }: { results: FindResult[]; days: nu
     <ol className="space-y-6">
       {results.map((r, i) => {
         const s = r.stats;
+        const report = `/${r.repo}${days !== 7 ? `?days=${days}` : ""}`;
         return (
           <li key={r.repo} className="reveal border border-line-strong bg-panel shadow-soft" style={{ ["--i" as string]: i }}>
             <div className="flex flex-wrap items-start gap-4 border-b border-line p-5 sm:p-6">
@@ -30,7 +32,7 @@ export function FindResults({ results, days }: { results: FindResult[]; days: nu
               <img src={`https://github.com/${r.repo.split("/")[0]}.png?size=80`} alt="" width={40} height={40} loading="lazy" className="size-10 rounded-md border border-line-strong bg-panel-2" />
               <div className="min-w-0 flex-1">
                 <h2 className="text-[1.15rem] font-semibold tracking-tight [overflow-wrap:anywhere]">
-                  <Link href={`/${r.repo}${days !== 7 ? `?days=${days}` : ""}`} className="hover:text-blue">
+                  <Link href={report} className="hover:text-blue">
                     <span className="text-muted">{r.repo.split("/")[0]}/</span>
                     {r.repo.split("/")[1]}
                   </Link>
@@ -49,12 +51,12 @@ export function FindResults({ results, days }: { results: FindResult[]; days: nu
             <div className="p-5 sm:p-6">
               <p className="mb-3 text-[0.72rem] uppercase tracking-[0.08em] text-faint">Pick one of these</p>
               <ul className="grid gap-3 md:grid-cols-2">
-                {r.issues.slice(0, 4).map((issue) => (
+                {r.issues.slice(0, issues).map((issue) => (
                   <StarterIssueCard key={issue.number} issue={issue} compact />
                 ))}
               </ul>
-              <Link href={`/${r.repo}`} className="mt-4 inline-block text-[0.8rem] text-green hover:underline">
-                [ full report for {r.repo} → ]
+              <Link href={report} className="mt-4 inline-block text-[0.8rem] text-green hover:underline">
+                [ {r.issues.length > issues ? "more issues and the full report" : `full report for ${r.repo}`} → ]
               </Link>
             </div>
           </li>
