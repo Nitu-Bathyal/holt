@@ -6,7 +6,8 @@ import type { ApiError, Mode, Report } from "@/lib/types";
 export type AnalysisState =
   | { phase: "starting" }
   | { phase: "running"; stage: string; progress: number }
-  | { phase: "done"; report: Report }
+  /** `fresh`: the check ran while this page watched (not a report that was already there). */
+  | { phase: "done"; report: Report; fresh: boolean }
   | { phase: "error"; error: ApiError };
 
 const LOST: ApiError = { code: "upstream", message: "We lost the connection while the report was running. It may have finished; try again." };
@@ -39,7 +40,7 @@ export function useAnalysis(repo: string, mode: Mode, days: number, enabled = tr
         return;
       }
       if (body.status === "done") {
-        startTransition(() => setState({ phase: "done", report: body.report }));
+        startTransition(() => setState({ phase: "done", report: body.report, fresh: false }));
         return;
       }
       setState({ phase: "running", stage: "Getting in line", progress: 0.02 });
@@ -54,7 +55,7 @@ export function useAnalysis(repo: string, mode: Mode, days: number, enabled = tr
         const report = JSON.parse((e as MessageEvent).data).report;
         // A transition, so the <ViewTransition>s around the progress and the
         // report crossfade them (a plain setState swaps instantly).
-        startTransition(() => setState({ phase: "done", report }));
+        startTransition(() => setState({ phase: "done", report, fresh: true }));
       });
       src.addEventListener("error", (e) => {
         const data = (e as MessageEvent).data;

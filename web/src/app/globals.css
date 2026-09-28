@@ -994,6 +994,75 @@
 }
 
 
+/* The report page (docs/design/EXPRESSIVE.md, patterns 4 and 8): the answer
+   lands when a check finishes on the page (report-view.tsx), and a running
+   check prints as a log (analysis-progress.tsx). Transform and opacity only;
+   under reduced motion everything is simply in its final state. */
+@layer components {
+  .plog-caret {
+    display: inline-block;
+    width: 0.55em;
+    height: 1em;
+    margin-left: 0.3em;
+    vertical-align: -0.15em;
+    background: var(--blue);
+  }
+  .plog-bar {
+    transition: transform 500ms var(--ease-out);
+  }
+  /* Numbers count up once on screen (motion/count-up.tsx); their meters wait with them. */
+  [data-count="wait"] .meter > span {
+    transform: scaleX(0);
+    animation: none;
+  }
+  [data-count="go"] .meter > span {
+    animation-delay: var(--d, 0ms);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .plog-line {
+      animation: plog-print 220ms var(--ease-out) both;
+    }
+    .plog-caret {
+      animation: ft-caret 1.1s steps(1) infinite;
+    }
+    .land-bar {
+      transform-origin: top;
+      animation: land-draw 520ms var(--ease-expressive) both;
+    }
+    /* Desktop only: the headline stamps down. It never fades, and on phones
+       it never moves (it's the largest paint). */
+    @media (min-width: 1024px) {
+      .land-stamp {
+        transform-origin: left center;
+        animation: land-stamp 480ms var(--ease-expressive) 120ms both;
+      }
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .plog-bar {
+      transition: none;
+    }
+  }
+}
+
+@keyframes plog-print {
+  from {
+    opacity: 0;
+    transform: translateX(-6px);
+  }
+}
+@keyframes land-draw {
+  from {
+    transform: scaleY(0);
+  }
+}
+@keyframes land-stamp {
+  from {
+    transform: scale(1.08) rotate(-1.5deg);
+  }
+}
+
+
 /* ------------------------------------------------------------------------
  * Motion (docs/design/MOTION.md). Everything here is progressive: without
  * view transitions, @starting-style or allow-discrete, things just swap.

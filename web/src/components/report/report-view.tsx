@@ -18,6 +18,7 @@ import { ShareBar } from "./share-bar";
 import { StatsGrid } from "./stats-grid";
 import { TONE, TONE_MOOD } from "./tone";
 import { UpgradeCard } from "./upgrade-card";
+import { VerdictCat } from "./verdict-cat";
 import { VerdictFeedback } from "./verdict-feedback";
 
 /** Delay for a part of the report that fades in when an analysis finishes on the page. */
@@ -38,23 +39,33 @@ export function Section({ n, title, id, children, note, reveal }: { n: string; t
   );
 }
 
-export function VerdictHero({ report, reveal }: { report: Report; reveal?: boolean }) {
+/**
+ * `land`: the answer just arrived on this page (docs/design/EXPRESSIVE.md,
+ * pattern 4): the verdict's bar draws, the headline stamps down (desktop only;
+ * it's the largest paint, so it never fades and never moves on phones) and the
+ * cat reacts. A report read again is still.
+ */
+export function VerdictHero({ report, reveal, land }: { report: Report; reveal?: boolean; land?: boolean }) {
   // Every sentence here comes from the server, derived there from the verdict,
   // the counts and the rules, so the top of the page can't disagree with them
   // or with itself. Three lines: the reason, the numbers, what to do next.
   const t = TONE[report.tone];
   return (
     <div className="relative overflow-hidden border border-line-strong bg-panel shadow-card" data-verdict-hero>
-      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${t.bg}`} />
+      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${t.bg} ${land ? "land-bar" : ""}`} />
       <div className="p-5 pl-6 sm:p-8 sm:pl-10">
         <div className="flex items-center justify-between gap-4 text-[0.8rem] uppercase tracking-[0.08em] text-faint">
           <span>verdict · {report.mode === "ai" ? "AI report" : "rules report"} · {report.days}-day budget</span>
           <span className={reveal ? "reveal" : ""}>
-            <CatFace mood={TONE_MOOD[report.tone]} blink className="text-[1.1rem] normal-case tracking-normal sm:text-[1.5rem]" />
+            {land ? (
+              <VerdictCat mood={TONE_MOOD[report.tone]} className="text-[1.1rem] normal-case tracking-normal sm:text-[1.5rem]" />
+            ) : (
+              <CatFace mood={TONE_MOOD[report.tone]} blink className="text-[1.1rem] normal-case tracking-normal sm:text-[1.5rem]" />
+            )}
           </span>
         </div>
         {/* The largest paint: on phones it never animates, on desktop it only moves. */}
-        <h1 className={`display mt-4 text-[2.6rem] sm:text-[4rem] ${t.text} ${reveal ? "reveal-lcp" : ""}`}>
+        <h1 className={`display mt-4 text-[2.6rem] sm:text-[4rem] ${t.text} ${land ? "land-stamp" : reveal ? "reveal-lcp" : ""}`}>
           {report.headline}
           <span className="text-ink">.</span>
         </h1>
@@ -150,6 +161,7 @@ export function ReportView({
   issues,
   signedIn,
   reveal,
+  land,
   example,
 }: {
   report: Report;
@@ -158,6 +170,8 @@ export function ReportView({
   signedIn: boolean;
   /** The report just arrived on this page: step its parts in. A server-rendered report doesn't wait. */
   reveal?: boolean;
+  /** The check ran while the visitor watched: the answer lands (VerdictHero) and the numbers count up. */
+  land?: boolean;
   /** A recorded example (/example-ai-report): shares its own link, and takes no votes, badge or view count. */
   example?: boolean;
 }) {
@@ -170,7 +184,7 @@ export function ReportView({
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-10">
       {!example && <Track event="report-view" data={{ verdict: report.verdict, mode: report.mode, repo }} />}
       <div className="min-w-0 space-y-10">
-        <VerdictHero report={report} reveal={reveal} />
+        <VerdictHero report={report} reveal={reveal} land={land} />
 
         {(report.bottom_line || report.summary) && (
           <div className="border-l-2 border-blue pl-5" data-ai-explanation>
@@ -207,7 +221,7 @@ export function ReportView({
         {!example && <PreflightLink repo={repo} />}
 
         <Section n="02" id="numbers" title="What happened to outsiders">
-          <StatsGrid stats={report.stats} reveal={reveal} />
+          <StatsGrid stats={report.stats} reveal={reveal} land={land} />
           <HoltUsersLine stats={report.holt_users} />
         </Section>
 
