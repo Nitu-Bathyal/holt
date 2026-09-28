@@ -15,6 +15,7 @@ from holt_server import (
     connections,
     contributions,
     credits,
+    discover,
     entitlements,
     errors,
     feedback,
@@ -76,6 +77,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(feedback.router)
     app.include_router(connections.router)
     app.include_router(contributions.router)
+    app.include_router(discover.router)
     app.include_router(profiles.router)
     return app
 

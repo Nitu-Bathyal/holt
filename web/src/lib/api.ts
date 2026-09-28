@@ -3,7 +3,7 @@
 import "server-only";
 import { cache } from "react";
 import type {
-  AnalysisStart, ApiError, Contributions, Credits, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection, HistoryItem, JobStatus, Me, Mode, ProfileOut, ProfilePrefs,
+  AnalysisStart, ApiError, Contributions, Credits, DiscoverOut, DiscoverSort, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection, HistoryItem, JobStatus, Me, Mode, ProfileOut, ProfilePrefs,
   Report, Result, StarterIssue,
 } from "./types";
 import type { FeedbackInput } from "./feedback";
@@ -151,6 +151,15 @@ export async function find(q: FindQuery, caller: Caller): Promise<Result<FindSta
   if (r.data.job_id) return { ok: true, data: { status: "queued", job_id: r.data.job_id } };
   return { ok: true, data: { status: "done", results: r.data.results ?? [] } };
 }
+
+/** Checked repos, filtered and ranked from rules verdicts (API.md, GET /v1/discover). Reads only the database. */
+export const discover = cache(async (sort: DiscoverSort, language: string | null, topic: string | null, limit = 30): Promise<Result<DiscoverOut>> => {
+  if (MOCK) return mock.discover(sort, language, topic, limit);
+  const q = new URLSearchParams({ sort, limit: String(limit) });
+  if (language) q.set("language", language);
+  if (topic) q.set("topic", topic);
+  return call(`/v1/discover?${q}`);
+});
 
 /** "Was this verdict right?" (API.md, Feedback). One answer per person per report version. */
 export async function sendFeedback(input: FeedbackInput, caller: Caller): Promise<Result<FeedbackOut>> {
