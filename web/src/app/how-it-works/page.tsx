@@ -24,7 +24,7 @@ const TRACE = [
 
 function Block({ n, label, title, children, alt = false }: { n: string; label: string; title: string; children: React.ReactNode; alt?: boolean }) {
   return (
-    <section className={`border-t border-line py-16 md:py-20 ${alt ? "bg-section-alt" : ""}`}>
+    <section className={`pane border-t border-line ${alt ? "bg-section-alt" : ""}`}>
       <div className="wrap grid grid-cols-1 gap-6 md:grid-cols-[148px_minmax(0,1fr)] md:gap-10">
         <aside className="rail"><strong>{n}</strong><span>{label}</span></aside>
         <div>
@@ -95,25 +95,30 @@ export default function HowItWorks() {
         </Block>
 
         <Block n="03" label="terminal" title="Prefer the terminal? Same engine.">
-          <p className="prose-sans mb-8 max-w-[740px] text-[1.05rem]">
-            Same rules, on your machine, with your own GitHub token. Good for scripts, and for people who never leave
-            the terminal.
-          </p>
-          <div className="mb-10 grid max-w-[760px] grid-cols-[auto_1fr_auto] items-center border border-line-strong bg-panel">
-            <span aria-hidden="true" className="pl-4 text-amber">$</span>
-            <code className="min-w-0 overflow-x-auto whitespace-nowrap px-3 py-4 text-[0.9rem]">uv tool install holt-cli</code>
-            <CopyButton text="uv tool install holt-cli" className="self-stretch border-l border-line-strong px-4 text-[0.89rem] text-muted transition-colors hover:bg-green hover:text-on-accent" />
-          </div>
-          <figure className="m-0 border border-line-strong bg-[#101010]">
-            <div className="flex min-h-10 items-center justify-between border-b border-[#292b29] px-4 text-[0.78rem] text-[#8a8a83]">
-              <span>holt / terminal app</span>
-              <span className="text-[#69c7a6]">● read-only</span>
+          {/* Side by side from lg up, so the screenshot fits the same screen as the install line. */}
+          <div className="grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-center">
+            <div>
+              <p className="prose-sans mb-8 max-w-[740px] text-[1.05rem]">
+                Same rules, on your machine, with your own GitHub token. Good for scripts, and for people who never leave
+                the terminal.
+              </p>
+              <div className="grid max-w-[760px] grid-cols-[auto_1fr_auto] items-center border border-line-strong bg-panel">
+                <span aria-hidden="true" className="pl-4 text-amber">$</span>
+                <code className="min-w-0 overflow-x-auto whitespace-nowrap px-3 py-4 text-[0.9rem]">uv tool install holt-cli</code>
+                <CopyButton text="uv tool install holt-cli" className="self-stretch border-l border-line-strong px-4 text-[0.89rem] text-muted transition-colors hover:bg-green hover:text-on-accent" />
+              </div>
+              <p className="mt-8">
+                <Link href="/" className="bracket-link">[ or just paste a repo → ]</Link>
+              </p>
             </div>
-            <Image src={tui} alt="Holt terminal interface listing assessed repositories and their verdicts" sizes="(min-width: 1120px) 900px, 100vw" className="h-auto w-full" placeholder="blur" />
-          </figure>
-          <p className="mt-8">
-            <Link href="/" className="bracket-link">[ or just paste a repo → ]</Link>
-          </p>
+            <figure className="m-0 border border-line-strong bg-[#101010]">
+              <div className="flex min-h-10 items-center justify-between border-b border-[#292b29] px-4 text-[0.78rem] text-[#8a8a83]">
+                <span>holt / terminal app</span>
+                <span className="text-[#69c7a6]">● read-only</span>
+              </div>
+              <Image src={tui} alt="Holt terminal interface listing assessed repositories and their verdicts" sizes="(min-width: 1120px) 540px, (min-width: 1024px) 50vw, 100vw" className="h-auto w-full" placeholder="blur" />
+            </figure>
+          </div>
         </Block>
       </>
     </PageTransition>

@@ -254,8 +254,15 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
 | pending feedback | `useLinkStatus` (Next) | built in |
 | **Motion (motion.dev)** | **not needed** | 7.9–46.6 KB gzipped measured (LazyMotion to full) vs under 1 KB of CSS; nothing here needs springs or layout animation |
 | GSAP | stays desktop-only on the landing cat | — |
-| Lenis (smooth scroll) | **removed** | eased the wheel over 1.15s on the landing page only, and only once idle, so scrolling felt laggy and changed feel mid-visit |
+| Lenis (smooth scroll) | **site-wide, desktop mouse and trackpad only** (`components/motion/smooth-scroll.tsx`) | the first version was removed in #65: it eased each wheel notch over 1.15s and 10% short, ran on the landing page only and started once idle, so scrolling felt laggy and changed feel mid-visit. The owner wants smooth scrolling, so it came back tuned (see below) |
 | cross-document `@view-transition` | **no** | Holt is a single app with client navigation; Firefox lacks it |
+
+**Lenis rules** (`components/motion/smooth-scroll.tsx`, mounted once in the root layout):
+- One instance for the whole site, started as soon as the page hydrates (never on idle, so the feel never changes mid-visit). `lerp: 0.15` and full-length wheel notches, so the page settles in a few frames instead of trailing the hand.
+- Driven by GSAP's ticker (`lagSmoothing(0)`); `ScrollTrigger.update` runs on every Lenis scroll, so `[data-reveal]` reveals and the landing cat stay in step.
+- Off under `prefers-reduced-motion` and on touch-only devices (`(hover: hover) and (pointer: fine)` must match); touch keeps native scrolling (`syncTouch: false`).
+- Route changes: `stopInertiaOnNavigate` ends a glide when a link is clicked, and on every pathname change Lenis jumps (`immediate`) to the position the router set, so a new page never shows mid-scroll and `scroll={false}` links (discover and Hacktoberfest tabs, the report's budget picker) keep their place. Hash links (`#check`) scroll through Lenis (`anchors: true`).
+- Nested scroll areas scroll on their own: `allowNestedScroll` covers the sideways rows (language chips, shelves, the settings nav); the focus-mode dialog and the header menus carry `data-lenis-prevent`. A modal calls `pauseSmoothScroll(true)` while it's open.
 
 **Performance:**
 - Lighthouse measures a cold load. View transitions only run on client navigations, and `sk-appear` and the shimmer are compositor-only. So calibrated performance (currently 95–99) should hold; re-measure with `e2e/lighthouse.mjs --calibrate`.

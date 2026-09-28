@@ -3,9 +3,11 @@ import { JetBrains_Mono } from "next/font/google";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { RouteFallback } from "@/components/motion/route-fallback";
+import { SmoothScroll } from "@/components/motion/smooth-scroll";
 import { themeScript } from "@/components/theme-toggle";
 import { ANALYTICS } from "@/lib/analytics";
 import { SITE_URL } from "@/lib/site";
+import "lenis/dist/lenis.css";
 import "./globals.css";
 
 const mono = JetBrains_Mono({
@@ -61,6 +63,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <RouteFallback />
         </main>
         <Footer />
+        <SmoothScroll />
       </body>
     </html>
   );

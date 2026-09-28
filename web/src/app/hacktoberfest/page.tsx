@@ -149,7 +149,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
           </section>
         </div>
 
-        <section aria-labelledby="how" className="border-t border-line bg-panel py-14 sm:py-20">
+        <section aria-labelledby="how" className="pane border-t border-line bg-panel">
           <div className="wrap grid grid-cols-1 gap-12 lg:grid-cols-2">
             <div>
               <h2 id="how" className="h2">How to make October count</h2>

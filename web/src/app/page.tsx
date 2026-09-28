@@ -56,22 +56,22 @@ export default function Home() {
     <PageTransition>
       <>
         {/* 01 — start here */}
-        <section data-hero data-cat-section="ready" className="relative overflow-hidden border-b border-line pb-12 pt-5 md:pb-16 md:pt-7 short:pt-3">
+        <section data-hero data-cat-section="ready" className="pane relative overflow-hidden border-b border-line low:pt-5 short:pt-3">
           <div aria-hidden="true" className="hero-backdrop" />
           <CatCompanion />
           <Grid>
             <Rail n="01" label="start here" className="relative hidden pt-2 md:block" />
             <div className="relative z-10 max-w-[860px]">
-              <div className="fade-up mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 short:mb-2" style={{ ["--d" as string]: ".1s" }}>
+              <div className="fade-up mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 low:mb-3 short:mb-2" style={{ ["--d" as string]: ".1s" }}>
                 {hf && <HacktoberfestPill year={hf.year} short={hf.short} />}
                 <p className="text-[0.85rem] text-muted">holt / free / for your first PR or your fiftieth</p>
               </div>
-              <h1 className="display mb-5 text-[clamp(2rem,8.9vw,3.15rem)] short:mb-3 short:text-[2rem]">
+              <h1 className="display mb-5 text-[clamp(2rem,8.9vw,3.15rem)] low:mb-4 low:text-[2.75rem] short:mb-3 short:text-[2rem]">
                 <span className="headline-line"><span>Will this repo</span></span>
                 <span className="headline-line"><span className="text-orange"><span className="marker">actually merge</span></span></span>
                 <span className="headline-line"><span className="text-orange">your PR?</span></span>
               </h1>
-              <p className="prose-sans fade-up mb-6 max-w-[680px] text-[clamp(1rem,1.45vw,1.12rem)] short:mb-4" style={{ ["--d" as string]: ".3s" }}>
+              <p className="prose-sans fade-up mb-6 max-w-[680px] text-[clamp(1rem,1.45vw,1.12rem)] low:mb-4 short:mb-4" style={{ ["--d" as string]: ".3s" }}>
                 Paste a repo. Holt checks what happened to the outsiders who tried before you: did anyone reply, and
                 did anything get merged?
               </p>
@@ -88,7 +88,7 @@ export default function Home() {
                 Already on GitHub? Swap <strong className="text-muted">hub</strong> for <strong className="text-muted">holt</strong>:{" "}
                 <code className="font-mono">github.com</code> → <code className="font-mono text-muted">{SITE_HOST}</code>
               </p>
-              <div className="fade-up mt-8 flex flex-wrap items-center gap-x-3 gap-y-2" style={{ ["--d" as string]: ".5s" }}>
+              <div className="fade-up mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 low:mt-5" style={{ ["--d" as string]: ".5s" }}>
                 <span className="award-badge">
                   <span>micro1 winner</span>
                   <span>Most useful real-world workflow</span>
@@ -105,7 +105,7 @@ export default function Home() {
         </Suspense>
 
         {/* 02 — see the answer */}
-        <section data-cat-section="startled" className="py-14 md:py-28">
+        <section data-cat-section="startled" className="pane">
           <Grid>
             <Rail n="02" label="see the answer" />
             <div>
@@ -122,7 +122,7 @@ export default function Home() {
         </section>
 
         {/* 03 — who it's for */}
-        <section data-cat-section="thinking" className="border-t border-line bg-section-alt py-14 md:py-28">
+        <section data-cat-section="thinking" className="pane border-t border-line bg-section-alt">
           <Grid>
             <Rail n="03" label="who it's for" />
             <div>
@@ -148,7 +148,7 @@ export default function Home() {
         </section>
 
         {/* 04 — the URL trick */}
-        <section data-cat-section="determined" className="border-t border-line py-14 md:py-28">
+        <section data-cat-section="determined" className="pane border-t border-line">
           <Grid>
             <Rail n="04" label="the url trick" />
             <div>
@@ -164,7 +164,7 @@ export default function Home() {
         </section>
 
         {/* 05 — what it checks */}
-        <section data-cat-section="heartbroken" className="border-t border-line bg-section-alt py-14 md:py-28">
+        <section data-cat-section="heartbroken" className="pane border-t border-line bg-section-alt">
           <Grid>
             <Rail n="05" label="what it checks" />
             <div>
@@ -197,7 +197,7 @@ export default function Home() {
         </section>
 
         {/* 06 — three answers */}
-        <section data-cat-section="celebrating" className="border-t border-line py-14 md:py-28">
+        <section data-cat-section="celebrating" className="pane border-t border-line">
           <Grid>
             <Rail n="06" label="three answers" />
             <div>
@@ -231,7 +231,7 @@ export default function Home() {
         </section>
 
         {/* 07 — open source */}
-        <section data-cat-section="adoring" className="relative overflow-clip border-t border-line bg-panel py-14 md:py-28">
+        <section data-cat-section="adoring" className="pane relative overflow-clip border-t border-line bg-panel">
           <ScrollMarquee text="OPEN / SOURCE / OPEN / SOURCE / OPEN / SOURCE / OPEN / SOURCE / OPEN / SOURCE /" />
           <div className="relative">
             <Grid>
@@ -257,7 +257,7 @@ export default function Home() {
           </div>
         </section>
         {/* 08 — your turn: no scrolling to a dead end */}
-        <section data-cat-section="ready" className="border-t border-line py-14 md:py-28">
+        <section data-cat-section="ready" className="pane border-t border-line">
           <Grid>
             <Rail n="08" label="your turn" />
             <div>

@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { createContext, Suspense, use, useEffect, useRef, useState } from "react";
 import { neighbours, type CardRepo } from "@/lib/repo-card";
 import { savedSet, withSaved } from "@/lib/saved";
+import { pauseSmoothScroll } from "../motion/smooth-scroll";
 import { SaveButton } from "../save-button";
 import { RepoCard } from "./repo-card";
 import { RepoFocus } from "./repo-focus";
@@ -136,8 +137,10 @@ function Focusable({ repos, layout, days, topicBase, card, actionsFor }: ListPro
     if (current && !d.open) d.showModal();
     if (!current && d.open) d.close();
     document.documentElement.style.overflow = current ? "hidden" : "";
+    pauseSmoothScroll(Boolean(current));
     return () => {
       document.documentElement.style.overflow = "";
+      pauseSmoothScroll(false);
     };
   }, [current]);
   // Moving to another repo starts at its top.
@@ -150,6 +153,8 @@ function Focusable({ repos, layout, days, topicBase, card, actionsFor }: ListPro
       <OpenFocus value={open}>{layout(card)}</OpenFocus>
       <dialog
         ref={dialog}
+        // Its own scroll area: the wheel scrolls it natively, never the page behind.
+        data-lenis-prevent
         aria-labelledby="focus-title"
         onClose={() => {
           if (new URLSearchParams(window.location.search).has(PARAM)) close();
