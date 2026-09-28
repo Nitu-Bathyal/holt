@@ -3,8 +3,8 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CatFace } from "@/components/cat-face";
 import { ErrorPanel } from "@/components/error-panel";
-import { PageHead } from "@/components/page-head";
 import { PageTransition } from "@/components/motion/page-transition";
+import { AppPageHeader } from "@/components/shell/app-page";
 import { RepoGrid } from "@/components/repo-card/repo-grid";
 import { SaveButton } from "@/components/save-button";
 import { savedRepos } from "@/lib/api";
@@ -26,14 +26,10 @@ export default async function SavedPage() {
   return (
     <PageTransition>
       <>
-      <PageHead>
-        <p className="rail mb-4 flex gap-2"><strong className="m-0">saved</strong><span>{user.name || user.email}</span></p>
-        <h1 className="display text-[clamp(2rem,6vw,3rem)]">Repos you saved</h1>
-        <p className="prose-sans mt-3 max-w-2xl">
-          Your shortlist for when you have time. Each verdict is from the latest free report, so it&apos;s current, not what it said the day you saved it.
-        </p>
-      </PageHead>
-      <div className="wrap py-10 sm:py-12">
+      <div className="wrap">
+      <AppPageHeader title="Saved repos" lead="Your shortlist. Each verdict is from the latest free report, not the day you saved it." />
+      </div>
+      <div className="wrap pb-14">
         {!r.ok ? (
           <ErrorPanel error={r.error} retryHref="/me/saved" />
         ) : items.length === 0 ? (

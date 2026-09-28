@@ -7,6 +7,7 @@ import { HOME_REDIRECT_CACHE, landingRedirect } from "@/lib/home";
 import { hasLiveSession } from "@/lib/live-session";
 import { isMockNotFound } from "@/lib/mock/fixtures";
 import { isValidRepo, redirectTargetForPath } from "@/lib/repo";
+import { retiredRedirect } from "@/lib/shell";
 import { probeGitHub, repoExistsChecker } from "@/lib/repo-exists";
 
 const repoExists = repoExistsChecker({
@@ -16,6 +17,10 @@ const repoExists = repoExistsChecker({
 export async function proxy(req: NextRequest) {
   const target = redirectTargetForPath(req.nextUrl.pathname, req.nextUrl.search);
   if (target) return NextResponse.redirect(new URL(target, req.url), 308);
+
+  // Pages that were merged into others (lib/shell.ts).
+  const retired = retiredRedirect(req.nextUrl.pathname);
+  if (retired) return NextResponse.redirect(new URL(retired, req.url), 308);
 
   // Signed in, "/" is your home (/me); /?landing=1 still shows the landing page.
   // Only a request carrying a session cookie costs a database lookup.

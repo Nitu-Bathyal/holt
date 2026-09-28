@@ -76,5 +76,5 @@ export async function saveStep(p: Prefs): Promise<{ ok: true } | { ok: false; ad
 export async function finish() {
   revalidatePath("/", "layout");
   (await cookies()).delete(PICKS_COOKIE);
-  redirect("/for-you");
+  redirect("/me#picks");
 }
