@@ -149,6 +149,8 @@ def test_someone_who_merges_others_work_is_staff_whatever_github_says():
 
 
 def test_closing_someone_elses_pull_request_is_staff_too_but_closing_your_own_is_not():
+    # Merging your own is staff, though: the merge button needs write access
+    # (llvm and astral committers read CONTRIBUTOR and merge their own work).
     threads = build_threads([
         opened(1, 0, "dev", "CONTRIBUTOR"),
         opened(2, 1, "sam", "NONE"),
@@ -157,7 +159,7 @@ def test_closing_someone_elses_pull_request_is_staff_too_but_closing_your_own_is
         rec("pr:a/b#3:closed", 4, "kim", {"closed_by": "kim", "closed_by_is_bot": False}),
         opened(4, 3, "lee", "NONE"), merged(4, 5, "lee", by="lee"),
     ])
-    assert keys(outsider_threads(threads)) == {"pr:a/b#2", "pr:a/b#3", "pr:a/b#4"}
+    assert keys(outsider_threads(threads)) == {"pr:a/b#2", "pr:a/b#3"}
 
 
 def test_a_bot_merging_is_not_a_maintainer():

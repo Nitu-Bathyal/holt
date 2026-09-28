@@ -157,3 +157,12 @@ def test_screening_needs_no_model():
 
     assert "model" not in inspect.signature(screen_records).parameters
     assert "client" not in inspect.signature(screen_records).parameters
+
+
+def test_the_merge_rate_floor_has_its_own_bucket():
+    from holt.agent.verdict import Rule
+    from holt.discover import CAT_LONG_ODDS, _categorise
+    from holt.report import Verdict
+
+    trace = [Rule("2 merged.", code="merges"), Rule("Only 2 of 60.", code="long_odds")]
+    assert _categorise(Verdict.NOT_VIABLE, trace) == CAT_LONG_ODDS

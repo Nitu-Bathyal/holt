@@ -1168,6 +1168,11 @@ export interface components {
         LandingPath: {
             /** Attempted */
             attempted: number;
+            /**
+             * Is File
+             * @default false
+             */
+            is_file: boolean;
             /** Merged */
             merged: number;
             /** Path */
@@ -1192,6 +1197,11 @@ export interface components {
         NeverLanded: {
             /** Attempted */
             attempted: number;
+            /**
+             * Is File
+             * @default false
+             */
+            is_file: boolean;
             /** Path */
             path: string;
         };

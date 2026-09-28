@@ -212,9 +212,10 @@ def build(
         "decided_by": [str(r) for r in assessment.rules],
         "rule_codes": [c or "" for c in rule_codes(assessment.rules)],
         "unknowns": unknowns,
-        "landing": [{"path": a.path, "merged": a.landed, "attempted": a.attempted}
-                    for a in where.landed],
-        "never_landed": [{"path": a.path, "attempted": a.attempted} for a in where.never],
+        "landing": [{"path": a.path, "merged": a.landed, "attempted": a.attempted,
+                     "is_file": a.is_file} for a in where.landed],
+        "never_landed": [{"path": a.path, "attempted": a.attempted, "is_file": a.is_file}
+                         for a in where.never],
         "evidence": evidence,
         "evidence_until": iso(assessment.as_of),
         "generated_at": iso(generated_at or datetime.now(UTC)),

@@ -18,7 +18,7 @@ import logging
 import os
 import time
 from collections.abc import Callable, Iterable, Iterator
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import quote
 
@@ -186,6 +186,7 @@ query($q:String!, $cursor:String) {
 }
 """
 PR_SEARCH_SCREEN = PR_SEARCH.replace(_PR_TIMELINE, "")
+PAGE_SIZE = 25  # PR_SEARCH's `first:25`
 
 
 # Issues, for Path Finder. Decomposed the same way pull requests are: an issue
@@ -468,6 +469,56 @@ def search_query(repo_slug: str, window: Window, cutoff: datetime) -> str:
     day = cutoff.date().isoformat()
     bound = f"created:<{day}" if window is Window.PRE_T else f"created:>={day}"
     return f"repo:{repo_slug} is:pr {bound} sort:created-desc"
+
+
+# --- the settled sample -------------------------------------------------------
+#
+# A busy repository's newest 200 pull requests span a day or two (pytorch,
+# llvm, nixpkgs, cpython), and the engine's rates only count pull requests
+# opened at least SETTLE_DAYS before the read (agent/rates.py), because what
+# has already happened to a two-day-old pull request is mostly the fast
+# outcomes: quick merges and quick triage closes. Rates over those read
+# pytorch's merge rate as 39% and openssl's as 40%, where the pull requests
+# that had two weeks to get an answer show 11% for openssl.
+#
+# So when the newest pages hold fewer than SETTLED_TARGET outside pull requests
+# old enough to count, a second search reads further back: pull requests
+# opened before the settle window (or before the oldest one already read),
+# newest first, one page at a time until the target is met, at most
+# SETTLED_MAX_PAGES pages. Each page is the same query, one point.
+SETTLE_DAYS = 14
+SETTLED_TARGET = 60
+SETTLED_MAX_PAGES = 8
+
+_TEAM = {"OWNER", "MEMBER", "COLLABORATOR"}
+
+
+def settled_query(repo_slug: str, cutoff: datetime, oldest: datetime | None) -> str:
+    """Pull requests old enough to count, from where the newest pages stopped."""
+    settle_day = (cutoff - timedelta(days=SETTLE_DAYS)).date()
+    if oldest is not None and oldest.date() < settle_day:
+        # The newest pages already reach past the window; carry on from their
+        # last day (inclusive: the rest of that day wasn't read; repeats are
+        # dropped by number).
+        bound = f"created:<={oldest.date().isoformat()}"
+    else:
+        bound = f"created:<{settle_day.isoformat()}"
+    return f"repo:{repo_slug} is:pr {bound} sort:created-desc"
+
+
+def _outside_and_settled(node: dict[str, Any], before: datetime) -> bool:
+    """Roughly what the engine will count: an outside, non-draft pull request
+    opened before `before`. Only steers how far to read; the engine decides."""
+    author = node.get("author") or {}
+    login = (author.get("login") or "").lower()
+    created = _ts(node.get("createdAt"))
+    return bool(
+        created is not None and created < before
+        and author.get("__typename") != "Bot" and not login.endswith("bot")
+        and not login.endswith("[bot]")
+        and node.get("authorAssociation") not in _TEAM
+        and not node.get("isDraft")
+    )
 
 
 def _nodes(connection: dict[str, Any] | None) -> list[dict[str, Any]]:
@@ -856,10 +907,16 @@ class LiveGitHubProvider(EvidenceProvider):
         transport: GitHubGraphQL | None = None,
         max_pages: int = 8,
         timeline: bool = True,
+        settled_pages: int | None = None,
     ) -> None:
         super().__init__(window, cutoff or datetime.now(UTC))
         self.transport = transport or GitHubGraphQL()
         self.max_pages = max_pages
+        # How far past the newest pages a full report may read for pull
+        # requests old enough to count (see SETTLED_TARGET). A screen doesn't.
+        self.settled_pages = (
+            (SETTLED_MAX_PAGES if timeline else 0) if settled_pages is None else settled_pages
+        )
         # False for a quick screen: no close events or commit references (see
         # PR_SEARCH_SCREEN). A full report always reads them.
         self.timeline = timeline
@@ -886,11 +943,13 @@ class LiveGitHubProvider(EvidenceProvider):
         query = search_query(home, self.window, self.cutoff)
         # The keyword only when screening, so a transport written before it
         # existed (the tests have several) still serves full fetches.
-        nodes = (
+        nodes = list(
             self.transport.search_pull_requests(query, self.max_pages)
             if self.timeline
             else self.transport.search_pull_requests(query, self.max_pages, timeline=False)
         )
+        if self.window is Window.PRE_T:
+            nodes += self._settled(home, nodes)
         records.extend(project(request, nodes, home=home))
 
         # Slice at the source; the base-class assertion is the safety net, not
@@ -898,6 +957,31 @@ class LiveGitHubProvider(EvidenceProvider):
         kept = [r for r in records if self._in_window(r)]
         self._seen.update({r.evidence_id: r for r in kept})
         return kept
+
+    def _settled(self, home: str, nodes: list[dict[str, Any]]) -> list[dict[str, Any]]:
+        """Older pull requests, when the newest pages hold too few that count."""
+        # Fewer than the pages could hold means the repository has no more.
+        if not self.settled_pages or len(nodes) < self.max_pages * PAGE_SIZE:
+            return []
+        before = self.cutoff - timedelta(days=SETTLE_DAYS)
+        have = sum(1 for n in nodes if _outside_and_settled(n, before))
+        if have >= SETTLED_TARGET:
+            return []
+        seen = {n.get("number") for n in nodes}
+        oldest = min((t for n in nodes if (t := _ts(n.get("createdAt")))), default=None)
+        query = settled_query(home, self.cutoff, oldest)
+        more: list[dict[str, Any]] = []
+        for i, node in enumerate(
+            self.transport.search_pull_requests(query, self.settled_pages), 1
+        ):
+            if node.get("number") not in seen:
+                seen.add(node.get("number"))
+                more.append(node)
+                have += _outside_and_settled(node, before)
+            # Stop at a page boundary, so no page is paid for and left unread.
+            if i % PAGE_SIZE == 0 and have >= SETTLED_TARGET:
+                break
+        return more
 
     def _in_window(self, record: EvidenceRecord) -> bool:
         if self.window is Window.PRE_T:

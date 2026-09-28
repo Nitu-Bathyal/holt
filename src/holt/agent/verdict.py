@@ -84,6 +84,21 @@ DEFAULT_CONTRIBUTOR_DAYS = 7
 # the conjunction that describes work being waved through unread.
 RUBBER_STAMP_REVIEWED_MAX = 0.20
 RUBBER_STAMP_MERGE_RATE_MIN = 0.60
+# On a live reading the rule asks about outside contributors' merges only (a
+# maintainer merging their own work unreviewed says nothing about how yours
+# would be read), and needs this many of them: "0 of 3 merges got a comment"
+# is three data points, not a policy. See docs/research/REVIEW-2026-09-30.md.
+RUBBER_STAMP_MIN_MERGES = 10
+
+# The merge-rate floor (ticket 08, live readings only). Enough merges from
+# enough people used to pass however many attempts they came from: flask
+# merged 5 of 171 outside pull requests and read "Worth your time". Below this
+# share of decided outside attempts, a pull request here is a long shot and
+# the answer is Not worth your time. With MIN_MERGES merges needed to pass at
+# all, a rate under 5% implies at least 41 decided attempts, so the floor
+# never judges a thin sample. The threshold, and why not 10%, is argued from
+# the golden set and the prod re-run in docs/research/REVIEW-2026-09-30.md.
+MERGE_RATE_FLOOR = 0.05
 
 # One merge from one person is an anecdote; two people is a pattern.
 MIN_MERGES = 2
@@ -287,6 +302,11 @@ def classify(
         trace.append(Rule(elsewhere, code="elsewhere"))
         return Verdict.NOT_VIABLE, trace
 
+    # Nothing merged and nothing pushed in 90 days (rates.dormancy).
+    if inactive := findings.get("inactive"):
+        trace.append(Rule(inactive, code="inactive"))
+        return Verdict.NOT_VIABLE, trace
+
     if kind in CLOSED_KINDS:
         trace.append(Rule(
             "This is a read-only copy of a project developed somewhere else, so "
@@ -353,7 +373,7 @@ def classify(
     slow = median is not None and median > slow_response_hours
     if (
         signals.outsider_merged >= MIN_MERGES
-        and signals.distinct_outsider_authors >= MIN_DISTINCT_AUTHORS
+        and signals.distinct_merged_authors >= MIN_DISTINCT_AUTHORS
         and not slow
     ):
         text = (
@@ -386,14 +406,20 @@ def classify(
                 f"{signals.median_first_response_hours}h"
             ),
         ))
+        # A live reading (or a recording of one) gets ticket 08's rules; the
+        # frozen benchmark keeps the ones it was scored with.
+        live = signals.settle_hours > 0
+        reviewed = signals.outsider_reviewed_share if live else signals.reviewed_share
         if (
-            signals.reviewed_share is not None
+            reviewed is not None
             and signals.merge_rate is not None
-            and signals.reviewed_share < RUBBER_STAMP_REVIEWED_MAX
+            and reviewed < RUBBER_STAMP_REVIEWED_MAX
             and signals.merge_rate > RUBBER_STAMP_MERGE_RATE_MIN
+            and (not live or signals.outsider_merged >= RUBBER_STAMP_MIN_MERGES)
         ):
+            whose = "merged pull requests from outside contributors" if live else "merged pull requests"
             trace.append(Rule(
-                f"But only {signals.reviewed_share:.0%} of merged pull requests got "
+                f"But only {reviewed:.0%} of {whose} got "
                 f"any comment from a person, while {signals.merge_rate:.0%} of "
                 "outside attempts were merged. Changes here seem to be merged "
                 "without anyone reviewing them, so you wouldn't get feedback on yours.",
@@ -403,6 +429,20 @@ def classify(
                     f"reply while {signals.merge_rate:.0%} of attempts landed: work is "
                     "being waved through unread, so a contribution here buys no review"
                 ),
+            ))
+            return Verdict.NOT_VIABLE, trace
+        if (
+            live
+            and signals.merge_rate is not None
+            and signals.merge_rate < MERGE_RATE_FLOOR
+        ):
+            # A plain sentence on its own: the web shows it alone as the reason.
+            trace.append(Rule(
+                f"Only {signals.outsider_merged} of {judgeable} pull requests from outside "
+                f"contributors were merged, about 1 in "
+                f"{round(judgeable / signals.outsider_merged)}. Most outside work here "
+                "is never merged, so yours would be a long shot.",
+                code="long_odds",
             ))
             return Verdict.NOT_VIABLE, trace
         return Verdict.VIABLE, trace
@@ -446,10 +486,10 @@ def classify(
         # Enough merges, from too few people: without this line the answer
         # came with no reason at all.
         trace.append(Rule(
-            f"The {signals.outsider_merged} merged pull requests from outside "
+            f"All {signals.outsider_merged} merged pull requests from outside "
             f"contributors came from "
-            f"{_n(signals.distinct_outsider_authors, 'person', 'people')}, too few "
-            "people to show a pattern.",
+            f"{'one person' if signals.distinct_merged_authors == 1 else _n(signals.distinct_merged_authors, 'person', 'people')}, "
+            "too few people to show a pattern.",
             code="few_people",
         ))
     return Verdict.INSUFFICIENT_EVIDENCE, trace

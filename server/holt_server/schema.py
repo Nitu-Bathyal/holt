@@ -67,8 +67,9 @@ class ErrorBody(Model):
 
 
 class Stats(Model):
-    # Decided attempts only (merged, closed, or open past the settle window):
-    # the denominator of every rate here. `still_open` are too new to count;
+    # Decided attempts only (opened more than the 14-day settle window ago):
+    # the denominator of every rate here. `still_open` were opened within the
+    # window, too recently to count, whatever has happened to them so far;
     # `closed_silently` were closed with no reply, which is not `no_reply`.
     outsider_attempts: int
     outsider_merged: int
@@ -104,11 +105,14 @@ class LandingPath(Model):
     path: str
     merged: int
     attempted: int
+    # One file rather than a folder (a path cut to two segments can be either).
+    is_file: bool = False
 
 
 class NeverLanded(Model):
     path: str
     attempted: int
+    is_file: bool = False
 
 
 class EvidenceItem(Model):
@@ -229,7 +233,8 @@ def verdict_line(verdict: str, s: Stats, decided_by: list[str], rule_codes: list
             return last
         if s.outsider_merged == 0:
             return f"None of the last {n} pull requests from outside contributors were merged."
-        return (f"Only {merged} pull requests from outside contributors were merged, "
+        return (f"Only {merged} pull request{'' if s.outsider_merged == 1 else 's'} from "
+                f"outside contributors {'was' if s.outsider_merged == 1 else 'were'} merged, "
                 "and most never got a useful reply.")
     return "Too few outside contributors have tried recently for Holt to say either way."
 

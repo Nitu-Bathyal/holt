@@ -74,9 +74,21 @@ def test_ignored_attempts_with_no_merges_is_not_viable():
 def test_one_person_merging_repeatedly_is_not_a_pattern():
     v, _ = classify(
         findings(repo_kind="real_software"),
-        signals(outsider_merged=5, distinct_outsider_authors=1),
+        signals(outsider_merged=5, distinct_outsider_authors=1, distinct_merged_authors=1),
     )
     assert v is Verdict.INSUFFICIENT_EVIDENCE
+
+
+def test_two_merges_by_one_person_among_many_who_tried_is_not_a_pattern():
+    """The pass rule counted people who tried, not people who got merged:
+    lazygit's 2 merges were one person's, out of 35 who tried."""
+    v, trace = classify(
+        findings(repo_kind="real_software"),
+        signals(outsider_merged=2, distinct_outsider_authors=35, distinct_merged_authors=1),
+    )
+    assert v is Verdict.INSUFFICIENT_EVIDENCE
+    assert rule_codes(trace)[-1] == "few_people"
+    assert "came from one person" in trace[-1]
 
 
 def test_a_response_slower_than_a_week_blocks_viable():

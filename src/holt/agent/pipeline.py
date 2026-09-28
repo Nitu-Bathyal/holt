@@ -156,6 +156,7 @@ def analyze(
     contested = contested_kind(findings, signals, meta.payload if meta else None)
     if contested:
         findings.drop("repo_kind")
+    _add_inactive(findings, records, threads, signals, as_of, meta)
 
     verdict, rules = decide(findings, signals, contributor_days)
     if contested:
@@ -176,7 +177,8 @@ def analyze(
     narrated_signals = {
         k: v for k, v in narrated_signals.items()
         if k not in ("outsider_answered", "outsider_still_open",
-                     "outsider_closed_silently", "outsider_excluded")
+                     "outsider_closed_silently", "outsider_excluded",
+                     "outsider_reviewed_share", "merged_threads")
         and not k.startswith(("first_timer_", "distinct_first_timer_"))
     }
     report("Writing the report", 0.85)
@@ -312,9 +314,7 @@ def _timed(timings: dict[str, float], name: str):
 def _computed_bottom_line(verdict, rules) -> str:
     # None of these gives the reason: rates.py's lines say what was counted,
     # and the packaging one says what the work is (repo_kind_rules).
-    deciding = next((r for r in rules
-                     if getattr(r, "code", "") not in rates.INFO_CODES | {"package_updates"}),
-                    rules[0] if rules else "")
+    deciding = rates.first_deciding(rules, skip=frozenset({"package_updates"})) or ""
     return f"{headline(verdict)}. {deciding}"
 
 
@@ -346,7 +346,8 @@ def _counted_summary(signals: Signals) -> str:
         )
     if s["outsider_still_open"]:
         summary += (
-            f" {s['outsider_still_open']} are still open and too new to count."
+            f" {s['outsider_still_open']} were opened in the last {rates.SETTLE_DAYS} "
+            "days, too recently to count."
         )
     return summary + " These are counts from the pull request history, not an AI's judgement."
 
@@ -411,6 +412,8 @@ def analyze_without_model(
     ):
         findings.add("contribute_elsewhere", elsewhere, (meta.evidence_id,),
                      "read from GitHub's mirror and fork fields and the description")
+
+    _add_inactive(findings, records, threads, signals, as_of, meta)
 
     # What Stage A would call a registry or a list, measured from the diffs
     # outside contributors sent instead of asked of a model. The AI report
@@ -478,7 +481,24 @@ def first_timer_sentence(signals: Signals) -> str:
 
 
 # Rules after which how the merges happened is beside the point.
-_NOT_ABOUT_MERGES = {"archived", "elsewhere", "closed_kind", "non_software_kind"}
+_NOT_ABOUT_MERGES = {"archived", "elsewhere", "closed_kind", "non_software_kind", "inactive"}
+# Rules that follow the merge count and turn the repository down.
+_TURNED_DOWN = rates.OVERRULING_CODES
+
+
+def _add_inactive(findings: Findings, records: list, threads: dict[str, Thread],
+                  signals: Signals, as_of: datetime | None, meta) -> None:
+    """No merge and no push in 90 days: a finding the verdict turns down on.
+
+    Only for a reading that knows its moment (live, or a recording of one), as
+    the dormancy line; the frozen benchmark never had it.
+    """
+    if meta is None or not signals.settle_hours:
+        return
+    line = rates.inactive_sentence(records, threads, as_of or datetime.now(UTC), meta.payload)
+    if line:
+        findings.add("inactive", line, (meta.evidence_id,),
+                     "no merge in the sample and no push on GitHub in 90 days")
 
 
 def _say_how_merges_landed(rules: list[str], threads: dict[str, Thread]) -> None:
@@ -490,7 +510,10 @@ def _say_how_merges_landed(rules: list[str], threads: dict[str, Thread]) -> None
     if any(getattr(r, "code", "") in _NOT_ABOUT_MERGES for r in rules):
         return
     if line := landing_detection.landed_sentence(outsider_threads(threads)):
-        rules.append(Rule(line, code="landed_off_button"))
+        # Never after a rule that turned the repository down: the web reads
+        # the reason from the last line.
+        at = len(rules) - 1 if rules and getattr(rules[-1], "code", "") in _TURNED_DOWN else len(rules)
+        rules.insert(at, Rule(line, code="landed_off_button"))
 
 
 def _say_what_was_read(rules: list[str], records: list, threads: dict[str, Thread],

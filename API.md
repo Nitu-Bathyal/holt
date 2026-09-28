@@ -84,8 +84,9 @@ responses. The server also accepts and normalises full URLs
   "decided_by": ["plain-English rule sentence", "..."],
   "rule_codes": ["merges", "rubber_stamp"], // stable code per decided_by line, same order
   "unknowns": ["plain-English sentence", "..."],
-  "landing": [ { "path": "pkgs/by-name", "merged": 13, "attempted": 62 } ],
-  "never_landed": [ { "path": "pkgs/applications", "attempted": 6 } ],
+  "landing": [ { "path": "pkgs/by-name", "merged": 13, "attempted": 62, "is_file": false } ],
+  "never_landed": [ { "path": "pkgs/applications", "attempted": 6, "is_file": false } ],
+                                    // is_file: the path is one file, not a folder (default false)
   "evidence": [
     { "id": "pr:NixOS/nixpkgs#526518:opened", "url": "https://github.com/NixOS/nixpkgs/pull/526518",
       "kind": "onboarding", "value": "substantive", "text": "…", "quote": "string | null" }
@@ -134,12 +135,13 @@ Returning outsiders count.
 cached from evidence without GitHub's association use the earlier rule: an
 outsider had nothing merged earlier in the sample.
 
-`stats` counts are over **decided** newcomer pull requests: merged (or landed
-another way), closed, or open for longer than the 14-day settle window.
+`stats` counts are over **decided** newcomer pull requests: ones opened more
+than 14 days (the settle window) before the report, whatever happened to them.
 `outsider_attempts` is that decided total, so `outsider_merged /
 outsider_attempts` and `no_reply / outsider_attempts` are the rates the verdict
-was computed from. `no_reply` is open, past the window, with no reply.
-`still_open` (younger open ones, in no rate) and `closed_silently` (closed with
+was computed from. `no_reply` is still open, with no reply.
+`still_open` (opened within the window, merged or not; in no rate; reports
+cached before 30 Sep 2026 counted only the open ones) and `closed_silently` (closed with
 no reply, usually maintainers clearing out spam; not in `no_reply`) are shown
 beside them; both are 0 on reports cached before they existed. Drafts and pull
 requests labelled as spam or invalid are in no count.

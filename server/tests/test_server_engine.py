@@ -51,9 +51,9 @@ def check_report_shape(report: dict, mode: str) -> None:
         assert item["url"].startswith("https://github.com/"), item
         assert set(item) == {"id", "url", "kind", "value", "text", "quote"}
     for area in report["landing"]:
-        assert set(area) == {"path", "merged", "attempted"}
+        assert set(area) == {"path", "merged", "attempted", "is_file"}
     for area in report["never_landed"]:
-        assert set(area) == {"path", "attempted"}
+        assert set(area) == {"path", "attempted", "is_file"}
     assert report["evidence_until"] == "2026-06-01T00:00:00Z"
     # What a beginner reads is plain English. (`kind`/`value` are machine keys.)
     prose = " ".join([report["headline"], report["verdict_line"],

@@ -29,9 +29,10 @@ Start with the [README](../README.md). Everything else is here.
 | Page | What it is for |
 |---|---|
 | [DESIGN.md](DESIGN.md) | Why the verdict is a pipeline of rules and not a prompt |
-| [research/EVALUATION.md](research/EVALUATION.md) | How the benchmark was built, the numbers, and what they depend on |
+| [research/REVIEW-2026-09-30.md](research/REVIEW-2026-09-30.md) | The verdict rules in plain English, the evidence for each threshold, and the 30 Sep go/no-go review |
+| [research/EVALUATION.md](research/EVALUATION.md) | How the competition benchmark was built (retired as a gate), the numbers, and what they depend on |
 | [research/REPRODUCTION.md](research/REPRODUCTION.md) | Reproduce every published number from a clone, with no key and no spend |
-| [../golden/README.md](../golden/README.md) | The golden set: 52 recorded repositories, the engine's approved answer on each, and the before/after table every engine change is checked with |
+| [../golden/README.md](../golden/README.md) | The golden set: 62 recorded repositories, the engine's approved answer on each, and the before/after table every engine change is checked with |
 | [../eval/](../eval/) | The benchmark itself: pools, labels, recorded runs and their pre-registration notes |
 
 ## Plans and drafts
