@@ -58,7 +58,8 @@ export async function remove() {
 /**
  * One answer from the first-time flow on /me. Saves the whole profile so far
  * and returns, without revalidating or touching cookies: either would refresh
- * /me and close the flow mid-way. `finish` does that at the end.
+ * /me and close the flow mid-way. `finish` does that at the end. It sends
+ * adult_confirmed, so call it only after the 18+ start button (ProfileFlow).
  */
 export async function saveStep(p: Prefs): Promise<{ ok: true } | { ok: false; adult: boolean }> {
   const user = await currentUser();
