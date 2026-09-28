@@ -30,10 +30,10 @@ const refuse = (message: string): Refusal => ({ status: 401, error: { code: "una
 
 /** POST /api/analyses: null when this caller may start a check. */
 export function startGate(userId: string | null | undefined): Refusal | null {
-  return userId ? null : refuse("Sign in to check this repo. It's free, and you land straight on the results.");
+  return userId ? null : refuse("Sign in to check this repo.");
 }
 
 /** POST /api/find: null when this caller may run a search. */
 export function findGate(userId: string | null | undefined): Refusal | null {
-  return userId ? null : refuse("Sign in to search with your own filters. It's free.");
+  return userId ? null : refuse("Sign in to search with your own filters.");
 }

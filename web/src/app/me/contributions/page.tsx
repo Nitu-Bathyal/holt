@@ -56,8 +56,7 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
           <div className="mt-8 border border-dashed border-line-strong p-8 text-center">
             <CatFace mood="thinking" className="text-[1.6rem]" />
             <p className="prose-sans mx-auto mt-4 max-w-md text-muted">
-              Connect your GitHub account to see your pull requests here, each with Holt&apos;s verdict on the repo. It&apos;s free, and Holt
-              only reads public data.
+              Connect your GitHub account to see your pull requests here, each with Holt&apos;s verdict on the repo.
             </p>
             <Link href="/connect" className="btn-primary mt-6 inline-flex">connect GitHub</Link>
           </div>

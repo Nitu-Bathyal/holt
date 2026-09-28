@@ -25,7 +25,7 @@ export async function ProfileOnboarding({ back, open = false, className = "" }: 
               Pick your languages and how much time you have. Searches start there. Change it any time in settings.
             </span>
           </span>
-          <span className="text-[0.89rem] text-blue group-open:hidden">[ set it up · 30 seconds → ]</span>
+          <span className="text-[0.89rem] text-blue group-open:hidden">[ set it up → ]</span>
         </summary>
         <div className="mt-6 border-t border-line pt-6">
           <ProfileForm prefs={null} adultConfirmed={r.data.adult_confirmed} back={back}>

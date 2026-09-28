@@ -18,8 +18,7 @@ export function GitHubConnectionCard({ acct }: { acct: Account }) {
       <div className="border border-line-strong bg-panel p-5 shadow-soft">
         <p className="font-semibold">GitHub isn&apos;t connected</p>
         <p className="prose-sans mt-1 text-[0.92rem] text-muted">
-          Connect it to see your public PRs with Holt&apos;s verdict on each repo, and get picks from where they got merged. Free. Holt only reads
-          public data and never posts.
+          Connect it to see your public PRs with Holt&apos;s verdict on each repo, and get picks from where they got merged.
         </p>
         <Link href="/connect" className="btn-primary mt-4 inline-flex">connect GitHub</Link>
       </div>

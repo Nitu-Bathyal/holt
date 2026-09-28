@@ -35,7 +35,7 @@ export default async function ExamplesPage() {
           </h1>
           <p className="prose-sans mt-5 max-w-2xl text-[1.05rem]">
             Three real repos, one for each answer Holt can give, and an AI report that explains the evidence in plain
-            English. Read them in full, free.
+            English.
           </p>
         </PageHead>
 
@@ -87,10 +87,7 @@ export default async function ExamplesPage() {
               {user ? (
                 <Link href="/" className="bracket-link">[ check a repo → ]</Link>
               ) : (
-                <>
-                  <Link href="/signin" prefetch={false} className="bracket-link">[ sign in to check it, free → ]</Link>
-                  <span className="font-sans text-[0.89rem] text-faint">One click with GitHub or Google.</span>
-                </>
+                <Link href="/signin" prefetch={false} className="bracket-link">[ sign in to check it, free → ]</Link>
               )}
             </div>
           </div>

@@ -36,8 +36,7 @@ export default async function ConnectPage({ searchParams }: PageProps<"/connect"
         <p className="rail mb-4 flex gap-2"><strong className="m-0">connect</strong><span>free</span></p>
         <h1 className="display text-[clamp(2rem,6vw,3rem)]">Connect GitHub</h1>
         <p className="prose-sans mt-4 max-w-2xl text-[1rem]">
-          See your public PRs, with Holt&apos;s verdict on each repo. Get picks based on where your PRs got merged. Free,
-          and you can undo it any time.
+          See your public PRs, with Holt&apos;s verdict on each repo. Get picks based on where your PRs got merged.
         </p>
       </PageHead>
       <div className="wrap max-w-3xl pb-14 pt-2 sm:pb-16">

@@ -4,12 +4,11 @@
 // the page you're on does nothing; elsewhere it's a plain link home.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { HOME } from "@/lib/home";
 import { logoAction } from "@/lib/shell";
 import { scrollToTop } from "../motion/smooth-scroll";
 
 export function LogoLink({ signedIn, className, children }: { signedIn: boolean; className?: string; children: React.ReactNode }) {
-  const action = logoAction(usePathname(), signedIn, HOME);
+  const action = logoAction(usePathname(), signedIn);
   if ("href" in action)
     return (
       <Link href={action.href} className={className}>

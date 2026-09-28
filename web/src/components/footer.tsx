@@ -30,7 +30,7 @@ const SIGN_OFF = "git commit --to-the-right-repo";
 
 export function Footer({ signedIn = false }: { signedIn?: boolean }) {
   const router = useRouter();
-  // The landing page is "/" (signed in, "/?landing=1"); every other page
+  // The landing page is "/"; every other page
   // already has its own action, so only the landing ends on the form.
   const onLanding = usePathname() === "/";
   const root = useRef<HTMLElement>(null);
