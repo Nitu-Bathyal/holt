@@ -5,6 +5,7 @@
 import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { track } from "@/lib/analytics";
+import { pasteHref } from "@/lib/gate";
 import { parseRepoInput } from "@/lib/repo";
 import { HOME } from "@/lib/home";
 
@@ -27,7 +28,8 @@ export function QuickCheck({ variant = "bar" }: { variant?: "bar" | "inline" }) 
         if (!ref) return setBad(true);
         track("paste-submit", { repo: `${ref.owner}/${ref.repo}`, from: variant });
         setValue("");
-        router.push(`/${ref.owner}/${ref.repo}`);
+        // Only signed-in people see this box; same rule as every paste box.
+        router.push(pasteHref(`${ref.owner}/${ref.repo}`, true));
       }}
       className={`relative w-full items-center border border-line-strong bg-panel transition-colors focus-within:border-blue ${bar ? "hidden max-w-sm md:flex" : "flex max-w-xl"}`}
     >
