@@ -115,7 +115,7 @@ export function PasteBox({
           disabled={busy}
           className={`btn-primary m-1.5 sm:m-2 ${size === "lg" ? "sm:min-h-12" : ""}`}
         >
-          {busy ? "opening…" : signedIn ? "check this repo" : "sign in to check, free"} <span aria-hidden="true">→</span>
+          {busy ? "opening…" : "check this repo"} <span aria-hidden="true">→</span>
         </button>
       </form>
       {error && (
@@ -125,7 +125,7 @@ export function PasteBox({
       )}
       {examples && (
         <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.82rem] text-faint">
-          <span>{signedIn ? "try" : "try an example, no account needed:"}</span>
+          <span>try</span>
           {EXAMPLES.map(({ repo }) => (
             <button
               key={repo}

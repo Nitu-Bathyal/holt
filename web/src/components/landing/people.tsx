@@ -50,7 +50,6 @@ export function People({ people }: { people: Person[] }) {
           <ReactiveCat mood="ready" className="ls-person-cat" />
         </div>
         <p className="ls-person-title mt-auto font-semibold tracking-tight text-ink">Starting from zero?</p>
-        <p className="ls-person-body mt-2 font-sans text-muted">Pick a language. Holt lists projects that answer outsiders and have issues you could take.</p>
         <Link href="/find" className="bracket-link bracket-link--orange ls-person-cta mt-4 min-h-11 self-start">
           [ find a project in your language → ]
         </Link>

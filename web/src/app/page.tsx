@@ -6,7 +6,6 @@ import { CatCompanion } from "@/components/motion/cat-companion";
 import { SwapHost } from "@/components/motion/swap-host";
 import { ScrollMarquee } from "@/components/motion/scroll-marquee";
 import { PasteBox } from "@/components/paste-box";
-import { UrlTrick } from "@/components/url-trick";
 import { EXAMPLE_PATH, EXAMPLE_REPORT } from "@/lib/example-report";
 import { humanHours } from "@/lib/format";
 import { buildReplay } from "@/lib/landing-replay";
@@ -16,7 +15,7 @@ import { People, type Person } from "@/components/landing/people";
 import { Receipts } from "@/components/landing/receipts";
 import { Words } from "@/components/landing/words";
 import { currentUser } from "@/lib/session";
-import { GITHUB_REPO_URL, SITE_HOST, WELCOME_AI_CREDITS, hacktoberfest } from "@/lib/site";
+import { GITHUB_REPO_URL, WELCOME_AI_CREDITS, hacktoberfest } from "@/lib/site";
 import { PageTransition } from "@/components/motion/page-transition";
 import { ProfileOnboarding } from "@/components/profile-onboarding";
 import { Suspense } from "react";
@@ -119,7 +118,7 @@ export default async function Home() {
                   <span className="headline-line"><span className="text-orange">your PR?</span></span>
                 </h1>
                 <p className="prose-sans fade-up hero-sub" style={{ ["--d" as string]: ".3s" }}>
-                  Paste a repo. Holt checks what happened to the outsiders who tried before you: did anyone reply, and
+                  Holt checks what happened to the outsiders who tried before you: did anyone reply, and
                   did anything get merged?
                 </p>
               </div>
@@ -128,13 +127,12 @@ export default async function Home() {
               </div>
               <div className="fade-up hero-foot" style={{ ["--d" as string]: ".42s" }}>
                 <p className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                  <span className="font-sans text-muted">No repo in mind?</span>
                   <Link href="/find" className="bracket-link bracket-link--orange min-h-11 px-3 text-center sm:min-h-12 sm:px-5">
                     [ find a project&nbsp;→&nbsp;]
                   </Link>
                 </p>
                 <p className="font-sans text-faint">
-                  Already on GitHub? Swap <strong className="text-muted">hub</strong> for <strong className="text-muted">holt</strong>:{" "}
+                  swap <strong className="text-muted">hub</strong> for <strong className="text-muted">holt</strong>:{" "}
                   <SwapHost />
                 </p>
               </div>
@@ -159,18 +157,9 @@ export default async function Home() {
           <Grid>
             <Kicker n="02" label="see the answer" />
             <div className="ls-split">
-              <div>
-                <h2 className="h2 mb-6">
-                  <Words text="Watch Holt check a repo." />
-                </h2>
-                <p className="prose-sans mb-8 max-w-[34ch]" data-reveal>
-                  It reads what happened to the last few months of outside pull requests, then applies the same written
-                  rules to every repo. On the web or in your terminal: same check, same answer.
-                </p>
-                <p className="prose-sans max-w-[34ch]" data-reveal>
-                  Every claim in a report links to the GitHub thread it came from. Check our work.
-                </p>
-              </div>
+              <h2 className="h2">
+                <Words text="Watch Holt check a repo." />
+              </h2>
               <div className="min-w-0" data-reveal>
                 <CheckReplay replay={REPLAY} />
                 {/* An example report: open to everyone, signed in or not. */}
@@ -197,19 +186,11 @@ export default async function Home() {
         <section data-cat-section="determined" className="pane border-t border-line">
           <Grid>
             <Kicker n="04" label="the url trick" />
-            <h2 className="h2 mb-6">
+            <h2 className="h2 mb-[clamp(1.5rem,5svh,3.5rem)]">
               <Words text="Already on GitHub? Swap hub for holt." />
             </h2>
-            <p className="prose-sans mb-10 max-w-[740px]" data-reveal>
-              Change <code className="font-mono text-ink">github.com</code> to{" "}
-              <code className="font-mono text-ink">{SITE_HOST}</code> in any repo link and hit enter. Works on your
-              phone too.
-            </p>
-            <div className="ls-split ls-split--even">
-              <div className="min-w-0" data-reveal>
-                <SwapHost path="/pallets/flask" big />
-              </div>
-              <UrlTrick />
+            <div className="min-w-0" data-reveal>
+              <SwapHost path="/pallets/flask" big />
             </div>
           </Grid>
         </section>
@@ -218,18 +199,11 @@ export default async function Home() {
         <section id="what-it-checks" data-cat-section="heartbroken" className="pane scroll-mt-[61px] border-t border-line bg-section-alt">
           <Grid>
             <Kicker n="05" label="what it checks" />
-            <h2 className="h2 mb-6">
+            <h2 className="h2 mb-12">
               <Words text="Stars won't tell you who gets merged." />
             </h2>
-            <p className="prose-sans mb-12 max-w-[740px]" data-reveal>
-              So Holt skips them and reads what happened to the outsiders who tried.
-            </p>
             <Receipts />
-            <p className="mt-6 text-[0.9rem] text-faint" data-reveal>
-              <span className="text-blue">evidence:</span> both say &ldquo;closed&rdquo; on GitHub. Only one is good news.
-            </p>
             <div className="mt-10 flex flex-wrap items-center gap-x-4 gap-y-2" data-reveal>
-              <span className="font-sans text-[0.95rem] text-muted">Rather browse a ranked list?</span>
               <Link href="/discover" className="bracket-link">[ discover repos → ]</Link>
             </div>
           </Grid>
@@ -242,14 +216,9 @@ export default async function Home() {
             <h2 className="h2 mb-4">
               <Words text="Three possible answers. No hedging." />
             </h2>
-            <p className="prose-sans max-w-[70ch]" data-reveal>
-              The same written rules judge every repo. An AI can explain the evidence to you. It can&apos;t change the
-              answer.{" "}
-              <Link href="/how-it-works" className="text-link font-mono text-[0.9em]">[ how it decides ]</Link>
-            </p>
             <Answers />
             <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3" data-reveal>
-              <span className="w-full font-sans text-[0.95rem] text-muted">Want the evidence explained in plain English, with citations?</span>
+              <Link href="/how-it-works" className="text-link inline-flex min-h-11 items-center font-mono text-[0.89rem]">[ how it decides ]</Link>
               <Suspense fallback={null}>
                 <AiReportsCta />
               </Suspense>
@@ -263,13 +232,9 @@ export default async function Home() {
           <div className="relative">
             <Grid>
               <Kicker n="07" label="open source" />
-              <h2 className="h2 mb-6">
+              <h2 className="h2 mb-8">
                 <Words text="Open source. We merge outsiders too." />
               </h2>
-              <p className="prose-sans mb-8 max-w-[740px]" data-reveal>
-                Fix a typo in the docs or rework the verdict rules. There&apos;s room at every level. Prefer the
-                terminal? Holt runs there too.
-              </p>
               <div className="ls-install grid max-w-[760px] grid-cols-[auto_1fr_auto] items-center border border-line-strong bg-bg" data-reveal>
                 <span aria-hidden="true" className="pl-4 text-amber">$</span>
                 <code className="min-w-0 overflow-x-auto whitespace-nowrap px-2 py-4 text-[0.8rem] sm:px-3 sm:text-[0.95rem]">

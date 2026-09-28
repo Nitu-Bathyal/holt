@@ -208,8 +208,9 @@ async function start(gsap: Gsap, ScrollTrigger: ST, cat: HTMLButtonElement) {
   // Desktop: the cat walks from the hero to the right edge and stays with you.
   // Timed, not scrubbed: tied to scroll position, the cat jumped with every
   // wheel notch (up to ~50px a frame). Crossing the hero's top plays one glide;
-  // scrolling back to the top plays it backwards.
+  // scrolling back to the top glides it home.
   let journey: gsap.core.Timeline | undefined;
+  let back: gsap.core.Tween | undefined;
   let journeyTrigger: ReturnType<ST["create"]> | undefined;
   let footerTrigger: ReturnType<ST["create"]> | undefined;
   if (desktop) {
@@ -231,11 +232,20 @@ async function start(gsap: Gsap, ScrollTrigger: ST, cat: HTMLButtonElement) {
       .timeline({ paused: true })
       .to(cat, { x: side.x, scale: side.scale, opacity: 0.92, duration: 0.35, ease: "power3.out", force3D: true })
       .to(cat, { y: side.y, duration: 0.6, ease: "power3.inOut", force3D: true }, 0.25);
+    // Back at the top it glides home on its own ease: reversing the walk
+    // would replay the fast exit backwards, ending in a snap.
     journeyTrigger = ScrollTrigger.create({
       trigger: "[data-hero]",
       start: "top top",
-      onEnter: () => journey!.play(),
-      onLeaveBack: () => journey!.reverse(),
+      onEnter: () => {
+        back?.kill();
+        // From wherever it is (it may be on its way home).
+        journey!.invalidate().restart();
+      },
+      onLeaveBack: () => {
+        journey!.pause();
+        back = gsap.to(cat, { x: 0, y: 0, scale: 1, opacity: 0.85, duration: 0.7, ease: "power3.inOut", force3D: true });
+      },
     });
 
     // The footer has a cat of its own. As the footer comes into view this one
@@ -272,6 +282,7 @@ async function start(gsap: Gsap, ScrollTrigger: ST, cat: HTMLButtonElement) {
     triggers.forEach((t) => t.kill());
     journeyTrigger?.kill();
     journey?.kill();
+    back?.kill();
     footerTrigger?.kill();
     reveals.forEach((r) => {
       r.scrollTrigger?.kill();

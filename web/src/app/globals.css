@@ -1483,7 +1483,7 @@
 [data-hero] .ls-kicker {
   margin-bottom: 0;
 }
-/* Text beside its demo from 1024px: section 02 (words | replay), 04 (flip | form). */
+/* Section 02: the headline beside the replay from 1024px. */
 .ls-split {
   display: grid;
   gap: clamp(1.5rem, 4svh, 3rem);
@@ -1493,9 +1493,6 @@
     grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
     align-items: center;
     gap: clamp(2rem, 4vw, 5rem);
-  }
-  .ls-split--even {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }
 

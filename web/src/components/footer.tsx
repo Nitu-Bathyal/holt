@@ -215,7 +215,6 @@ export function Footer({ signedIn = false }: { signedIn?: boolean }) {
               {error}
             </p>
             <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
-              <span className="font-sans text-[0.95rem] text-muted">No repo yet?</span>
               <Link href="/find" {...react("celebrating")} className="bracket-link bracket-link--orange">
                 [ find a project → ]
               </Link>
