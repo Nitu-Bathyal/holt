@@ -34,7 +34,7 @@ export function RepoCard({ r, report, focusHref, onOpen, actions }: { r: CardRep
               {name}
             </a>
           </h2>
-          <p className="mt-0.5 truncate font-sans text-[0.84rem] text-muted">{r.description || "No description."}</p>
+          {r.description && <p className="mt-0.5 truncate font-sans text-[0.84rem] text-muted">{r.description}</p>}
         </div>
       </div>
 

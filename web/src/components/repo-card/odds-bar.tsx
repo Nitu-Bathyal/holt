@@ -15,11 +15,14 @@ export const SEGMENT_CLASS: Record<SegmentKey, string> = {
 export function OddsBar({ stats, className = "h-1.5" }: { stats: CardStats; className?: string }) {
   const segs = oddsSegments(stats);
   if (!segs) return <div role="img" aria-label={oddsText(stats)} className={`${className} bg-panel-2`} />;
-  const total = segs.reduce((a, s) => a + s.n, 0);
+  // "Too recent" is context, not odds: it never takes more than a third of the bar.
+  const decided = segs.reduce((a, s) => a + (s.key === "recent" ? 0 : s.n), 0);
+  const width = (s: { key: string; n: number }) => (s.key === "recent" ? Math.min(s.n, decided / 2) : s.n);
+  const total = segs.reduce((a, s) => a + width(s), 0);
   return (
     <div role="img" aria-label={oddsText(stats)} className={`flex gap-px overflow-hidden bg-panel-2 ${className}`}>
       {segs.map((s) => (
-        <span key={s.key} className={SEGMENT_CLASS[s.key]} style={{ flexGrow: s.n, flexBasis: 0, minWidth: s.n / total < 0.02 ? 3 : 0 }} />
+        <span key={s.key} className={SEGMENT_CLASS[s.key]} style={{ flexGrow: width(s), flexBasis: 0, minWidth: width(s) / total < 0.02 ? 3 : 0 }} />
       ))}
     </div>
   );

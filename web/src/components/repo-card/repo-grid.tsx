@@ -12,6 +12,8 @@ type Props = {
   days?: number;
   /** A slot per repo (by `owner/name`) for buttons such as Save, on the card and in the focus view. */
   actions?: Partial<Record<string, React.ReactNode>>;
+  /** Where a topic in the focus view links to (a board URL; `topic=` is added). */
+  topicBase?: string;
 };
 
 const PARAM = "focus";
@@ -46,7 +48,7 @@ function Cards({ repos, days, actions, onOpen }: Props & { onOpen?: (repo: strin
 }
 
 function Focusable(props: Props) {
-  const { repos, days, actions } = props;
+  const { repos, days, actions, topicBase } = props;
   const focus = useSearchParams().get(PARAM);
   const nb = neighbours(repos.map((r) => r.repo), focus);
   const current = nb ? repos[nb.index] : null;
@@ -110,10 +112,10 @@ function Focusable(props: Props) {
           const dy = e.changedTouches[0].clientY - t.y;
           if (Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy)) go(dx < 0 ? nb.next : nb.prev);
         }}
-        className="m-0 h-dvh max-h-none w-full max-w-none bg-bg text-ink backdrop:bg-black/60 backdrop:backdrop-blur-[2px] sm:m-auto sm:h-auto sm:max-h-[90vh] sm:w-[min(48rem,calc(100%-3rem))] sm:border sm:border-line-strong sm:shadow-soft"
+        className="bg-bg text-ink backdrop:bg-black/60 backdrop:backdrop-blur-[2px] max-sm:m-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:max-w-none sm:m-auto sm:max-h-[90vh] sm:w-[min(48rem,calc(100%-3rem))] sm:border sm:border-line-strong sm:shadow-soft"
       >
         {current && nb && (
-          <div className="flex h-full flex-col sm:max-h-[90vh]">
+          <div className="flex h-full flex-col sm:h-auto sm:max-h-[90vh]">
             <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 text-[0.78rem] text-muted sm:px-6">
               <span className="tabular-nums">{nb.index + 1} of {repos.length}</span>
               <div className="flex items-center gap-1">
@@ -122,8 +124,8 @@ function Focusable(props: Props) {
                 <button type="button" onClick={close} aria-label="Close" className="ml-2 grid size-10 place-items-center text-[1.1rem] hover:text-ink">✕</button>
               </div>
             </div>
-            <div data-scroll className="flex-1 overflow-y-auto overscroll-contain p-4 sm:p-6">
-              <RepoFocus key={current.repo} r={current} report={reportHref(current.repo, days)} actions={actions?.[current.repo]} />
+            <div data-scroll className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:flex-initial sm:p-6">
+              <RepoFocus key={current.repo} r={current} report={reportHref(current.repo, days)} actions={actions?.[current.repo]} topicBase={topicBase} />
             </div>
             <p className="hidden border-t border-line px-6 py-2 text-[0.72rem] text-faint sm:block">← → to move between repos · Esc to close</p>
           </div>

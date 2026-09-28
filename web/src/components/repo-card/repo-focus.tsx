@@ -8,7 +8,7 @@ import { OddsBar, OddsLegend } from "./odds-bar";
 import { LangDot, RepoAvatar } from "./repo-avatar";
 
 /** Everything a list knows about one repo: the full numbers, why it's here, and issues to start with. */
-export function RepoFocus({ r, report, actions }: { r: CardRepo; report: string; actions?: React.ReactNode }) {
+export function RepoFocus({ r, report, actions, topicBase }: { r: CardRepo; report: string; actions?: React.ReactNode; topicBase?: string }) {
   const [owner, name] = r.repo.split("/");
   return (
     <div>
@@ -32,9 +32,15 @@ export function RepoFocus({ r, report, actions }: { r: CardRepo; report: string;
             )}
             {r.stars != null && <span>★ {compact(r.stars)}<span className="sr-only"> stars</span></span>}
             {r.checkedThisWeek != null && <span className="text-blue">checked by {r.checkedThisWeek} people this week</span>}
-            {r.topics.slice(0, 5).map((t) => (
-              <span key={t} className="border border-line px-1.5 py-0.5">{t}</span>
-            ))}
+            {r.topics.slice(0, 5).map((t) =>
+              topicBase ? (
+                <Link key={t} href={`${topicBase}${topicBase.includes("?") ? "&" : "?"}topic=${encodeURIComponent(t)}`} className="border border-line px-1.5 py-0.5 hover:border-blue hover:text-ink">
+                  {t}
+                </Link>
+              ) : (
+                <span key={t} className="border border-line px-1.5 py-0.5">{t}</span>
+              ),
+            )}
           </div>
         </div>
       </div>
@@ -81,7 +87,7 @@ export function RepoFocus({ r, report, actions }: { r: CardRepo; report: string;
       )}
 
       <div className="mt-6 flex flex-wrap items-center gap-3">
-        <Link href={report} className="btn-primary">read the full report</Link>
+        <Link href={report} className="btn-primary">{r.issues.length ? "read the full report" : "see its starter issues"}</Link>
         {actions}
       </div>
     </div>
