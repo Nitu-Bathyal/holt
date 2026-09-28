@@ -339,7 +339,7 @@ StarterIssue:
 issue is sent, so cached issues have them too. The web uses them with a
 profile (see Profile); they never change a verdict or which repos are listed.
 
-### `GET /v1/discover?sort=welcoming|stars|trending&language=python&topic=cli&limit=24`
+### `GET /v1/discover?sort=welcoming|stars|trending&language=python&topic=cli&hacktoberfest=true&limit=24`
 Browse the repositories Holt has checked, built only from each repo's latest
 7-day **rules** report (never the model) and ranking repositories, never
 people. Reads only the database: no GitHub call and no rate limit.
@@ -355,9 +355,17 @@ people. Reads only the database: no GitHub call and no rate limit.
   `trending_min` (5).
 - `language` and `topic` filter case-insensitively (`c++`, `Python`). `limit`
   1–100, default 24.
+- `hacktoberfest=true` keeps only repos tagged with the `hacktoberfest` GitHub
+  topic (how a project takes part; a Hacktoberfest find searches the same
+  topic) that aren't archived, under any sort and alongside the other filters.
+  `languages` then counts those repos only. For a "Hacktoberfest" row use
+  `?hacktoberfest=true&limit=20`: "Worth your time" repos, best first; add
+  `sort=stars` to include every verdict. Reads only the database, like the rest
+  of Discover, so it is as fast as the boards.
 
 ```jsonc
-{ "sort": "welcoming", "language": "Python", "topic": null, "trending_min": 5,
+{ "sort": "welcoming", "language": "Python", "topic": null, "hacktoberfest": false,
+  "trending_min": 5,
   "repos": [ { "repo": "owner/repo", "verdict": "viable", "headline": "Worth your time",
     "tone": "good", "reason": "…the report's verdict_line…", "stats": Stats,
     "description": "…"|null, "language": "Python"|null, "stars": 123|null,
@@ -367,9 +375,11 @@ people. Reads only the database: no GitHub call and no rate limit.
   "languages": [ { "name": "Python", "repos": 40 } ] }  // filter chips, most repos first
 ```
 
-`description`, `language`, `stars`, `topics` and `pushed_at` come from
-`repo_meta`, which the warm pass fills from GitHub (one GraphQL query per
-hundred repositories, re-read daily); they are null or empty until then.
+`description`, `language`, `stars`, `topics` (all of them, up to GitHub's 20)
+and `pushed_at` come from `repo_meta`, which the warm pass fills from GitHub
+(one GraphQL query per hundred repositories, re-read daily); they are null or
+empty until then, so a repo checked for the first time joins the Hacktoberfest
+filter after the next warm pass.
 
 ### `GET /badge/{owner}/{repo}.svg` (no internal key; public; `Cache-Control: public, max-age=3600, stale-while-revalidate=86400`)
 Shields-style SVG badge. Maintainers embed it in READMEs; it links back to the

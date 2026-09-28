@@ -1198,6 +1198,11 @@ export interface components {
         };
         /** DiscoverOut */
         DiscoverOut: {
+            /**
+             * Hacktoberfest
+             * @default false
+             */
+            hacktoberfest: boolean;
             /** Language */
             language: string | null;
             /** Languages */
@@ -3034,6 +3039,7 @@ export interface operations {
                 language?: string | null;
                 topic?: string | null;
                 limit?: number;
+                hacktoberfest?: boolean;
             };
             header?: {
                 "x-holt-internal-key"?: string | null;
