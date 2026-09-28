@@ -100,7 +100,7 @@ export function ProfileForm({
           maxLength={300}
           className="min-h-11 w-full border border-line-strong bg-bg px-3 font-sans text-[0.95rem] outline-none focus-visible:border-blue"
         />
-        <span className="mt-2 block font-sans text-[0.82rem] text-faint">GitHub topics, separated by commas. Topics narrow the search a lot; leave empty to see more.</span>
+        <span className="mt-2 block font-sans text-[0.82rem] text-faint">GitHub topics, comma-separated. Each one narrows the search a lot. Leave it empty to see more.</span>
       </label>
 
       {!adultConfirmed && (

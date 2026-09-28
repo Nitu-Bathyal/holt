@@ -35,19 +35,19 @@ export default async function ThanksPage({ searchParams }: PageProps<"/pricing/t
           {credits && <> You now have <strong className="text-ink">{creditsLabel(credits.balance)}</strong> to spend.</>}
         </p>
         <p className="prose-sans mt-3 text-[0.95rem] text-muted">
-          Credits pay for AI reports and paid features, after your free ones are used up. The quick report is always free.
+          Credits kick in once your free AI reports run out. Checking a repo stays free.
         </p>
       </>
     );
   } else if (order?.status === "failed") {
     heading = <>That payment didn&apos;t go through.</>;
-    body = <p className="prose-sans text-[1.05rem]">You haven&apos;t been charged. You can try again with another payment method.</p>;
+    body = <p className="prose-sans text-[1.05rem]">You haven&apos;t been charged. Try again, or use another payment method.</p>;
   } else if (order?.status === "held") {
     heading = <>We&apos;re checking your payment.</>;
     body = (
       <p className="prose-sans text-[1.05rem]">
-        Razorpay told us about your payment, but it didn&apos;t match the order, so we haven&apos;t added credits yet. We check these by
-        hand. If it isn&apos;t sorted within a day, write to{" "}
+        Razorpay reported a payment that didn&apos;t match the order, so no credits yet. We check these by hand. Not sorted
+        within a day? Write to{" "}
         <a href={`mailto:${CONTACT_EMAIL}`} className="text-link">{CONTACT_EMAIL}</a> and mention order <code className="text-[0.85em]">{id.slice(0, 12)}</code>.
       </p>
     );
@@ -55,7 +55,7 @@ export default async function ThanksPage({ searchParams }: PageProps<"/pricing/t
     heading = <>Almost there.</>;
     body = (
       <>
-        <p className="prose-sans text-[1.05rem]">Your payment is being confirmed. This usually takes a few seconds.</p>
+        <p className="prose-sans text-[1.05rem]">Confirming your payment. This usually takes a few seconds.</p>
         <OrderWaiter orderId={id} />
       </>
     );

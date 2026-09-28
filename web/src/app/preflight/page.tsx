@@ -9,7 +9,7 @@ import { caller, currentUser } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "PR pre-flight",
-  description: "Paste your pull request and see how it compares with what gets merged in that repository: checks, tests, size, the template, linked issues, with the evidence.",
+  description: "Paste your PR and see how it stacks up against what that repo merges: checks, tests, size, the template and linked issues.",
   alternates: { canonical: "/preflight" },
 };
 
@@ -39,12 +39,11 @@ export default async function PreflightPage({ searchParams }: PageProps<"/prefli
             <span>before a maintainer sees it</span>
           </p>
           <h1 className="display max-w-3xl text-[clamp(2rem,6vw,3.2rem)]">
-            Check your pull request <span className="text-blue">against this repo.</span>
+            Check your PR <span className="text-blue">against what gets merged.</span>
           </h1>
           <p className="prose-sans mt-5 max-w-2xl text-[1.05rem]">
-            Paste your pull request. Holt compares it with the pull requests this project merged in the last 12 months:
-            passing checks, tests, size, the template, a linked issue, sign-offs. Each point links the evidence. It&apos;s
-            guidance only: Holt never comments on GitHub and never changes your code.
+            Paste your PR. Holt holds it up against a year of PRs this repo merged, point by point, with the evidence.
+            It never comments on GitHub or touches your code.
           </p>
         </PageHead>
         <div className="wrap max-w-3xl py-8 sm:py-12">

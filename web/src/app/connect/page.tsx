@@ -13,11 +13,11 @@ import { connect } from "./actions";
 export const metadata: Metadata = { title: "Connect GitHub", robots: { index: false } };
 
 const ERRORS: Record<string, string> = {
-  adult: "Please confirm you're 18 or older. Connecting GitHub is only for adults; reports stay open to everyone.",
-  taken: "That GitHub account is already connected to another Holt account. Sign in with that account instead.",
+  adult: "Connecting GitHub is for people 18 or older. Tick the box to go on. Reports stay open to everyone.",
+  taken: "That GitHub account is already connected to another Holt account. Sign in with that one instead.",
   link: "GitHub didn't confirm your account. Try again.",
-  unavailable: "Connecting a GitHub account isn't set up on this server yet.",
-  save: "We couldn't connect your account just now. Try again in a minute.",
+  unavailable: "Connecting GitHub isn't set up on this server.",
+  save: "That didn't connect. Try again in a minute.",
 };
 
 export default async function ConnectPage({ searchParams }: PageProps<"/connect">) {
@@ -36,8 +36,8 @@ export default async function ConnectPage({ searchParams }: PageProps<"/connect"
         <p className="rail mb-4 flex gap-2"><strong className="m-0">connect</strong><span>free</span></p>
         <h1 className="display text-[clamp(2rem,6vw,3rem)]">Connect GitHub</h1>
         <p className="prose-sans mt-4 max-w-2xl text-[1rem]">
-          Connecting is free and optional. It lets Holt show you your own pull requests, with Holt&apos;s verdict on each repo, and
-          suggest repos that fit you. Those features are coming soon; connecting now means they&apos;ll be ready for you.
+          See your public PRs, with Holt&apos;s verdict on each repo. Get picks based on where your PRs got merged. Free,
+          and you can undo it any time.
         </p>
       </PageHead>
       <div className="wrap max-w-3xl pb-14 pt-2 sm:pb-16">
@@ -45,9 +45,9 @@ export default async function ConnectPage({ searchParams }: PageProps<"/connect"
 
         <form action={connect} className="mt-8 border border-line-strong bg-panel p-5 shadow-soft sm:p-8">
           <ul className="prose-sans list-disc space-y-1.5 pl-5 text-[0.95rem]">
-            <li>Holt only reads <strong>public</strong> information about your GitHub account, using its own access. It never posts, comments or opens anything as you, and gets no access to your repositories.</li>
-            {viaGitHub && <li>You&apos;ll go to GitHub once to confirm which account is yours. Holt asks for the same as signing in with GitHub: your public profile and email address.</li>}
-            <li>You can disconnect any time in settings. That deletes the connection and the list of repos you viewed here.</li>
+            <li>Holt reads only <strong>public</strong> data about your account, with its own access. It can&apos;t touch your repos and never posts, comments or opens anything as you.</li>
+            {viaGitHub && <li>GitHub asks you once to confirm which account is yours. Holt gets what GitHub sign-in gets: your public profile and email.</li>}
+            <li>Disconnect any time in settings. That deletes the connection and the list of repos you viewed here.</li>
           </ul>
 
           <p className="mt-6 border-l-2 border-blue pl-4 text-[0.95rem] font-semibold">{STATS_NOTICE}</p>

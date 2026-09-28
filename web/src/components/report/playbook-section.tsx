@@ -16,8 +16,8 @@ type Run =
   | { phase: "running"; stage: string; progress: number }
   | { phase: "error"; error: ApiError };
 
-const LOST: ApiError = { code: "upstream", message: "We lost the connection while the playbook was being written. It may still finish: reload the page in a minute." };
-const FAILED: ApiError = { code: "upstream", message: "Something went wrong on our side. Please try again in a minute." };
+const LOST: ApiError = { code: "upstream", message: "We lost the connection mid-write. It may still finish, so reload in a minute." };
+const FAILED: ApiError = { code: "upstream", message: "Something broke on our side. Try again in a minute." };
 
 export function PlaybookSection({ repo, signedIn }: { repo: string; signedIn: boolean }) {
   const [s, setS] = useState<PlaybookState | null>(null);
@@ -123,9 +123,9 @@ function Teaser({ s, repo, signedIn, onUnlock, error }: { s: PlaybookState; repo
   return (
     <div data-playbook-teaser>
       <p className="mt-2 max-w-2xl font-sans text-muted">
-        What this project&apos;s merged pull requests have in common, who reviews them, and why outside ones were closed, in
-        the project&apos;s own words, linked. Written by an AI from counts of the last 12 months of pull requests; anything
-        that doesn&apos;t match the counts is removed. It doesn&apos;t change the verdict.
+        What this project&apos;s merged PRs have in common, who reviews them, and why outside ones got closed, in the
+        project&apos;s own words, linked. An AI writes it from 12 months of PR counts. Anything that doesn&apos;t match the
+        counts is cut. It doesn&apos;t change the verdict.
       </p>
 
       {t?.first && (
@@ -136,7 +136,7 @@ function Teaser({ s, repo, signedIn, onUnlock, error }: { s: PlaybookState; repo
       )}
 
       <p className="mt-6 text-[0.72rem] uppercase tracking-[0.08em] text-faint">
-        {t ? "In this repository's playbook" : "What a playbook covers"}
+        {t ? "In this repo's playbook" : "What a playbook covers"}
       </p>
       <ul className="mt-2 space-y-1.5 font-sans text-[0.95rem]" data-playbook-sections>
         {t
@@ -198,7 +198,7 @@ function Writing({ stage, progress }: { stage: string; progress: number }) {
         <div className="h-full bg-blue transition-[width] duration-500 ease-out" style={{ width: `${pct}%` }} />
       </div>
       <p className="mt-3 font-sans text-[0.85rem] text-faint">
-        This usually takes 1 to 3 minutes. You can leave this page and come back; it keeps going. If it fails, you aren&apos;t charged.
+        This takes 1 to 3 minutes and keeps going if you leave. If it fails, you aren&apos;t charged.
       </p>
     </div>
   );
@@ -211,8 +211,8 @@ function FullPlaybook({ p }: { p: Playbook }) {
   return (
     <div data-playbook-full>
       {p.note && <p className="mt-3 max-w-2xl border border-dashed border-line-strong px-3 py-2 font-sans text-[0.9rem] text-muted">{p.note}</p>}
-      {p.archived && <p className="mt-3 font-sans text-[0.9rem] text-orange">This repository is archived: it no longer takes pull requests.</p>}
-      {shown.length === 0 && <p className="mt-4 font-sans text-muted">The pull requests didn&apos;t show anything we could count with confidence, so there&apos;s nothing to advise yet.</p>}
+      {p.archived && <p className="mt-3 font-sans text-[0.9rem] text-orange">This repo is archived. It doesn&apos;t take PRs any more.</p>}
+      {shown.length === 0 && <p className="mt-4 font-sans text-muted">These PRs didn&apos;t show anything solid enough to advise on yet.</p>}
       <div className="mt-2 space-y-7">
         {shown.map((k) => (
           <div key={k}>
@@ -239,7 +239,7 @@ function FullPlaybook({ p }: { p: Playbook }) {
       </div>
       <p className="mt-8 border-t border-dashed border-line pt-4 text-[0.72rem] text-faint">
         Written by {p.model ?? "an AI model"} from counts of {p.window_days ? `the last ${p.window_days === 365 ? "12 months" : `${p.window_days} days`}` : "recent"} of
-        pull requests. Every item was checked against those counts and quotes, and anything that didn&apos;t match was removed. It
+        PRs. Every item was checked against those counts and quotes, and anything that didn&apos;t match was cut. It
         doesn&apos;t change the verdict. Updated <time dateTime={p.generated_at} suppressHydrationWarning>{timeAgo(p.generated_at)}</time>.
       </p>
     </div>

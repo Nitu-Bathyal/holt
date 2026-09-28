@@ -31,7 +31,7 @@ export function AnalysisRunner({ repo, mode, days, signedIn, fallback }: { repo:
     return (
       <div>
         <p role="status" className="mb-6 border border-line-strong bg-panel-2 px-4 py-3 text-[0.85rem] text-muted">
-          Holt&rsquo;s rules have been updated and we couldn&rsquo;t re-check this repository just now, so this is the earlier result.{" "}
+          Holt&rsquo;s rules changed and the re-check didn&rsquo;t finish, so this is the earlier result.{" "}
           <button type="button" onClick={retry} className="underline hover:text-ink">
             Try again
           </button>

@@ -11,7 +11,7 @@ const [owner, repo] = report.repo.split("/");
 
 export const metadata: Metadata = {
   title: "Example AI report",
-  description: `A full AI report on ${report.repo}, free to read: the written explanation, the quoted pull-request threads and the evidence. Recorded ${recorded}.`,
+  description: `A full AI report on ${report.repo}, free to read: the written explanation, quoted PR threads and the evidence. Recorded ${recorded}.`,
   alternates: { canonical: EXAMPLE_PATH },
 };
 
@@ -24,13 +24,13 @@ export default function ExampleAiReportPage() {
           <aside className="mb-6 border border-blue/50 bg-blue/[0.06] p-4 sm:p-5" data-example-banner>
             <p className="text-[0.72rem] uppercase tracking-[0.08em] text-blue">Example AI report (recorded {recorded})</p>
             <p className="mt-2 max-w-3xl font-sans text-[0.95rem] text-ink">
-              This is a recorded example, not a live report. It shows what an AI report adds for {report.repo}, using
-              GitHub activity up to {recorded}. Anyone can read it: no account, no free report spent.
+              A recorded example, not a live report, from GitHub activity up to {recorded}. Free to read. No account
+              needed.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1">
               <Link href="/" className="bracket-link">[ get one for your repo → ]</Link>
-              <Link href={`/${report.repo}`} className="bracket-link">[ see today&apos;s free report for {report.repo} → ]</Link>
-              <span className="font-sans text-[0.8rem] text-faint">sign in for {WELCOME_AI_CREDITS} free AI reports</span>
+              <Link href={`/${report.repo}`} className="text-link font-sans text-[0.85rem]">today&apos;s free report for {report.repo}</Link>
+              <Link href="/signin" className="text-link font-sans text-[0.85rem]">sign in for {WELCOME_AI_CREDITS} free AI reports</Link>
             </div>
           </aside>
 
@@ -50,7 +50,7 @@ export default function ExampleAiReportPage() {
             example
             issues={
               <p className="border border-dashed border-line-strong p-4 font-sans text-[0.95rem] text-muted">
-                Starter issues change every day, so they aren&apos;t part of this recorded example.{" "}
+                Starter issues change daily, so this example skips them.{" "}
                 <Link href={`/${report.repo}`} className="text-link">See today&apos;s starter issues for {report.repo}</Link>.
               </p>
             }

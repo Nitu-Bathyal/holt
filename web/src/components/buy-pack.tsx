@@ -58,7 +58,7 @@ export async function post<T>(url: string, body: unknown): Promise<{ ok: true; d
     const data = await res.json().catch(() => null);
     if (res.ok) return { ok: true, data: data as T };
     const e = (data as { error?: ApiError } | null)?.error;
-    return { ok: false, code: e?.code, message: (e && MESSAGES[e.code]) || e?.message || "Something went wrong. Try again in a minute." };
+    return { ok: false, code: e?.code, message: (e && MESSAGES[e.code]) || e?.message || "That didn't work. Try again in a minute." };
   } catch {
     return { ok: false, message: "Couldn't reach Holt. Check your connection and try again." };
   }
@@ -106,7 +106,7 @@ export function BuyPack({ pack, label, signedIn, prefill, autoStart, primary }: 
     try {
       await loadRazorpay();
     } catch {
-      setPhase({ t: "failed", message: "Razorpay's payment window didn't load. An ad blocker may be stopping it; allow checkout.razorpay.com and try again." });
+      setPhase({ t: "failed", message: "Razorpay's payment window didn't load. If you use an ad blocker, allow checkout.razorpay.com and try again." });
       return;
     }
     setPhase({ t: "paying" });
