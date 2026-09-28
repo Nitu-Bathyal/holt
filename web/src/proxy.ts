@@ -5,13 +5,15 @@ import { NextResponse, type NextRequest } from "next/server";
 import { HOME_REDIRECT_CACHE, landingRedirect } from "@/lib/home";
 import { hasLiveSession } from "@/lib/live-session";
 import { isMockNotFound } from "@/lib/mock/fixtures";
-import { redirectTargetForPath, repoFromPath } from "@/lib/repo";
+import { isValidRepo, redirectTargetForPath } from "@/lib/repo";
 import { probeGitHub, repoExistsChecker } from "@/lib/repo-exists";
 
 const repoExists = repoExistsChecker({
   probe: process.env.MOCK_API === "1" ? async (r) => (isMockNotFound(r) ? "missing" : "exists") : probeGitHub,
 });
 
+// Two-segment app routes that /[owner]/[repo] must not claim.
+const APP_ROUTES = new Set(["me", "discover", "pricing"]);
 
 export async function proxy(req: NextRequest) {
   const target = redirectTargetForPath(req.nextUrl.pathname, req.nextUrl.search);
@@ -24,9 +26,9 @@ export async function proxy(req: NextRequest) {
     if (home) return NextResponse.redirect(new URL(home, req.url), { status: 307, headers: { "Cache-Control": HOME_REDIRECT_CACHE } });
   }
 
-  const repo = repoFromPath(req.nextUrl.pathname);
-  if (repo) {
-    if (!(await repoExists(repo))) {
+  const parts = req.nextUrl.pathname.split("/").filter(Boolean);
+  if (parts.length === 2 && !APP_ROUTES.has(parts[0].toLowerCase()) && isValidRepo(parts[0], parts[1])) {
+    if (!(await repoExists(`${parts[0]}/${parts[1]}`))) {
       return NextResponse.rewrite(new URL("/_not-found", req.url), { status: 404 });
     }
   }
