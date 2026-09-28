@@ -43,7 +43,7 @@ export function AnalysisRunner({ repo, mode, days, signedIn, fallback }: { repo:
   if (state.phase === "done")
     return (
       <ViewTransition enter="sk-in" default="none">
-        <ReportView report={state.report} issues={<StarterIssues issues={issues} repo={state.report.repo} />} signedIn={signedIn} reveal />
+        <ReportView report={state.report} issues={<StarterIssues issues={issues} repo={state.report.repo} />} signedIn={signedIn} reveal land={state.fresh} />
       </ViewTransition>
     );
   return (
