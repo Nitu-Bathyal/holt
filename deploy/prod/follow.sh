@@ -190,7 +190,7 @@ esac
 staging="$(curl -fsS --max-time 10 "$STAGING_URL" 2>/dev/null \
     | python3 -c 'import json,sys; print(((json.load(sys.stdin).get("live") or {}).get("main") or {}).get("sha") or "")' 2>/dev/null || true)"
 if [[ "$staging" != "$sha" ]]; then
-    on="${staging:0:7}"; on="${on:-nothing: its /__build didn't answer}"
+    on="${staging:0:7}"; on="${on:-nothing: its /__build did not answer}"
     status waiting "$sha" "CI is green on $short; staging isn't live on it yet (staging is on $on)"
     exit 0
 fi
