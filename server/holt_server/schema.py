@@ -21,7 +21,7 @@ from datetime import datetime
 from typing import Literal
 
 from holt.agent.verdict import headline as verdict_headline
-from holt.agent.verdict import MIN_MERGES
+from holt.agent.verdict import MIN_MERGES, hours_phrase
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_serializer
 
 # Bound here, not looked up per call: tests swap `holt.starter` for a fake.
@@ -304,21 +304,6 @@ def period(sample: Sample | None) -> str | None:
     return f"{start} – {end}"
 
 
-def wait_phrase(hours: float) -> str:
-    """0.4 -> "24 minutes", 6.2 -> "6 hours", 60 -> "3 days"."""
-    if hours < 1:
-        minutes = max(1, round(hours * 60))
-        return f"{minutes} minute" + ("" if minutes == 1 else "s")
-    if hours < 1.5:
-        return "an hour"
-    if hours < 36:
-        return f"{round(hours)} hours"
-    days = round(hours / 24)
-    if days < 14:
-        return f"{days} days"
-    return f"{round(days / 7)} weeks"
-
-
 def numbers_line(s: Stats, sample: Sample | None) -> str:
     """The second line: what happened to outside contributors, with the dates
     it covers. The same counts as the stat tiles and the verdict's rules."""
@@ -333,8 +318,9 @@ def numbers_line(s: Stats, sample: Sample | None) -> str:
     if s.median_first_response_hours is not None:
         # The median is over the ones that got a reply; say so, or a fast
         # median hides a silent majority (the next sentence gives its size).
+        # The engine's phrasing, so it reads the same as the rule that decided.
         out.append("When a maintainer replied, it was typically within "
-                   f"{wait_phrase(s.median_first_response_hours)}.")
+                   f"{hours_phrase(s.median_first_response_hours)}.")
     else:
         out.append("No maintainer replied to any of them.")
     if s.no_reply:
