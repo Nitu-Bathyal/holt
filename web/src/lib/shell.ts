@@ -16,6 +16,11 @@ export function shellFor(pathname: string, signedIn: boolean): ShellKind {
   return MARKETING.some((m) => p === m || (m !== "/" && p.startsWith(`${m}/`))) ? "marketing" : "app";
 }
 
+/** The header logo: signed in it goes to your home on every page, the landing included; signed out, to the landing page. */
+export function logoHref(signedIn: boolean): string {
+  return signedIn ? "/me" : "/";
+}
+
 /** The landing page's sections, in page order: the marketing nav jumps to these. */
 export const LANDING_SECTIONS = [
   { id: "answer", label: "the answer" },
@@ -28,12 +33,10 @@ export type LandingSection = (typeof LANDING_SECTIONS)[number]["id"];
 
 /**
  * A jump link to a landing section. On the landing page it's a plain hash, so
- * Lenis glides there; anywhere else it goes to the landing page first. A
- * signed-in "/" redirects home, so they get the landing page at /?landing=1.
+ * Lenis glides there; anywhere else it goes to the landing page first.
  */
-export function jumpHref(pathname: string, signedIn: boolean, id: LandingSection): string {
-  if (pathname === "/") return `#${id}`;
-  return signedIn ? `/?landing=1#${id}` : `/#${id}`;
+export function jumpHref(pathname: string, id: LandingSection): string {
+  return pathname === "/" ? `#${id}` : `/#${id}`;
 }
 
 export type IconName =

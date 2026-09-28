@@ -3,8 +3,6 @@
 // A repo that doesn't exist on GitHub gets the 404 page with a 404 status.
 import { NextResponse, type NextRequest } from "next/server";
 import { isAppRoute } from "@/lib/app-routes";
-import { HOME_REDIRECT_CACHE, landingRedirect } from "@/lib/home";
-import { hasLiveSession } from "@/lib/live-session";
 import { isMockNotFound } from "@/lib/mock/fixtures";
 import { isValidRepo, redirectTargetForPath } from "@/lib/repo";
 import { retiredRedirect } from "@/lib/shell";
@@ -21,13 +19,6 @@ export async function proxy(req: NextRequest) {
   // Pages that were merged into others (lib/shell.ts).
   const retired = retiredRedirect(req.nextUrl.pathname);
   if (retired) return NextResponse.redirect(new URL(retired, req.url), 308);
-
-  // Signed in, "/" is your home (/me); /?landing=1 still shows the landing page.
-  // Only a request carrying a session cookie costs a database lookup.
-  if (req.nextUrl.pathname === "/") {
-    const home = landingRedirect(await hasLiveSession(req), req.nextUrl.searchParams.get("landing") ?? undefined);
-    if (home) return NextResponse.redirect(new URL(home, req.url), { status: 307, headers: { "Cache-Control": HOME_REDIRECT_CACHE } });
-  }
 
   const parts = req.nextUrl.pathname.split("/").filter(Boolean);
   if (parts.length === 2 && !isAppRoute(parts[0]) && isValidRepo(parts[0], parts[1])) {
