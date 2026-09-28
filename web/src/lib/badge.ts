@@ -40,6 +40,10 @@ const ADVICE: Record<string, string[]> = {
     "Newcomers wait too long for a first reply. A quick acknowledgement counts, even before a full review.",
     "Tools like a CODEOWNERS file or a triage rota can make sure new pull requests get seen.",
   ],
+  long_odds: [
+    "Very few outside pull requests get merged. Say in CONTRIBUTING what kind of change you'd accept, and label issues you'd welcome help with.",
+    "Close pull requests you won't take with a short reason, so newcomers learn what would land.",
+  ],
   rubber_stamp: ["Merged pull requests rarely get any review comments. Leave a short review on newcomer pull requests so they learn something from contributing."],
 };
 

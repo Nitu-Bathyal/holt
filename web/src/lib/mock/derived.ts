@@ -53,7 +53,7 @@ function nextStep(r: Stored): string {
     : "Best bet: a small, focused change; a starter issue is a good place to find one.";
 }
 
-type Derived = "headline" | "tone" | "verdict_line" | "odds" | "rule_codes" | "numbers_line" | "first_timer_line" | "next_step" | "stat_line" | "counted" | "sample" | "asks";
+type Derived = "headline" | "tone" | "verdict_line" | "odds" | "rule_codes" | "numbers_line" | "first_timer_line" | "next_step" | "stat_line" | "counted" | "sample" | "asks" | "budget_independent";
 type Stored = Omit<Report, Derived>;
 
 export function withDerived(r: Stored): Report {
@@ -65,6 +65,7 @@ export function withDerived(r: Stored): Report {
     rule_codes: [],
     sample: null,
     asks: [],
+    budget_independent: r.mode === "rules",
     verdict_line: line(r.verdict, s, r.decided_by),
     numbers_line: numbers(s),
     first_timer_line: !s.outsider_attempts ? null : k ? `${k} ${k === 1 ? "person" : "people"} got their first pull request merged here.` : "Nobody got their first pull request merged here in this period.",

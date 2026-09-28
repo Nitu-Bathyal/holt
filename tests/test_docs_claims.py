@@ -188,7 +188,7 @@ def test_a_chosen_model_does_not_break_a_replay(monkeypatch, tmp_path):
     monkeypatch.setenv("XDG_CONFIG_HOME", str(tmp_path))
     out = io.StringIO()
     with contextlib.redirect_stdout(out):
-        code = main(["analyze", "NixOS/nixpkgs", "--baseline", "--replay"])
+        code = main(["analyze", "NixOS/nixpkgs", "--replay"])
     assert code == 0
     assert "NixOS/nixpkgs" in out.getvalue()
 

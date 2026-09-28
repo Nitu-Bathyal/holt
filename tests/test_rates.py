@@ -103,16 +103,28 @@ def test_each_outcome_lands_in_one_bucket():
         pr(5),                                      # ignored
         pr(6, hours_ago=5),                         # still open
         pr(7, hours_ago=5, replied=True),           # still open, answered
-        pr(8, hours_ago=5, outcome="merged"),       # decided fast: merged
-        pr(9, hours_ago=5, outcome="closed"),       # decided fast: closed silently
+        pr(8, hours_ago=5, outcome="merged"),       # fast merge: too recent all the same
+        pr(9, hours_ago=5, outcome="closed"),       # fast close: too recent all the same
     )
     assert s.outsider_threads == 9
-    assert s.outsider_still_open == 2
-    assert s.outsider_judgeable == 7
-    assert s.outsider_merged == 2
-    assert s.outsider_closed_silently == 2
+    assert s.outsider_still_open == 4
+    assert s.outsider_judgeable == 5
+    assert s.outsider_merged == 1
+    assert s.outsider_closed_silently == 1
     assert s.outsider_ignored == 1
-    assert s.merge_rate == pytest.approx(2 / 7)
+    assert s.merge_rate == pytest.approx(1 / 5)
+
+
+def test_fast_outcomes_do_not_inflate_the_merge_rate():
+    """The busy-repo bias: of the two-week-old PRs 1 in 10 merged, and the
+    only young ones with an outcome are the quick merges. Counting those read
+    as 6 in 15; leaving every young one out keeps it at 1 in 10."""
+    old = [pr(i, outcome="merged" if i == 1 else "open") for i in range(1, 11)]
+    young = [pr(20 + i, hours_ago=6, outcome="merged") for i in range(5)]
+    young += [pr(30 + i, hours_ago=6) for i in range(20)]
+    s = signals_of(*old, *young)
+    assert s.merge_rate == pytest.approx(0.1)
+    assert s.outsider_still_open == 25
 
 
 def test_without_a_reference_time_a_silent_close_is_still_no_reply():
@@ -157,10 +169,10 @@ def test_a_busy_repo_is_not_judged_on_hours_old_pull_requests():
 
 
 @pytest.mark.parametrize(("n", "want"), [
-    (1, "1 pull request from an outside contributor is less than 14 days old and still open, "
-        "so it isn't counted yet."),
-    (3, "3 pull requests from outside contributors are less than 14 days old and still open, "
-        "so they aren't counted yet."),
+    (1, "1 pull request from an outside contributor was opened in the last 14 days, too "
+        "recently to know how it will end, so it isn't counted yet."),
+    (3, "3 pull requests from outside contributors were opened in the last 14 days, too "
+        "recently to know how they will end, so they aren't counted yet."),
 ])
 def test_the_still_open_line_agrees_with_its_number(n, want):
     lines = dict((code, text) for text, code in rates.count_sentences(n, 0, 0))
@@ -198,7 +210,7 @@ def threads_of(*prs):
 def test_the_period_line_names_the_first_and_last_dates():
     _, threads = threads_of(pr(1, hours_ago=24 * 30), pr(2, hours_ago=24))
     line = rates.period_sentence(threads, NOW)
-    assert line == ("These numbers come from the newest 2 pull requests, opened "
+    assert line == ("These numbers come from 2 pull requests, opened "
                     "between 26 Aug 2026 and 24 Sep 2026.")
 
 
@@ -281,3 +293,25 @@ def test_click_rejected_ai_pull_requests_leave_the_counts():
     _, trace = pipeline.analyze_without_model(
         "pallets/click", golden.RecordingProvider("pallets/click"), as_of=cutoff)
     assert trace.signals.outsider_excluded > 100
+
+
+def test_the_reason_is_the_rule_that_overruled_the_merge_count():
+    from holt.agent.verdict import Rule
+
+    rules = [Rule("Dates.", code="sample_period"), Rule("5 merged.", code="merges"),
+             Rule("Only 5 of 171.", code="long_odds")]
+    assert rates.first_deciding(rules).code == "long_odds"
+    assert rates.first_deciding(rules[:2]).code == "merges"
+
+
+def test_inactive_only_without_a_recent_push():
+    """No merge in 90 days decides only when nothing was pushed either."""
+    _, threads = threads_of(pr(1, hours_ago=24 * 400, outcome="merged"),
+                            pr(2, hours_ago=24 * 200))
+    records = [r for p in (pr(1, hours_ago=24 * 400, outcome="merged"),
+                           pr(2, hours_ago=24 * 200)) for r in p]
+    old_push = {"pushed_at": (NOW - timedelta(days=200)).isoformat()}
+    new_push = {"pushed_at": (NOW - timedelta(days=3)).isoformat()}
+    assert "looks inactive" in rates.inactive_sentence(records, threads, NOW, old_push)
+    assert rates.inactive_sentence(records, threads, NOW, new_push) is None
+    assert "some other way" in rates.dormant_sentence(records, threads, NOW, new_push)

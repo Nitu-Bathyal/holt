@@ -20,7 +20,7 @@ from holt.agent import rates
 from holt.agent.landing_detection import VIA
 from holt.agent.pipeline import MODEL_NOTE_LABEL
 from holt.agent.signals import Signals, Thread, Threads, build_threads, outsider_threads
-from holt.agent.verdict import rule_codes
+from holt.agent.verdict import rule_codes, slow_note, slow_sentence
 from holt.report import Assessment
 from holt.types import EvidenceRecord
 
@@ -241,14 +241,53 @@ def build(
         "decided_by": [str(r) for r in assessment.rules],
         "rule_codes": [c or "" for c in rule_codes(assessment.rules)],
         "unknowns": unknowns,
-        "landing": [{"path": a.path, "merged": a.landed, "attempted": a.attempted}
-                    for a in where.landed],
-        "never_landed": [{"path": a.path, "attempted": a.attempted} for a in where.never],
+        "landing": [{"path": a.path, "merged": a.landed, "attempted": a.attempted,
+                     "is_file": a.is_file} for a in where.landed],
+        "never_landed": [{"path": a.path, "attempted": a.attempted, "is_file": a.is_file}
+                         for a in where.never],
         "evidence": evidence,
         "evidence_until": iso(assessment.as_of),
         "generated_at": iso(generated_at or datetime.now(UTC)),
         "cost": cost if mode == "ai" else None,
         "sample": sample(threads),
+        # Rules reports from a live reading: every budget gets the same verdict
+        # (verdict.py), so another `days` is this report with its note redone.
+        "budget_independent": mode == "rules" and signals.settle_hours > 0,
         "asks": [{"code": a.code, "url": a.url} for a in asks_mod.read(
             by_id.values(), {t.key for t in outsider_threads(threads)})],
     }).model_dump(mode="json")
+
+
+# --- another time budget, from a report already made ----------------------------
+
+# The lines that read the reader's budget, and the ones a slow line goes before.
+_BUDGET_CODES = ("slow", "slow_note")
+_THIN_EVIDENCE = ("too_few_attempts", "few_merges", "few_people")
+
+
+def retime(report: dict[str, Any], days: int) -> dict[str, Any] | None:
+    """`report` as it reads for a `days`-day budget, or None if it can't be.
+
+    Only for a report marked `budget_independent`: its verdict is the same
+    for every budget (verdict.py), and the budget shows only in whether the
+    typical first reply is "slow". So the lines that say so are taken out and
+    put back for `days`, where the engine puts them: the note right after the
+    merge count under "Worth your time", and the slow line before the reason
+    the evidence is thin. No GitHub read, no model.
+    """
+    if not report.get("budget_independent") or report.get("mode") != "rules":
+        return None
+    lines = [(t, c) for t, c in zip(report.get("decided_by") or [], report.get("rule_codes") or [])
+             if c not in _BUDGET_CODES]
+    median = (report.get("stats") or {}).get("median_first_response_hours")
+    if median is not None and median > days * 24:
+        codes = [c for _, c in lines]
+        if report.get("verdict") == "viable" and "merges" in codes:
+            note = slow_note(median, days)
+            lines.insert(codes.index("merges") + 1, (str(note), note.code))
+        elif report.get("verdict") == "insufficient_evidence":
+            at = next((i for i, c in enumerate(codes) if c in _THIN_EVIDENCE), None)
+            if at is not None:
+                lines.insert(at, (slow_sentence(median, days), "slow"))
+    return {**report, "days": days,
+            "decided_by": [t for t, _ in lines], "rule_codes": [c for _, c in lines]}

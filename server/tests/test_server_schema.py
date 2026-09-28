@@ -227,7 +227,7 @@ def test_how_this_was_counted():
     assert topics == ["What we read", "The team and outside contributors", "Bots",
                       "Merges GitHub shows as closed", "What decided it", "The rule"]
     by = {c.topic: c.text for c in r.counted}
-    assert by["What we read"] == "The newest 200 pull requests on GitHub, opened 3 Jun – 26 Sep 2026."
+    assert by["What we read"] == "200 pull requests on GitHub, opened 3 Jun – 26 Sep 2026."
     assert by["The team and outside contributors"].startswith(
         "40 of them came from 9 people on the project's team")
     assert by["Bots"].startswith("No pull requests were opened by bots.")
@@ -244,9 +244,9 @@ def test_numbers_line_keeps_still_open_and_silent_closes_apart():
     assert top("viable", s, sample=SAMPLE).numbers_line == (
         "Of 18 pull requests from outside contributors (3 Jun – 26 Sep 2026) that have had "
         "time for an answer, 7 were merged (39%). When a maintainer replied, it was "
-        "typically within 2 hours. 28% were closed without a word. Another 42 are still "
-        "open and too new to count.")
+        "typically within 2 hours. 28% were closed without a word. Another 42 were opened "
+        "in the last 14 days, too recently to count.")
     fresh = stats(0, 0, 0) | {"still_open": 3}
     assert top("insufficient_evidence", fresh).numbers_line == (
-        "Outside contributors opened 3 pull requests, all still open and too new to judge "
-        "(less than 14 days old).")
+        "Outside contributors opened 3 pull requests, all in the last 14 days, too recently "
+        "to judge.")

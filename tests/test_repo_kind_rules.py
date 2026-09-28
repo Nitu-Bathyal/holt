@@ -263,7 +263,7 @@ def test_an_archived_catalogue_is_still_turned_down_for_being_archived():
 CATALOGUES = {
     "is-a-dev/register", "microsoft/winget-pkgs", "Homebrew/homebrew-cask",
     "hacs/default", "sindresorhus/awesome", "EbookFoundation/free-programming-books",
-    "firstcontributions/first-contributions",
+    "firstcontributions/first-contributions", "public-apis/public-apis",
 }
 PACKAGE_SETS = {"NixOS/nixpkgs", "termux/termux-packages"}
 

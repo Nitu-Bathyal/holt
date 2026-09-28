@@ -10,8 +10,8 @@ GitHub shows MEMBER only for *public* organisation membership: most of
 PyTorch's engineers, and Google's on material-components, read CONTRIBUTOR. So
 the sample also counts people it shows doing a maintainer's job:
 
-- merging a pull request, or closing somebody else's (both need write or
-  triage access);
+- merging a pull request, their own included, or closing somebody else's
+  (both need write or triage access; closing your own doesn't);
 - formally reviewing (approving, or asking for changes on) at least
   REGULAR_REVIEWER_PRS other people's pull requests while reading CONTRIBUTOR;
 - in a project that labels every outside pull request (see OUTSIDE_LABELS),
@@ -73,7 +73,7 @@ def maintainers(records: Iterable[EvidenceRecord],
     is_bot = is_automation or _default_automation
     authors: dict[str, str] = {}
     opened: list[dict] = []
-    acts: list[tuple[str, str | None, bool]] = []
+    acts: list[tuple[str, str | None, bool, bool]] = []
     reviews: list[tuple[str, dict]] = []
     team: set[str] = set()
 
@@ -86,15 +86,18 @@ def maintainers(records: Iterable[EvidenceRecord],
             authors[_key(eid)] = who
             opened.append(p)
         elif eid.endswith(":merged"):
-            acts.append((_key(eid), p.get("merged_by"), bool(p.get("merged_by_is_bot"))))
+            acts.append((_key(eid), p.get("merged_by"), bool(p.get("merged_by_is_bot")), True))
         elif eid.endswith(":closed"):
-            acts.append((_key(eid), p.get("closed_by"), bool(p.get("closed_by_is_bot"))))
+            acts.append((_key(eid), p.get("closed_by"), bool(p.get("closed_by_is_bot")), False))
         elif ":review:" in eid:
             reviews.append((_key(eid), p))
 
+    # Merging needs write access, so merging your own pull request counts too
+    # (astral's and llvm's committers read CONTRIBUTOR and merge their own
+    # work); closing your own doesn't, anyone can.
     team.update(
-        who for key, who, flagged in acts
-        if who and who != authors.get(key) and not is_bot(who, flagged)
+        who for key, who, flagged, merge in acts
+        if who and (merge or who != authors.get(key)) and not is_bot(who, flagged)
     )
 
     reviewed: dict[str, set[str]] = {}

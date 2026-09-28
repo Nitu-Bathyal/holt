@@ -3,7 +3,7 @@
 import "server-only";
 import type {
   AnalysisStart, ApiError, Credits, DiscoverOut, DiscoverRepo, DiscoverSort, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, HistoryItem,
-  ContributionType, JobStatus, Me, Mode, Packs, ProfileOut, ProfilePrefs, Recommendation, Recommendations, Report, Result, Stats, StarterIssue,
+  ContributionType, JobStatus, Me, Mode, Packs, Plans, ProfileOut, ProfilePrefs, Recommendation, Recommendations, Report, Result, Stats, StarterIssue,
 } from "../types";
 import type { FeedbackInput } from "../feedback";
 import { verdictView, withDerived } from "./derived";
@@ -225,8 +225,19 @@ export async function discover(sort: DiscoverSort, language: string | null, topi
 export async function getReport(repoIn: string, mode: Mode, days: number): Promise<Result<Report>> {
   const v = validate(repoIn);
   if (!v.ok) return v;
-  const r = state().cache.get(key(v.data, mode, days));
+  const r = state().cache.get(key(v.data, mode, days)) ?? (mode === "rules" ? anotherBudget(v.data, days) : undefined);
   return r ? { ok: true, data: r } : err(404, "not_found", "No report yet for this repository.");
+}
+
+/** Like the server: a rules report's verdict is the same for every budget, so
+ * another budget is served from the one already made (the mock's fixtures
+ * reply fast, so there's no slow-reply note to redo). */
+function anotherBudget(repo: string, days: number): Report | undefined {
+  for (const d of [7, 14, 30]) {
+    const r = state().cache.get(key(repo, "rules", d));
+    if (r?.budget_independent) return { ...r, days };
+  }
+  return undefined;
 }
 
 export async function starterIssues(repoIn: string, limit: number): Promise<Result<{ repo: string; issues: StarterIssue[] }>> {
@@ -332,6 +343,15 @@ export async function claimCredit(userId: string): Promise<Result<Credits>> {
 // Payments stay off in the mock: no packs, no orders.
 export async function packs(): Promise<Result<Packs>> {
   return { ok: true, data: { on_sale: false, packs: [] } };
+}
+
+// Plans stay off in the mock too: nothing on sale, no subscription.
+export async function plans(): Promise<Result<Plans>> {
+  return { ok: true, data: { on_sale: false, plans: [] } };
+}
+
+export async function subscribe(): Promise<Result<never>> {
+  return err(403, "payments_off", "Paid plans aren't on sale yet. Everything free in Holt keeps working.");
 }
 
 export async function createOrder(): Promise<Result<never>> {

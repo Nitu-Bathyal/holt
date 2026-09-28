@@ -4,7 +4,8 @@ import "server-only";
 import { cache } from "react";
 import type {
   AnalysisStart, ApiError, Checkout, Contributions, Credits, DiscoverOut, DiscoverSort, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection,
-  HistoryItem, JobStatus, Me, Mode, Order, OrderConfirmed, Packs, PlaybookStart, PlaybookState, PreflightStart, PreflightState, ProfileOut, ProfilePrefs, RazorpaySuccess, Recommendations, Report, Result, StarterIssue,
+  HistoryItem, JobStatus, Me, Mode, MySubscription, Order, OrderConfirmed, Packs, Plans, PlaybookStart, PlaybookState, PreflightStart, PreflightState,
+  ProfileOut, ProfilePrefs, RazorpaySubscriptionSuccess, RazorpaySuccess, Recommendations, Report, Result, StarterIssue, SubscriptionCheckout, SubscriptionConfirmed,
 } from "./types";
 import type { FeedbackInput } from "./feedback";
 import { isJobId } from "./ids";
@@ -333,6 +334,38 @@ export function confirmOrder(userId: string, paid: RazorpaySuccess): Promise<Res
 export function orders(userId: string, limit = 50): Promise<Result<{ orders: Order[] }>> {
   if (MOCK) return Promise.resolve({ ok: true, data: { orders: [] } });
   return call(`/v1/me/orders?limit=${limit}`, { caller: { userId } });
+}
+
+// Monthly plans (API.md, "Plans (subscriptions)"). Off unless the server says
+// `on_sale`; the price and the Razorpay plan come from its catalogue.
+export function plans(): Promise<Result<Plans>> {
+  if (MOCK) return mock.plans();
+  return call("/v1/plans");
+}
+
+export function subscribe(userId: string, plan: string): Promise<Result<SubscriptionCheckout>> {
+  if (MOCK) return mock.subscribe();
+  return call("/v1/me/subscription", { method: "POST", body: JSON.stringify({ plan }), caller: { userId } });
+}
+
+export function confirmSubscription(userId: string, paid: RazorpaySubscriptionSuccess): Promise<Result<SubscriptionConfirmed>> {
+  if (MOCK) return mock.subscribe();
+  const { razorpay_payment_id, razorpay_subscription_id, razorpay_signature } = paid;
+  return call("/v1/me/subscription/confirm", {
+    method: "POST",
+    body: JSON.stringify({ razorpay_payment_id, razorpay_subscription_id, razorpay_signature }),
+    caller: { userId },
+  });
+}
+
+export function mySubscription(userId: string): Promise<Result<MySubscription>> {
+  if (MOCK) return Promise.resolve({ ok: true, data: { subscription: null, charges: [] } });
+  return call("/v1/me/subscription", { caller: { userId } });
+}
+
+export function cancelSubscription(userId: string): Promise<Result<SubscriptionConfirmed>> {
+  if (MOCK) return mock.subscribe();
+  return call("/v1/me/subscription/cancel", { method: "POST", body: "{}", caller: { userId } });
 }
 
 /**

@@ -39,11 +39,11 @@ const SEEDS: Seed[] = [
     ],
     unknowns: ["Holt can't see discussions that happened on Discord or in private."],
     landing: [
-      { path: "docs", merged: 8, attempted: 14 },
-      { path: "src/flask", merged: 6, attempted: 31 },
-      { path: "tests", merged: 3, attempted: 9 },
+      { path: "docs", merged: 8, attempted: 14, is_file: false },
+      { path: "src/flask", merged: 6, attempted: 31, is_file: false },
+      { path: "tests", merged: 3, attempted: 9, is_file: false },
     ],
-    never_landed: [{ path: "examples", attempted: 4 }],
+    never_landed: [{ path: "examples", attempted: 4, is_file: false }],
     evidence: [
       ["onboarding", 5578, "A first-time contributor fixed a typo in the tutorial; merged the same day.", "Thanks! Merging."],
       ["review", 5601, "A maintainer asked for a test, the contributor added it, and it was merged.", "Could you add a test for the empty case? Then this is good to go."],
@@ -83,12 +83,12 @@ const SEEDS: Seed[] = [
       "Holt only read the most recent 100 outside pull requests in a very busy repository.",
     ],
     landing: [
-      { path: "pkgs/by-name", merged: 13, attempted: 62 },
-      { path: "nixos/modules", merged: 2, attempted: 19 },
+      { path: "pkgs/by-name", merged: 13, attempted: 62, is_file: false },
+      { path: "nixos/modules", merged: 2, attempted: 19, is_file: false },
     ],
     never_landed: [
-      { path: "pkgs/applications", attempted: 6 },
-      { path: "pkgs/development", attempted: 5 },
+      { path: "pkgs/applications", attempted: 6, is_file: false },
+      { path: "pkgs/development", attempted: 5, is_file: false },
     ],
     evidence: [
       ["onboarding", 526518, "A newcomer's package update in pkgs/by-name was merged within a day.", "LGTM, thanks for the update!"],
@@ -123,10 +123,10 @@ const SEEDS: Seed[] = [
     ],
     unknowns: ["The project says it is feature-frozen; Holt can't tell which fixes maintainers still want."],
     landing: [
-      { path: "docs", merged: 4, attempted: 9 },
-      { path: "src/requests", merged: 3, attempted: 22 },
+      { path: "docs", merged: 4, attempted: 9, is_file: false },
+      { path: "src/requests", merged: 3, attempted: 22, is_file: false },
     ],
-    never_landed: [{ path: "tests", attempted: 3 }],
+    never_landed: [{ path: "tests", attempted: 3, is_file: false }],
     evidence: [
       ["onboarding", 6790, "A first-time contributor's docs fix was merged after a short review.", "Thanks for the fix."],
       ["closed", 6781, "A new feature was declined because the project is feature-frozen.", "Requests is feature-frozen; we won't be adding this."],
@@ -155,11 +155,11 @@ const SEEDS: Seed[] = [
       "The typical first reply takes about 8 days, longer than a week of spare time allows.",
     ],
     unknowns: ["Some outside work may land through internal imports that Holt can't see."],
-    landing: [{ path: "docs/source", merged: 2, attempted: 12 }],
+    landing: [{ path: "docs/source", merged: 2, attempted: 12, is_file: false }],
     never_landed: [
-      { path: "torch", attempted: 54 },
-      { path: "aten/src", attempted: 17 },
-      { path: "test", attempted: 9 },
+      { path: "torch", attempted: 54, is_file: false },
+      { path: "aten/src", attempted: 17, is_file: false },
+      { path: "test", attempted: 9, is_file: false },
     ],
     evidence: [
       ["no_reply", 136201, "A first-time contributor's bug fix in torch/ got no reply for a month.", null],
@@ -189,8 +189,8 @@ const SEEDS: Seed[] = [
     unknowns: [],
     landing: [],
     never_landed: [
-      { path: "core", attempted: 22 },
-      { path: "docs", attempted: 11 },
+      { path: "core", attempted: 22, is_file: false },
+      { path: "docs", attempted: 11, is_file: false },
     ],
     evidence: [
       ["no_reply", 412, "A first-time contributor's docs fix received no reply.", null],
@@ -214,7 +214,7 @@ const SEEDS: Seed[] = [
     },
     decided_by: ["5 people got their first pull request merged here in the period Holt read."],
     unknowns: ["This is a small project; a few pull requests make up the whole picture."],
-    landing: [{ path: "aws", merged: 3, attempted: 5 }, { path: "google", merged: 2, attempted: 4 }],
+    landing: [{ path: "aws", merged: 3, attempted: 5, is_file: false }, { path: "google", merged: 2, attempted: 4, is_file: false }],
     never_landed: [],
     evidence: [
       ["onboarding", 301, "A newcomer fixed a broken link; merged the next day.", "Thank you!"],
@@ -233,7 +233,7 @@ const FIND_ONLY: Seed[] = [
     repo: "excalidraw/excalidraw", verdict: "viable", description: "Virtual whiteboard for sketching hand-drawn like diagrams.",
     language: "TypeScript", stars: 98000, hacktoberfest: true,
     stats: { outsider_attempts: 58, outsider_merged: 14, distinct_outsiders: 49, first_time_merged_authors: 10, no_reply: 12, median_first_response_hours: 9, bot_share: 0.04, still_open: 0, closed_silently: 0 },
-    decided_by: [], unknowns: [], landing: [{ path: "packages/excalidraw", merged: 12, attempted: 44 }], never_landed: [], evidence: [],
+    decided_by: [], unknowns: [], landing: [{ path: "packages/excalidraw", merged: 12, attempted: 44, is_file: false }], never_landed: [], evidence: [],
     issues: [
       { number: 9721, title: "Tooltip for the eraser tool is cut off on small screens", labels: ["good first issue", "UX"], comments: 0, why: ["Labelled good first issue", "UI fixes from newcomers were merged 6 times recently"] },
       { number: 9688, title: "Add missing aria-label to the library button", labels: ["accessibility", "good first issue"], comments: 1, why: ["One-file change", "A maintainer confirmed the fix"] },
@@ -244,7 +244,7 @@ const FIND_ONLY: Seed[] = [
     repo: "charmbracelet/bubbletea", verdict: "viable", description: "A powerful little TUI framework.",
     language: "Go", stars: 31000, hacktoberfest: true,
     stats: { outsider_attempts: 30, outsider_merged: 9, distinct_outsiders: 26, first_time_merged_authors: 7, no_reply: 6, median_first_response_hours: 14, bot_share: 0.1, still_open: 0, closed_silently: 0 },
-    decided_by: [], unknowns: [], landing: [{ path: "examples", merged: 5, attempted: 9 }], never_landed: [], evidence: [],
+    decided_by: [], unknowns: [], landing: [{ path: "examples", merged: 5, attempted: 9, is_file: false }], never_landed: [], evidence: [],
     issues: [
       { number: 1203, title: "Example: add a spinner with a progress bar", labels: ["good first issue", "examples"], comments: 0, why: ["examples/ is where 5 of 9 outsider PRs were merged"] },
     ],
@@ -254,7 +254,7 @@ const FIND_ONLY: Seed[] = [
     repo: "rust-lang/rustlings", verdict: "viable", description: "Small exercises to get you used to reading and writing Rust code.",
     language: "Rust", stars: 57000, hacktoberfest: true,
     stats: { outsider_attempts: 44, outsider_merged: 15, distinct_outsiders: 40, first_time_merged_authors: 13, no_reply: 5, median_first_response_hours: 6, bot_share: 0.02, still_open: 0, closed_silently: 0 },
-    decided_by: [], unknowns: [], landing: [{ path: "exercises", merged: 9, attempted: 20 }], never_landed: [], evidence: [],
+    decided_by: [], unknowns: [], landing: [{ path: "exercises", merged: 9, attempted: 20, is_file: false }], never_landed: [], evidence: [],
     issues: [
       { number: 2150, title: "Hint for `iterators3` mentions a function that was renamed", labels: ["good first issue"], comments: 0, why: ["Labelled good first issue", "Hint fixes are merged almost every time"] },
       { number: 2141, title: "Typo in the `structs2` exercise comment", labels: ["good first issue", "typo"], comments: 2, why: ["One-line fix"] },
@@ -265,7 +265,7 @@ const FIND_ONLY: Seed[] = [
     repo: "freeCodeCamp/devdocs", verdict: "viable", description: "API documentation browser.",
     language: "JavaScript", stars: 38000, hacktoberfest: true,
     stats: { outsider_attempts: 36, outsider_merged: 12, distinct_outsiders: 31, first_time_merged_authors: 9, no_reply: 4, median_first_response_hours: 30, bot_share: 0.06, still_open: 0, closed_silently: 0 },
-    decided_by: [], unknowns: [], landing: [{ path: "lib/docs/scrapers", merged: 7, attempted: 15 }], never_landed: [], evidence: [],
+    decided_by: [], unknowns: [], landing: [{ path: "lib/docs/scrapers", merged: 7, attempted: 15, is_file: false }], never_landed: [], evidence: [],
     issues: [
       { number: 2311, title: "Update the Vite documentation to v7", labels: ["good first issue", "docs update"], comments: 1, why: ["Scraper updates are the most-merged newcomer change here"] },
     ],
@@ -275,7 +275,7 @@ const FIND_ONLY: Seed[] = [
     repo: "go-gitea/gitea", verdict: "viable", description: "Painless self-hosted all-in-one software development service.",
     language: "Go", stars: 49000, hacktoberfest: false,
     stats: { outsider_attempts: 80, outsider_merged: 21, distinct_outsiders: 60, first_time_merged_authors: 11, no_reply: 14, median_first_response_hours: 11, bot_share: 0.07, still_open: 0, closed_silently: 0 },
-    decided_by: [], unknowns: [], landing: [{ path: "templates", merged: 8, attempted: 20 }], never_landed: [], evidence: [],
+    decided_by: [], unknowns: [], landing: [{ path: "templates", merged: 8, attempted: 20, is_file: false }], never_landed: [], evidence: [],
     issues: [
       { number: 35412, title: "Dark theme: diff line numbers have low contrast", labels: ["good first issue", "topic/ui"], comments: 0, why: ["templates/ is where 8 of 20 outsider PRs were merged"] },
     ],
@@ -413,9 +413,9 @@ function generated(repo: string, mode: "rules" | "ai", days: number): Report {
           : ["Too few outside contributors tried in the period Holt read to judge from."],
     unknowns: verdict === "insufficient_evidence" ? ["With so few pull requests, one good or bad experience would change the picture."] : [],
     landing: verdict === "viable"
-      ? [{ path: dirs[0], merged: Math.ceil(merged * 0.6), attempted: Math.ceil(attempts * 0.3) }, { path: dirs[1], merged: Math.floor(merged * 0.4), attempted: Math.floor(attempts * 0.5) }]
+      ? [{ path: dirs[0], merged: Math.ceil(merged * 0.6), attempted: Math.ceil(attempts * 0.3), is_file: false }, { path: dirs[1], merged: Math.floor(merged * 0.4), attempted: Math.floor(attempts * 0.5), is_file: false }]
       : [],
-    never_landed: verdict === "viable" ? [{ path: dirs[3], attempted: 3 }] : verdict === "not_viable" ? [{ path: dirs[1], attempted: Math.floor(attempts * 0.6) }] : [],
+    never_landed: verdict === "viable" ? [{ path: dirs[3], attempted: 3, is_file: false }] : verdict === "not_viable" ? [{ path: dirs[1], attempted: Math.floor(attempts * 0.6), is_file: false }] : [],
     evidence: [
       [verdict === "viable" ? "onboarding" : "no_reply", 100 + Math.floor(r() * 900), verdict === "viable" ? "A first-time contributor's pull request was merged after one review." : "A newcomer's pull request got no reply.", verdict === "viable" ? "Thanks, merged!" : null],
       ["reply", 100 + Math.floor(r() * 900), "Maintainer response on an outside pull request.", null],

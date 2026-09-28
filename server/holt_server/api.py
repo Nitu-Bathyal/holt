@@ -14,6 +14,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 
+from holt_server import report as report_mod
 from holt_server import (
     __version__,
     badge,
@@ -167,12 +168,34 @@ async def enqueue_badge_refresh(svc: Services, repo: str, client: str) -> None:
 
 
 async def latest_report(svc: Services, repo: str, mode: str, days: int) -> Report | None:
+    """The newest report for this repo, mode and budget.
+
+    A rules report's verdict doesn't depend on the budget (see
+    `report.retime`), so when there is no fresh one for `days`, a fresh one
+    made for another budget answers, with its reply-time note redone. It is
+    not stored: the next read derives it again, and a real run for `days`
+    wins as soon as one exists.
+    """
+    key = repos.key(repo)
     async with svc.db.session() as s:
-        return (await s.execute(
-            select(Report).where(Report.repo_key == repos.key(repo), Report.mode == mode,
+        exact = (await s.execute(
+            select(Report).where(Report.repo_key == key, Report.mode == mode,
                                  Report.days == days)
             .order_by(Report.created_at.desc(), Report.id.desc()).limit(1)
         )).scalar_one_or_none()
+        if mode != "rules" or (exact is not None and is_fresh(svc, exact)):
+            return exact
+        cutoff = now() - timedelta(hours=svc.settings.cache_hours)
+        others = (await s.execute(
+            select(Report).where(Report.repo_key == key, Report.mode == "rules",
+                                 Report.days != days, Report.created_at >= cutoff)
+            .order_by(Report.created_at.desc(), Report.id.desc()).limit(5)
+        )).scalars().all()
+    for other in others:
+        if (derived := report_mod.retime(other.report, days)) is not None:
+            return Report(id=other.id, repo=other.repo, repo_key=other.repo_key, mode="rules",
+                          days=days, report=derived, created_at=other.created_at)
+    return exact
 
 
 def is_fresh(svc: Services, report: Report) -> bool:

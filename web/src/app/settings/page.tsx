@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { claimCredit, me, orders, packs } from "@/lib/api";
+import { cancelSubscription, claimCredit, me, mySubscription, orders, packs, plans } from "@/lib/api";
 import { shortDate } from "@/lib/format";
-import { creditsLabel, formatPrice, STATUS_LABEL } from "@/lib/payments";
+import { canCancel, creditsLabel, formatPrice, STATUS_LABEL, subscriptionLabel, subscriptionLine } from "@/lib/payments";
 import { currentUser } from "@/lib/session";
 import { WELCOME_AI_CREDITS } from "@/lib/site";
 import { ConnectGitHubCard } from "@/components/connect-github-card";
@@ -24,12 +24,26 @@ async function claim() {
   redirect(r.ok ? "/settings?claimed=1" : r.error.code === "claim_not_ready" ? "/settings?error=early" : "/settings?error=claim");
 }
 
+async function cancelPlan() {
+  "use server";
+  const user = await currentUser();
+  if (!user) redirect("/signin?callbackUrl=/settings");
+  const r = await cancelSubscription(user.id);
+  revalidatePath("/settings");
+  redirect(r.ok ? "/settings?cancelled=1#plan" : "/settings?error=cancel#plan");
+}
+
 export default async function SettingsPage({ searchParams }: PageProps<"/settings">) {
   const user = await currentUser();
   if (!user) redirect("/signin?callbackUrl=/settings");
   const sp = await searchParams;
-  const [account, bought, sale] = await Promise.all([me(user.id), orders(user.id), packs()]);
+  const [account, bought, sale, subscription, monthly] = await Promise.all([
+    me(user.id), orders(user.id), packs(), mySubscription(user.id), plans(),
+  ]);
   const m = account.ok ? account.data : null;
+  const sub = subscription.ok ? subscription.data.subscription : null;
+  const charges = subscription.ok ? subscription.data.charges : [];
+  const plansOnSale = monthly.ok && monthly.data.on_sale;
   const purchases = bought.ok ? bought.data.orders : [];
   const onSale = sale.ok && sale.data.on_sale;
   const c = m?.credits;
@@ -37,6 +51,9 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
 
   const notice =
     sp.claimed ? { tone: "text-green border-green/50 bg-green/10", text: "Claimed. You have one more free AI report." }
+    : sp.subscribed ? { tone: "text-green border-green/50 bg-green/10", text: "Thanks! Your plan is below. It can take a minute to show as active." }
+    : sp.cancelled ? { tone: "text-green border-green/50 bg-green/10", text: "Cancelled. You won't be charged again." }
+    : sp.error === "cancel" ? { tone: "text-orange border-orange/50 bg-orange/10", text: "We couldn't cancel just now. Try again in a minute; nothing has changed." }
     : sp.error === "early" ? { tone: "text-orange border-orange/50 bg-orange/10", text: `Not yet: your next free AI report can be claimed on ${nextClaim}.` }
     : sp.error ? { tone: "text-orange border-orange/50 bg-orange/10", text: "We couldn't claim it just now. Try again in a minute." }
     : null;
@@ -97,6 +114,63 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
             <li>The quick report is always free and has the same verdict. AI only adds a written explanation.</li>
           </ul>
         </section>
+
+        {(sub || charges.length > 0 || plansOnSale) && (
+          <section id="plan" aria-labelledby="plan-h" className="mt-10 scroll-mt-24 border border-line-strong bg-panel p-5 shadow-soft sm:p-8">
+            <h2 id="plan-h" className="text-[1.3rem] font-semibold tracking-tight">Your plan</h2>
+            {!sub ? (
+              <p className="prose-sans mt-2 text-[0.95rem]">
+                You&apos;re on the free plan. <Link href="/pricing#plans" className="text-link">See paid plans</Link>.
+              </p>
+            ) : (
+              <>
+                <p className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                  <span className="text-[1.1rem] font-semibold">{sub.name}</span>
+                  <span className="text-muted">{formatPrice(sub.amount, sub.currency)} a month</span>
+                  <span className={`chip ${sub.status === "active" && !sub.cancel_at_period_end ? "border-green/60 text-green" : sub.status === "pending" ? "border-orange/60 text-orange" : "border-line-strong text-muted"}`}>
+                    {subscriptionLabel(sub)}
+                  </span>
+                </p>
+                <p className="prose-sans mt-2 text-[0.95rem]">{subscriptionLine(sub, m?.plan_expires_at ?? null)}</p>
+                {canCancel(sub) && (
+                  <details className="mt-4 font-sans text-[0.9rem]">
+                    <summary className="cursor-pointer text-muted hover:text-ink">Cancel plan</summary>
+                    <div className="mt-3 border border-line p-4">
+                      <p>
+                        {sub.status === "active"
+                          ? `You won't be charged again, and you keep the plan until ${sub.paid_until ? shortDate(sub.paid_until) : "the end of this month"}.`
+                          : "The plan stops now and nothing more is charged."}
+                      </p>
+                      <form action={cancelPlan} className="mt-3">
+                        <button type="submit" className="btn-ghost">yes, cancel my plan</button>
+                      </form>
+                    </div>
+                  </details>
+                )}
+              </>
+            )}
+            {charges.length > 0 && (
+              <>
+                <h3 className="mt-6 text-[0.72rem] uppercase tracking-[0.08em] text-faint">Payments</h3>
+                <ul className="mt-2 divide-y divide-line border-y border-line">
+                  {charges.map((c) => (
+                    <li key={c.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-[0.9rem]">
+                      <span className="min-w-0">
+                        <span className="font-semibold">{formatPrice(c.amount, c.currency)}</span>
+                        <span className="text-muted"> · {shortDate(c.paid_at)}</span>
+                      </span>
+                      <span className={c.status === "paid" ? "text-green" : "text-amber"}>
+                        {c.status === "paid"
+                          ? c.period_start && c.period_end ? `${shortDate(c.period_start)} to ${shortDate(c.period_end)}` : "Paid"
+                          : "Being checked"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </section>
+        )}
 
         {(purchases.length > 0 || onSale) && (
           <section id="purchases" aria-labelledby="purchases-h" className="mt-10 scroll-mt-24 border border-line-strong bg-panel p-5 shadow-soft sm:p-8">

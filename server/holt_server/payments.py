@@ -99,7 +99,7 @@ def same(expected: str, given: str | None) -> bool:
 
 
 class Razorpay:
-    """The three Razorpay calls Holt makes, over HTTPS with basic auth (no SDK).
+    """The Razorpay calls Holt makes, over HTTPS with basic auth (no SDK).
     Tests replace `svc.razorpay` with a fake that has the same methods."""
 
     name = "razorpay"
@@ -139,6 +139,29 @@ class Razorpay:
 
     def payment_signature_ok(self, order_id: str, payment_id: str, signature: str) -> bool:
         return same(sign(self._secret, f"{order_id}|{payment_id}"), signature)
+
+    # Subscriptions (subscriptions.py).
+
+    def fetch_plan(self, plan_id: str) -> dict:
+        return self._call("GET", f"/plans/{plan_id}")
+
+    def create_subscription(self, *, plan_id: str, total_count: int,
+                            notes: dict[str, str]) -> dict:
+        return self._call("POST", "/subscriptions", {"plan_id": plan_id,
+                                                      "total_count": total_count,
+                                                      "customer_notify": 1, "notes": notes})
+
+    def fetch_subscription(self, subscription_id: str) -> dict:
+        return self._call("GET", f"/subscriptions/{subscription_id}")
+
+    def cancel_subscription(self, subscription_id: str, *, at_cycle_end: bool) -> dict:
+        return self._call("POST", f"/subscriptions/{subscription_id}/cancel",
+                          {"cancel_at_cycle_end": 1 if at_cycle_end else 0})
+
+    def subscription_signature_ok(self, payment_id: str, subscription_id: str,
+                                  signature: str) -> bool:
+        # The reverse of an order's: payment first.
+        return same(sign(self._secret, f"{payment_id}|{subscription_id}"), signature)
 
     def webhook_signature_ok(self, body: bytes, signature: str | None) -> bool:
         return bool(self._webhook_secret) and same(sign(self._webhook_secret, body), signature)
@@ -426,6 +449,13 @@ async def razorpay_webhook(
         payment = ((data.get("payload") or {}).get("payment") or {}).get("entity")
     except (ValueError, AttributeError) as exc:
         raise ApiError("invalid_request", "Malformed webhook body.") from exc
+    if event.startswith("subscription."):
+        from holt_server import subscriptions
+
+        result = (await subscriptions.webhook_event(svc, event, data)
+                  if event in subscriptions.EVENTS else "ignored")
+        log.info("razorpay webhook %s -> %s", event, result)
+        return {"ok": True, "result": result}
     if event not in PAYMENT_EVENTS or not isinstance(payment, dict):
         return {"ok": True, "result": "ignored"}
     result = await settle(svc, payment)
