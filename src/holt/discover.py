@@ -30,6 +30,7 @@ from typing import Any, Callable, Iterable
 
 from holt import model
 from holt.agent import landing as landing_mod
+from holt.agent import rates
 from holt.agent.findings import Findings
 from holt.agent.pipeline import analyze
 from holt.agent.signals import Signals, build_threads, compute
@@ -335,11 +336,11 @@ def analyse_survivor(slug: str, provider: EvidenceProvider, client,
                                 contributor_days=days, as_of=as_of)
     signals = trace.signals
     landing = landing_mod.compute(build_threads(records))
-    why = assessment.rules[0] if assessment.rules else "no rule fired"
+    why = rates.first_deciding(assessment.rules) or "no rule fired"
     return SurvivorRow(
         slug=slug,
         verdict=assessment.verdict.value,
-        landed=f"{signals.outsider_merged}/{signals.outsider_threads}",
+        landed=f"{signals.outsider_merged}/{signals.outsider_judgeable}",
         reply=(f"{signals.median_first_response_hours:.1f}h"
                if signals.median_first_response_hours is not None else "never"),
         why=why if len(why) <= 58 else why[:57].rstrip(" ,;:") + "…",

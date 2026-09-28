@@ -13,8 +13,9 @@ it cannot change. A test asserts the rendered report and this function agree.
 
 from __future__ import annotations
 
+from holt.agent import rates
 from holt.agent.findings import Findings
-from holt.agent.signals import MIN_AGE_HOURS, Signals
+from holt.agent.signals import Signals
 from holt.report import Verdict
 
 # Kinds where a merged pull request is not a software contribution. Landing work
@@ -311,14 +312,11 @@ def classify(
             ))
             return Verdict.NOT_VIABLE, trace
 
-    if signals.outsider_awaiting_reply:
-        trace.append(Rule(
-            f"{_n(signals.outsider_awaiting_reply, 'pull request')} from outside "
-            f"contributors {'was' if signals.outsider_awaiting_reply == 1 else 'were'} opened "
-            f"in the last {MIN_AGE_HOURS:g} hours and haven't had time to get a "
-            "reply yet, so they aren't counted as ignored.",
-            code="awaiting_reply",
-        ))
+    # What the rates leave out, and why (rates.py). They never decide.
+    for text, code in rates.count_sentences(signals.outsider_still_open,
+                                            signals.outsider_closed_silently,
+                                            signals.outsider_excluded):
+        trace.append(Rule(text, code=code))
 
     if signals.outsider_threads == 0:
         # "The period we looked at", not "before the cutoff": the cutoff is an
@@ -362,7 +360,7 @@ def classify(
             f"{_n(signals.outsider_merged, 'pull request')} from outside "
             f"contributors {'was' if signals.outsider_merged == 1 else 'were'} "
             f"merged, by {_n(signals.distinct_merged_authors, 'different person', 'different people')}, "
-            f"out of {_n(signals.outsider_threads, 'attempt')} by "
+            f"out of {_n(judgeable, 'attempt')} by "
             f"{_n(signals.distinct_outsider_authors, 'person', 'people')}."
         )
         if median is not None:
@@ -375,7 +373,7 @@ def classify(
         if signals.outsider_ignored:
             text += (
                 f" {_n(signals.outsider_ignored, 'attempt')} got no reply at all "
-                "and weren't merged."
+                f"and {'wasn' if signals.outsider_ignored == 1 else 'weren'}'t merged."
             )
         trace.append(Rule(
             text,
@@ -433,10 +431,25 @@ def classify(
         ))
     elif signals.outsider_merged < MIN_MERGES:
         trace.append(Rule(
-            f"Only {_n(signals.outsider_merged, 'pull request')} from outside "
-            "contributors got merged in the period we looked at, too few to show "
-            "a pattern.",
+            ("No pull request from an outside contributor got merged in the "
+             "period we looked at, so there's no pattern to go on."
+             if signals.outsider_merged == 0 else
+             f"Only {signals.outsider_merged} "
+             + ("pull request from an outside contributor"
+                if signals.outsider_merged == 1 else
+                "pull requests from outside contributors")
+             + " got merged in the period we looked at, too few to show a pattern."),
             code="few_merges",
             legacy=f"only {signals.outsider_merged} outsider merges in the period read",
+        ))
+    elif not slow:
+        # Enough merges, from too few people: without this line the answer
+        # came with no reason at all.
+        trace.append(Rule(
+            f"The {signals.outsider_merged} merged pull requests from outside "
+            f"contributors came from "
+            f"{_n(signals.distinct_outsider_authors, 'person', 'people')}, too few "
+            "people to show a pattern.",
+            code="few_people",
         ))
     return Verdict.INSUFFICIENT_EVIDENCE, trace

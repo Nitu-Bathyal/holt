@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { devSignInEnabled, oauthProviders, signIn } from "@/auth";
 import { CatFace } from "@/components/cat-face";
+import { EXAMPLE_PATH } from "@/lib/example-report";
 import { safeCallback } from "@/lib/safe-url";
 import { currentUser } from "@/lib/session";
 import { PageTransition } from "@/components/motion/page-transition";
@@ -41,6 +42,9 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
           <h1 className="display mt-6 text-[2.2rem] sm:text-[2.6rem]">Sign in to Holt</h1>
           <p className="prose-sans mt-3">
             Free reports don&apos;t need an account. Sign in for free AI reports and your history.
+          </p>
+          <p className="mt-2 font-sans text-[0.9rem] text-muted">
+            Not sure yet? <Link href={EXAMPLE_PATH} className="text-link">Read an example AI report</Link>, no account needed.
           </p>
 
           <div className="mt-8 space-y-3">
