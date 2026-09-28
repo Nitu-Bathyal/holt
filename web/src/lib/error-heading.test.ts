@@ -11,5 +11,5 @@ test("a used-up AI budget gets its own heading, not 'switched on yet'", () => {
 test("AI switched off, and other codes, keep their headings", () => {
   assert.equal(errorHeading({ code: "ai_unavailable" }), "AI reports aren't switched on yet");
   assert.equal(errorHeading({ code: "quota_exceeded" }), "You've used your free AI reports");
-  assert.equal(errorHeading({ code: "payments_off" }), "Something went wrong");
+  assert.equal(errorHeading({ code: "payments_off" }), "That didn't work");
 });

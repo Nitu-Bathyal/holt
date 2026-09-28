@@ -50,12 +50,12 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
   const nextClaim = c?.next_claim_at ? shortDate(c.next_claim_at) : "";
 
   const notice =
-    sp.claimed ? { tone: "text-green border-green/50 bg-green/10", text: "Claimed. You have one more free AI report." }
-    : sp.subscribed ? { tone: "text-green border-green/50 bg-green/10", text: "Thanks! Your plan is below. It can take a minute to show as active." }
+    sp.claimed ? { tone: "text-green border-green/50 bg-green/10", text: "Claimed. One more free AI report is yours." }
+    : sp.subscribed ? { tone: "text-green border-green/50 bg-green/10", text: "Thanks! Your plan is below. It can take a minute to go active." }
     : sp.cancelled ? { tone: "text-green border-green/50 bg-green/10", text: "Cancelled. You won't be charged again." }
-    : sp.error === "cancel" ? { tone: "text-orange border-orange/50 bg-orange/10", text: "We couldn't cancel just now. Try again in a minute; nothing has changed." }
-    : sp.error === "early" ? { tone: "text-orange border-orange/50 bg-orange/10", text: `Not yet: your next free AI report can be claimed on ${nextClaim}.` }
-    : sp.error ? { tone: "text-orange border-orange/50 bg-orange/10", text: "We couldn't claim it just now. Try again in a minute." }
+    : sp.error === "cancel" ? { tone: "text-orange border-orange/50 bg-orange/10", text: "That didn't cancel, and nothing changed. Try again in a minute." }
+    : sp.error === "early" ? { tone: "text-orange border-orange/50 bg-orange/10", text: `Not yet. Your next free AI report is ready on ${nextClaim}.` }
+    : sp.error ? { tone: "text-orange border-orange/50 bg-orange/10", text: "That didn't go through. Try again in a minute." }
     : null;
 
   return (
@@ -107,11 +107,10 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
           <ul className="prose-sans mt-3 list-disc space-y-1.5 pl-5 text-[0.95rem]">
             <li>You get {WELCOME_AI_CREDITS} when you first sign in.</li>
             <li>
-              Every {c?.claim_every_days ?? 7} days you can claim 1 more here. Unclaimed weeks don&apos;t add up, so there&apos;s
-              only ever one to claim.
+              Claim 1 more here every {c?.claim_every_days ?? 7} days. Missed weeks don&apos;t stack.
             </li>
-            <li>An AI report that fails doesn&apos;t use one up.</li>
-            <li>The quick report is always free and has the same verdict. AI only adds a written explanation.</li>
+            <li>A failed AI report doesn&apos;t use one up.</li>
+            <li>The free report gives the same verdict. AI adds a written explanation on top.</li>
           </ul>
         </section>
 

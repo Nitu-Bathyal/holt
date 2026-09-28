@@ -40,7 +40,7 @@ test("evidence labels are plain words, never the engine's values", () => {
 
 test("creditsNote says free only when every credit is free", () => {
   const c = { ai_available: true, balance: 13, can_claim: false, claim_every_days: 7, free: 3, next_claim_at: null, purchased: 10 };
-  assert.equal(creditsNote(c), "13 AI reports left. Writing this one uses 1; a report that fails doesn't count.");
-  assert.equal(creditsNote({ ...c, balance: 3, purchased: 0 }), "3 free AI reports left. Writing this one uses 1; a report that fails doesn't count.");
+  assert.equal(creditsNote(c), "13 AI reports left. This one uses 1. A failed report doesn't count.");
+  assert.equal(creditsNote({ ...c, balance: 3, purchased: 0 }), "3 free AI reports left. This one uses 1. A failed report doesn't count.");
   assert.equal(creditsNote({ ...c, balance: 1, free: 1, purchased: 0 }).startsWith("1 free AI report left."), true);
 });

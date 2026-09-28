@@ -34,10 +34,10 @@ function opts(sp: Record<string, string | string[] | undefined>): { mode: Mode; 
 }
 
 function describe(report: Report | null, name: string): string {
-  if (!report) return `Holt reads ${name}'s recent pull requests and tells you whether newcomers get replies and get merged.`;
+  if (!report) return `Do outsiders get replies and get merged at ${name}? Holt checks its recent PRs and tells you.`;
   const s = report.stats;
   const reply = s.median_first_response_hours == null ? "" : `, and the typical first reply takes ${humanHours(s.median_first_response_hours)}`;
-  return `${report.headline}. ${s.outsider_merged} of ${s.outsider_attempts} pull requests from outside contributors were merged${reply}. See the evidence and starter issues.`;
+  return `${report.headline}. ${s.outsider_merged} of ${s.outsider_attempts} outside PRs got merged${reply}. See the evidence and starter issues.`;
 }
 
 const titleFor = (name: string) => `${name}: Worth your time? | Holt`;

@@ -11,7 +11,7 @@ import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Get a badge",
-  description: "Maintainers: show newcomers your repository replies to and merges their pull requests, with a Holt badge in your README.",
+  description: "Maintainers: show newcomers your repo replies to and merges their PRs, with a Holt badge in your README.",
   alternates: { canonical: "/badge" },
 };
 
@@ -32,15 +32,14 @@ export default async function BadgePage({ searchParams }: PageProps<"/badge">) {
           <p className="rail mb-4 flex gap-2"><strong className="m-0">badge</strong><span>for maintainers</span></p>
           <h1 className="display max-w-3xl text-[clamp(2rem,6vw,3.4rem)]">Show newcomers they&apos;re welcome.</h1>
           <p className="prose-sans mt-5 max-w-2xl text-[1.05rem]">
-            Paste your repository. If outside contributors get replies and get merged, you get a README badge that says so,
-            in plain facts:
+            Paste your repo. If outsiders get replies and get merged, you get a README badge that says so.
           </p>
           <p className="mt-3 inline-flex overflow-hidden rounded-[3px] text-[0.75rem] leading-5 text-white" style={{ fontFamily: "Verdana,Geneva,DejaVu Sans,sans-serif" }}>
             <span className="bg-[#555] px-1.5">Holt</span>
             <span className="bg-[#1a7f37] px-1.5">merges outsiders · replies in ~6h</span>
           </p>
           <form action="/badge" method="get" className="mt-8 grid max-w-2xl grid-cols-[1fr_auto] border border-line-strong bg-panel shadow-soft focus-within:border-blue">
-            <label htmlFor="repo" className="sr-only">Your repository</label>
+            <label htmlFor="repo" className="sr-only">Your repo</label>
             <input
               id="repo"
               name="repo"
@@ -56,7 +55,7 @@ export default async function BadgePage({ searchParams }: PageProps<"/badge">) {
           </form>
           {raw && !name && (
             <p role="alert" className="mt-3 font-sans text-[0.9rem] text-orange">
-              That doesn&apos;t look like a GitHub repository. Try <span className="font-mono">owner/name</span>.
+              That doesn&apos;t look like a repo. Try <span className="font-mono">owner/name</span>.
             </p>
           )}
         </PageHead>
@@ -65,12 +64,12 @@ export default async function BadgePage({ searchParams }: PageProps<"/badge">) {
           {!name ? (
             <div className="space-y-4 font-sans text-[0.95rem] text-muted">
               <p>
-                Holt reads your recent pull requests the way a newcomer would want to: do people from outside the project get
-                a reply, and does their work get merged? The badge only appears when the answer is yes.
+                Holt checks your recent PRs the way a newcomer would: do outsiders get a reply, and does their work get merged?
+                You only get a badge when the answer is yes.
               </p>
               <p>
-                It never shows a red verdict. If things change later, it turns grey and says &ldquo;see report&rdquo;, and{" "}
-                <Link href="/how-it-works" className="text-link">the rules</Link> are the same for every repository.
+                It never shows red. If things change, it turns grey and says &ldquo;see report&rdquo;.{" "}
+                <Link href="/how-it-works" className="text-link">The rules</Link> are the same for every repo.
               </p>
             </div>
           ) : report?.ok ? (

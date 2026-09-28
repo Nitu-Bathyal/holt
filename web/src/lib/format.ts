@@ -51,8 +51,8 @@ export function creditsNote(c: Credits): string {
   if (!c.ai_available) return "AI reports aren't switched on yet. Your free ones will be waiting when they are.";
   const kind = c.purchased > 0 ? "AI report" : "free AI report";
   const left = `${c.balance} ${kind}${c.balance === 1 ? "" : "s"} left.`;
-  if (c.balance > 0) return `${left} Writing this one uses 1; a report that fails doesn't count.`;
-  if (c.can_claim) return `${left} You can claim 1 more in your settings now.`;
+  if (c.balance > 0) return `${left} This one uses 1. A failed report doesn't count.`;
+  if (c.can_claim) return `${left} Claim 1 more in your settings now.`;
   return `${left} You can claim 1 more${c.next_claim_at ? ` on ${shortDate(c.next_claim_at)}` : " each week"}.`;
 }
 
@@ -90,7 +90,7 @@ export function statLines(s: Partial<Stats>): StatLine[] {
     out.push({
       key: "merged",
       big: `${s.outsider_merged} of ${s.outsider_attempts}`,
-      label: `pull requests from outside contributors were merged (${p}%)`,
+      label: `outside PRs merged (${p}%)`,
       tone: mergeTone(p),
       meter: s.outsider_attempts ? s.outsider_merged / s.outsider_attempts : 0,
     });
@@ -100,7 +100,7 @@ export function statLines(s: Partial<Stats>): StatLine[] {
     out.push({
       key: "reply",
       big: h == null ? "No replies" : humanHours(h),
-      label: h == null ? "to measure: outside pull requests were not answered" : "is the typical wait for a first reply",
+      label: h == null ? "to measure: no outside PR got an answer" : "is the typical wait for a first reply",
       tone: h == null ? "bad" : h <= 48 ? "good" : h <= 24 * 7 ? "warn" : "bad",
     });
   }
@@ -108,7 +108,7 @@ export function statLines(s: Partial<Stats>): StatLine[] {
     out.push({
       key: "first",
       big: String(s.first_time_merged_authors),
-      label: s.first_time_merged_authors === 1 ? "person got their first pull request merged here" : "people got their first pull request merged here",
+      label: s.first_time_merged_authors === 1 ? "person got their first PR merged here" : "people got their first PR merged here",
       tone: s.first_time_merged_authors > 0 ? "good" : "bad",
     });
   }
@@ -117,7 +117,7 @@ export function statLines(s: Partial<Stats>): StatLine[] {
     out.push({
       key: "noreply",
       big: `${p}%`,
-      label: `of outside pull requests never got a reply (${s.no_reply})`,
+      label: `of outside PRs never got a reply (${s.no_reply})`,
       tone: noReplyTone(p),
       meter: s.no_reply / s.outsider_attempts,
     });
@@ -126,7 +126,7 @@ export function statLines(s: Partial<Stats>): StatLine[] {
     out.push({
       key: "people",
       big: String(s.distinct_outsiders),
-      label: "different outside contributors tried recently",
+      label: "different outsiders tried recently",
       tone: "neutral",
     });
   }
@@ -135,7 +135,7 @@ export function statLines(s: Partial<Stats>): StatLine[] {
     out.push({
       key: "bots",
       big: `${p}%`,
-      label: "of pull request activity came from bots",
+      label: "of PR activity came from bots",
       tone: "neutral",
     });
   }

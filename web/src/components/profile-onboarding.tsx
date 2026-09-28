@@ -20,9 +20,9 @@ export async function ProfileOnboarding({ back, className = "" }: { back: "/" | 
       <details className="group">
         <summary className="flex cursor-pointer list-none flex-wrap items-baseline justify-between gap-x-6 gap-y-2 [&::-webkit-details-marker]:hidden">
           <span>
-            <span id="onboard-h" className="block text-[1.15rem] font-semibold tracking-tight">Tell Holt what you&apos;re after, once</span>
+            <span id="onboard-h" className="block text-[1.15rem] font-semibold tracking-tight">What are you after?</span>
             <span className="mt-1 block font-sans text-[0.9rem] text-muted">
-              Your languages, your time and what you want to work on. Searches start from it; you can change it any time in settings.
+              Pick your languages and how much time you have. Searches start there. Change it any time in settings.
             </span>
           </span>
           <span className="text-[0.85rem] text-blue group-open:hidden">[ set it up · 30 seconds → ]</span>

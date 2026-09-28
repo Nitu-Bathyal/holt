@@ -30,8 +30,8 @@ export async function ConnectGitHubCard({ userId, notice }: { userId: string; no
       {r.ok && !acct && (
         <>
           <p className="prose-sans mt-2 text-[0.95rem]">
-            Connect your GitHub account to get personal features, like your own pull requests with Holt&apos;s verdict on each repo.
-            It&apos;s free. Holt only reads public data and never posts anything.
+            See your public PRs with Holt&apos;s verdict on each repo, and get picks based on where they got merged. Free. Holt
+            only reads public data and never posts.
           </p>
           <Link href="/connect" className="btn-primary mt-5 inline-flex">connect GitHub</Link>
         </>

@@ -8,7 +8,7 @@ export function HoltUsersLine({ stats }: { stats: HoltUsers | null }) {
   return (
     <div className="mt-4 border-l-2 border-line-strong pl-4">
       <p className="font-sans text-[0.95rem] text-ink">
-        <span className="text-muted">Holt users who sent pull requests here: </span>
+        <span className="text-muted">Holt users who sent PRs here: </span>
         {holtUsersLine(stats)}
       </p>
       <details className="group mt-1 text-[0.8rem] text-faint">
@@ -16,8 +16,8 @@ export function HoltUsersLine({ stats }: { stats: HoltUsers | null }) {
           what&apos;s this?
         </summary>
         <p className="mt-1 max-w-xl font-sans leading-relaxed text-muted">
-          People who connected their GitHub account to Holt, counted without names, over {windowLabel(stats.window_days)}. We only show this when at least 5
-          people make up the numbers, and never count anyone who chose to leave statistics out.{" "}
+          People who connected GitHub to Holt, counted without names, over {windowLabel(stats.window_days)}. Shown only when 5 or more
+          people make up the numbers. Anyone who opted out of statistics is never counted.{" "}
           <Link href="/privacy#connect-github" className="text-link">
             How we handle this
           </Link>

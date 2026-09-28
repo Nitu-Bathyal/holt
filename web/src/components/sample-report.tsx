@@ -30,7 +30,7 @@ const EXAMPLE: Sample = {
   headline: "Worth your time",
   tone: "good",
   stats: [
-    ["43 of 58", "outside pull requests merged"],
+    ["43 of 58", "outside PRs merged"],
     ["15 hours", "typical wait for a first reply"],
     ["30", "people's first PR merged here"],
   ],
@@ -54,7 +54,7 @@ async function load(): Promise<Sample> {
     headline: r.data.headline,
     tone: r.data.tone,
     stats: [
-      [`${s.outsider_merged} of ${s.outsider_attempts}`, "outside pull requests merged"],
+      [`${s.outsider_merged} of ${s.outsider_attempts}`, "outside PRs merged"],
       [s.median_first_response_hours == null ? "none" : humanHours(s.median_first_response_hours), "typical wait for a first reply"],
       [String(s.first_time_merged_authors), "people's first PR merged here"],
     ],

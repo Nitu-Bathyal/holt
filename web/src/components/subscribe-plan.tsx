@@ -52,14 +52,14 @@ export function SubscribePlan({ plan, label, signedIn, prefill, autoStart }: Sub
     setPhase({ t: "starting" });
     const r = await post<SubscriptionCheckout>("/api/subscription", { plan });
     if (!r.ok) {
-      setPhase({ t: "failed", message: r.code === "already_subscribed" ? "You already have a plan. You can manage it in Settings." : r.message });
+      setPhase({ t: "failed", message: r.code === "already_subscribed" ? "You already have a plan. Manage it in Settings." : r.message });
       return;
     }
     const sub = r.data;
     try {
       await loadRazorpay();
     } catch {
-      setPhase({ t: "failed", message: "Razorpay's payment window didn't load. An ad blocker may be stopping it; allow checkout.razorpay.com and try again." });
+      setPhase({ t: "failed", message: "Razorpay's payment window didn't load. If you use an ad blocker, allow checkout.razorpay.com and try again." });
       return;
     }
     setPhase({ t: "paying" });

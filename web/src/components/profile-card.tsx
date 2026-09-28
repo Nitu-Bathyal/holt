@@ -8,7 +8,7 @@ import { ProfileForm } from "./profile-form";
 const NOTICES: Record<string, { tone: string; text: string }> = {
   saved: { tone: "text-green border-green/50 bg-green/10", text: "Saved. Find and Hacktoberfest now start from your profile." },
   deleted: { tone: "text-muted border-line-strong", text: "Profile deleted." },
-  adult: { tone: "text-orange border-orange/50 bg-orange/10", text: "Please confirm you're 18 or older to save a profile." },
+  adult: { tone: "text-orange border-orange/50 bg-orange/10", text: "Tick the 18+ box to save a profile." },
   error: { tone: "text-orange border-orange/50 bg-orange/10", text: "That didn't work. Try again in a minute." },
 };
 
@@ -21,8 +21,8 @@ export async function ProfileCard({ userId, notice }: { userId: string; notice?:
     <section id="profile" aria-labelledby="profile-h" className="mt-10 scroll-mt-24 border border-line-strong bg-panel p-5 shadow-soft sm:p-8">
       <h2 id="profile-h" className="text-[1.3rem] font-semibold tracking-tight">Your profile</h2>
       <p className="prose-sans mt-2 text-[0.95rem]">
-        Say once what you&apos;re looking for. <Link href="/find" className="text-link">Find</Link> and{" "}
-        <Link href="/hacktoberfest" className="text-link">Hacktoberfest</Link> start from it, and you can still change any search.
+        Say what you&apos;re after once. <Link href="/find" className="text-link">Find</Link> and{" "}
+        <Link href="/hacktoberfest" className="text-link">Hacktoberfest</Link> start from it. You can still change any search.
       </p>
       {n && <p role="status" className={`mt-4 border px-4 py-3 font-sans text-[0.9rem] ${n.tone}`}>{n.text}</p>}
       {!r.ok && <p role="alert" className="mt-4 border border-orange/50 px-4 py-3 font-sans text-[0.9rem] text-orange">{r.error.message}</p>}
