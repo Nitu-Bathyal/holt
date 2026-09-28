@@ -749,6 +749,20 @@ export interface components {
             /** Repo */
             repo: string;
         };
+        /**
+         * Ask
+         * @description Something the project asks of a contributor before a pull request, and
+         *     where Holt read it (a CLA bot's comment, or CONTRIBUTING).
+         */
+        Ask: {
+            /**
+             * Code
+             * @enum {string}
+             */
+            code: "cla" | "dco" | "issue_first";
+            /** Url */
+            url: string;
+        };
         /** Catalogue */
         Catalogue: {
             /**
@@ -880,6 +894,16 @@ export interface components {
             seconds: number | null;
             /** Usd */
             usd: number | null;
+        };
+        /**
+         * Counted
+         * @description One entry of "How this was counted".
+         */
+        Counted: {
+            /** Text */
+            text: string;
+            /** Topic */
+            topic: string;
         };
         /**
          * Credits
@@ -1611,9 +1635,13 @@ export interface components {
         };
         /** Report */
         Report: {
+            /** Asks */
+            asks: components["schemas"]["Ask"][];
             /** Bottom Line */
             bottom_line: string | null;
             cost: components["schemas"]["Cost"] | null;
+            /** Counted */
+            readonly counted: components["schemas"]["Counted"][];
             /** Days */
             days: number;
             /** Decided By */
@@ -1622,6 +1650,8 @@ export interface components {
             evidence: components["schemas"]["EvidenceItem"][];
             /** Evidence Until */
             evidence_until: string | null;
+            /** First Timer Line */
+            readonly first_timer_line: string | null;
             /** Generated At */
             generated_at: string;
             /** Headline */
@@ -1636,11 +1666,18 @@ export interface components {
             mode: "rules" | "ai";
             /** Never Landed */
             never_landed: components["schemas"]["NeverLanded"][];
+            /** Next Step */
+            readonly next_step: string;
+            /** Numbers Line */
+            readonly numbers_line: string;
             readonly odds: components["schemas"]["Odds"] | null;
             /** Repo */
             repo: string;
             /** Rule Codes */
             rule_codes: string[];
+            sample: components["schemas"]["Sample"] | null;
+            /** Stat Line */
+            readonly stat_line: string | null;
             stats: components["schemas"]["Stats"];
             /** Summary */
             summary: string | null;
@@ -1677,6 +1714,25 @@ export interface components {
             repo: string;
             /** Verdict */
             verdict: ("viable" | "not_viable" | "insufficient_evidence") | null;
+        };
+        /**
+         * Sample
+         * @description What the counts were read from: the newest pull requests, and who was
+         *     left out of them before counting.
+         */
+        Sample: {
+            /** Bot Pull Requests */
+            bot_pull_requests: number;
+            /** First Opened */
+            first_opened: string | null;
+            /** Last Opened */
+            last_opened: string | null;
+            /** Pull Requests */
+            pull_requests: number;
+            /** Team People */
+            team_people: number;
+            /** Team Pull Requests */
+            team_pull_requests: number;
         };
         /** StarterIssue */
         StarterIssue: {
@@ -1767,6 +1823,7 @@ export type AdminUserSummary = components['schemas']['AdminUserSummary'];
 export type AdminUsers = components['schemas']['AdminUsers'];
 export type AnalysisDone = components['schemas']['AnalysisDone'];
 export type AnalysisIn = components['schemas']['AnalysisIn'];
+export type Ask = components['schemas']['Ask'];
 export type Catalogue = components['schemas']['Catalogue'];
 export type ConnectIn = components['schemas']['ConnectIn'];
 export type ContributionMetric = components['schemas']['ContributionMetric'];
@@ -1774,6 +1831,7 @@ export type ContributionPullRequest = components['schemas']['ContributionPullReq
 export type ContributionSummary = components['schemas']['ContributionSummary'];
 export type Contributions = components['schemas']['Contributions'];
 export type Cost = components['schemas']['Cost'];
+export type Counted = components['schemas']['Counted'];
 export type Credits = components['schemas']['Credits'];
 export type DiscoverOut = components['schemas']['DiscoverOut'];
 export type DiscoverRepo = components['schemas']['DiscoverRepo'];
@@ -1827,6 +1885,7 @@ export type RepoVerdict = components['schemas']['RepoVerdict'];
 export type Report = components['schemas']['Report'];
 export type ReportList = components['schemas']['ReportList'];
 export type ReportListItem = components['schemas']['ReportListItem'];
+export type Sample = components['schemas']['Sample'];
 export type StarterIssue = components['schemas']['StarterIssue'];
 export type StarterIssues = components['schemas']['StarterIssues'];
 export type Stats = components['schemas']['Stats'];

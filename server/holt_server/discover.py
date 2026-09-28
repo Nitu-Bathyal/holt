@@ -143,8 +143,7 @@ def _card(row: tuple, views: dict[str, int]) -> DiscoverRepo | None:
         stars=meta.stars if meta else None,
         topics=list(meta.topics or []) if meta else [],
         pushed_at=iso(meta.pushed_at) if meta else None,
-        reason=verdict_line(verdict, st, decided_by, rule_codes,
-                            starter_issues_below=False), stats=st,
+        reason=verdict_line(verdict, st, decided_by, rule_codes), stats=st,
         checked_this_week=views.get(key), generated_at=generated or iso(created))
 
 

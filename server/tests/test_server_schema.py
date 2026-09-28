@@ -72,11 +72,10 @@ def test_long_odds_name_the_weak_part():
 
 def test_viable_line_is_honest_about_long_odds():
     line = report("viable", stats(189, 5, 100)).verdict_line
-    assert line.startswith("Outside contributors do get merged here (5 of 189 recently)")
-    assert "most pull requests don't land" in line and "about half get no reply" in line
+    assert line.startswith("Outside contributors do get merged here, but")
+    assert "most of their pull requests don't land" in line and "about half get no reply" in line
     assert report("viable", stats(100, 40, 10)).verdict_line == (
-        "Outside contributors get real replies here, and 40 of 100 of their recent "
-        "pull requests were merged.")
+        "Outside contributors get real replies here, and their work gets merged.")
 
 
 def test_not_viable_line_names_the_rule_that_decided_it():
@@ -129,3 +128,125 @@ def test_openapi_describes_the_derived_fields(make_harness):
     for field in ("headline", "tone", "verdict_line", "odds", "rule_codes"):
         assert field in report_schema["required"], field
     assert {"StarterIssue", "FindResult", "JobStatus", "ErrorBody"} <= set(spec["components"]["schemas"])
+
+
+# --- the top of the report (ticket 19) ---------------------------------------------
+
+SAMPLE = {"pull_requests": 200, "first_opened": "2026-06-03T10:00:00Z",
+          "last_opened": "2026-09-26T09:00:00Z", "team_pull_requests": 40,
+          "team_people": 9, "bot_pull_requests": 12}
+
+
+def top(verdict: str, s: dict, decided_by=(), rule_codes=(), **extra) -> schema.Report:
+    body = canned_report("o/r", verdict=verdict)
+    body.update(stats=s, decided_by=list(decided_by), rule_codes=list(rule_codes), **extra)
+    return schema.Report.model_validate(body)
+
+
+def test_numbers_line_carries_the_dates_and_the_same_counts():
+    r = top("viable", stats(120, 22, 30), sample=SAMPLE)
+    assert r.numbers_line == (
+        "Of 120 pull requests from outside contributors (3 Jun – 26 Sep 2026), 22 were "
+        "merged (18%). When a maintainer replied, it was typically within 2 hours. "
+        "25% got no reply at all.")
+    assert r.stat_line == "22 of 120 outside PRs merged"
+
+
+def test_numbers_line_without_a_sample_or_replies():
+    s = stats(10, 0, 10) | {"median_first_response_hours": None}
+    assert top("not_viable", s).numbers_line == (
+        "Of 10 pull requests from outside contributors, 0 were merged (0%). "
+        "No maintainer replied to any of them. 100% got no reply at all.")
+    assert top("insufficient_evidence", stats(0, 0, 0)).numbers_line == (
+        "Nobody outside the project's team opened a pull request.")
+    assert top("insufficient_evidence", stats(0, 0, 0)).stat_line is None
+
+
+def test_period_spans_years_and_single_days():
+    one = schema.Sample(**(SAMPLE | {"first_opened": "2026-09-26T01:00:00Z"}))
+    assert schema.period(one) == "26 Sep 2026"
+    two = schema.Sample(**(SAMPLE | {"first_opened": "2025-10-22T01:00:00Z"}))
+    assert schema.period(two) == "22 Oct 2025 – 26 Sep 2026"
+
+
+def test_first_timer_line():
+    assert top("viable", stats(50, 9, 3)).first_timer_line == (
+        "9 people got their first pull request merged here.")
+    assert top("viable", stats(50, 1, 3)).first_timer_line == (
+        "1 person got their first pull request merged here.")
+    assert top("not_viable", stats(50, 0, 3)).first_timer_line == (
+        "Nobody got their first pull request merged here in this period.")
+    assert top("insufficient_evidence", stats(0, 0, 0)).first_timer_line is None
+
+
+def test_next_step_names_where_work_lands_and_what_is_asked():
+    landing = [{"path": "(root)", "merged": 9, "attempted": 10},
+               {"path": "docs/guide", "merged": 3, "attempted": 4},
+               {"path": "src/core", "merged": 12, "attempted": 60}]
+    never = [{"path": "src/api", "attempted": 2}, {"path": "src/engine", "attempted": 14}]
+    asks = [{"code": "cla", "url": "https://github.com/o/r/pull/1"},
+            {"code": "issue_first", "url": "https://github.com/o/r/blob/x/CONTRIBUTING.md"}]
+    r = top("viable", stats(80, 20, 5), landing=landing, never_landed=never, asks=asks)
+    assert r.next_step == (
+        "Best bet: a small change in src/core, where 12 of 60 outside pull requests were "
+        "merged. Nothing from outside landed in src/engine (14 tried). "
+        + schema.ASK_STEP["cla"] + " " + schema.ASK_STEP["issue_first"])
+    # Two merges in a folder is luck, not a place to aim for.
+    thin = top("viable", stats(80, 20, 5), landing=[{"path": "a/b", "merged": 2, "attempted": 3}])
+    assert thin.next_step.startswith("Best bet: a small, focused change")
+
+
+def test_next_step_follows_the_rule_that_decided():
+    rubber = top("not_viable", stats(42, 33, 6), ["33 merged.", "But only 18%."],
+                 ["merges", "rubber_stamp"])
+    assert rubber.next_step == schema.NOT_VIABLE_STEP["rubber_stamp"]
+    archived = top("not_viable", stats(0, 0, 0), ["Archived."], ["archived"])
+    assert archived.next_step == schema.NOT_VIABLE_STEP["archived"]
+    assert top("not_viable", stats(40, 0, 30), ["Ignored."], ["ignored"]).next_step == (
+        schema.NOT_VIABLE_DEFAULT_STEP)
+    assert top("insufficient_evidence", stats(3, 1, 1)).next_step == schema.INSUFFICIENT_STEP
+
+
+def test_an_informational_line_last_never_reads_as_the_reason():
+    """react-native: the off-button line comes after the deciding rule."""
+    ignored = "30 of 40 pull requests from outside contributors got no reply at all."
+    landed = "All merged pull requests ... are counted as merged here."
+    r = top("not_viable", stats(40, 0, 30), [ignored, landed], ["ignored", "landed_off_button"])
+    assert r.verdict_line == ignored
+    rubber = top("not_viable", stats(42, 33, 6), ["33 merged.", "But only 18%.", landed],
+                 ["merges", "rubber_stamp", "landed_off_button"])
+    assert rubber.verdict_line == schema.RUBBER_STAMP_LINE
+    assert rubber.next_step == schema.NOT_VIABLE_STEP["rubber_stamp"]
+
+
+def test_how_this_was_counted():
+    landed = "All merged pull requests were landed by a merge bot."
+    r = top("viable", stats(120, 22, 30), ["22 merged, out of 120.", landed],
+            ["merges", "landed_off_button"], sample=SAMPLE | {"bot_pull_requests": 0})
+    topics = [c.topic for c in r.counted]
+    assert topics == ["What we read", "The team and outside contributors", "Bots",
+                      "Merges GitHub shows as closed", "What decided it", "The rule"]
+    by = {c.topic: c.text for c in r.counted}
+    assert by["What we read"] == "The newest 200 pull requests on GitHub, opened 3 Jun – 26 Sep 2026."
+    assert by["The team and outside contributors"].startswith(
+        "40 of them came from 9 people on the project's team")
+    assert by["Bots"].startswith("No pull requests were opened by bots.")
+    assert by["What decided it"] == "22 merged, out of 120."
+    assert "no AI chooses the verdict" in by["The rule"]
+    # A report cached before `sample` existed still says what it can.
+    old = top("viable", stats(120, 22, 30), evidence_until="2026-09-26T00:00:00Z")
+    assert old.counted[0].text == "The newest pull requests on GitHub, up to 26 Sep 2026."
+
+
+def test_numbers_line_keeps_still_open_and_silent_closes_apart():
+    """pytorch after ticket 06: most outside pull requests are too new to judge."""
+    s = stats(18, 7, 0) | {"still_open": 42, "closed_silently": 5}
+    assert top("viable", s, sample=SAMPLE).numbers_line == (
+        "Of 18 pull requests from outside contributors (3 Jun – 26 Sep 2026) that have had "
+        "time for an answer, 7 were merged (39%). When a maintainer replied, it was "
+        "typically within 2 hours. 28% were closed without a word. Another 42 are still "
+        "open and too new to count.")
+    fresh = stats(0, 0, 0) | {"still_open": 3}
+    assert top("insufficient_evidence", fresh).numbers_line == (
+        "Outside contributors opened 3 pull requests, all still open and too new to judge "
+        "(less than 14 days old).")

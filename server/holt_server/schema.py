@@ -2,11 +2,12 @@
 
 These are the contract with `web/` and the browser extension: the OpenAPI
 document FastAPI builds from them is turned into `web/src/lib/api-schema.ts`
-(`server/scripts/export_types.sh`), and CI fails when that file is stale.
+(`server/scripts/api_types.sh`), and CI fails when that file is stale.
 
-What a reader sees at the top of a report (the headline, its tone, the one
-sentence under it and "Your odds") is derived here, once, from the verdict and
-the counts. Every surface renders these fields instead of working them out
+What a reader sees at the top of a report (the headline and its tone, then
+three lines: the reason, the numbers with their dates, what to do next) and
+"How this was counted" are derived here, once, from the verdict, the counts
+and the rules. Every surface renders these fields instead of working them out
 again, so they cannot disagree with each other or with the verdict. They are
 computed fields, so reports cached before a wording change get the new wording.
 
@@ -16,9 +17,12 @@ without it), add it to API.md, and regenerate the TypeScript types.
 
 from __future__ import annotations
 
+from datetime import datetime
 from typing import Literal
 
 from holt.agent.verdict import headline as verdict_headline
+from holt.agent.rates import SETTLE_DAYS
+from holt.agent.verdict import MIN_MERGES, hours_phrase
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_serializer
 
 # Bound here, not looked up per call: tests swap `holt.starter` for a fake.
@@ -138,6 +142,38 @@ class Odds(Model):
     text: str
 
 
+AskCode = Literal["cla", "dco", "issue_first"]
+
+
+class Ask(Model):
+    """Something the project asks of a contributor before a pull request, and
+    where Holt read it (a CLA bot's comment, or CONTRIBUTING)."""
+
+    code: AskCode
+    url: str
+
+
+class Sample(Model):
+    """What the counts were read from: the newest pull requests, and who was
+    left out of them before counting."""
+
+    # Every pull request read, and when the oldest and newest were opened.
+    pull_requests: int
+    first_opened: str | None
+    last_opened: str | None
+    # Opened by the project's own team, or by bots: in no count.
+    team_pull_requests: int
+    team_people: int
+    bot_pull_requests: int
+
+
+class Counted(Model):
+    """One entry of "How this was counted"."""
+
+    topic: str
+    text: str
+
+
 # Thresholds for the odds. web/src/lib/format.ts colours the stat tiles with
 # the same numbers, so a tile and the odds line never pull different ways.
 MERGE_GOOD, MERGE_FAIR = 0.12, 0.05
@@ -191,47 +227,261 @@ RUBBER_STAMP_LINE = ("Outside pull requests here get merged without anyone revie
                      "them, so you wouldn't get feedback on yours.")
 
 
-def verdict_line(verdict: str, s: Stats, decided_by: list[str], rule_codes: list[str],
-                 starter_issues_below: bool = True) -> str:
-    """One sentence under the headline. It explains the verdict and never
-    oversells it: "Worth your time" with a low merge rate or many ignored pull
-    requests says so plainly. `starter_issues_below=False` where no starter
-    issues follow (Discover cards)."""
+# Rule codes that say something about the sample and never decide (API.md).
+# The reason under the headline is the last rule that is not one of these.
+INFO_CODES = frozenset({
+    "awaiting_reply", "landed_off_button", "package_updates", "kind_contested",
+    "kind_uncited", "sample_period", "dormant", "excluded", "still_open",
+    "closed_silently",
+})
+
+
+def deciding_rule(decided_by: list[str], rule_codes: list[str]) -> tuple[str, str]:
+    """The sentence and code of the rule that decided the verdict. Reports
+    cached before `rule_codes` existed have no codes: their last line."""
+    codes = rule_codes if len(rule_codes) == len(decided_by) else [""] * len(decided_by)
+    for text, code in zip(reversed(decided_by), reversed(codes)):
+        if code not in INFO_CODES:
+            return text, code
+    return (decided_by[-1], "") if decided_by else ("", "")
+
+
+def verdict_line(verdict: str, s: Stats, decided_by: list[str], rule_codes: list[str]) -> str:
+    """The first line of the report: the reason for the verdict, in one
+    sentence. It never oversells: "Worth your time" with a low merge rate or
+    many ignored pull requests says so plainly. The counts themselves are the
+    next line (`numbers_line`), so a "Worth your time" reason doesn't repeat
+    them."""
     n = s.outsider_attempts
-    merged = f"{s.outsider_merged} of {n}"
     if verdict == "viable":
         rate = s.outsider_merged / n if n else 0.0
         silent = s.no_reply / n if n else 0.0
         low_merge, many_silent = rate < 0.1, silent > 0.4
         if low_merge or many_silent:
             buts = [b for b in (
-                "most pull requests don't land" if low_merge else "",
+                "most of their pull requests don't land" if low_merge else "",
                 f"{_silent_phrase(silent)} get no reply" if many_silent else "",
             ) if b]
-            advice = (", so start with one of the starter issues below" if starter_issues_below
-                      else ", so pick your first issue carefully")
-            return (f"Outside contributors do get merged here ({merged} recently), but "
-                    f"{' and '.join(buts)}{advice}.")
+            return (f"Outside contributors do get merged here, but {' and '.join(buts)}, "
+                    "so choose your first change carefully.")
         if silent < 0.3:
-            return ("Outside contributors get real replies here, and "
-                    f"{merged} of their recent pull requests were merged.")
-        return f"Outside contributors get merged here: {merged} of their recent pull requests landed."
+            return "Outside contributors get real replies here, and their work gets merged."
+        return "Outside contributors get merged here, though some wait a while for a reply."
     if verdict == "not_viable":
-        # The rule that turned it down is the last one in the trace, and is a
-        # plain sentence on its own, except rubber-stamping, which reads as a
-        # "but" after the merge count. Reports cached before `rule_codes`
-        # existed are recognised by that "But".
-        last = decided_by[-1] if decided_by else ""
-        if (rule_codes[-1:] == ["rubber_stamp"]
-                or (not rule_codes and last.startswith("But only"))):
+        # Rubber-stamping reads as a "but" after the merge count, so it gets
+        # its own sentence. Reports cached before `rule_codes` existed are
+        # recognised by that "But".
+        last, code = deciding_rule(decided_by, rule_codes)
+        if code == "rubber_stamp" or (not rule_codes and last.startswith("But only")):
             return RUBBER_STAMP_LINE
         if last:
             return last
         if s.outsider_merged == 0:
             return f"None of the last {n} pull requests from outside contributors were merged."
-        return (f"Only {merged} pull requests from outside contributors were merged, "
-                "and most never got a useful reply.")
+        return (f"Only {s.outsider_merged} of {n} pull requests from outside contributors "
+                "were merged, and most never got a useful reply.")
     return "Too few outside contributors have tried recently for Holt to say either way."
+
+
+def _pct(part: int, whole: int) -> int:
+    # Whole percentages, rounded half up, as the web's stat tiles show them.
+    return int(100 * part / whole + 0.5) if whole else 0
+
+
+def _date(iso: str) -> tuple[int, str, int] | None:
+    try:
+        d = datetime.fromisoformat(iso.replace("Z", "+00:00"))
+    except (TypeError, ValueError):
+        return None
+    return d.day, d.strftime("%b"), d.year
+
+
+def period(sample: Sample | None) -> str | None:
+    """ "3 Jun – 26 Sep 2026": when the pull requests read were opened."""
+    if sample is None or not sample.first_opened or not sample.last_opened:
+        return None
+    a, b = _date(sample.first_opened), _date(sample.last_opened)
+    if a is None or b is None:
+        return None
+    end = f"{b[0]} {b[1]} {b[2]}"
+    if a == b:
+        return end
+    start = f"{a[0]} {a[1]}" + (f" {a[2]}" if a[2] != b[2] else "")
+    return f"{start} – {end}"
+
+
+def numbers_line(s: Stats, sample: Sample | None) -> str:
+    """The second line: what happened to outside contributors, with the dates
+    it covers. The same counts as the stat tiles and the verdict's rules:
+    rates are over decided pull requests, and the ones still too new to judge
+    are said apart."""
+    n = s.outsider_attempts
+    when = period(sample)
+    when = f" ({when})" if when else ""
+    if not n and not s.still_open:
+        return f"Nobody outside the project's team opened a pull request{when}."
+    if not n:
+        return (f"Outside contributors opened {s.still_open} pull "
+                f"request{'' if s.still_open == 1 else 's'}{when}, all still open and "
+                f"too new to judge (less than {SETTLE_DAYS} days old).")
+    decided = " that have had time for an answer" if s.still_open else ""
+    out = [f"Of {n} pull request{'' if n == 1 else 's'} from outside contributors{when}"
+           f"{decided}, {s.outsider_merged} {'was' if s.outsider_merged == 1 else 'were'} "
+           f"merged ({_pct(s.outsider_merged, n)}%)."]
+    if s.median_first_response_hours is not None:
+        # The median is over the ones that got a reply; say so, or a fast
+        # median hides a silent majority (the next sentences give its size).
+        # The engine's phrasing, so it reads the same as the rule that decided.
+        out.append("When a maintainer replied, it was typically within "
+                   f"{hours_phrase(s.median_first_response_hours)}.")
+    else:
+        out.append("No maintainer replied to any of them.")
+    if s.closed_silently:
+        out.append(f"{_pct(s.closed_silently, n)}% were closed without a word.")
+    if s.no_reply:
+        out.append(f"{_pct(s.no_reply, n)}% got no reply at all.")
+    if s.still_open:
+        out.append(f"Another {s.still_open} {'is' if s.still_open == 1 else 'are'} still "
+                   "open and too new to count.")
+    return " ".join(out)
+
+
+def stat_line(s: Stats) -> str | None:
+    """The short count the browser extension's chip shows next to the headline."""
+    n = s.outsider_attempts
+    if not n:
+        return None
+    return f"{s.outsider_merged} of {n} outside PR{'' if n == 1 else 's'} merged"
+
+
+def first_timer_line(s: Stats) -> str | None:
+    if not s.outsider_attempts:
+        return None
+    k = s.first_time_merged_authors
+    if not k:
+        return "Nobody got their first pull request merged here in this period."
+    return (f"{k} {'person' if k == 1 else 'people'} got their first pull request "
+            "merged here.")
+
+
+# The best place to start needs this many merged outside pull requests in it;
+# fewer is luck, not a pattern. A folder where this many tried and none landed
+# is worth a warning.
+BEST_AREA_MIN_MERGED = 3
+AVOID_AREA_MIN_TRIED = 5
+
+ASK_STEP: dict[str, str] = {
+    "cla": "Sign the CLA (Contributor License Agreement) when the bot asks.",
+    "dco": "Sign off every commit (git commit -s): the project asks for a DCO sign-off.",
+    "issue_first": "Open an issue before you write code: CONTRIBUTING asks for that.",
+}
+NOT_VIABLE_STEP: dict[str, str] = {
+    "archived": "Don't send a pull request here. Look for an active fork or a similar "
+                "project that's still maintained.",
+    "elsewhere": "Contribute where the project is really developed, not here.",
+    "closed_kind": "Contribute where the project is really developed, not here.",
+    "non_software_kind": "Adding an entry is fine if that's what you want. For experience "
+                         "with real code, pick a different project.",
+    "catalogue_shape": "Adding an entry is fine if that's what you want. For experience "
+                       "with real code, pick a different project.",
+    "rubber_stamp": "Your change would probably be merged, but nobody would review it. "
+                    "For feedback on your code, pick a project that reviews.",
+}
+NOT_VIABLE_DEFAULT_STEP = ("Put your time into a project that answers outside "
+                           "contributors; Holt's Find page lists some.")
+INSUFFICIENT_STEP = ("There's too little to go on. Before writing code, open an issue "
+                     "and ask whether a pull request would be welcome.")
+
+
+def next_step(verdict: str, decided_by: list[str], rule_codes: list[str],
+              landing: list[LandingPath], never_landed: list[NeverLanded],
+              asks: list[Ask]) -> str:
+    """The third line: what to do next, from where outside work landed and
+    what the project asks of contributors. Advice only; it never decides."""
+    if verdict == "not_viable":
+        _, code = deciding_rule(decided_by, rule_codes)
+        return NOT_VIABLE_STEP.get(code, NOT_VIABLE_DEFAULT_STEP)
+    if verdict != "viable":
+        return INSUFFICIENT_STEP
+    areas = [a for a in landing if a.path != "(root)" and a.merged >= BEST_AREA_MIN_MERGED]
+    best = max(areas, key=lambda a: (a.merged, a.merged / a.attempted), default=None)
+    if best is not None:
+        out = [f"Best bet: a small change in {best.path}, where {best.merged} of "
+               f"{best.attempted} outside pull requests were merged."]
+    else:
+        out = ["Best bet: a small, focused change; a starter issue is a good place to find one."]
+    avoid = next((a for a in never_landed if a.attempted >= AVOID_AREA_MIN_TRIED), None)
+    if avoid is not None:
+        out.append(f"Nothing from outside landed in {avoid.path} ({avoid.attempted} tried).")
+    out += [ASK_STEP[a.code] for a in asks]
+    return " ".join(out)
+
+
+# `decided_by` lines that inform, shown in "How this was counted" under these.
+INFO_TOPICS: dict[str, str] = {
+    "awaiting_reply": "Too new to judge",
+    "still_open": "Still open",
+    "closed_silently": "Closed without a word",
+    "excluded": "Drafts and spam",
+    "dormant": "Recent activity",
+    "landed_off_button": "Merges GitHub shows as closed",
+    "package_updates": "What the work is",
+    "kind_contested": "What kind of project this is",
+    "kind_uncited": "What kind of project this is",
+}
+
+
+def verdict_rule_text(days: int) -> str:
+    return (
+        f"“{verdict_headline('viable')}” needs at least {MIN_MERGES} merged pull requests "
+        "from outside contributors and a typical first reply within your "
+        f"{days}-day budget, with people actually reviewing what gets merged. "
+        f"“{verdict_headline('not_viable')}” is an archived repository, a mirror, a "
+        "catalogue of entries, merges nobody reviews, or outside pull requests that "
+        f"are almost all ignored. Anything in between is “{verdict_headline('insufficient_evidence')}”. "
+        "These rules are fixed; no AI chooses the verdict."
+    )
+
+
+def counted(r: Report) -> list[Counted]:
+    """ "How this was counted": the sample, who was left out and why, and the
+    rule that decided it. Every number here is one the report already shows."""
+    out: list[Counted] = []
+    smp = r.sample
+    when = period(smp)
+    if smp is not None:
+        text = f"The newest {smp.pull_requests} pull requests on GitHub"
+        text += f", opened {when}." if when else "."
+        out.append(Counted(topic="What we read", text=text))
+        team = smp.team_pull_requests
+        out.append(Counted(topic="The team and outside contributors", text=(
+            f"{team} of them came from {smp.team_people} "
+            f"{'person' if smp.team_people == 1 else 'people'} on the project's team and "
+            f"{'is' if team == 1 else 'are'} left out. The team is everyone GitHub shows as an "
+            "owner, member or collaborator, plus anyone the history shows merging, "
+            "closing or formally reviewing other people's pull requests. Everyone else "
+            "is an outside contributor, including people who come back.")))
+        bots = smp.bot_pull_requests
+        left = ("No pull requests were opened by bots." if not bots else
+                f"{bots} pull request{'' if bots == 1 else 's'} opened by bots (dependency "
+                f"updates and the like) {'is' if bots == 1 else 'are'} left out.")
+        out.append(Counted(topic="Bots", text=(
+            f"{left} Only a maintainer's reply counts as a reply: not a bot, a CLA "
+            "check, the author, or a passer-by.")))
+    elif r.evidence_until and (d := _date(r.evidence_until)):
+        out.append(Counted(topic="What we read", text=(
+            f"The newest pull requests on GitHub, up to {d[0]} {d[1]} {d[2]}.")))
+    codes = r.rule_codes if len(r.rule_codes) == len(r.decided_by) else [""] * len(r.decided_by)
+    for text, code in zip(r.decided_by, codes):
+        if code in INFO_TOPICS:
+            out.append(Counted(topic=INFO_TOPICS[code], text=text))
+    # Every rule that weighed in, in order: a rubber-stamp "But only..." reads
+    # after the merge count it qualifies.
+    deciding = [t for t, c in zip(r.decided_by, codes) if c not in INFO_CODES]
+    if deciding:
+        out.append(Counted(topic="What decided it", text=" ".join(deciding)))
+    out.append(Counted(topic="The rule", text=verdict_rule_text(r.days)))
+    return out
 
 
 class VerdictView(Model):
@@ -287,14 +537,48 @@ class Report(VerdictView):
     evidence_until: str | None = None
     generated_at: str
     cost: Cost | None = None
+    # What the counts were read from. Null on reports cached before it existed.
+    sample: Sample | None = None
+    # What the project asks of a contributor (a CLA, a DCO sign-off, an issue
+    # first), where Holt could read it. Empty means none found, not none asked.
+    asks: list[Ask] = Field(default_factory=list)
     # Filled when the report is served (GET /v1/reports/{owner}/{repo}), never
     # stored with it; null when too few Holt users sent pull requests here.
     holt_users: HoltUsers | None = None
 
+    # The top of the report, in order: `headline` and `verdict_line` (the
+    # verdict and its reason), `numbers_line` (what happened, with dates),
+    # `first_timer_line`, and `next_step` (what to do).
     @computed_field
     @property
     def verdict_line(self) -> str:
         return verdict_line(self.verdict, self.stats, self.decided_by, self.rule_codes)
+
+    @computed_field
+    @property
+    def numbers_line(self) -> str:
+        return numbers_line(self.stats, self.sample)
+
+    @computed_field
+    @property
+    def first_timer_line(self) -> str | None:
+        return first_timer_line(self.stats)
+
+    @computed_field
+    @property
+    def next_step(self) -> str:
+        return next_step(self.verdict, self.decided_by, self.rule_codes,
+                         self.landing, self.never_landed, self.asks)
+
+    @computed_field
+    @property
+    def stat_line(self) -> str | None:
+        return stat_line(self.stats)
+
+    @computed_field
+    @property
+    def counted(self) -> list[Counted]:
+        return counted(self)
 
     @computed_field
     @property
