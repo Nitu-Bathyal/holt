@@ -1227,3 +1227,156 @@
     animation-range: entry 0% exit 100%;
   }
 }
+
+/* The reacting cat (components/reactive-cat.tsx) and the footer (footer.tsx),
+   docs/design/EXPRESSIVE.md. Transform and opacity only; nothing moves under
+   reduced motion, and every element's resting state is its final state. */
+@layer components {
+  .rcat {
+    display: inline-block;
+    white-space: nowrap;
+    font-weight: 600;
+  }
+  .rcat-face,
+  .rcat-gaze,
+  .rcat-ear,
+  .rcat-eye {
+    display: inline-block;
+  }
+  .rcat-gaze {
+    transition: transform 260ms var(--ease-out);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .rcat-face {
+      animation: rcat-squash 420ms var(--ease-expressive);
+    }
+    .rcat-blink .rcat-eye {
+      animation: rcat-blink 4.8s infinite;
+    }
+    .rcat-face:is([data-mood="celebrating"], [data-mood="adoring"]) .rcat-ear {
+      animation: rcat-ear 520ms var(--ease-out) 2 alternate;
+    }
+    .rcat-face[data-mood="thinking"] .rcat-gaze {
+      animation: rcat-look 1.6s ease-in-out infinite;
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .rcat-gaze {
+      transition: none;
+    }
+  }
+
+  .ft-signoff {
+    line-height: 1.15;
+  }
+  .ft-caret {
+    display: inline-block;
+    width: 0.55em;
+    height: 0.95em;
+    margin-left: 0.12em;
+    vertical-align: -0.1em;
+    background: var(--blue);
+  }
+  .ft-wave {
+    display: inline-block;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .ft-signoff[data-waving="true"] .ft-wave {
+      animation: ft-wave 560ms var(--ease-out) both;
+      animation-delay: calc(var(--i) * 24ms);
+    }
+    .ft-caret {
+      animation: ft-caret 1.1s steps(1) infinite;
+    }
+  }
+
+  .ft-ticker-mask {
+    overflow: clip;
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 6%, #000 94%, transparent);
+  }
+  .ft-ticker-track {
+    display: flex;
+    width: max-content;
+    gap: 2.4rem;
+  }
+  .ft-ticker-item {
+    white-space: nowrap;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .ft-ticker-track {
+      animation: ft-drift 60s linear infinite;
+    }
+    .ft-ticker:is(:hover, :focus-within) .ft-ticker-track {
+      animation-play-state: paused;
+    }
+  }
+  /* Reduced motion: the strip becomes a still, wrapped list. */
+  @media (prefers-reduced-motion: reduce) {
+    .ft-ticker-mask {
+      width: min(calc(100% - 32px), 1120px);
+      margin-inline: auto;
+      -webkit-mask-image: none;
+      mask-image: none;
+    }
+    .ft-ticker-track {
+      flex-wrap: wrap;
+      width: auto;
+      gap: 0.4rem 2rem;
+    }
+    .ft-ticker-item[aria-hidden="true"] {
+      display: none;
+    }
+  }
+}
+
+@keyframes rcat-squash {
+  0% {
+    transform: scale(1.14, 0.7) translateY(0.08em);
+  }
+  55% {
+    transform: scale(0.97, 1.06) translateY(-0.06em);
+  }
+  100% {
+    transform: none;
+  }
+}
+@keyframes rcat-blink {
+  0%,
+  94%,
+  100% {
+    transform: none;
+  }
+  97% {
+    transform: scaleY(0.1);
+  }
+}
+@keyframes rcat-ear {
+  to {
+    transform: translateY(-0.12em);
+  }
+}
+@keyframes rcat-look {
+  0%,
+  100% {
+    translate: -0.14em 0;
+  }
+  50% {
+    translate: 0.14em 0;
+  }
+}
+@keyframes ft-wave {
+  40% {
+    transform: translateY(-0.14em);
+  }
+}
+@keyframes ft-caret {
+  50% {
+    opacity: 0;
+  }
+}
+@keyframes ft-drift {
+  to {
+    transform: translateX(calc(-50% - 1.2rem));
+  }
+}

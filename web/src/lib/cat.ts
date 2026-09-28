@@ -12,3 +12,16 @@ export const CAT: Record<CatMood, { eyes: [string, string]; mouth: string; ears:
 };
 
 export const TONE_TEXT = { blue: "text-blue", green: "text-green", orange: "text-orange", amber: "text-amber" } as const;
+
+/**
+ * The cat's face for what's typed into a repo box: pleased at something that
+ * is a repo, puzzled at something that can't become one (a space, or long
+ * enough that it should parse by now). Null while it's empty or still typing.
+ */
+export function inputMood(value: string, isRepo: boolean): CatMood | null {
+  const v = value.trim();
+  if (!v) return null;
+  if (isRepo) return "celebrating";
+  if (/\s/.test(v) || v.length > 8) return "thinking";
+  return null;
+}
