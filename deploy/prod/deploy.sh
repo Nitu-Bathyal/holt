@@ -70,6 +70,14 @@ load_prod_env
 [[ -n "$AUTH_GITHUB_ID" ]] && log "GitHub sign-in: on" || log "GitHub sign-in: off (no GITHUB_OAUTH_ID)"
 [[ -n "$AUTH_GOOGLE_ID" ]] && log "Google sign-in: on" || log "Google sign-in: off (no GOOGLE_OAUTH_ID)"
 [[ -n "$OPENROUTER_API_KEY" ]] && log "server AI key: on" || log "server AI key: off (AI reports need BYOK)"
+# AI spend needs a budget, and in production the owner's explicit say-so too.
+if [[ "${HOLT_PROD_AI_BUDGET_USD:-0}" =~ ^0*(\.0*)?$ ]]; then
+    log "AI budget: 0 (AI off)"
+elif [[ "${HOLT_PROD_AI_BUDGET_OWNER_OK:-}" != 1 ]]; then
+    die "HOLT_PROD_AI_BUDGET_USD is set without HOLT_PROD_AI_BUDGET_OWNER_OK=1; production AI needs the owner's explicit setting"
+else
+    log "AI budget: \$$HOLT_PROD_AI_BUDGET_USD (owner-approved)"
+fi
 for k in CONTACT_EMAIL CONTACT_CITY; do
     v="NEXT_PUBLIC_$k"
     [[ -n "${!v}" && "${!v}" != "$k" ]] || die "$k is not set in $SECRETS; the policy pages (/terms, /privacy, /refunds, /contact) would show the placeholder"

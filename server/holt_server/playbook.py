@@ -33,7 +33,7 @@ from pydantic import ValidationError
 from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 
-from holt_server import entitlements, pro, repos, schema
+from holt_server import budget, entitlements, pro, repos, schema
 from holt_server.api import job_body, load_job, rate_limit, sse
 from holt_server.credits import get_user
 from holt_server.db import ACTIVE, Job, Playbook, PlaybookUnlock, iso, now, utc
@@ -139,6 +139,7 @@ async def write(svc: Services, job: Job, emit) -> dict[str, Any]:
                                      request_id=job.id)
     except pro.ProError as err:
         raise pro_failure(err, job.repo) from None
+    svc.ai_costs[job.id] = budget.pro_cost(body)
     try:
         return from_pro(job.repo, body)
     except ValidationError:
@@ -305,6 +306,8 @@ async def unlock_playbook(owner: str, repo: str, request: Request,
         try:
             s.add(job)
             await s.flush()
+            # Before the charge: a playbook the AI budget can't cover costs nothing.
+            await budget.reserve(s, svc.settings, job.id, budget.PLAYBOOK)
             if not unlocked:
                 await _pay(s, svc, user_id, key, job.id)
             await s.commit()

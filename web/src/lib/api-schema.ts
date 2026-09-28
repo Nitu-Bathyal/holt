@@ -40,6 +40,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/admin/ai-spend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Ai Spend
+         * @description What AI has cost here so far, against `HOLT_AI_BUDGET_USD` (budget.py).
+         */
+        get: operations["get_ai_spend_v1_admin_ai_spend_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/admin/pricing": {
         parameters: {
             query?: never;
@@ -840,6 +860,42 @@ export interface components {
             /** Repo */
             repo: string;
         };
+        /**
+         * AdminAiSpend
+         * @description GET /v1/admin/ai-spend: this environment's AI spend against its budget.
+         */
+        AdminAiSpend: {
+            /**
+             * Budget Usd
+             * @description The cap in force; 0 means AI is off.
+             */
+            budget_usd: number;
+            /**
+             * Held Usd
+             * @description What running AI jobs hold until they finish.
+             */
+            held_usd: number;
+            /**
+             * Line
+             * @description `AI spend: $x of $y`, for people.
+             */
+            line: string;
+            /**
+             * Running
+             * @description AI jobs holding part of the budget.
+             */
+            running: number;
+            /**
+             * Runs
+             * @description Finished AI runs.
+             */
+            runs: number;
+            /**
+             * Spent Usd
+             * @description What finished AI runs cost (a run whose cost isn't known counts at the most it could cost).
+             */
+            spent_usd: number;
+        };
         /** AdminCreditEvent */
         AdminCreditEvent: {
             /** Actor */
@@ -1269,6 +1325,8 @@ export interface components {
             code: "unauthorized" | "not_found" | "invalid_repo" | "invalid_request" | "rate_limited" | "quota_exceeded" | "needs_plan" | "needs_key" | "claim_not_ready" | "ai_unavailable" | "upstream" | "internal" | "not_implemented" | "payments_off" | "payment_unconfirmed" | "already_subscribed";
             /** Message */
             message: string;
+            /** Reason */
+            reason?: "ai_budget_used_up" | null;
             /** Retry After */
             retry_after?: number | null;
         };
@@ -2636,6 +2694,7 @@ export interface components {
 }
 export type Access = components['schemas']['Access'];
 export type ActivityIn = components['schemas']['ActivityIn'];
+export type AdminAiSpend = components['schemas']['AdminAiSpend'];
 export type AdminCreditEvent = components['schemas']['AdminCreditEvent'];
 export type AdminLot = components['schemas']['AdminLot'];
 export type AdminPlanEvent = components['schemas']['AdminPlanEvent'];
@@ -2805,6 +2864,39 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Health"];
+                };
+            };
+        };
+    };
+    get_ai_spend_v1_admin_ai_spend_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AdminAiSpend"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
                 };
             };
         };
