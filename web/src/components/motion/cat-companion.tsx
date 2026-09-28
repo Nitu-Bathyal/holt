@@ -37,7 +37,7 @@ export function CatCompanion() {
       aria-label="Play with Holt, the site cat"
       data-cat-companion
       // One hover target sized to the whole face, above the hero text layer.
-      className="pointer-events-auto absolute z-20 hidden origin-top-left p-5 text-blue [touch-action:manipulation] lg:fixed lg:left-[calc(50%+360px)] lg:top-[130px] lg:inline-block lg:opacity-85"
+      className="pointer-events-auto absolute z-20 hidden origin-top-left p-5 text-blue [touch-action:manipulation] lg:fixed lg:left-[calc(50%+360px)] lg:top-[130px] lg:inline-block lg:opacity-85 lg:will-change-transform"
     >
       <span className="cat-character inline-block">
         <span
@@ -193,20 +193,31 @@ async function start(gsap: Gsap, ScrollTrigger: ST, cat: HTMLButtonElement) {
   );
 
   // Desktop: the cat walks from the hero to the right edge and stays with you.
+  // Timed, not scrubbed: tied to scroll position, the cat jumped with every
+  // wheel notch (up to ~50px a frame). Crossing the hero's top plays one glide;
+  // scrolling back to the top plays it backwards.
   let journey: gsap.core.Timeline | undefined;
+  let journeyTrigger: ReturnType<ST["create"]> | undefined;
+  let fade: gsap.core.Tween | undefined;
   if (desktop) {
     const r = cat.getBoundingClientRect();
     const compact = innerWidth < 1180;
-    journey = gsap
-      .timeline({ scrollTrigger: { trigger: "[data-hero]", start: "top top", end: "bottom 58%", scrub: 0.4 } })
-      .to(cat, {
-        x: innerWidth - (compact ? 118 : 156) - r.left,
-        y: innerHeight * 0.5 - 62 - r.top,
-        scale: compact ? 0.36 : 0.43,
-        opacity: 0.92,
-        ease: "power2.inOut",
-      });
-    gsap.to(cat, { autoAlpha: 0, scrollTrigger: { trigger: "footer", start: "top 94%", end: "top 75%", scrub: true } });
+    journey = gsap.timeline({ paused: true }).to(cat, {
+      x: innerWidth - (compact ? 118 : 156) - r.left,
+      y: innerHeight * 0.5 - 62 - r.top,
+      scale: compact ? 0.36 : 0.43,
+      opacity: 0.92,
+      duration: 0.9,
+      ease: "power3.inOut",
+      force3D: true,
+    });
+    journeyTrigger = ScrollTrigger.create({
+      trigger: "[data-hero]",
+      start: "top top",
+      onEnter: () => journey!.play(),
+      onLeaveBack: () => journey!.reverse(),
+    });
+    fade = gsap.to(cat, { autoAlpha: 0, scrollTrigger: { trigger: "footer", start: "top 94%", end: "top 75%", scrub: true } });
   }
 
   // Scroll reveals for anything still below the fold: short, small and started
@@ -221,8 +232,10 @@ async function start(gsap: Gsap, ScrollTrigger: ST, cat: HTMLButtonElement) {
   return () => {
     idleCall?.kill();
     triggers.forEach((t) => t.kill());
-    journey?.scrollTrigger?.kill();
+    journeyTrigger?.kill();
     journey?.kill();
+    fade?.scrollTrigger?.kill();
+    fade?.kill();
     reveals.forEach((r) => {
       r.scrollTrigger?.kill();
       r.revert();
