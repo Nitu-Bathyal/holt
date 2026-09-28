@@ -41,12 +41,22 @@ export function chipView(s: ChipState, r: Repo): ChipView {
   };
 }
 
-/** One short stat, e.g. "15 of 100 newcomer PRs merged". Null when there is nothing to count. */
+const MAX_STAT = 60;
+
+/**
+ * One short stat, e.g. "15 of 100 outside PRs merged": the server's
+ * `stat_line`, so the chip and the report page use the same words. Responses
+ * from before the server sent it get the same sentence built here. Null when
+ * there is nothing to count.
+ */
 export function statLine(report: Report): string | null {
+  const line = report.stat_line;
+  if (typeof line === "string" && line && line.length <= MAX_STAT) return line;
+  if (line === null) return null;
   const attempts = report.stats?.outsider_attempts;
   const merged = report.stats?.outsider_merged;
   if (!isCount(attempts) || !isCount(merged) || attempts === 0) return null;
-  const noun = attempts === 1 ? "newcomer PR" : "newcomer PRs";
+  const noun = attempts === 1 ? "outside PR" : "outside PRs";
   return `${merged} of ${attempts} ${noun} merged`;
 }
 

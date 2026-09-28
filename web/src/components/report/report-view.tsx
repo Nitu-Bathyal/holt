@@ -4,7 +4,7 @@ import Link from "next/link";
 import { shortDate, timeAgo } from "@/lib/format";
 import { EXAMPLE_PATH } from "@/lib/example-report";
 import { SITE_URL } from "@/lib/site";
-import type { Odds, Report } from "@/lib/types";
+import type { Report } from "@/lib/types";
 import { CatFace } from "../cat-face";
 import { Track } from "../track";
 import { badgeOffered } from "@/lib/badge";
@@ -37,11 +37,12 @@ export function Section({ n, title, id, children, note, reveal }: { n: string; t
 }
 
 export function VerdictHero({ report, reveal }: { report: Report; reveal?: boolean }) {
-  // Headline, tone, the line under it and the odds all come from the server,
-  // derived there from the verdict, so they can't disagree with it.
+  // Every sentence here comes from the server, derived there from the verdict,
+  // the counts and the rules, so the top of the page can't disagree with them
+  // or with itself. Three lines: the reason, the numbers, what to do next.
   const t = TONE[report.tone];
   return (
-    <div className={`relative overflow-hidden border border-line-strong bg-panel shadow-card`}>
+    <div className="relative overflow-hidden border border-line-strong bg-panel shadow-card" data-verdict-hero>
       <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${t.bg}`} />
       <div className="p-5 pl-6 sm:p-8 sm:pl-10">
         <div className="flex items-center justify-between gap-4 text-[0.72rem] uppercase tracking-[0.08em] text-faint">
@@ -55,10 +56,28 @@ export function VerdictHero({ report, reveal }: { report: Report; reveal?: boole
           {report.headline}
           <span className="text-ink">.</span>
         </h1>
-        <p className={`mt-4 max-w-2xl font-sans text-[1.05rem] leading-relaxed text-ink sm:text-[1.15rem] ${reveal ? "reveal-lcp" : ""}`}>{report.verdict_line}</p>
-        <OddsHint odds={report.odds} />
-        <p className="mt-4 text-[0.74rem] text-faint">
-          Based on {report.stats.outsider_attempts} pull requests from outside contributors · {report.evidence_until && <>data until {shortDate(report.evidence_until)} · </>} checked{" "}
+        <p className={`mt-4 max-w-2xl font-sans text-[1.05rem] leading-relaxed text-ink sm:text-[1.15rem] ${reveal ? "reveal-lcp" : ""}`} data-line="reason">
+          {report.verdict_line}
+        </p>
+
+        <dl className="mt-6 max-w-2xl border-t border-dashed border-line-strong">
+          <TopLine label="the numbers" name="numbers">
+            <p>{report.numbers_line}</p>
+            {report.first_timer_line && (
+              <p className="mt-2 font-medium" data-line="first-timers">
+                {report.first_timer_line}
+              </p>
+            )}
+          </TopLine>
+          <TopLine label="what to do" name="next">
+            <p>{report.next_step}</p>
+          </TopLine>
+        </dl>
+
+        <HowCounted report={report} />
+
+        <p className="mt-5 text-[0.74rem] text-faint">
+          {report.evidence_until && <>data until {shortDate(report.evidence_until)} · </>}checked{" "}
           <time dateTime={report.generated_at} suppressHydrationWarning>{timeAgo(report.generated_at)}</time>
         </p>
       </div>
@@ -66,18 +85,63 @@ export function VerdictHero({ report, reveal }: { report: Report; reveal?: boole
   );
 }
 
-/** Only "Worth your time" reports have odds (the server leaves them null otherwise). */
-function OddsHint({ odds: o }: { odds: Odds | null }) {
-  if (!o) return null;
-  const t = TONE[o.tone];
+function TopLine({ label, name, children }: { label: string; name: string; children: React.ReactNode }) {
   return (
-    <p className="mt-3 flex flex-wrap items-baseline gap-x-2 text-[0.82rem]">
-      <span className="text-faint">Your odds:</span>
-      <strong className={`font-semibold ${t.text}`}>{o.level}</strong>
-      <span className="font-sans text-muted">· {o.text}</span>
-    </p>
+    <div className="grid gap-1 border-b border-dashed border-line-strong py-4 sm:grid-cols-[8.5rem_minmax(0,1fr)] sm:gap-5" data-line={name}>
+      <dt className="text-[0.78rem] text-faint sm:pt-[0.2rem]">{label}</dt>
+      <dd className="font-sans text-[0.98rem] leading-relaxed text-ink">{children}</dd>
+    </div>
   );
 }
+
+/** "How this was counted": closed by default, for anyone who wants to check the working. */
+function HowCounted({ report }: { report: Report }) {
+  return (
+    <details className="group mt-4 max-w-2xl" data-how-counted>
+      <summary className="inline-flex min-h-[44px] cursor-pointer list-none items-center gap-[0.6ch] text-[0.82rem] text-muted hover:text-ink focus-visible:text-ink [&::-webkit-details-marker]:hidden">
+        <span aria-hidden="true" className="text-green">
+          [<span className="inline-block w-[1ch] text-center group-open:hidden">+</span>
+          <span className="hidden w-[1ch] text-center group-open:inline-block">−</span>]
+        </span>
+        how this was counted
+      </summary>
+      <dl className="mt-2 space-y-4 border-l border-line-strong pl-4 sm:pl-5">
+        {report.counted.map((c) => (
+          <div key={c.topic}>
+            <dt className="text-[0.78rem] text-faint">{c.topic.toLowerCase()}</dt>
+            <dd className="mt-1 font-sans text-[0.92rem] leading-relaxed text-muted">{c.text}</dd>
+          </div>
+        ))}
+        {report.unknowns.length > 0 && (
+          <div>
+            <dt className="text-[0.78rem] text-faint">what Holt couldn&apos;t check</dt>
+            {report.unknowns.map((u) => (
+              <dd key={u} className="mt-1 font-sans text-[0.92rem] leading-relaxed text-muted">{u}</dd>
+            ))}
+          </div>
+        )}
+        {report.asks.length > 0 && (
+          <div>
+            <dt className="text-[0.78rem] text-faint">where the advice comes from</dt>
+            {report.asks.map((a) => (
+              <dd key={a.code} className="mt-1 font-sans text-[0.92rem] leading-relaxed text-muted">
+                <a className="text-link" href={a.url} target="_blank" rel="noopener noreferrer">
+                  {ASK_SOURCE[a.code]}
+                </a>
+              </dd>
+            ))}
+          </div>
+        )}
+      </dl>
+    </details>
+  );
+}
+
+const ASK_SOURCE: Record<Report["asks"][number]["code"], string> = {
+  cla: "A CLA bot asking an outside contributor to sign",
+  dco: "CONTRIBUTING, on signing off commits",
+  issue_first: "CONTRIBUTING, on opening an issue first",
+};
 
 export function ReportView({
   report,
@@ -145,33 +209,9 @@ export function ReportView({
           <LandingMap landing={report.landing} neverLanded={report.never_landed} />
         </Section>
 
-        <Section n="04" id="why" title="Why this verdict" reveal={reveal ? 255 : undefined}>
-          <ul className="space-y-2 font-sans text-[0.98rem]">
-            {report.decided_by.map((d) => (
-              <li key={d} className="flex gap-3">
-                <span aria-hidden="true" className={TONE[report.tone].text}>→</span>
-                <span>{d}</span>
-              </li>
-            ))}
-          </ul>
-          {report.unknowns.length > 0 && (
-            <div className="mt-5">
-              <p className="text-[0.72rem] uppercase tracking-[0.08em] text-faint">What Holt couldn&apos;t check</p>
-              <ul className="mt-2 space-y-1.5 font-sans text-[0.92rem] text-muted">
-                {report.unknowns.map((u) => (
-                  <li key={u} className="flex gap-3">
-                    <span aria-hidden="true">?</span>
-                    <span>{u}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </Section>
-
         {!example && <VerdictFeedback report={report} />}
 
-        <Section n="05" id="evidence" title="The evidence" note="every claim links to GitHub" reveal={reveal ? 280 : undefined}>
+        <Section n="04" id="evidence" title="The evidence" note="every claim links to GitHub" reveal={reveal ? 280 : undefined}>
           <EvidenceList evidence={report.evidence} />
         </Section>
 

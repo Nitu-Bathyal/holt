@@ -8,6 +8,7 @@ export type Stats = S.Stats;
 export type LandingPath = S.LandingPath;
 export type EvidenceItem = S.EvidenceItem;
 export type Odds = S.Odds;
+export type Counted = S.Counted;
 export type StarterIssue = S.StarterIssue;
 export type FindResult = S.FindResult;
 // The web always sends every field; the server has defaults for them.

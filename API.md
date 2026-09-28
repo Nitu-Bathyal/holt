@@ -70,7 +70,12 @@ responses. The server also accepts and normalises full URLs
   "verdict": "viable" | "not_viable" | "insufficient_evidence",
   "headline": "Worth your time" | "Not worth your time" | "Not enough evidence",
   "tone": "good" | "bad" | "warn",    // the verdict's colour
-  "verdict_line": "string",           // one plain sentence under the headline
+  "verdict_line": "string",           // line 1: the reason for the verdict, one sentence
+  "numbers_line": "string",           // line 2: what happened to outside contributors, with dates
+  "first_timer_line": "string | null", // "9 people got their first pull request merged here."
+  "next_step": "string",              // line 3: what to do next
+  "stat_line": "string | null",       // short count for the extension chip: "22 of 120 outside PRs merged"
+  "counted": [ { "topic": "What we read", "text": "The newest 200 pull requests on GitHub, opened 3 Jun – 26 Sep 2026." } ],
   "odds": { "level": "good" | "fair" | "long", "tone": "good" | "warn" | "bad",
             "text": "most outside pull requests get a reply, and plenty get merged" } | null,
   "bottom_line": "string | null",     // ai mode: at most two model-written sentences, the lead of the AI explanation
@@ -92,6 +97,10 @@ responses. The server also accepts and normalises full URLs
   ],
   "evidence_until": "2026-06-01T00:00:00Z", // or null
   "generated_at": "2026-09-25T12:00:00Z",
+  "sample": { "pull_requests": 200, "first_opened": "2026-06-03T10:00:00Z",
+              "last_opened": "2026-09-26T09:00:00Z", "team_pull_requests": 40,
+              "team_people": 9, "bot_pull_requests": 12 } | null,
+  "asks": [ { "code": "cla" | "dco" | "issue_first", "url": "https://github.com/…" } ],
   "cost": { "model": "…", "input_tokens": 9000, "output_tokens": 6000,
             "usd": 0.0123, "seconds": 48.2 }, // ai only, else null
   "holt_users": { "people": 9, "pull_requests": 12, "merged": 7, "closed": 2,
@@ -143,9 +152,21 @@ was computed from. `no_reply` is open, past the window, with no reply.
 no reply, usually maintainers clearing out spam; not in `no_reply`) are shown
 beside them; both are 0 on reports cached before they existed. Drafts and pull
 requests labelled as spam or invalid are in no count.
+`landing` and `never_landed` count the same decided pull requests, so every
+number on a report is over one set.
 
-`headline`, `tone`, `verdict_line` and `odds` are derived by the server from
-`verdict`, `stats` and `decided_by`/`rule_codes`, every time a report is
+`sample` is what the counts were read from: every pull request read, when the
+oldest and newest were opened, and how many came from the team or from bots
+(left out of every count). Null on reports cached before it existed. `asks` is
+what the project asks of a contributor, where Holt could read it: `cla` (a CLA
+bot commented on outside pull requests), `dco` or `issue_first` (CONTRIBUTING
+says so in as many words). `url` is where it was read. An empty list means
+nothing was found, not that nothing is asked. Neither affects the verdict.
+
+`headline`, `tone`, `verdict_line`, `numbers_line`, `first_timer_line`,
+`next_step`, `stat_line`, `counted` and `odds` are derived by the server from
+`verdict`, `stats`, `sample`, `landing`, `asks` and
+`decided_by`/`rule_codes`, every time a report is
 served (so cached reports pick up wording changes). Every surface (web, OG
 images, the extension) shows these fields and never works them out itself, so
 they cannot disagree with each other or with the verdict:
@@ -155,6 +176,22 @@ they cannot disagree with each other or with the verdict:
 - `verdict_line` never oversells: "Worth your time" with a low merge rate or
   many unanswered pull requests says so. Under "Not worth your time" it states
   the rule that decided it.
+- The top of a report is three lines, in order: `headline` + `verdict_line`
+  (the verdict and one reason, without the counts), `numbers_line` (the
+  counts with the dates they cover, e.g. "Of 120 pull requests from outside
+  contributors (3 Jun – 26 Sep 2026), 22 were merged (18%). When a maintainer
+  replied, it was typically within 6 hours. 25% got no reply at all."), and
+  `next_step` (where outside work lands, what the project asks, or where to go
+  instead). `first_timer_line` is null when nobody outside tried.
+- The rule that decided the verdict is the last `decided_by` line whose code
+  is not informational (`awaiting_reply`, `landed_off_button`,
+  `package_updates`, `kind_contested`, `kind_uncited`, `sample_period`,
+  `dormant`, `excluded`, `still_open`, `closed_silently`).
+- `counted` is "How this was counted": the sample and its dates, the team and
+  how it was worked out, bots, each informational `decided_by` line, the
+  rules that decided, and the fixed rule itself. Topics are plain English and
+  may change; render them as given.
+- `stat_line` is null when nobody outside tried. The extension chip shows it.
 - `odds` is non-null only when the verdict is `viable` (and anyone tried): the
   worse of the merge rate (good ≥ 12%, fair ≥ 5%) and the no-reply rate (good
   ≤ 25%, fair ≤ 50%); its `text` names the weak part. The other verdicts are

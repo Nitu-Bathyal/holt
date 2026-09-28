@@ -179,10 +179,45 @@
     "usd": 0.01229,
     "seconds": null
   },
+  "sample": {
+    "pull_requests": 200,
+    "first_opened": "2026-05-27T20:33:37Z",
+    "last_opened": "2026-05-31T22:35:23Z",
+    "team_pull_requests": 70,
+    "team_people": 15,
+    "bot_pull_requests": 11
+  },
+  "asks": [],
   "holt_users": null,
   "headline": "Worth your time",
   "tone": "good",
-  "verdict_line": "Outside contributors do get merged here (28 of 119 recently), but about half get no reply, so start with one of the starter issues below.",
+  "verdict_line": "Outside contributors do get merged here, but about half get no reply, so choose your first change carefully.",
+  "numbers_line": "Of 119 pull requests from outside contributors (27 May – 31 May 2026), 28 were merged (24%). When a maintainer replied, it was typically within 2.3 hours. 46% got no reply at all.",
+  "first_timer_line": "28 people got their first pull request merged here.",
+  "next_step": "Best bet: a small change in homeassistant/components, where 26 of 104 outside pull requests were merged.",
+  "stat_line": "28 of 119 outside PRs merged",
+  "counted": [
+    {
+      "topic": "What we read",
+      "text": "The newest 200 pull requests on GitHub, opened 27 May – 31 May 2026."
+    },
+    {
+      "topic": "The team and outside contributors",
+      "text": "70 of them came from 15 people on the project's team and are left out. The team is everyone GitHub shows as an owner, member or collaborator, plus anyone the history shows merging, closing or formally reviewing other people's pull requests. Everyone else is an outside contributor, including people who come back."
+    },
+    {
+      "topic": "Bots",
+      "text": "11 pull requests opened by bots (dependency updates and the like) are left out. Only a maintainer's reply counts as a reply: not a bot, a CLA check, the author, or a passer-by."
+    },
+    {
+      "topic": "What decided it",
+      "text": "28 pull requests from outside contributors were merged, by 28 different people, out of 119 attempts by 81 people. Of those who got a reply, half heard back within 2.3 hours. 55 attempts got no reply at all and weren't merged."
+    },
+    {
+      "topic": "The rule",
+      "text": "“Worth your time” needs at least 2 merged pull requests from outside contributors and a typical first reply within your 7-day budget, with people actually reviewing what gets merged. “Not worth your time” is an archived repository, a mirror, a catalogue of entries, merges nobody reviews, or outside pull requests that are almost all ignored. Anything in between is “Not enough evidence”. These rules are fixed; no AI chooses the verdict."
+    }
+  ],
   "odds": {
     "level": "fair",
     "tone": "warn",
