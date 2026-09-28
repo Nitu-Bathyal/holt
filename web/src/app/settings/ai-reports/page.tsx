@@ -10,7 +10,7 @@ import { AI_SETTINGS } from "@/lib/settings";
 import { WELCOME_AI_CREDITS } from "@/lib/site";
 import { Notice, SectionHead } from "@/components/settings/section-head";
 
-export const metadata: Metadata = { title: "AI reports and plan · Settings", robots: { index: false } };
+export const metadata: Metadata = { title: "AI reports and plan | Settings", robots: { index: false } };
 
 async function claim() {
   "use server";
