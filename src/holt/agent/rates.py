@@ -66,7 +66,8 @@ STILL_OPEN = "still_open"
 
 # Rule codes this module's lines carry. They inform; they never decide, so
 # anything looking for the deciding rule skips them (`first_deciding`).
-INFO_CODES = frozenset({"sample_period", "dormant", "excluded", "still_open", "closed_silently"})
+INFO_CODES = frozenset({"sample_period", "dormant", "excluded", "still_open", "closed_silently",
+                        "slow_note"})
 
 
 # Rules that come after the merge count and overrule it (verdict.py): when

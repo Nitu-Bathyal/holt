@@ -1940,6 +1940,11 @@ export interface components {
             asks: components["schemas"]["Ask"][];
             /** Bottom Line */
             bottom_line: string | null;
+            /**
+             * Budget Independent
+             * @default false
+             */
+            budget_independent: boolean;
             cost: components["schemas"]["Cost"] | null;
             /** Counted */
             readonly counted: components["schemas"]["Counted"][];

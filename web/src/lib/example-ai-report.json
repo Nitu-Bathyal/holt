@@ -192,6 +192,7 @@
     "bot_pull_requests": 11
   },
   "asks": [],
+  "budget_independent": false,
   "holt_users": null,
   "headline": "Worth your time",
   "tone": "good",

@@ -263,6 +263,24 @@ def contested_kind(
     return None
 
 
+def slow_sentence(median_hours: float, contributor_days: int) -> str:
+    """Why the evidence is thin when replies are slow and merges few."""
+    return (f"Outside contributors who got a reply typically waited "
+            f"{hours_phrase(median_hours)} for it, longer than the "
+            f"{_n(contributor_days, 'day')} you have.")
+
+
+def slow_note(median_hours: float, contributor_days: int) -> Rule:
+    """The note under "Worth your time" when the typical first reply takes
+    longer than the reader's budget. It never decides (rates.INFO_CODES);
+    the server rewrites it for another budget without reading GitHub again."""
+    return Rule(
+        f"Replies are slow here: typically {hours_phrase(median_hours)}, beyond your "
+        f"{contributor_days}-day budget.",
+        code="slow_note",
+    )
+
+
 def _kind_is_cited(findings: Findings) -> bool:
     return any(
         item.field == "repo_kind" and item.evidence_ids for item in findings
@@ -287,7 +305,6 @@ def classify(
     trace: list[str] = []
     slow_response_hours = contributor_days * 24.0
     kind = findings.get("repo_kind")
-    days = _n(contributor_days, "day")
 
     if findings.get("is_archived"):
         trace.append(Rule(
@@ -371,10 +388,16 @@ def classify(
 
     median = signals.median_first_response_hours
     slow = median is not None and median > slow_response_hours
+    # A live reading (or a recording of one) gets ticket 08's rules; the
+    # frozen benchmark keeps the ones it was scored with.
+    live = signals.settle_hours > 0
     if (
         signals.outsider_merged >= MIN_MERGES
         and signals.distinct_merged_authors >= MIN_DISTINCT_AUTHORS
-        and not slow
+        # Slow replies on a project that merges outside work are a note under
+        # "Worth your time", not a reason to call the evidence thin: the
+        # merges are the evidence. The frozen benchmark kept them apart.
+        and (live or not slow)
     ):
         text = (
             f"{_n(signals.outsider_merged, 'pull request')} from outside "
@@ -406,9 +429,6 @@ def classify(
                 f"{signals.median_first_response_hours}h"
             ),
         ))
-        # A live reading (or a recording of one) gets ticket 08's rules; the
-        # frozen benchmark keeps the ones it was scored with.
-        live = signals.settle_hours > 0
         reviewed = signals.outsider_reviewed_share if live else signals.reviewed_share
         if (
             reviewed is not None
@@ -445,12 +465,13 @@ def classify(
                 code="long_odds",
             ))
             return Verdict.NOT_VIABLE, trace
+        if slow:
+            trace.append(slow_note(median, contributor_days))
         return Verdict.VIABLE, trace
 
     if slow:
         trace.append(Rule(
-            f"Outside contributors who got a reply typically waited {hours_phrase(median)} for it, "
-            f"longer than the {days} you have.",
+            slow_sentence(median, contributor_days),
             code="slow",
             legacy=(
                 f"median first response {signals.median_first_response_hours}h "
@@ -482,9 +503,11 @@ def classify(
             code="few_merges",
             legacy=f"only {signals.outsider_merged} outsider merges in the period read",
         ))
-    elif not slow:
+    elif live or not slow:
         # Enough merges, from too few people: without this line the answer
-        # came with no reason at all.
+        # came with no reason at all. On a live reading it is said whether or
+        # not replies are slow, so the budget changes only the slow line
+        # (server/report.retime relies on that).
         trace.append(Rule(
             f"{'Both' if signals.outsider_merged == 2 else f'All {signals.outsider_merged}'} "
             "merged pull requests from outside "

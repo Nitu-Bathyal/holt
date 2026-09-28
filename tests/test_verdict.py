@@ -298,3 +298,37 @@ def test_an_inactive_project_is_not_worth_it():
     v, trace = classify(findings(inactive=line), signals(settle_hours=LIVE))
     assert v is Verdict.NOT_VIABLE
     assert rule_codes(trace) == ["inactive"] and trace[0] == line
+
+
+def test_slow_replies_on_a_project_that_merges_are_a_note_not_a_reason():
+    """efcore: 41 of 44 merged, but first replies take ~12 days."""
+    s = signals(outsider_threads=44, outsider_merged=41, distinct_merged_authors=19,
+                merge_rate=41 / 44, median_first_response_hours=277.5, settle_hours=LIVE,
+                outsider_reviewed_share=1.0)
+    v, trace = classify(findings(), s)
+    assert v is Verdict.VIABLE
+    assert rule_codes(trace)[-2:] == ["merges", "slow_note"]
+    assert trace[-1] == "Replies are slow here: typically 11.6 days, beyond your 7-day budget."
+    v14, trace14 = classify(findings(), s, contributor_days=14)
+    assert v14 is Verdict.VIABLE and "slow_note" not in rule_codes(trace14)
+    v1, trace1 = classify(findings(), s, contributor_days=1)
+    assert v1 is Verdict.VIABLE and "beyond your 1-day budget" in trace1[-1]
+
+
+def test_on_a_live_reading_the_budget_never_changes_the_verdict():
+    """What `server/report.retime` relies on."""
+    shapes = [
+        {}, {"outsider_merged": 1}, {"outsider_merged": 0, "outsider_ignored": 9},
+        {"outsider_merged": 3, "distinct_merged_authors": 1},
+        {"outsider_merged": 0, "outsider_ignored": 4, "outsider_threads": 5},
+        {"reviewed_share": 0.1, "outsider_reviewed_share": 0.1, "merge_rate": 0.9,
+         "outsider_merged": 12, "outsider_threads": 13},
+    ]
+    for shape in shapes:
+        s = signals(median_first_response_hours=400.0, settle_hours=LIVE, **shape)
+        answers = {classify(findings(), s, contributor_days=d)[0] for d in (1, 7, 14, 30, 90)}
+        assert len(answers) == 1, shape
+        # The reason the evidence is thin is said whatever the budget.
+        slow_codes = rule_codes(classify(findings(), s, contributor_days=7)[1])
+        fast_codes = rule_codes(classify(findings(), s, contributor_days=30)[1])
+        assert [c for c in slow_codes if c not in ("slow", "slow_note")] == fast_codes, shape

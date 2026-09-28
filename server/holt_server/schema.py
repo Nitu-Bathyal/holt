@@ -237,7 +237,7 @@ RUBBER_STAMP_LINE = ("Outside pull requests here get merged without anyone revie
 INFO_CODES = frozenset({
     "awaiting_reply", "landed_off_button", "package_updates", "kind_contested",
     "kind_uncited", "sample_period", "dormant", "excluded", "still_open",
-    "closed_silently",
+    "closed_silently", "slow_note",
 })
 
 
@@ -249,6 +249,13 @@ def deciding_rule(decided_by: list[str], rule_codes: list[str]) -> tuple[str, st
         if code not in INFO_CODES:
             return text, code
     return (decided_by[-1], "") if decided_by else ("", "")
+
+
+def _with_slow_note(line: str, decided_by: list[str], rule_codes: list[str]) -> str:
+    """"Worth your time", and replies take longer than the reader's budget:
+    the engine's note goes right under the reason, not only in the details."""
+    note = next((t for t, c in zip(decided_by, rule_codes) if c == "slow_note"), None)
+    return f"{line} {note}" if note else line
 
 
 def verdict_line(verdict: str, s: Stats, decided_by: list[str], rule_codes: list[str]) -> str:
@@ -267,11 +274,14 @@ def verdict_line(verdict: str, s: Stats, decided_by: list[str], rule_codes: list
                 "most of their pull requests don't land" if low_merge else "",
                 f"{_silent_phrase(silent)} get no reply" if many_silent else "",
             ) if b]
-            return (f"Outside contributors do get merged here, but {' and '.join(buts)}, "
-                    "so choose your first change carefully.")
-        if silent < 0.3:
-            return "Outside contributors get real replies here, and their work gets merged."
-        return "Outside contributors get merged here, though some wait a while for a reply."
+            return _with_slow_note(
+                f"Outside contributors do get merged here, but {' and '.join(buts)}, "
+                "so choose your first change carefully.", decided_by, rule_codes)
+        return _with_slow_note(
+            "Outside contributors get real replies here, and their work gets merged."
+            if silent < 0.3 else
+            "Outside contributors get merged here, though some wait a while for a reply.",
+            decided_by, rule_codes)
     if verdict == "not_viable":
         # Rubber-stamping reads as a "but" after the merge count, so it gets
         # its own sentence. Reports cached before `rule_codes` existed are
@@ -426,6 +436,7 @@ def next_step(verdict: str, decided_by: list[str], rule_codes: list[str],
 INFO_TOPICS: dict[str, str] = {
     "awaiting_reply": "Too new to judge",
     "still_open": "Too recent to count",
+    "slow_note": "Reply time",
     "closed_silently": "Closed without a word",
     "excluded": "Drafts and spam",
     "dormant": "Recent activity",
@@ -553,6 +564,11 @@ class Report(VerdictView):
     # What the project asks of a contributor (a CLA, a DCO sign-off, an issue
     # first), where Holt could read it. Empty means none found, not none asked.
     asks: list[Ask] = Field(default_factory=list)
+    # True when the verdict is the same for every time budget and only the
+    # reply-time note reads `days` (rules reports since ticket 08). The server
+    # then answers another `days` from this report without reading GitHub
+    # again (`report.retime`). False on AI reports and older cached ones.
+    budget_independent: bool = False
     # Filled when the report is served (GET /v1/reports/{owner}/{repo}), never
     # stored with it; null when too few Holt users sent pull requests here.
     holt_users: HoltUsers | None = None

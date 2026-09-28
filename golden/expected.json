@@ -487,13 +487,14 @@
   ]
  },
  "dotnet/efcore": {
-  "verdict": "insufficient_evidence",
+  "verdict": "viable",
   "rules": [
    "sample_period",
    "excluded",
    "still_open",
    "closed_silently",
-   "slow"
+   "merges",
+   "slow_note"
   ],
   "numbers": {
    "total_threads": 396,
@@ -532,6 +533,12 @@
     "from": "viable",
     "to": "insufficient_evidence",
     "reason": "settled sample (ticket 08): over PRs two weeks old, first replies take a median 11.6 days, past the 7-day budget (it read 38h when only fast replies had come in); 41 of 44 merged"
+   },
+   {
+    "date": "2026-09-28",
+    "from": "insufficient_evidence",
+    "to": "viable",
+    "reason": "slow replies are a note, not a reason (user decision, 28 Sep): outside work is merged (efcore 41/44, keploy 17/51, monica 8/61, each from 5+ people) but first replies take 9-12 days, past the 7-day budget, so Worth with 'Replies are slow here'"
    }
   ]
  },
@@ -1188,13 +1195,14 @@
   ]
  },
  "keploy/keploy": {
-  "verdict": "insufficient_evidence",
+  "verdict": "viable",
   "rules": [
    "sample_period",
    "excluded",
    "still_open",
    "closed_silently",
-   "slow"
+   "merges",
+   "slow_note"
   ],
   "numbers": {
    "total_threads": 349,
@@ -1227,6 +1235,12 @@
     "from": null,
     "to": "insufficient_evidence",
     "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+   },
+   {
+    "date": "2026-09-28",
+    "from": "insufficient_evidence",
+    "to": "viable",
+    "reason": "slow replies are a note, not a reason (user decision, 28 Sep): outside work is merged (efcore 41/44, keploy 17/51, monica 8/61, each from 5+ people) but first replies take 9-12 days, past the 7-day budget, so Worth with 'Replies are slow here'"
    }
   ]
  },
@@ -1538,11 +1552,12 @@
   ]
  },
  "monicahq/monica": {
-  "verdict": "insufficient_evidence",
+  "verdict": "viable",
   "rules": [
    "sample_period",
    "closed_silently",
-   "slow"
+   "merges",
+   "slow_note"
   ],
   "numbers": {
    "total_threads": 343,
@@ -1581,6 +1596,12 @@
     "from": "viable",
     "to": "insufficient_evidence",
     "reason": "ticket 04: only maintainer replies count. monica's first reply came from CLAassistant within a minute; without it the maintainers' own replies decide."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "insufficient_evidence",
+    "to": "viable",
+    "reason": "slow replies are a note, not a reason (user decision, 28 Sep): outside work is merged (efcore 41/44, keploy 17/51, monica 8/61, each from 5+ people) but first replies take 9-12 days, past the 7-day budget, so Worth with 'Replies are slow here'"
    }
   ]
  },

@@ -6,11 +6,13 @@ import { after } from "next/server";
 import { ErrorPanel } from "@/components/error-panel";
 import { AiStart } from "@/components/report/ai-start";
 import { AnalysisRunner } from "@/components/report/analysis-runner";
+import { BudgetPicker } from "@/components/report/budget-picker";
 import { ReportView } from "@/components/report/report-view";
 import { StarterIssues, StarterIssuesSkeleton } from "@/components/report/starter-issues";
 import { LinkHint } from "@/components/motion/link-hint";
 import { SkeletonReveal } from "@/components/motion/reveal";
 import { getReport, me, recordView, starterIssues } from "@/lib/api";
+import { budgetFrom, reportHref } from "@/lib/budget";
 import { isValidRepo } from "@/lib/repo";
 import { caller, currentUser, type SessionUser } from "@/lib/session";
 import { humanHours } from "@/lib/format";
@@ -28,8 +30,7 @@ async function aiCredits(userId: string): Promise<Credits | null> {
 
 function opts(sp: Record<string, string | string[] | undefined>): { mode: Mode; days: number } {
   const mode: Mode = sp.mode === "ai" ? "ai" : "rules";
-  const d = Math.round(Number(sp.days));
-  return { mode, days: Number.isFinite(d) && d >= 1 && d <= 90 ? d : 7 };
+  return { mode, days: budgetFrom(sp.days) };
 }
 
 function describe(report: Report | null, name: string): string {
@@ -89,7 +90,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
 
   // Normalise to GitHub's casing so shared links and caches agree.
   if (report.ok && report.data.repo !== name && report.data.repo.toLowerCase() === name.toLowerCase()) {
-    redirect(`/${report.data.repo}${mode === "ai" ? "?mode=ai" : ""}`);
+    redirect(reportHref(report.data.repo, days, mode));
   }
 
   const display = report.ok ? report.data.repo : name;
@@ -130,7 +131,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
             <span aria-hidden="true" className={`tab-pill absolute inset-y-0 left-0 w-1/2 ${mode === "ai" ? "translate-x-full bg-blue" : "bg-ink"}`} />
             {/* No prefetch: one tab is this page, the other is sign-in for most visitors. */}
             <Link
-              href={`/${display}`}
+              href={reportHref(display, days)}
               prefetch={false}
               aria-current={mode === "rules" ? "page" : undefined}
               className={`relative inline-flex min-h-11 items-center justify-center px-3 transition-colors ${mode === "rules" ? "text-bg" : "text-muted hover:text-ink"}`}
@@ -149,6 +150,9 @@ export default async function RepoPage({ params, searchParams }: Props) {
             </Link>
           </nav>
         </div>
+
+        {/* Free report only: on the AI tab another budget would be another paid run. */}
+        {mode === "rules" && <BudgetPicker repo={display} days={days} />}
 
         {/* Switching between the free and AI tabs crossfades the report, not the page. */}
         <ViewTransition key={mode} name="report-body" share="swap" enter="swap" exit="swap" default="none">
@@ -170,7 +174,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
                 <AnalysisRunner repo={name} mode={mode} days={days} signedIn={signedIn} />
               )
             ) : (
-              <ErrorPanel error={report.error} repo={name} retryHref={`/${name}${mode === "ai" ? "?mode=ai" : ""}`} />
+              <ErrorPanel error={report.error} repo={name} retryHref={reportHref(name, days, mode)} />
             )}
           </div>
         </ViewTransition>
