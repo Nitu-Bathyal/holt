@@ -13,7 +13,7 @@ import json
 from dataclasses import dataclass, field
 from typing import Any
 
-from holt.model import Usage
+from holt.model import Usage, _check_finished, max_output_tokens
 
 PROVIDERS = ("openrouter", "openai", "anthropic", "gemini")
 
@@ -67,8 +67,14 @@ class OpenAICompatible:
             )
 
     def complete(self, *, label: str, system: str, prompt: str, schema: dict) -> dict:
+        # A cap on every call, so a runaway answer can't run up the bill. OpenAI
+        # itself takes `max_completion_tokens` (reasoning models refuse
+        # `max_tokens`); OpenRouter and Gemini take `max_tokens`.
+        cap = ("max_completion_tokens" if self.spec.provider == "openai"
+               else "max_tokens")
         response = self._client.chat.completions.create(
             model=self.spec.model,
+            **{cap: max_output_tokens(label)},
             messages=[
                 {"role": "system", "content": system},
                 {"role": "user", "content": prompt},
@@ -78,12 +84,13 @@ class OpenAICompatible:
                 "json_schema": {"name": label, "schema": schema, "strict": True},
             },
         )
-        content = response.choices[0].message.content or ""
-        parsed = json.loads(_strip_fence(content))
         u = response.usage
-        if u is not None:
+        if u is not None:  # counted even when the answer is cut off: it was paid for
             self.usage.add(self.spec.model, u.prompt_tokens or 0, u.completion_tokens or 0)
-        return parsed
+        choice = response.choices[0]
+        _check_finished(label, self.spec.model, getattr(choice, "finish_reason", None))
+        content = choice.message.content or ""
+        return json.loads(_strip_fence(content))
 
 
 @dataclass
@@ -92,8 +99,6 @@ class Anthropic:
     replayed: bool = False
     usage: Usage = field(default_factory=Usage)
     _client: Any = None
-
-    MAX_TOKENS = 16000
 
     def __post_init__(self) -> None:
         if self._client is None:
@@ -106,16 +111,18 @@ class Anthropic:
     def complete(self, *, label: str, system: str, prompt: str, schema: dict) -> dict:
         response = self._client.messages.create(
             model=self.spec.model,
-            max_tokens=self.MAX_TOKENS,
+            max_tokens=max_output_tokens(label),
             system=system,
             messages=[{"role": "user", "content": prompt}],
             output_config={"format": {"type": "json_schema", "schema": schema}},
         )
-        if response.stop_reason == "refusal":
-            raise RuntimeError(f"{self.spec.model} declined the {label} request")
-        text = next(b.text for b in response.content if b.type == "text")
         u = response.usage
         self.usage.add(self.spec.model, u.input_tokens, u.output_tokens)
+        stop = getattr(response, "stop_reason", None)
+        if stop == "refusal":
+            raise RuntimeError(f"{self.spec.model} declined the {label} request")
+        _check_finished(label, self.spec.model, stop)
+        text = next(b.text for b in response.content if b.type == "text")
         return json.loads(_strip_fence(text))
 
 

@@ -19,8 +19,7 @@ from collections.abc import Iterable
 from dataclasses import dataclass, field
 from datetime import datetime
 
-from holt.agent import landing_detection, rates
-from holt.agent import people
+from holt.agent import landing_detection, people, rates, replies
 from holt.agent.people import MAINTAINER_ASSOCIATIONS
 from holt.types import EvidenceRecord
 
@@ -78,18 +77,18 @@ class Thread:
     # The author's association with the repository (see
     # people.MAINTAINER_ASSOCIATIONS), or None when the capture predates it.
     association: str | None = None
+    # (when, who) for each maintainer reply; see agent/replies.py. None on a
+    # thread built by hand, where every non-author response counts.
+    replies: list[tuple[object, str]] | None = None
 
     @property
     def first_response_hours(self) -> float | None:
-        """Hours until someone other than the author first said anything."""
-        others = [t for t, who, _ in self.responses if who != self.author]
-        if not others:
-            return None
-        return (min(others) - self.opened_at).total_seconds() / 3600
+        """Hours until a maintainer first replied."""
+        return replies.first_reply_hours(self)
 
     @property
     def engaged(self) -> bool:
-        return any(who != self.author for _, who, _ in self.responses)
+        return replies.answered(self)
 
 
 class Threads(dict):
@@ -106,7 +105,7 @@ class Threads(dict):
 def build_threads(records: Iterable[EvidenceRecord]) -> dict[str, Thread]:
     threads = Threads()
     records = list(records)
-    threads.team = people.maintainers(records)
+    threads.team = people.maintainers(records, is_automation=replies.looks_like_automation)
 
     for r in records:
         if not r.evidence_id.endswith(":opened"):
@@ -145,6 +144,7 @@ def build_threads(records: Iterable[EvidenceRecord]) -> dict[str, Thread]:
                     (r.timestamp, r.payload.get("author", ""), r.payload.get("body") or "")
                 )
     landing_detection.mark_landed(threads, records)
+    replies.attach(threads, records, threads.team)
     return threads
 
 

@@ -101,10 +101,15 @@ export function ReportView({
       <div className="min-w-0 space-y-10">
         <VerdictHero report={report} reveal={reveal} />
 
-        {report.summary && (
-          <div className="border-l-2 border-blue pl-5">
+        {(report.bottom_line || report.summary) && (
+          <div className="border-l-2 border-blue pl-5" data-ai-explanation>
             <p className="text-[0.72rem] uppercase tracking-[0.08em] text-blue">AI explanation</p>
-            <p className="mt-2 font-sans text-[1.02rem] leading-relaxed text-ink">{report.summary}</p>
+            {report.bottom_line && (
+              <p className="mt-2 font-sans text-[1.12rem] font-medium leading-relaxed text-ink" data-bottom-line>
+                {report.bottom_line}
+              </p>
+            )}
+            {report.summary && <p className="mt-2 font-sans text-[1.02rem] leading-relaxed text-ink">{report.summary}</p>}
             <p className="mt-2 text-[0.72rem] text-faint">
               Written by {report.cost?.model ?? "a model"} from the evidence below. The verdict itself comes from fixed rules.
             </p>

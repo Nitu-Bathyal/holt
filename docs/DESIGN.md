@@ -57,6 +57,27 @@ that the mechanism works; the mechanism is covered by tests
 (`tests/test_verify.py`) rather than by the pool. It also checks only that an id
 *exists*, not that the evidence supports the claim.
 
+**What the AI report reads and may say (Sep 2026).** An audit of replayed AI
+reports found staff threads read as outsider feedback, a pull request author's
+own words quoted as a maintainer's review, automated posts quoted as people, and
+narration stating figures nobody measured or leaking field names. Four checks
+now apply, none of them a model:
+
+- Stage C reads only outsider threads (author not a bot and not on the team as
+  `people.maintainers` reads it), spread across merged, closed, open-with-a-reply
+  and ignored, with the author's replies and automated posts removed. Captures
+  that predate `author_association` (the committed benchmark fixtures) keep the
+  old selection so their recordings replay.
+- A thread quote must be words someone other than the pull request's author
+  said, and not a bot or an automated body. The title and description are not
+  quotable. A posture reading whose cited threads mostly failed this goes too.
+- Every narrated sentence is checked: a figure must be a measured count (or a
+  percentage, minutes or difference of one), a quotation must pass the same
+  speaker check, and a `snake_case` field name is never shown. Failing sentences
+  are removed; an emptied field falls back to the computed wording.
+- Stages A, B and C run at once, every provider call has an output cap, and each
+  AI report logs its time per stage, tokens and cost (`holt.report` logger).
+
 **The holdout is structural for timestamps, procedural for payloads.** Every fact
 passes through one `EvidenceProvider` whose base class asserts the cutoff on
 every record, and a subclass cannot return a record with a post-cutoff
@@ -104,6 +125,15 @@ rejects a registry for the same reason a model would: work waved through
 unread. The stages still buy what a rule cannot: the evidence a claim cites,
 the prose a person reads, and `repo_kind` for the reports where naming the
 category matters.
+
+The rubber-stamp rule did not catch every registry: on winget-pkgs and
+homebrew-cask a person comments on most merges, so the rule never fired and
+the free report called them "worth your time". Since then the free report
+names catalogues itself, from the shape of what outsiders send (one data file,
+one package manifest, a line in a list), with no model:
+`src/holt/agent/repo_kind_rules.py`. Package recipes (nixpkgs,
+termux-packages) keep their verdict, with a line saying most outside work
+there is package updates. The MCC figures on this page were measured before that.
 
 **That last sentence used to have no number behind it. It does now.** MCC scores
 the verdict, and the verdict is a three-valued label that `verdict.py` decides
