@@ -24,8 +24,7 @@ export default function ExampleAiReportPage() {
           <aside className="mb-6 border border-blue/50 bg-blue/[0.06] p-4 sm:p-5" data-example-banner>
             <p className="text-[0.8rem] uppercase tracking-[0.08em] text-blue">Example AI report (recorded {recorded})</p>
             <p className="mt-2 max-w-3xl font-sans text-[0.95rem] text-ink">
-              A recorded example, not a live report, from GitHub activity up to {recorded}. Free to read. No account
-              needed.
+              A recorded example, not a live report, from GitHub activity up to {recorded}.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1">
               <Link href="/" className="bracket-link">[ get one for your repo → ]</Link>

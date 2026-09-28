@@ -389,7 +389,7 @@ export function ResultView({ p, example = false }: { p: Preflight; example?: boo
 
       <p className="border-t border-dashed border-line pt-4 text-[0.8rem] leading-relaxed text-faint">
         {example ? "Example, made up to show the layout. " : <>Checked <time dateTime={p.checked_at} suppressHydrationWarning>{timeAgo(p.checked_at)}</time>, </>}
-        compared with pull requests merged in {span}. Each verdict comes from fixed rules, not an AI. Holt only reads GitHub: it never comments, labels or changes anything.
+        compared with pull requests merged in {span}. Each verdict comes from fixed rules, not an AI.
       </p>
     </section>
   );

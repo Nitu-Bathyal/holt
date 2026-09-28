@@ -78,7 +78,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
                 className={`mt-6 border-l-2 px-4 py-3 font-sans ${notice.tone === "error" ? "border-orange bg-orange/10" : "border-blue bg-blue/10"}`}
               >
                 <p className={`text-[0.95rem] font-semibold ${notice.tone === "error" ? "text-orange" : "text-blue"}`}>{notice.title}</p>
-                <p className="mt-1 text-[0.9rem] leading-relaxed text-muted">{notice.body}</p>
+                {notice.body && <p className="mt-1 text-[0.9rem] leading-relaxed text-muted">{notice.body}</p>}
               </div>
             )}
 

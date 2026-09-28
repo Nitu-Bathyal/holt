@@ -7,7 +7,7 @@ export interface SignInNotice {
   /** "info" for a nudge (you need to sign in), "error" when sign-in failed. */
   tone: "info" | "error";
   title: string;
-  body: string;
+  body?: string;
 }
 
 const LINKED: SignInNotice = {
@@ -60,7 +60,6 @@ const NOTICES: Record<string, SignInNotice> = {
   SessionRequired: {
     tone: "info",
     title: "Sign in to see that page",
-    body: "You'll go straight back to it afterwards.",
   },
 };
 
