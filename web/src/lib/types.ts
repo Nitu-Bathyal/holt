@@ -27,6 +27,9 @@ export type DiscoverRepo = S.DiscoverRepo;
 export type DiscoverSort = S.DiscoverOut["sort"];
 export type ProfileOut = S.ProfileOut;
 export type ProfilePrefs = S.ProfilePrefs;
+export type Recommendations = S.Recommendations;
+export type Recommendation = S.Recommendation;
+export type RecommendationBasis = S.RecommendationBasis;
 export type ContributionType = ProfilePrefs["contributions"][number];
 export type Level = ProfilePrefs["level"];
 
@@ -48,6 +51,13 @@ export interface RazorpaySuccess {
   razorpay_signature: string;
 }
 
+export type Access = S.Access;
+export type Playbook = S.Playbook;
+export type PlaybookItem = S.PlaybookItem;
+export type PlaybookSource = S.PlaybookSource;
+export type PlaybookClosingReason = S.PlaybookClosingReason;
+export type PlaybookState = S.PlaybookState;
+export type PlaybookSectionKey = S.PlaybookTeaserSection["key"];
 export type PlanOffer = S.PlanOffer;
 export type Plans = S.Plans;
 export type SubscriptionCheckout = S.SubscriptionCheckout;
@@ -63,6 +73,7 @@ export interface RazorpaySubscriptionSuccess {
 }
 
 export type AnalysisStart = S.AnalysisDone | S.Queued;
+export type PlaybookStart = S.PlaybookDone | S.Queued;
 export type FindStart = S.FindDone | S.Queued;
 
 /** Result of a call: either data or a plain-English error. */

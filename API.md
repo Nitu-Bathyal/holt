@@ -638,6 +638,110 @@ also shows issues asking for help and small unlabelled fixes. Issues whose
 `contributions` to find results itself, so they don't change the find search
 or its cache.
 
+### Playbook: "How to get merged here" (paid)
+
+For one repository: what its merged pull requests have in common, how big
+they are, who reviews, why outside pull requests were closed (with quotes from
+the project, linked), and a checklist. It is written by a model from counted
+facts about the last 365 days of pull requests, and every claim is checked
+against those facts before it is kept. It has no verdict and never changes the
+report's. It exists only when the server runs with its paid features
+(`HOLT_PRO_URL`); without them the GET says `available: false` and the POST is
+501 `not_implemented`.
+
+- `GET /v1/playbook/{owner}/{repo}` (anonymous or signed in; reads only the
+  database) → `PlaybookState`:
+  `{"repo", "available": true, "teaser": PlaybookTeaser|null, "playbook": Playbook|null, "unlocked": false, "access": Access|null, "on_sale": false, "job": PlaybookJob|null}`.
+  - `teaser` is for everyone, once anyone has had this repository's playbook
+    written: `{"sections": [{"key": "must_do", "count": 3}, …], "first": PlaybookItem|null, "generated_at"}`,
+    the sections that have items (in display order) and the first must-do.
+  - `playbook` is the whole playbook, only for a signed-in user who unlocked
+    this repository (`unlocked: true`). Unlocks don't expire.
+  - `access` (signed in only) is the `playbook` feature's `Access` (see
+    Account): whether unlocking now is allowed and what it costs. `on_sale`
+    says whether any plan or credit pack that pays for it is on sale; while
+    it is false, a user who isn't allowed can't do anything about it yet.
+  - `job` is the job writing this user's playbook for this repository while it
+    runs (`{"job_id", "status", "stage", "progress"}`), so a reloaded page can
+    follow it again.
+- `POST /v1/me/playbook/{owner}/{repo}` (signed in; no body) unlocks it:
+  - A playbook written in the last `HOLT_PLAYBOOK_CACHE_HOURS` (168) →
+    `200 {"status": "done", "playbook": Playbook}`, charged once per user and
+    repository (free when already unlocked).
+  - Otherwise `202 {"status": "queued", "job_id"}`: a job writes it (usually
+    1–3 minutes, stopped after `HOLT_JOB_TIMEOUT_AI`). People unlocking the same
+    repository at once share one job; each is charged once. Someone who
+    already unlocked it gets the newer one free.
+  - Charged for the `playbook` feature before anything runs (402
+    `quota_exceeded` or `needs_plan` otherwise, and nothing is queued). A job
+    that fails gives back what everyone waiting on it was charged, and their
+    unlock with it; its error message says so. An unknown or private
+    repository is 404 `not_found` before any charge.
+- `GET /v1/playbook-jobs/{job_id}` → `{"status", "stage", "progress", "playbook": Playbook|null, "error": Error|null}`,
+  and `GET /v1/playbook-jobs/{job_id}/events` (SSE, as for analyses; `done`
+  carries `{"playbook": Playbook}`).
+
+`Playbook`: `{"repo", "generated_at", "model", "note", "window_days", "archived", "sections"}`.
+`note` is plain English to show once near the top when present (e.g. the counts
+cover everyone's pull requests because too few outside ones were merged).
+`sections` always has five lists, in display order; show nothing for an empty
+one:
+- `must_do`, `size_and_scope`, `reviewers`, `checklist`: `PlaybookItem`s,
+  `{"text", "sources": [{"statement", "seen", "of", "links": ["https://github.com/…"]}]}`.
+  `text` is plain English and may contain Markdown code spans (check names,
+  paths), never HTML. Each source is a counted fact: "seen in `seen` of `of`"
+  pull requests, with example links; `seen`/`of` are null for a fact from a
+  document (the contributing guide, CODEOWNERS).
+- `closing_reasons`: `{"reason", "explanation", "seen", "of", "examples": [{"number", "url", "title", "who", "quote"}]}`,
+  most common first: `seen` of the `of` closed outside pull requests read
+  showed it, each example a closed pull request with the exact words `who`
+  (someone in the project) wrote on it.
+
+### Recommendations for you
+
+`GET /v1/me/recommendations?limit=10` → `Recommendations`: a short, ranked list
+of repositories (with starter issues) picked for the signed-in user. Reads
+only the database: no GitHub call, no model, no rate limit, never charged.
+
+- **Which repos**: only ones whose latest 7-day rules report (checked in the
+  last 14 days) says `viable`, plus `viable` find results from the last 7 days
+  that Holt has no report for, where maintainers are still answering (median
+  first reply within 7 days, at most half of outside pull requests with no
+  reply). Archived repos, forks, the user's own repos and every repo they
+  already sent a pull request to (My Contributions) are left out.
+- **Matching**: a pick must share a language with the profile, a language
+  the user's pull requests were merged in (connected users), or a profile
+  topic. Newcomers never get "long odds" repos, see only issues labelled for
+  first-timers, and a repo whose known issues have none is dropped.
+- **Ranking** is fixed points, never a model: stated language 4, merged-in
+  language 3 (both: 8), 2 per shared topic (up to 2), odds good 3 / fair 1,
+  first-timers merged recently 2 (newcomers), fitting starter issues 2, one of
+  the user's contribution types 1. Ties: merged share, reply time, sample.
+- **Paid**: the `recommendations` feature. A plan that covers it gets every
+  pick (`full: true`); everyone else gets the first 2 and `locked`, the number
+  held back.
+
+```jsonc
+{ "picks": [ { "repo": "owner/repo", "verdict": "viable", "headline": "Worth your time",
+    "tone": "good", "odds": Odds | null, "reason": "…the report's verdict_line…",
+    "numbers_line": "Of 42 pull requests from outside contributors, 19 were merged (45%). …",
+    "why": ["Written in Python, one of your languages.",
+            "Maintainers usually reply within 3 hours.",
+            "6 people had their first pull request merged here recently."],
+    "stats": Stats, "description": "…"|null, "language": "Python"|null,
+    "stars": 123|null, "topics": ["cli"],
+    "issues": [StarterIssue],     // up to 3, fitted to level and contribution types; [] when none known
+    "checked_at": "…"|null } ],
+  "locked": 3, "full": false,
+  "basis": { "languages": ["python"], "topics": ["cli"], "level": "newcomer",
+             "contributions": ["docs"], "history_languages": ["Rust"],
+             "already_contributing": 4, "has_profile": true, "connected": true },
+  "computed_at": "…" }
+```
+
+Empty `picks` with `has_profile: false` and `connected: false` means there is
+nothing to match on yet. Starter issues older than 72 hours aren't shown.
+
 ### Feedback: "Was this verdict right?"
 - `POST /v1/feedback` body `{"repo": "owner/repo", "mode": "rules"|"ai", "days": 7,
   "generated_at": "<the report's generated_at>", "vote": "up"|"down", "reason": "…"|null}`
