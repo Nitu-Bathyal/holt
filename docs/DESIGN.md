@@ -126,6 +126,15 @@ unread. The stages still buy what a rule cannot: the evidence a claim cites,
 the prose a person reads, and `repo_kind` for the reports where naming the
 category matters.
 
+The rubber-stamp rule did not catch every registry: on winget-pkgs and
+homebrew-cask a person comments on most merges, so the rule never fired and
+the free report called them "worth your time". Since then the free report
+names catalogues itself, from the shape of what outsiders send (one data file,
+one package manifest, a line in a list), with no model:
+`src/holt/agent/repo_kind_rules.py`. Package recipes (nixpkgs,
+termux-packages) keep their verdict, with a line saying most outside work
+there is package updates. The MCC figures on this page were measured before that.
+
 **That last sentence used to have no number behind it. It does now.** MCC scores
 the verdict, and the verdict is a three-valued label that `verdict.py` decides
 with arithmetic — so the model stages were being measured only on the one task

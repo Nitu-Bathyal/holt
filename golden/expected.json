@@ -36,10 +36,9 @@
   ]
  },
  "EbookFoundation/free-programming-books": {
-  "verdict": "viable",
+  "verdict": "not_viable",
   "rules": [
-   "awaiting_reply",
-   "merges"
+   "catalogue_shape"
   ],
   "numbers": {
    "total_threads": 200,
@@ -68,13 +67,19 @@
     "from": null,
     "to": "viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "not_viable",
+    "reason": "Catalogue detection from diff shape (ticket 07): most outside pull requests here add one data file or package manifest, or a line to a list, which isn't a software contribution"
    }
   ]
  },
  "Homebrew/homebrew-cask": {
-  "verdict": "viable",
+  "verdict": "not_viable",
   "rules": [
-   "merges"
+   "catalogue_shape"
   ],
   "numbers": {
    "total_threads": 200,
@@ -103,6 +108,12 @@
     "from": null,
     "to": "viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "not_viable",
+    "reason": "Catalogue detection from diff shape (ticket 07): most outside pull requests here add one data file or package manifest, or a line to a list, which isn't a software contribution"
    }
   ]
  },
@@ -110,7 +121,8 @@
   "verdict": "viable",
   "rules": [
    "awaiting_reply",
-   "merges"
+   "merges",
+   "package_updates"
   ],
   "numbers": {
    "total_threads": 200,
@@ -483,9 +495,7 @@
  "firstcontributions/first-contributions": {
   "verdict": "not_viable",
   "rules": [
-   "awaiting_reply",
-   "merges",
-   "rubber_stamp"
+   "catalogue_shape"
   ],
   "numbers": {
    "total_threads": 200,
@@ -605,8 +615,7 @@
  "hacs/default": {
   "verdict": "not_viable",
   "rules": [
-   "awaiting_reply",
-   "ignored"
+   "catalogue_shape"
   ],
   "numbers": {
    "total_threads": 200,
@@ -713,8 +722,7 @@
  "is-a-dev/register": {
   "verdict": "not_viable",
   "rules": [
-   "awaiting_reply",
-   "ignored"
+   "catalogue_shape"
   ],
   "numbers": {
    "total_threads": 200,
@@ -970,10 +978,9 @@
   ]
  },
  "microsoft/winget-pkgs": {
-  "verdict": "viable",
+  "verdict": "not_viable",
   "rules": [
-   "awaiting_reply",
-   "merges"
+   "catalogue_shape"
   ],
   "numbers": {
    "total_threads": 200,
@@ -1002,6 +1009,12 @@
     "from": null,
     "to": "viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "not_viable",
+    "reason": "Catalogue detection from diff shape (ticket 07): most outside pull requests here add one data file or package manifest, or a line to a list, which isn't a software contribution"
    }
   ]
  },
@@ -1608,9 +1621,9 @@
   ]
  },
  "sindresorhus/awesome": {
-  "verdict": "viable",
+  "verdict": "not_viable",
   "rules": [
-   "merges"
+   "catalogue_shape"
   ],
   "numbers": {
    "total_threads": 200,
@@ -1639,6 +1652,12 @@
     "from": null,
     "to": "viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-28",
+    "from": "viable",
+    "to": "not_viable",
+    "reason": "Catalogue detection from diff shape (ticket 07): most outside pull requests here add one data file or package manifest, or a line to a list, which isn't a software contribution"
    }
   ]
  },
@@ -1681,7 +1700,8 @@
  "termux/termux-packages": {
   "verdict": "viable",
   "rules": [
-   "merges"
+   "merges",
+   "package_updates"
   ],
   "numbers": {
    "total_threads": 200,
