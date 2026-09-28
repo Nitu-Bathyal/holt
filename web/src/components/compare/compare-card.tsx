@@ -13,7 +13,7 @@ export function CompareShell({ repo, removeHref, children }: { repo: string; rem
     <li className="flex min-w-0 flex-col border border-line-strong bg-panel shadow-soft">
       <div className="flex items-center gap-3 border-b border-line p-4">
         <RepoAvatar repo={repo} size={28} />
-        <Link href={`/${repo}`} className="flex min-h-11 min-w-0 flex-1 items-center text-[0.92rem] font-semibold hover:text-blue" title={repo}>
+        <Link href={`/${repo}`} className="flex min-h-11 min-w-0 flex-1 items-center text-[0.875rem] font-semibold hover:text-blue" title={repo}>
           {/* The ellipsis needs a block child: text-overflow doesn't apply to a flex container's text. */}
           <span className="truncate">{repo}</span>
         </Link>
@@ -39,15 +39,15 @@ export function CompareBody({ report, leads = [] }: { report: Report; leads?: Le
   return (
     <>
       <div className={`p-4 ${t.soft}`}>
-        <CatFace mood={TONE_MOOD[report.tone]} className="text-[1.1rem]" />
-        <p className={`mt-2 text-[1.35rem] font-semibold leading-tight tracking-tight ${t.text}`}>{report.headline}</p>
+        <CatFace mood={TONE_MOOD[report.tone]} className="text-[1.125rem]" />
+        <p className={`mt-2 text-[1.375rem] font-semibold leading-tight tracking-tight ${t.text}`}>{report.headline}</p>
         <OddsBar stats={fullStats(s)} className="mt-4 h-2" />
       </div>
       <dl className="divide-y divide-line">
         {rows.map(([k, v, lead]) => {
           const best = lead != null && leads.includes(lead);
           return (
-            <div key={k} className={`grid grid-cols-[1fr_auto] gap-3 px-4 py-3 text-[0.88rem] ${best ? "bg-green/[0.06]" : ""}`}>
+            <div key={k} className={`grid grid-cols-[1fr_auto] gap-3 px-4 py-3 text-[0.875rem] ${best ? "bg-green/[0.06]" : ""}`}>
               <dt className="font-sans text-muted">{k}</dt>
               <dd className="text-right text-muted">
                 {v}

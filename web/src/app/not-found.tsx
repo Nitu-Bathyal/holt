@@ -11,8 +11,8 @@ export default function NotFound() {
   return (
     <PageTransition>
       <div className="wrap max-w-2xl py-20">
-        <CatFace mood="startled" className="text-[2rem]" />
-        <h1 className="display mt-6 text-[2.4rem]">Nothing here.</h1>
+        <CatFace mood="startled" className="text-[2.25rem]" />
+        <h1 className="display mt-6 text-[2.25rem]">Nothing here.</h1>
         <p className="prose-sans mt-3">
           Looking for a repo? It might be private, renamed or misspelled. Try it again.
         </p>

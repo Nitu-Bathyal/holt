@@ -30,9 +30,9 @@ export default async function HistoryPage() {
             <ErrorPanel error={r.error} retryHref="/me/history" />
           ) : r.data.items.length === 0 ? (
             <div className="border border-dashed border-line-strong p-8 text-center">
-              <CatFace mood="startled" className="text-[1.6rem]" />
+              <CatFace mood="startled" className="text-[1.75rem]" />
               <p className="mt-4 font-sans text-muted">Nothing yet. Reports you run while signed in show up here.</p>
-              <Link href="/" className="bracket-link mt-6">[ check a repo → ]</Link>
+              <Link href="/" className="bracket-link mt-6">Check a repo →</Link>
             </div>
           ) : (
             <ul className="border border-line-strong bg-panel px-3 shadow-soft sm:px-4">
@@ -44,14 +44,14 @@ export default async function HistoryPage() {
                   >
                     <span className="min-w-0">
                       <span className="block truncate font-semibold">{h.repo}</span>
-                      <span className="text-[0.82rem] text-faint">
+                      <span className="text-[0.8125rem] text-faint">
                         {h.mode === "ai" ? "AI report" : "free report"} · <time dateTime={h.created_at}>{timeAgo(h.created_at)}</time>
                       </span>
                     </span>
                     {h.headline && h.tone ? (
                       <VerdictPill headline={h.headline} tone={h.tone} className="justify-self-end" />
                     ) : (
-                      <span className={`justify-self-end text-[0.82rem] ${h.status === "error" ? "text-orange" : "text-faint"}`}>
+                      <span className={`justify-self-end text-[0.8125rem] ${h.status === "error" ? "text-orange" : "text-faint"}`}>
                         {h.status === "error" ? "didn't finish" : "still running"}
                       </span>
                     )}

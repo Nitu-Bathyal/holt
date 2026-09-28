@@ -13,7 +13,7 @@ export default async function SettingsLayout({ children }: { children: React.Rea
         <PageHead compact className="max-md:border-b-0">
           <div>
             <h1 className="display text-[clamp(1.8rem,5vw,2.6rem)]">Settings</h1>
-            {user && <p className="mt-1 truncate text-[0.89rem] text-faint">{user.name || user.email}</p>}
+            {user && <p className="mt-1 truncate text-[0.875rem] text-faint">{user.name || user.email}</p>}
           </div>
         </PageHead>
         <div className="wrap pb-14 sm:pb-16 md:grid md:grid-cols-[11rem_minmax(0,1fr)] md:gap-10 md:pt-10">

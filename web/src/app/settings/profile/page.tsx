@@ -35,14 +35,14 @@ export default async function ProfileSettings({ searchParams }: PageProps<"/sett
       )}
       {notice === "adult" && <Notice tone="bad">Tick the 18+ box to save a profile.</Notice>}
       {notice === "error" && <Notice tone="bad">That didn&apos;t save. Try again in a minute.</Notice>}
-      {!r.ok && <p role="alert" className="mb-6 border border-orange/50 px-4 py-3 font-sans text-[0.9rem] text-orange">{r.error.message}</p>}
+      {!r.ok && <p role="alert" className="mb-6 border border-orange/50 px-4 py-3 font-sans text-[0.875rem] text-orange">{r.error.message}</p>}
 
       {r.ok && (
         <ProfileForm prefs={p} adultConfirmed={r.data.adult_confirmed} back={PROFILE_SETTINGS} submitLabel={p ? "save changes" : "save my profile"} />
       )}
 
       {p && (
-        <p className="mt-8 border-t border-line pt-5 font-sans text-[0.87rem] text-faint">
+        <p className="mt-8 border-t border-line pt-5 font-sans text-[0.875rem] text-faint">
           {p.updated_at && <>Last saved {shortDate(p.updated_at)}. </>}
           To delete it, go to <Link href={PRIVACY_SETTINGS} className="text-link">Privacy and data</Link>.
         </p>

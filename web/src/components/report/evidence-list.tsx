@@ -7,7 +7,7 @@ function Item({ e }: { e: EvidenceItem }) {
   const { title, quoted } = evidenceTitle(e.text);
   return (
     <li className="grid gap-x-5 gap-y-1 border-b border-line px-5 py-4 last:border-b-0 sm:grid-cols-[7.5rem_minmax(0,1fr)_auto] sm:items-baseline">
-      <span className={`inline-flex items-center gap-2 text-[0.88rem] font-medium ${bad ? "text-orange" : "text-green"}`}>
+      <span className={`inline-flex items-center gap-2 text-[0.875rem] font-medium ${bad ? "text-orange" : "text-green"}`}>
         <span aria-hidden="true" className={`size-1.5 rounded-full ${bad ? "bg-orange" : "bg-green"}`} />
         {label}
       </span>
@@ -23,13 +23,13 @@ function Item({ e }: { e: EvidenceItem }) {
             ),
           )}
         </p>
-        {e.quote && <blockquote className="mt-1.5 border-l-2 border-line-strong pl-3 font-sans text-[0.9rem] text-muted">“{e.quote}”</blockquote>}
+        {e.quote && <blockquote className="mt-1.5 border-l-2 border-line-strong pl-3 font-sans text-[0.875rem] text-muted">“{e.quote}”</blockquote>}
       </div>
       <a
         href={e.url}
         target="_blank"
         rel="noopener noreferrer"
-        className="inline-flex min-h-9 items-center self-start text-[0.92rem] tabular-nums text-blue hover:underline sm:min-h-0"
+        className="inline-flex min-h-9 items-center self-start text-[0.875rem] tabular-nums text-blue hover:underline sm:min-h-0"
       >
         {evidenceRef(e.url)} <span aria-hidden="true">&nbsp;↗</span>
         <span className="sr-only"> on GitHub</span>
@@ -47,7 +47,7 @@ export function EvidenceList({ evidence }: { evidence: EvidenceItem[] }) {
       <ul>{first.map((e, i) => <Item key={`${i}:${e.id}`} e={e} />)}</ul>
       {rest.length > 0 && (
         <details className="group">
-          <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 border-t border-line px-5 text-[0.95rem] font-medium text-blue [&::-webkit-details-marker]:hidden">
+          <summary className="flex min-h-12 cursor-pointer list-none items-center gap-2 border-t border-line px-5 text-[1rem] font-medium text-blue [&::-webkit-details-marker]:hidden">
             <span className="group-open:hidden">Show {rest.length} more</span>
             <span className="hidden group-open:inline">Show fewer</span>
           </summary>

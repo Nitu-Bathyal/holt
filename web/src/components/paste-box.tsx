@@ -46,7 +46,7 @@ export function PasteBox({
           e.preventDefault();
           go(value);
         }}
-        className="group relative grid grid-cols-1 border border-line-strong bg-panel shadow-card transition-colors focus-within:border-blue sm:grid-cols-[auto_1fr_auto]"
+        className="group relative grid grid-cols-1 overflow-hidden rounded-2xl border border-line-strong bg-panel shadow-card transition-colors focus-within:border-blue sm:grid-cols-[auto_1fr_auto]"
       >
         <span aria-hidden="true" className="absolute inset-y-0 left-0 w-0.5 origin-top scale-y-0 bg-amber transition-transform group-focus-within:scale-y-100" />
         <label htmlFor={id} className="sr-only">{label}</label>
@@ -76,7 +76,7 @@ export function PasteBox({
           placeholder="owner/name or a GitHub URL"
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${id}-error` : undefined}
-          className={`min-w-0 bg-transparent px-4 text-ink outline-none placeholder:text-faint sm:px-3 ${size === "lg" ? "h-16 text-[1rem] sm:text-[1.05rem]" : "h-13 text-[0.95rem]"}`}
+          className={`min-w-0 bg-transparent px-4 text-ink outline-none placeholder:text-faint sm:px-3 ${size === "lg" ? "h-16 text-[1rem] sm:text-[1rem]" : "h-13 text-[1rem]"}`}
         />
         <button
           type="submit"
@@ -87,12 +87,12 @@ export function PasteBox({
         </button>
       </form>
       {error && (
-        <p id={`${id}-error`} role="alert" className="mt-2 font-sans text-[0.89rem] text-orange">
+        <p id={`${id}-error`} role="alert" className="mt-2 font-sans text-[0.875rem] text-orange">
           {error}
         </p>
       )}
       {examples && (
-        <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.82rem] text-faint">
+        <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.8125rem] text-faint">
           <span>try</span>
           {EXAMPLES.map((ex) => (
             <button

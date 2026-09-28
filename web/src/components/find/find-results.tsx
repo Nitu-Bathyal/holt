@@ -8,8 +8,8 @@ export function FindResults({ results, days, saved }: { results: FindResult[]; d
   if (!results.length) {
     return (
       <div className="border border-dashed border-line-strong p-8 text-center">
-        <CatFace mood="thinking" className="text-[1.6rem]" />
-        <p className="mt-4 text-[1.1rem] font-semibold">No welcoming repos matched all of that.</p>
+        <CatFace mood="thinking" className="text-[1.75rem]" />
+        <p className="mt-4 text-[1.125rem] font-semibold">No welcoming repos matched all of that.</p>
         <p className="mt-2 font-sans text-muted">Try another language, or turn off the Hacktoberfest filter.</p>
       </div>
     );

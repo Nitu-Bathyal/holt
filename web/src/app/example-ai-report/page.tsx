@@ -26,10 +26,10 @@ export default async function ExampleAiReportPage({ searchParams }: PageProps<"/
     <PageTransition>
       <ReportDoc className="wrap py-8 sm:py-12">
         <aside className="mb-10 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl bg-panel-2/60 px-5 py-3.5" data-example-banner>
-          <p className="text-[0.95rem] text-muted">
+          <p className="text-[1rem] text-muted">
             <span className="font-semibold text-ink">Example.</span> Recorded {recorded}, not live. Free to read, no account needed.
           </p>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[0.95rem]">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[1rem]">
             <Link href={locked ? EXAMPLE_PATH : `${EXAMPLE_PATH}?view=locked`} className="text-link">
               {locked ? "See the whole plan" : "What free users see"}
             </Link>

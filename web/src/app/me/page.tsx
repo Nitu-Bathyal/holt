@@ -142,24 +142,24 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
           <h1 className="display text-[clamp(1.9rem,6vw,2.6rem)]">
             {state.checked === 0 ? "Welcome" : "Welcome back"}{first ? `, ${first}` : ""}
           </h1>
-          {notice && <p role="status" className={`mt-6 border px-4 py-3 font-sans text-[0.9rem] ${notice.tone}`}>{notice.text}</p>}
+          {notice && <p role="status" className={`mt-6 border px-4 py-3 font-sans text-[0.875rem] ${notice.tone}`}>{notice.text}</p>}
 
           {prompt && <ProfileOnboarding back="/me" open className="mt-6" />}
 
           <div className={`mt-6 grid gap-5 ${prompt ? "" : "lg:grid-cols-2"}`}>
             {!prompt && next.href !== "#check" && (
               <section aria-labelledby="next-h" className="border border-line-strong bg-panel p-5 shadow-card sm:p-6">
-                <p className="text-[0.87rem] text-blue">Your next step</p>
-                <h2 id="next-h" className="mt-1 text-[1.2rem] font-semibold tracking-tight [overflow-wrap:anywhere]">{next.title}</h2>
-                <p className="prose-sans mt-2 text-[0.95rem] text-muted">{next.body}</p>
+                <p className="text-[0.875rem] text-blue">Your next step</p>
+                <h2 id="next-h" className="mt-1 text-[1.125rem] font-semibold tracking-tight [overflow-wrap:anywhere]">{next.title}</h2>
+                <p className="prose-sans mt-2 text-[1rem] text-muted">{next.body}</p>
                 <Link href={next.href} className="btn-primary mt-4 inline-flex">{next.cta}</Link>
               </section>
             )}
             <div id="check" className={`scroll-mt-24 ${!prompt && next.href === "#check" ? "lg:col-span-2" : "self-center"}`}>
               {!prompt && next.href === "#check" && (
                 <>
-                  <h2 className="text-[1.2rem] font-semibold tracking-tight">{next.title}</h2>
-                  <p className="prose-sans mb-4 mt-2 max-w-2xl text-[0.95rem] text-muted">{next.body}</p>
+                  <h2 className="text-[1.125rem] font-semibold tracking-tight">{next.title}</h2>
+                  <p className="prose-sans mb-4 mt-2 max-w-2xl text-[1rem] text-muted">{next.body}</p>
                 </>
               )}
               <PasteBox size="md" examples={state.checked === 0} />
@@ -169,8 +169,8 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
           {setupLeft(steps) > 0 && (
             <section aria-labelledby="setup-h" className="mt-8 border border-blue/40 bg-panel p-5 shadow-soft sm:p-6">
               <div className="flex items-baseline justify-between gap-4">
-                <h2 id="setup-h" className="text-[1.05rem] font-semibold tracking-tight">Get set up</h2>
-                <span className="text-[0.82rem] text-faint">{steps.length - setupLeft(steps)} of {steps.length} done</span>
+                <h2 id="setup-h" className="text-[1rem] font-semibold tracking-tight">Get set up</h2>
+                <span className="text-[0.8125rem] text-faint">{steps.length - setupLeft(steps)} of {steps.length} done</span>
               </div>
               <div aria-hidden="true" className="mt-3 h-1 bg-line">
                 <div className="h-1 bg-blue" style={{ width: `${((steps.length - setupLeft(steps)) / steps.length) * 100}%` }} />
@@ -184,7 +184,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
                     ) : (
                       <span>
                         <Link href={s.href} className="font-semibold text-blue hover:underline">{s.label}</Link>
-                        <span className="block font-sans text-[0.89rem] text-muted">{s.note}</span>
+                        <span className="block font-sans text-[0.875rem] text-muted">{s.note}</span>
                       </span>
                     )}
                   </li>
@@ -202,7 +202,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
           </div>
 
           {credits?.ai_available && (
-            <p className="mt-10 font-sans text-[0.9rem] text-muted">
+            <p className="mt-10 font-sans text-[0.875rem] text-muted">
               <strong className="text-ink">{credits.balance}</strong> {credits.purchased > 0 ? "AI report credits" : "free AI reports"} left.{" "}
               {credits.can_claim ? (
                 <Link href="/settings/ai-reports" className="text-link">Claim this week&apos;s free one</Link>

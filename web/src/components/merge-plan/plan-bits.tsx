@@ -45,7 +45,7 @@ export function Sources({ sources, className = "", linksOnly = false }: { source
   const parts = sources.filter((s) => s.links.length > 0 || (!linksOnly && s.seen != null && s.of != null));
   if (parts.length === 0) return null;
   return (
-    <div className={`flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[0.88rem] text-faint ${className}`}>
+    <div className={`flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[0.875rem] text-faint ${className}`}>
       {parts.map((s, i) => (
         <p key={i} className="flex flex-wrap items-baseline gap-x-2.5" title={s.statement}>
           {!linksOnly && s.seen != null && s.of != null && (

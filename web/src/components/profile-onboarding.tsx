@@ -20,16 +20,16 @@ export async function ProfileOnboarding({ back, open = false, className = "" }: 
       <details className="group" open={open}>
         <summary className="flex cursor-pointer list-none flex-wrap items-baseline justify-between gap-x-6 gap-y-2 [&::-webkit-details-marker]:hidden">
           <span>
-            <span id="onboard-h" className="block text-[1.15rem] font-semibold tracking-tight">What are you after?</span>
-            <span className="mt-1 block font-sans text-[0.9rem] text-muted">
+            <span id="onboard-h" className="block text-[1.125rem] font-semibold tracking-tight">What are you after?</span>
+            <span className="mt-1 block font-sans text-[0.875rem] text-muted">
               Pick your languages and how much time you have. Searches start there. Change it any time in settings.
             </span>
           </span>
-          <span className="text-[0.89rem] text-blue group-open:hidden">[ set it up · 30 seconds → ]</span>
+          <span className="text-[0.875rem] text-blue group-open:hidden">Set it up · 30 seconds →</span>
         </summary>
         <div className="mt-6 border-t border-line pt-6">
           <ProfileForm prefs={null} adultConfirmed={r.data.adult_confirmed} back={back}>
-            <button type="submit" formAction={skip} formNoValidate className="text-[0.89rem] text-muted hover:text-ink">
+            <button type="submit" formAction={skip} formNoValidate className="text-[0.875rem] text-muted hover:text-ink">
               skip for now
             </button>
           </ProfileForm>
@@ -37,7 +37,7 @@ export async function ProfileOnboarding({ back, open = false, className = "" }: 
       </details>
       <form action={skip} className="mt-3">
         <input type="hidden" name="back" value={back} />
-        <button type="submit" className="text-[0.87rem] text-faint hover:text-ink">not now</button>
+        <button type="submit" className="text-[0.875rem] text-faint hover:text-ink">not now</button>
       </form>
     </section>
     </div>

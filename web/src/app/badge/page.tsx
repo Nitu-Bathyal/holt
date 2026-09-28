@@ -31,10 +31,10 @@ export default async function BadgePage({ searchParams }: PageProps<"/badge">) {
         <PageHead narrow>
           <p className="rail mb-4 flex gap-2"><strong className="m-0">badge</strong><span>for maintainers</span></p>
           <h1 className="display max-w-3xl text-[clamp(2rem,6vw,3.4rem)]">Show newcomers they&apos;re welcome.</h1>
-          <p className="prose-sans mt-5 max-w-2xl text-[1.05rem]">
+          <p className="prose-sans mt-5 max-w-2xl text-[1rem]">
             Paste your repo. If outsiders get replies and get merged, you get a README badge that says so.
           </p>
-          <p className="mt-3 inline-flex overflow-hidden rounded-[3px] text-[0.82rem] leading-5 text-white" style={{ fontFamily: "Verdana,Geneva,DejaVu Sans,sans-serif" }}>
+          <p className="mt-3 inline-flex overflow-hidden rounded-[3px] text-[0.8125rem] leading-5 text-white" style={{ fontFamily: "Verdana,Geneva,DejaVu Sans,sans-serif" }}>
             <span className="bg-[#555] px-1.5">Holt</span>
             <span className="bg-[#1a7f37] px-1.5">merges outsiders · replies in ~6h</span>
           </p>
@@ -54,7 +54,7 @@ export default async function BadgePage({ searchParams }: PageProps<"/badge">) {
             <button type="submit" className="btn-primary m-1.5">check</button>
           </form>
           {raw && !name && (
-            <p role="alert" className="mt-3 font-sans text-[0.9rem] text-orange">
+            <p role="alert" className="mt-3 font-sans text-[0.875rem] text-orange">
               That doesn&apos;t look like a repo. Try <span className="font-mono">owner/name</span>.
             </p>
           )}
@@ -62,7 +62,7 @@ export default async function BadgePage({ searchParams }: PageProps<"/badge">) {
 
         <div className="wrap max-w-3xl py-10 sm:py-12">
           {!name ? (
-            <div className="space-y-4 font-sans text-[0.95rem] text-muted">
+            <div className="space-y-4 font-sans text-[1rem] text-muted">
               <p>
                 Holt checks your recent PRs the way a newcomer would: do outsiders get a reply, and does their work get merged?
                 You only get a badge when the answer is yes.
@@ -77,7 +77,7 @@ export default async function BadgePage({ searchParams }: PageProps<"/badge">) {
           ) : report?.error.code === "not_found" ? (
             <BadgeLive key={name} repo={name} site={SITE_URL} />
           ) : (
-            <p role="alert" className="panel p-5 font-sans text-[0.92rem] text-orange">{report?.error.message}</p>
+            <p role="alert" className="panel p-5 font-sans text-[0.875rem] text-orange">{report?.error.message}</p>
           )}
         </div>
       </>

@@ -30,22 +30,22 @@ export default async function ThanksPage({ searchParams }: PageProps<"/pricing/t
     heading = <>Thank you. <span className="text-green">{creditsLabel(order.credits)} added.</span></>;
     body = (
       <>
-        <p className="prose-sans text-[1.05rem]">
+        <p className="prose-sans text-[1rem]">
           You paid {formatPrice(order.amount, order.currency)} for {order.name}. Razorpay emails you a receipt.
           {credits && <> You now have <strong className="text-ink">{creditsLabel(credits.balance)}</strong> to spend.</>}
         </p>
-        <p className="prose-sans mt-3 text-[0.95rem] text-muted">
+        <p className="prose-sans mt-3 text-[1rem] text-muted">
           Credits kick in once your free AI reports run out. Checking a repo stays free.
         </p>
       </>
     );
   } else if (order?.status === "failed") {
     heading = <>That payment didn&apos;t go through.</>;
-    body = <p className="prose-sans text-[1.05rem]">You haven&apos;t been charged. Try again, or use another payment method.</p>;
+    body = <p className="prose-sans text-[1rem]">You haven&apos;t been charged. Try again, or use another payment method.</p>;
   } else if (order?.status === "held") {
     heading = <>We&apos;re checking your payment.</>;
     body = (
-      <p className="prose-sans text-[1.05rem]">
+      <p className="prose-sans text-[1rem]">
         Razorpay reported a payment that didn&apos;t match the order, so no credits yet. We check these by hand. Not sorted
         within a day? Write to{" "}
         <a href={`mailto:${CONTACT_EMAIL}`} className="text-link">{CONTACT_EMAIL}</a> and mention order <code className="text-[0.85em]">{id.slice(0, 12)}</code>.
@@ -55,7 +55,7 @@ export default async function ThanksPage({ searchParams }: PageProps<"/pricing/t
     heading = <>Almost there.</>;
     body = (
       <>
-        <p className="prose-sans text-[1.05rem]">Confirming your payment. This usually takes a few seconds.</p>
+        <p className="prose-sans text-[1rem]">Confirming your payment. This usually takes a few seconds.</p>
         <OrderWaiter orderId={id} />
       </>
     );

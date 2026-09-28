@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { JetBrains_Mono } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans, IBM_Plex_Serif, JetBrains_Mono } from "next/font/google";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { RouteFallback } from "@/components/motion/route-fallback";
@@ -10,13 +10,13 @@ import { SITE_URL } from "@/lib/site";
 import "lenis/dist/lenis.css";
 import "./globals.css";
 
-const mono = JetBrains_Mono({
-  variable: "--font-jetbrains",
-  // greek: the ω in the header cat is on every page; preloading it with latin
-  // saves a second font swap (and re-layout) right after first paint.
-  subsets: ["latin", "greek"],
-  display: "swap",
-});
+// One type family for the whole site: Plex Sans to read, Plex Serif for
+// headings, Plex Mono for code. JetBrains Mono stays only for the cat (its
+// glyphs are drawn for it; greek: the ω is on every page).
+const sans = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-plex-sans", display: "swap" });
+const serif = IBM_Plex_Serif({ subsets: ["latin"], weight: ["500", "600"], variable: "--font-plex-serif", display: "swap" });
+const code = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-plex-mono", display: "swap" });
+const cat = JetBrains_Mono({ variable: "--font-jetbrains", subsets: ["latin", "greek"], display: "swap" });
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
@@ -46,7 +46,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
-    <html lang="en" className={mono.variable} suppressHydrationWarning>
+    <html lang="en" className={`${sans.variable} ${serif.variable} ${code.variable} ${cat.variable}`} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         {ANALYTICS && <script defer src={ANALYTICS.src} data-website-id={ANALYTICS.websiteId} />}

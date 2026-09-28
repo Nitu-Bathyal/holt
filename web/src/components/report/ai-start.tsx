@@ -32,13 +32,13 @@ export function AiStart({ repo, days, signedIn, credits }: { repo: string; days:
       className="border border-line-strong bg-panel p-5 shadow-card sm:p-8"
       data-ai-start
     >
-      <p className="text-[0.8rem] uppercase tracking-[0.08em] text-blue">AI report · {repo}</p>
-      <h1 className="mt-2 text-[1.6rem] font-semibold tracking-tight sm:text-[2rem]">Get the AI report</h1>
+      <p className="text-[0.8125rem] text-blue">AI report · {repo}</p>
+      <h1 className="mt-2 text-[1.75rem] font-semibold tracking-tight sm:text-[2.25rem]">Get the AI report</h1>
       <p className="mt-2 max-w-2xl font-sans text-muted">
         An AI reads the PR threads and explains the verdict in plain English. The rules pick the verdict. The AI
         can&apos;t.
       </p>
-      <ul className="mt-4 max-w-2xl space-y-2 font-sans text-[0.95rem] text-ink" data-ai-includes>
+      <ul className="mt-4 max-w-2xl space-y-2 font-sans text-[1rem] text-ink" data-ai-includes>
         {WHAT_YOU_GET.map((line) => (
           <li key={line} className="flex gap-3">
             <span aria-hidden="true" className="text-blue">✦</span>
@@ -46,12 +46,12 @@ export function AiStart({ repo, days, signedIn, credits }: { repo: string; days:
           </li>
         ))}
       </ul>
-      <p className="mt-4 font-sans text-[0.9rem] text-muted" data-ai-example-link>
+      <p className="mt-4 font-sans text-[0.875rem] text-muted" data-ai-example-link>
         Want to see one first?{" "}
         <Link href={EXAMPLE_PATH} className="text-link">Read an example</Link>. It doesn&apos;t use a credit.
       </p>
       {credits && (
-        <p className={`mt-5 max-w-2xl border px-3 py-2 font-sans text-[0.9rem] ${blocked ? "border-orange/50 text-orange" : "border-green/50 text-green"}`} data-credits>
+        <p className={`mt-5 max-w-2xl border px-3 py-2 font-sans text-[0.875rem] ${blocked ? "border-orange/50 text-orange" : "border-green/50 text-green"}`} data-credits>
           {creditsNote(credits)}
           {blocked && credits.ai_available && credits.can_claim && (
             <>

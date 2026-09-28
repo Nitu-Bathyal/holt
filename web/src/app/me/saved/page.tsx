@@ -38,19 +38,19 @@ export default async function SavedPage() {
           <ErrorPanel error={r.error} retryHref="/me/saved" />
         ) : items.length === 0 ? (
           <div className="mx-auto max-w-3xl border border-dashed border-line-strong p-8 text-center">
-            <CatFace mood="thinking" className="text-[1.6rem]" />
+            <CatFace mood="thinking" className="text-[1.75rem]" />
             <p className="mt-4 font-sans text-muted">
               Nothing saved yet. Press <span className="text-ink">save</span> on any report to keep that repo here.
             </p>
-            <Link href="/discover" className="bracket-link mt-6">[ browse checked repos ]</Link>
+            <Link href="/discover" className="bracket-link mt-6">Browse checked repos</Link>
           </div>
         ) : (
           <div className="space-y-10">
             {cards.length > 0 && <RepoGrid repos={cards.map(fromDiscover)} topicBase="/discover" saved={items.map((i) => i.repo)} fadeUnsaved />}
             {unchecked.length > 0 && (
               <section aria-labelledby="unchecked">
-                <h2 id="unchecked" className="text-[1.05rem] font-semibold tracking-tight">Not checked recently</h2>
-                <p className="mt-1 font-sans text-[0.9rem] text-muted">Holt has no current report for these. Open one to check it now; it takes about a minute.</p>
+                <h2 id="unchecked" className="text-[1rem] font-semibold tracking-tight">Not checked recently</h2>
+                <p className="mt-1 font-sans text-[0.875rem] text-muted">Holt has no current report for these. Open one to check it now; it takes about a minute.</p>
                 <ul className="mt-4 divide-y divide-line border border-line-strong bg-panel shadow-soft">
                   {unchecked.map((i) => {
                     const [owner, name] = i.repo.split("/");
@@ -61,9 +61,9 @@ export default async function SavedPage() {
                             <span className="text-muted">{owner}/</span>
                             {name}
                           </Link>
-                          <p className="text-[0.82rem] text-faint">saved <time dateTime={i.saved_at}>{timeAgo(i.saved_at)}</time></p>
+                          <p className="text-[0.8125rem] text-faint">saved <time dateTime={i.saved_at}>{timeAgo(i.saved_at)}</time></p>
                         </div>
-                        <Link href={`/${i.repo}`} className="text-[0.87rem] text-green hover:underline">[ check it ]</Link>
+                        <Link href={`/${i.repo}`} className="text-[0.875rem] text-green hover:underline">Check it</Link>
                         <SaveButton repo={i.repo} saved />
                       </li>
                     );
@@ -71,7 +71,7 @@ export default async function SavedPage() {
                 </ul>
               </section>
             )}
-            <p className="text-[0.82rem] text-faint">
+            <p className="text-[0.8125rem] text-faint">
               {items.length} of {r.data.max_saved} saved. Press saved on a card to remove it; it leaves this list when you come back.
             </p>
           </div>

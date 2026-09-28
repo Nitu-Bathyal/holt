@@ -21,7 +21,7 @@ const NOTE: Partial<Record<QuestionId, string>> = {
 };
 
 const CHIP =
-  "min-h-12 border px-4 text-[0.92rem] transition-colors focus-visible:outline-2 focus-visible:outline-blue disabled:opacity-60";
+  "min-h-12 border px-4 text-[0.875rem] transition-colors focus-visible:outline-2 focus-visible:outline-blue disabled:opacity-60";
 const ON = "border-blue bg-blue text-on-accent";
 const OFF = "border-line-strong hover:border-blue";
 
@@ -65,9 +65,9 @@ export function ProfileFlow({ adultConfirmed, startAt = "start" }: { adultConfir
   return (
     <section id="profile-flow" aria-labelledby="flow-h" className="scroll-mt-24 border border-blue/50 bg-panel p-5 shadow-soft sm:p-6">
       <div className="flex items-center justify-between gap-4">
-        <CatFace mood={step === "done" ? "celebrating" : q ? "thinking" : "ready"} className="text-[0.95rem]" />
+        <CatFace mood={step === "done" ? "celebrating" : q ? "thinking" : "ready"} className="text-[1rem]" />
         {q && (
-          <span className="flex items-center gap-3 text-[0.85rem] text-faint">
+          <span className="flex items-center gap-3 text-[0.875rem] text-faint">
             <span aria-hidden="true" className="flex gap-1">
               {QUESTIONS.map((_, i) => (
                 <span key={i} className={`h-1 w-5 ${i <= (step as number) ? "bg-blue" : "bg-line"}`} />
@@ -81,11 +81,11 @@ export function ProfileFlow({ adultConfirmed, startAt = "start" }: { adultConfir
       <div aria-live="polite">
         {step === "start" && (
           <>
-            <h2 id="flow-h" ref={heading} tabIndex={-1} className="mt-3 text-[1.2rem] font-semibold tracking-tight outline-none">
+            <h2 id="flow-h" ref={heading} tabIndex={-1} className="mt-3 text-[1.125rem] font-semibold tracking-tight outline-none">
               Let Holt pick repos for you
             </h2>
-            <p className="prose-sans mt-1 text-[0.95rem] text-muted">Four quick taps: your languages, your time, your experience, what you like doing.</p>
-            {!adultConfirmed && <p className="mt-2 font-sans text-[0.89rem] text-faint">Profiles are for people 18 or older.</p>}
+            <p className="prose-sans mt-1 text-[1rem] text-muted">Four quick taps: your languages, your time, your experience, what you like doing.</p>
+            {!adultConfirmed && <p className="mt-2 font-sans text-[0.875rem] text-faint">Profiles are for people 18 or older.</p>}
             <div className="mt-4 flex flex-wrap items-center gap-4">
               <button type="button" onClick={() => go(null, "start")} className="btn-primary">
                 {adultConfirmed ? "start" : "I'm 18 or older, start"}
@@ -97,10 +97,10 @@ export function ProfileFlow({ adultConfirmed, startAt = "start" }: { adultConfir
 
         {q && (
           <>
-            <h2 id="flow-h" ref={heading} tabIndex={-1} className="mt-3 text-[1.2rem] font-semibold tracking-tight outline-none">
+            <h2 id="flow-h" ref={heading} tabIndex={-1} className="mt-3 text-[1.125rem] font-semibold tracking-tight outline-none">
               {q.title}
             </h2>
-            {NOTE[q.id] && <p className="mt-1 font-sans text-[0.89rem] text-muted">{NOTE[q.id]}</p>}
+            {NOTE[q.id] && <p className="mt-1 font-sans text-[0.875rem] text-muted">{NOTE[q.id]}</p>}
             <div
               role="group"
               aria-labelledby="flow-h"
@@ -118,22 +118,22 @@ export function ProfileFlow({ adultConfirmed, startAt = "start" }: { adultConfir
                     className={`${CHIP} ${on ? ON : OFF} ${c.hint ? "flex flex-col items-start gap-1 py-3 text-left" : ""}`}
                   >
                     <span className={c.hint ? "font-semibold" : ""}>{c.label}</span>
-                    {c.hint && <span className={`font-sans text-[0.87rem] ${on ? "" : "text-muted"}`}>{c.hint}</span>}
+                    {c.hint && <span className={`font-sans text-[0.875rem] ${on ? "" : "text-muted"}`}>{c.hint}</span>}
                   </button>
                 );
               })}
             </div>
-            {error && <p role="alert" className="mt-3 font-sans text-[0.9rem] text-orange">{error}</p>}
+            {error && <p role="alert" className="mt-3 font-sans text-[0.875rem] text-orange">{error}</p>}
             <div className="mt-5 flex flex-wrap items-center gap-4">
               {q.multi && (
                 <button type="button" disabled={pending} onClick={() => go(answer(prefs, q.id, picked), step)} className="btn-primary">
                   {pending ? "saving…" : step === QUESTIONS.length - 1 ? "done" : "next"}
                 </button>
               )}
-              <button type="button" disabled={pending} onClick={() => go(step === QUESTIONS.length - 1 ? prefs : null, step)} className="text-[0.89rem] text-muted hover:text-ink">
+              <button type="button" disabled={pending} onClick={() => go(step === QUESTIONS.length - 1 ? prefs : null, step)} className="text-[0.875rem] text-muted hover:text-ink">
                 skip this one
               </button>
-              {!q.multi && pending && <span className="text-[0.89rem] text-faint">saving…</span>}
+              {!q.multi && pending && <span className="text-[0.875rem] text-faint">saving…</span>}
               <span className="ml-auto"><SkipAll /></span>
             </div>
           </>
@@ -141,12 +141,12 @@ export function ProfileFlow({ adultConfirmed, startAt = "start" }: { adultConfir
 
         {step === "done" && (
           <>
-            <h2 id="flow-h" ref={heading} tabIndex={-1} className="mt-3 text-[1.2rem] font-semibold tracking-tight outline-none">
+            <h2 id="flow-h" ref={heading} tabIndex={-1} className="mt-3 text-[1.125rem] font-semibold tracking-tight outline-none">
               Saved. Your picks start from this now.
             </h2>
-            <p className="prose-sans mt-1 text-[0.95rem] text-muted">Change it any time in Settings.</p>
+            <p className="prose-sans mt-1 text-[1rem] text-muted">Change it any time in Settings.</p>
             <form action={finish} className="mt-4">
-              <button type="submit" className="bracket-link">[ here are repos picked for you → ]</button>
+              <button type="submit" className="bracket-link">Here are repos picked for you →</button>
             </form>
           </>
         )}
@@ -159,7 +159,7 @@ function SkipAll() {
   return (
     <form action={skip}>
       <input type="hidden" name="back" value="/me" />
-      <button type="submit" className="text-[0.89rem] text-muted hover:text-ink">skip for now</button>
+      <button type="submit" className="text-[0.875rem] text-muted hover:text-ink">skip for now</button>
     </form>
   );
 }

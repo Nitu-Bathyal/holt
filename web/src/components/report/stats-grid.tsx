@@ -11,8 +11,8 @@ export function StatsGrid({ stats, limit, reveal }: { stats: Partial<Stats>; lim
         const t = TONE[s.tone];
         return (
           <li key={s.key} className={`bg-panel p-5 ${reveal ? "reveal" : ""}`} style={reveal ? { ["--d0" as string]: "60ms", ["--i" as string]: i } : undefined}>
-            <p className={`text-[1.6rem] font-semibold leading-tight tracking-tight ${s.tone === "neutral" ? "text-ink" : t.text}`}>{s.big}</p>
-            <p className="mt-1 font-sans text-[0.9rem] leading-snug text-muted">{s.label}</p>
+            <p className={`text-[1.75rem] font-semibold leading-tight tracking-tight ${s.tone === "neutral" ? "text-ink" : t.text}`}>{s.big}</p>
+            <p className="mt-1 font-sans text-[0.875rem] leading-snug text-muted">{s.label}</p>
             {s.meter != null && (
               <div className="meter mt-3" aria-hidden="true">
                 <span className={t.bg} style={{ width: `${Math.max(2, Math.round(s.meter * 100))}%` }} />

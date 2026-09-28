@@ -14,7 +14,7 @@ export function HacktoberfestPill({ year, short }: { year: number; short: string
     document.documentElement.dataset.hfDismissed = "1";
   }
   return (
-    <div className="hf-pill inline-flex max-w-full items-stretch overflow-hidden rounded-full border border-hf-line bg-hf-bg text-[0.82rem] leading-none">
+    <div className="hf-pill inline-flex max-w-full items-stretch overflow-hidden rounded-full border border-hf-line bg-hf-bg text-[0.8125rem] leading-none">
       <Link href="/hacktoberfest" className="flex min-h-11 min-w-0 items-center gap-2 py-1.5 pl-3 pr-2 text-hf hover:underline sm:min-h-9">
         <span aria-hidden="true" className="relative flex size-2 shrink-0">
           <span className="absolute inset-0 rounded-full bg-orange motion-safe:animate-ping" />

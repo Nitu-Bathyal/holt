@@ -34,13 +34,13 @@ export function RepoCard({ r, report, focusHref, onOpen, actions }: { r: CardRep
               {name}
             </a>
           </h2>
-          {r.description && <p className="mt-0.5 truncate font-sans text-[0.88rem] text-muted">{r.description}</p>}
+          {r.description && <p className="mt-0.5 truncate font-sans text-[0.875rem] text-muted">{r.description}</p>}
         </div>
       </div>
 
       <div className="mt-3 flex items-center justify-between gap-3">
-        <VerdictPill headline={r.headline} tone={r.tone} className="shrink-0 px-1.5 py-0.5 text-[0.76rem]" />
-        <span className="flex min-w-0 items-center gap-1.5 truncate text-[0.8rem] text-faint">
+        <VerdictPill headline={r.headline} tone={r.tone} className="shrink-0 px-1.5 py-0.5 text-[0.8125rem]" />
+        <span className="flex min-w-0 items-center gap-1.5 truncate text-[0.8125rem] text-faint">
           {r.language && (
             <>
               <LangDot color={langColor(r.language)} />
@@ -51,32 +51,32 @@ export function RepoCard({ r, report, focusHref, onOpen, actions }: { r: CardRep
         </span>
       </div>
       <OddsBar stats={r.stats} className="mt-3 h-1.5" />
-      <ul className="mt-2.5 flex flex-wrap gap-1.5 text-[0.78rem]">
+      <ul className="mt-2.5 flex flex-wrap gap-1.5 text-[0.8125rem]">
         {statPills(r.stats).map((p, i) => (
           <li key={p} className={`border px-1.5 py-0.5 ${i === 0 ? "border-green/40 text-green" : "border-line text-muted"}`}>{p}</li>
         ))}
       </ul>
 
       {issue ? (
-        <p className="mt-3 border-t border-dashed border-line pt-2.5 font-sans text-[0.88rem] leading-snug">
-          <span className="font-mono text-[0.78rem] text-faint">start with </span>
+        <p className="mt-3 border-t border-dashed border-line pt-2.5 font-sans text-[0.875rem] leading-snug">
+          <span className="font-mono text-[0.8125rem] text-faint">start with </span>
           <a href={issue.url} target="_blank" rel="noopener noreferrer" data-umami-event="starter-issue-click" className="line-clamp-1 font-semibold text-ink hover:text-blue">
-            <span className="font-mono text-[0.85rem] font-normal text-blue">#{issue.number}</span> {issue.title}
+            <span className="font-mono text-[0.875rem] font-normal text-blue">#{issue.number}</span> {issue.title}
             <span className="sr-only"> (opens GitHub)</span>
           </a>
         </p>
       ) : r.reason ? (
-        <p className="mt-3 line-clamp-2 border-t border-dashed border-line pt-2.5 font-sans text-[0.88rem] leading-snug text-muted">{r.reason}</p>
+        <p className="mt-3 line-clamp-2 border-t border-dashed border-line pt-2.5 font-sans text-[0.875rem] leading-snug text-muted">{r.reason}</p>
       ) : null}
 
-      <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 pt-3 text-[0.85rem]">
+      <div className="mt-auto flex flex-wrap items-center gap-x-4 gap-y-2 pt-3 text-[0.875rem]">
         <a
           href={focusHref}
           onClick={open}
           className="text-green hover:underline"
           aria-label={`More about ${r.repo}`}
         >
-          [ more ]
+          More
         </a>
         <Link href={report} className="text-muted hover:text-ink">report →</Link>
         {actions && <span className="ml-auto">{actions}</span>}

@@ -20,8 +20,8 @@ export function Shelf({ title, more, note, children }: { title: string; more?: {
   return (
     <section aria-label={title}>
       <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 className="text-[1.08rem] font-semibold tracking-tight">{title}</h2>
-        <span className="flex items-baseline gap-4 text-[0.85rem]">
+        <h2 className="text-[1.125rem] font-semibold tracking-tight">{title}</h2>
+        <span className="flex items-baseline gap-4 text-[0.875rem]">
           {note && <span className="hidden text-faint sm:inline">{note}</span>}
           {more && <Link href={more.href} className="inline-flex min-h-11 items-center text-blue hover:underline sm:min-h-0">{more.label}</Link>}
         </span>
@@ -46,8 +46,8 @@ export function RepoTile({ t }: { t: Tile }) {
         )}
       </Link>
       {t.verdict && <VerdictPill headline={t.verdict.headline} tone={t.verdict.tone} className="mt-2 self-start" />}
-      {t.line && <p className="mt-2 line-clamp-3 font-sans text-[0.89rem] leading-snug text-muted">{t.line}</p>}
-      {t.meta && <p className="mt-auto pt-3 text-[0.8rem] text-faint">{t.meta}</p>}
+      {t.line && <p className="mt-2 line-clamp-3 font-sans text-[0.875rem] leading-snug text-muted">{t.line}</p>}
+      {t.meta && <p className="mt-auto pt-3 text-[0.8125rem] text-faint">{t.meta}</p>}
     </li>
   );
 }

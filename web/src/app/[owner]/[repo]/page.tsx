@@ -122,18 +122,18 @@ export default async function RepoPage({ params, searchParams }: Props) {
             className="size-11 rounded-xl border border-line bg-panel-2"
           />
           <div className="min-w-0 flex-1">
-            <p className="text-[1.15rem] font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-[1.35rem]">
+            <p className="text-[1.125rem] font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-[1.375rem]">
               <span className="text-muted">{dOwner}/</span>
               {dRepo}
             </p>
-            <a href={`https://github.com/${display}`} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center truncate text-[0.82rem] text-faint hover:text-blue sm:block sm:min-h-0">
+            <a href={`https://github.com/${display}`} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center truncate text-[0.8125rem] text-faint hover:text-blue sm:block sm:min-h-0">
               github.com/{display} ↗
             </a>
           </div>
           {/* A failed lookup shows "save"; saving again is harmless. Keyed so
               moving to another repo's report starts from that repo's state. */}
           <SaveButton key={display} repo={display} saved={user ? Boolean(saved?.ok && saved.data.saved) : null} />
-          <nav aria-label="Report type" className="relative grid w-full grid-cols-2 overflow-hidden rounded-full border border-line bg-panel p-1 text-center text-[0.9rem] shadow-soft sm:w-auto">
+          <nav aria-label="Report type" className="relative grid w-full grid-cols-2 overflow-hidden rounded-full border border-line bg-panel p-1 text-center text-[0.875rem] shadow-soft sm:w-auto">
             {/* One pill under both tabs; it slides to the current one. */}
             <span aria-hidden="true" className={`tab-pill absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-full ${mode === "ai" ? "translate-x-full bg-ink" : "bg-ink"}`} />
             {/* No prefetch: one tab is this page, the other is sign-in for most visitors. */}

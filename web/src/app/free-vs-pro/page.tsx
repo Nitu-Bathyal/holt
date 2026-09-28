@@ -14,7 +14,7 @@ export default function FreeVsProPage() {
   return (
     <>
       <nav aria-label="Jump to" className="sticky top-[61px] z-30 border-b border-orange bg-bg/95 backdrop-blur">
-        <div className="wrap flex flex-wrap items-center gap-x-6 gap-y-1 py-2 text-[0.85rem]">
+        <div className="wrap flex flex-wrap items-center gap-x-6 gap-y-1 py-2 text-[0.875rem]">
           <span className="text-orange">dev only · temporary · delete web/src/app/free-vs-pro/ before #144 merges</span>
           <a href="#free" className="text-link">free report ↓</a>
           <a href="#paid" className="text-link">paid report ↓</a>
@@ -34,8 +34,8 @@ function Band({ id, title, note }: { id: string; title: string; note: string }) 
   return (
     <div id={id} className="scroll-mt-[105px] border-y-2 border-ink bg-ink text-bg">
       <div className="wrap flex flex-wrap items-baseline justify-between gap-x-6 gap-y-1 py-4">
-        <p className="text-[1.3rem] font-semibold tracking-tight sm:text-[1.6rem]">{title}</p>
-        <p className="text-[0.85rem] opacity-80">{note}</p>
+        <p className="text-[1.375rem] font-semibold tracking-tight sm:text-[1.75rem]">{title}</p>
+        <p className="text-[0.875rem] opacity-80">{note}</p>
       </div>
     </div>
   );

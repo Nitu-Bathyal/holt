@@ -180,18 +180,18 @@ function Focusable({ repos, layout, days, topicBase, card, actionsFor }: ListPro
       >
         {current && nb && (
           <div className="flex h-full flex-col sm:h-auto sm:max-h-[90vh]">
-            <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 text-[0.85rem] text-muted sm:px-6">
+            <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 text-[0.875rem] text-muted sm:px-6">
               <span className="tabular-nums">{nb.index + 1} of {repos.length}</span>
               <div className="flex items-center gap-1">
                 <button type="button" onClick={() => go(nb.prev)} disabled={!nb.prev} aria-label="Previous repo" className="grid size-10 place-items-center hover:text-ink disabled:opacity-30">←</button>
                 <button type="button" onClick={() => go(nb.next)} disabled={!nb.next} aria-label="Next repo" className="grid size-10 place-items-center hover:text-ink disabled:opacity-30">→</button>
-                <button type="button" onClick={close} aria-label="Close" className="ml-2 grid size-10 place-items-center text-[1.1rem] hover:text-ink">✕</button>
+                <button type="button" onClick={close} aria-label="Close" className="ml-2 grid size-10 place-items-center text-[1.125rem] hover:text-ink">✕</button>
               </div>
             </div>
             <div data-scroll className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:flex-initial sm:p-6">
               <RepoFocus key={current.repo} r={current} report={reportHref(current.repo, days)} actions={actionsFor(current.repo, false)} topicBase={topicBase} />
             </div>
-            <p className="hidden border-t border-line px-6 py-2 text-[0.8rem] text-faint sm:block">← → to move between repos · Esc to close</p>
+            <p className="hidden border-t border-line px-6 py-2 text-[0.8125rem] text-faint sm:block">← → to move between repos · Esc to close</p>
           </div>
         )}
       </dialog>

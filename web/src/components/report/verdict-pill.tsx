@@ -5,7 +5,7 @@ import { TONE } from "./tone";
 export function VerdictPill({ headline, tone, className = "" }: { headline: string; tone: Tone; className?: string }) {
   const t = TONE[tone];
   return (
-    <span className={`inline-flex items-center gap-2 border px-2 py-1 text-[0.8rem] font-semibold ${t.text} ${t.border} ${t.soft} ${className}`}>
+    <span className={`inline-flex items-center gap-2 border px-2 py-1 text-[0.8125rem] font-semibold ${t.text} ${t.border} ${t.soft} ${className}`}>
       <span aria-hidden="true" className={`size-1.5 rounded-full ${t.bg}`} />
       {headline}
     </span>

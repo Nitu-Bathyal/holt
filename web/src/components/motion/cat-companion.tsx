@@ -41,7 +41,7 @@ export function CatCompanion() {
     >
       <span className="cat-character inline-block">
         <span
-          className="cat-face text-[1.5rem] lg:text-[clamp(2.4rem,3.4vw,3.4rem)]"
+          className="cat-face text-[1.375rem] lg:text-[clamp(2.4rem,3.4vw,3.4rem)]"
           data-cat-face
           style={{ textShadow: "0 0 28px color-mix(in oklab, var(--blue) 25%, transparent)" }}
         >

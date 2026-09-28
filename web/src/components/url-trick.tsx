@@ -3,7 +3,7 @@ import { SITE_HOST } from "@/lib/site";
 
 function Bar({ children, label }: { children: React.ReactNode; label: string }) {
   return (
-    <div className="flex min-h-13 items-center gap-3 overflow-hidden rounded-full border border-line-strong bg-panel px-4 text-[0.88rem] sm:text-[0.95rem]" aria-label={label}>
+    <div className="flex min-h-13 items-center gap-3 overflow-hidden rounded-full border border-line-strong bg-panel px-4 text-[0.875rem] sm:text-[1rem]" aria-label={label}>
       <svg className="size-3.5 shrink-0 text-faint" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
         <rect x="5" y="11" width="14" height="10" rx="2" />
         <path d="M8 11V7a4 4 0 0 1 8 0v4" />
@@ -27,12 +27,12 @@ export function UrlTrick() {
         <span className="bg-green px-1 font-semibold text-on-accent">{SITE_HOST}</span>
         <span className="text-ink">/pallets/flask</span>
       </Bar>
-      <p className="pt-4 font-sans text-[0.9rem] text-muted">
+      <p className="pt-4 font-sans text-[0.875rem] text-muted">
         Lazier still: stick <code className="font-mono text-ink">{SITE_HOST}/</code> in front of the whole link.
       </p>
       <p className="pt-4">
         <Link href="/https://github.com/pallets/flask" prefetch={false} className="bracket-link">
-          [ try it on pallets/flask → ]
+          Try it on pallets/flask →
         </Link>
       </p>
     </div>

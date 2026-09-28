@@ -26,9 +26,9 @@ const NOTICES: Record<string, { tone: string; text: string }> = {
 function Tile({ label, value, note }: { label: string; value: string; note?: string | null }) {
   return (
     <div className="bg-panel p-4 sm:p-5">
-      <p className="text-[0.8rem] uppercase tracking-[0.08em] text-faint">{label}</p>
-      <p className="mt-1 text-[1.5rem] font-semibold">{value}</p>
-      {note && <p className="mt-1 text-[0.82rem] text-faint">{note}</p>}
+      <p className="text-[0.8125rem] text-faint">{label}</p>
+      <p className="mt-1 text-[1.375rem] font-semibold">{value}</p>
+      {note && <p className="mt-1 text-[0.8125rem] text-faint">{note}</p>}
     </div>
   );
 }
@@ -58,11 +58,11 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
         </p>
       </PageHead>
       <div className="wrap max-w-3xl pb-14 pt-2 sm:pb-16">
-        {notice && d && <p role="status" className={`mt-6 border px-4 py-3 font-sans text-[0.9rem] ${notice.tone}`}>{notice.text}</p>}
+        {notice && d && <p role="status" className={`mt-6 border px-4 py-3 font-sans text-[0.875rem] ${notice.tone}`}>{notice.text}</p>}
 
         {notConnected ? (
           <div className="mt-8 border border-dashed border-line-strong p-8 text-center">
-            <CatFace mood="thinking" className="text-[1.6rem]" />
+            <CatFace mood="thinking" className="text-[1.75rem]" />
             <p className="prose-sans mx-auto mt-4 max-w-md text-muted">
               Connect your GitHub account to see your pull requests here, each with Holt&apos;s verdict on the repo. It&apos;s free, and Holt
               only reads public data.
@@ -79,11 +79,11 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
               <Tile label="Still waiting" value={String(d.summary.waiting)} note="open, no decision yet" />
               <Tile label="Landed" value={pct == null ? "–" : `${pct}%`} note={landedLine(d.summary) ?? "nothing decided yet"} />
             </section>
-            {via && <p className="prose-sans mt-4 text-[0.9rem] text-blue">{via}</p>}
+            {via && <p className="prose-sans mt-4 text-[0.875rem] text-blue">{via}</p>}
             {picks.ok && <ForYouCard data={picks.data} />}
 
             <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-[0.82rem] text-faint">
+              <p className="text-[0.8125rem] text-faint">
                 Checked GitHub <time dateTime={d.fetched_at}>{timeAgo(d.fetched_at)}</time>. We check again every day.
               </p>
               <RefreshButton action={refresh} nextRefreshAt={d.next_refresh_at} />
@@ -92,18 +92,18 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
             <div className="mt-4">
               {d.pull_requests.length === 0 ? (
                 <div className="border border-dashed border-line-strong p-8 text-center">
-                  <CatFace mood="startled" className="text-[1.6rem]" />
+                  <CatFace mood="startled" className="text-[1.75rem]" />
                   <p className="prose-sans mx-auto mt-4 max-w-md text-muted">
                     No public pull requests to other people&apos;s repos in the last 12 months. Holt can help you pick a first one.
                   </p>
-                  <Link href="/find" className="bracket-link mt-6">[ find a project → ]</Link>
+                  <Link href="/find" className="bracket-link mt-6">Find a project →</Link>
                 </div>
               ) : (
                 <PrList prs={d.pull_requests} />
               )}
             </div>
 
-            <p className="mt-6 font-sans text-[0.87rem] text-faint">
+            <p className="mt-6 font-sans text-[0.875rem] text-faint">
               &ldquo;Found via Holt&rdquo; marks a pull request you opened within 30 days of checking that repo here while connected.
               The verdict is Holt&apos;s latest check of each repo; no verdict yet means nobody has checked it.
               Pull requests to your own repos are left out. <Link href="/settings/accounts" className="text-link">GitHub settings</Link>

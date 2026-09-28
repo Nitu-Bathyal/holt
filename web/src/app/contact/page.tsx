@@ -25,7 +25,7 @@ export default function ContactPage() {
       lede="One person runs Holt. Email is the fastest way in, and every message gets a reply."
     >
       <h2>Email</h2>
-      <p className="text-[1.15rem]">
+      <p className="text-[1.125rem]">
         <ContactEmail />
       </p>
       <p>Expect a reply within 3 business days. Usually sooner.</p>

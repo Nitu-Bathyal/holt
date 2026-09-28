@@ -34,11 +34,11 @@ export default async function FindPage({ searchParams }: PageProps<"/find">) {
       <>
         <PageHead compact>
           <h1 className="text-[clamp(1.45rem,3.4vw,2.1rem)] font-semibold leading-tight tracking-tight">Find a project that will merge your work</h1>
-          <p className="mt-2 hidden max-w-2xl font-sans text-[0.95rem] text-muted sm:block">
+          <p className="mt-2 hidden max-w-2xl font-sans text-[1rem] text-muted sm:block">
             Every repo here replies to outsiders and merges their PRs. Each has issues you could take today.
           </p>
           {sp.profile === "saved" && (
-            <p role="status" className="mt-4 border border-green/50 bg-green/10 px-4 py-2.5 font-sans text-[0.9rem] text-green">
+            <p role="status" className="mt-4 border border-green/50 bg-green/10 px-4 py-2.5 font-sans text-[0.875rem] text-green">
               Profile saved. This search uses it; change it any time in <Link href="/settings/profile" className="underline">settings</Link>.
             </p>
           )}

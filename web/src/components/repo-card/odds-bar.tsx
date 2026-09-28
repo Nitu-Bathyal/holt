@@ -33,7 +33,7 @@ export function OddsLegend({ stats }: { stats: CardStats }) {
   const segs = oddsSegments(stats);
   if (!segs) return null;
   return (
-    <ul aria-hidden="true" className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-[0.83rem] text-muted">
+    <ul aria-hidden="true" className="mt-3 flex flex-wrap gap-x-5 gap-y-1.5 text-[0.8125rem] text-muted">
       {segs.map((s) => (
         <li key={s.key} className="flex items-center gap-2">
           <span className={`inline-block size-2.5 ${SEGMENT_CLASS[s.key]}`} />

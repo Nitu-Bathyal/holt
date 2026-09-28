@@ -32,11 +32,11 @@ export function MergePlanView({ plan, locked = false }: { plan: MergePlan; locke
         <PlanHeader plan={plan} />
         <VerdictStrip plan={plan} />
 
-        <section aria-labelledby="the-call" className="mt-12">
-          <h2 id="the-call" className="text-[0.95rem] font-medium text-muted">
+        <section aria-labelledby="the-call" className="mt-16">
+          <h2 id="the-call" className="text-[1rem] font-medium text-muted">
             The call
           </h2>
-          <p className="mt-2 max-w-[36ch] font-serif text-[1.75rem] font-semibold leading-[1.25] tracking-[-0.015em] text-ink [text-wrap:balance] sm:text-[2.15rem]">
+          <p className="mt-2 max-w-[36ch] font-serif text-[1.75rem] font-semibold leading-[1.25] tracking-[-0.015em] text-ink [text-wrap:balance] sm:text-[2.25rem]">
             <PlanText text={plan.call.text} />
           </p>
           <Sources sources={plan.call.sources} className="mt-4" />
@@ -61,10 +61,10 @@ export function MergePlanView({ plan, locked = false }: { plan: MergePlan; locke
                 {plan.merged.map((f) => (
                   <li key={f.label} className={`flex flex-col p-5 ${card}`}>
                     <p className="flex items-baseline gap-1.5">
-                      <span className="text-[2.2rem] font-semibold leading-none tracking-[-0.02em] tabular-nums text-ink">{f.value}</span>
-                      <span className="text-[0.95rem] text-muted">{f.unit}</span>
+                      <span className="text-[2.25rem] font-semibold leading-none tracking-[-0.02em] tabular-nums text-ink">{f.value}</span>
+                      <span className="text-[1rem] text-muted">{f.unit}</span>
                     </p>
-                    <p className="mt-2.5 flex-1 text-[0.98rem] leading-snug text-muted">
+                    <p className="mt-2.5 flex-1 text-[1rem] leading-snug text-muted">
                       <PlanText text={f.label} />
                     </p>
                     {f.unit.startsWith("of") && (
@@ -97,10 +97,10 @@ export function MergePlanView({ plan, locked = false }: { plan: MergePlan; locke
                         <a href={`https://github.com/${p.login}`} target="_blank" rel="noopener noreferrer" className="block truncate font-semibold text-ink hover:text-blue">
                           @{p.login}
                         </a>
-                        {p.areas.length > 0 && <p className="truncate text-[0.88rem] text-faint">{p.areas.join(", ")}</p>}
+                        {p.areas.length > 0 && <p className="truncate text-[0.875rem] text-faint">{p.areas.join(", ")}</p>}
                       </div>
                       <Meter seen={p.reviewed} of={p.of} tone="blue" label={`reviewed ${p.reviewed} of ${p.of}`} />
-                      <p className="text-right text-[0.92rem] tabular-nums text-muted">
+                      <p className="text-right text-[0.875rem] tabular-nums text-muted">
                         {p.reviewed} of {p.of}
                       </p>
                     </li>
@@ -111,17 +111,12 @@ export function MergePlanView({ plan, locked = false }: { plan: MergePlan; locke
             </PlanSection>
 
             <PlanSection id="how" title="How this was made">
-              <div className="max-w-[68ch] space-y-3 text-[0.98rem] leading-relaxed text-muted">
-                <p>
-                  Counted from {plan.sample.merged} merged and {plan.sample.closed} closed pull requests since {dateLabel(plan.window.since)}, plus
-                  Holt&apos;s free report.{plan.ai && <> The AI read {plan.ai.threads} outside pull request threads on {dateLabel(plan.ai.read_on)}.</>} Written by <code className="rounded bg-panel-2 px-1 text-[0.9em]">{plan.model}</code>, then every sentence was
-                  checked against those counts and anything that didn&apos;t match was cut. The rules picked the verdict, not the model.
-                </p>
-                {plan.note && <p className="rounded-xl bg-panel-2/60 px-4 py-3">{plan.note}</p>}
-                <p className="text-[0.9rem] text-faint">
-                  Cites {cited} pull requests · written {dateLabel(plan.generated_at)}
-                </p>
-              </div>
+              <p className="max-w-[62ch] text-[1rem] leading-relaxed text-muted">
+                Counted from {plan.sample.merged + plan.sample.closed} pull requests since {dateLabel(plan.window.since)}
+                {plan.ai && <>, with {plan.ai.threads} threads read by {plan.ai.model}</>}. Every sentence was checked against those counts; the rules
+                picked the verdict, not the model.
+              </p>
+              {plan.note && <p className="mt-4 max-w-[62ch] rounded-xl bg-panel-2/60 px-4 py-3 text-[0.875rem] text-muted">{plan.note}</p>}
             </PlanSection>
           </>
         )}
@@ -129,8 +124,8 @@ export function MergePlanView({ plan, locked = false }: { plan: MergePlan; locke
 
       <aside className="hidden lg:block">
         <nav aria-label="Merge plan" className="sticky top-24">
-          <p className="text-[0.9rem] font-medium text-ink">In this plan</p>
-          <ol className="mt-3 space-y-0.5 border-l border-line text-[0.92rem]">
+          <p className="text-[0.875rem] font-medium text-ink">In this plan</p>
+          <ol className="mt-3 space-y-0.5 border-l border-line text-[0.875rem]">
             {SECTIONS.filter(([id]) => !locked || id === "first-pr").map(([id, label]) => (
               <li key={id}>
                 <a href={`#${id}`} className="-ml-px block border-l border-transparent py-1.5 pl-4 text-muted transition-colors hover:border-ink hover:text-ink">
@@ -139,7 +134,7 @@ export function MergePlanView({ plan, locked = false }: { plan: MergePlan; locke
               </li>
             ))}
           </ol>
-          <p className="mt-6 text-[0.88rem] leading-relaxed text-faint">
+          <p className="mt-6 text-[0.875rem] leading-relaxed text-faint">
             {plan.steps.length} steps · {plan.closed.length} closing reasons · {plan.reviewers.people.length} reviewers
             {!locked && <> · cites {cited} pull requests</>}
           </p>
@@ -153,20 +148,20 @@ function PlanHeader({ plan }: { plan: MergePlan }) {
   const [owner, name] = plan.repo.split("/");
   return (
     <header>
-      <p className="flex items-center gap-2 text-[0.92rem] text-muted">
-        <span className="rounded-md bg-ink px-1.5 py-0.5 text-[0.7rem] font-semibold uppercase tracking-[0.12em] text-bg">Pro</span>
+      <p className="flex items-center gap-2 text-[0.875rem] text-muted">
+        <span className="rounded-md bg-ink px-1.5 py-0.5 text-[0.8125rem] font-semibold uppercase tracking-[0.12em] text-bg">Pro</span>
         Merge plan
       </p>
       <div className="mt-3 flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
-        <h1 className="font-serif text-[2.1rem] font-semibold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere] sm:text-[2.6rem]">
+        <h1 className="font-serif text-[2.25rem] font-semibold leading-tight tracking-[-0.02em] [overflow-wrap:anywhere] sm:text-[3rem]">
           <span className="text-muted">{owner}/</span>
           {name}
         </h1>
-        <a href={`https://github.com/${plan.repo}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center text-[0.92rem] text-faint hover:text-blue">
+        <a href={`https://github.com/${plan.repo}`} target="_blank" rel="noopener noreferrer" className="inline-flex min-h-9 items-center text-[0.875rem] text-faint hover:text-blue">
           github.com/{plan.repo} ↗
         </a>
       </div>
-      <p className="mt-2 text-[0.98rem] text-muted">
+      <p className="mt-2 text-[1rem] text-muted">
         Built from {plan.sample.merged} merged and {plan.sample.closed} closed pull requests since {dateLabel(plan.window.since)} · written {dateLabel(plan.generated_at)}
       </p>
     </header>
@@ -181,12 +176,12 @@ function VerdictStrip({ plan }: { plan: MergePlan }) {
       <dl className="grid grid-cols-3 gap-4 sm:gap-8">
         {v.numbers.map((n) => (
           <div key={n.label} className="flex min-w-0 flex-col-reverse justify-end">
-            <dt className="mt-1 text-[0.88rem] leading-snug text-muted">{n.label}</dt>
-            <dd className="text-[1.35rem] font-semibold leading-none tabular-nums text-ink">{n.value}</dd>
+            <dt className="mt-1 text-[0.875rem] leading-snug text-muted">{n.label}</dt>
+            <dd className="text-[1.375rem] font-semibold leading-none tabular-nums text-ink">{n.value}</dd>
           </div>
         ))}
       </dl>
-      <p className="text-[0.98rem] leading-relaxed text-muted sm:col-span-2">
+      <p className="text-[1rem] leading-relaxed text-muted sm:col-span-2">
         {v.line}{" "}
         <Link href={`/${plan.repo}`} className="text-link whitespace-nowrap">
           See the free report
@@ -198,12 +193,12 @@ function VerdictStrip({ plan }: { plan: MergePlan }) {
 
 function PlanSection({ id, title, note, children }: { id: string; title: string; note?: string; children: React.ReactNode }) {
   return (
-    <section aria-labelledby={id} className="mt-16 scroll-mt-24">
-      <div className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 id={id} className="font-serif text-[1.55rem] font-semibold tracking-[-0.01em] sm:text-[1.75rem]">
+    <section aria-labelledby={id} className="mt-24 scroll-mt-24">
+      <div className="mb-6 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <h2 id={id} className="font-serif text-[1.75rem] font-semibold tracking-[-0.01em] sm:text-[1.75rem]">
           {title}
         </h2>
-        {note && <p className="text-[0.92rem] text-faint">{note}</p>}
+        {note && <p className="text-[0.875rem] text-faint">{note}</p>}
       </div>
       {children}
     </section>
@@ -216,8 +211,8 @@ function ClosingReason({ c }: { c: PlanClosing }) {
   return (
     <div>
       <div className="flex items-baseline justify-between gap-4">
-        <p className="text-[1.12rem] font-semibold text-ink">{c.reason}</p>
-        <p className="shrink-0 text-[0.98rem] tabular-nums text-orange">
+        <p className="text-[1.125rem] font-semibold text-ink">{c.reason}</p>
+        <p className="shrink-0 text-[1rem] tabular-nums text-orange">
           {c.seen} <span className="text-faint">of {c.of}</span>
         </p>
       </div>
@@ -227,16 +222,16 @@ function ClosingReason({ c }: { c: PlanClosing }) {
       {c.quote && (
         <figure className="mt-5">
           {isUrl(c.quote.text) ? (
-            <blockquote className="text-[1.02rem] leading-relaxed text-ink">
+            <blockquote className="text-[1rem] leading-relaxed text-ink">
               Closed with a link to the project&apos;s policy:{" "}
               <a href={c.quote.text} target="_blank" rel="noopener noreferrer" className="text-link [overflow-wrap:anywhere]">
                 {c.quote.text.replace(/^https?:\/\//, "")}
               </a>
             </blockquote>
           ) : (
-            <blockquote className="font-serif text-[1.2rem] leading-relaxed text-ink">&ldquo;{c.quote.text}&rdquo;</blockquote>
+            <blockquote className="font-serif text-[1.125rem] leading-relaxed text-ink">&ldquo;{c.quote.text}&rdquo;</blockquote>
           )}
-          <figcaption className="mt-2 text-[0.9rem] text-faint">
+          <figcaption className="mt-2 text-[0.875rem] text-faint">
             @{c.quote.who}, a maintainer, on{" "}
             <a href={c.quote.url} target="_blank" rel="noopener noreferrer" className="text-link">
               #{c.quote.number}
@@ -245,7 +240,7 @@ function ClosingReason({ c }: { c: PlanClosing }) {
         </figure>
       )}
       {c.examples.length > 1 && (
-        <p className="mt-3 flex flex-wrap items-baseline gap-x-2 text-[0.9rem] text-faint">
+        <p className="mt-3 flex flex-wrap items-baseline gap-x-2 text-[0.875rem] text-faint">
           <span>Also</span>
           <PrLinks links={c.examples.filter((e) => e.url !== c.quote?.url).map((e) => e.url)} />
         </p>
@@ -273,13 +268,13 @@ function LockedRest({ plan }: { plan: MergePlan }) {
             </svg>
             <div className="min-w-0">
               <p className="font-semibold text-ink">{title}</p>
-              <p className="mt-0.5 text-[0.95rem] leading-snug text-muted">{body}</p>
+              <p className="mt-0.5 text-[1rem] leading-snug text-muted">{body}</p>
             </div>
           </li>
         ))}
       </ul>
       <div className="flex flex-wrap items-center justify-between gap-4 border-t border-line bg-bg/60 px-6 py-5">
-        <p className="text-[0.95rem] text-muted">1 credit for this repository. Yours to keep. A plan that fails costs nothing.</p>
+        <p className="text-[1rem] text-muted">1 credit for this repository. Yours to keep. A plan that fails costs nothing.</p>
         <button type="button" className="btn-primary min-h-12 rounded-xl bg-ink px-5 text-bg">
           Unlock the merge plan →
         </button>

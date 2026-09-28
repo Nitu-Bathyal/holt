@@ -27,11 +27,11 @@ export function AiFindings({ ai }: { ai: PlanAi }) {
       <ul className="grid gap-4 md:grid-cols-3">
         {ai.signals.map((s) => (
           <li key={s.kind} className={`flex flex-col p-5 ${card}`}>
-            <p className="text-[0.92rem] text-muted">{fieldLabel(s.kind)}</p>
-            <p className={`mt-1 font-serif text-[1.35rem] font-semibold leading-snug ${s.tone === "neutral" ? "text-ink" : TONE[s.tone].text}`}>{s.headline}</p>
-            <p className="mt-2 flex-1 text-[0.95rem] leading-relaxed text-muted">{s.text}</p>
+            <p className="text-[0.875rem] text-muted">{fieldLabel(s.kind)}</p>
+            <p className={`mt-1 font-serif text-[1.375rem] font-semibold leading-snug ${s.tone === "neutral" ? "text-ink" : TONE[s.tone].text}`}>{s.headline}</p>
+            <p className="mt-2 flex-1 text-[1rem] leading-relaxed text-muted">{s.text}</p>
             {s.url && isGitHubLink(s.url) && (
-              <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-link mt-3 self-start text-[0.9rem]">
+              <a href={s.url} target="_blank" rel="noopener noreferrer" className="text-link mt-3 self-start text-[0.875rem]">
                 What it read ↗
               </a>
             )}
@@ -42,15 +42,15 @@ export function AiFindings({ ai }: { ai: PlanAi }) {
       {total > 0 && (
         <div className={`p-5 sm:p-6 ${card}`}>
           <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-            <p className="text-[1.05rem] font-semibold text-ink">How the {total} threads it read ended</p>
-            <p className="text-[0.9rem] text-faint">outside pull requests</p>
+            <p className="text-[1rem] font-semibold text-ink">How the {total} threads it read ended</p>
+            <p className="text-[0.875rem] text-faint">outside pull requests</p>
           </div>
           <div className="mt-4 flex h-3 gap-0.5 overflow-hidden rounded-full" role="img" aria-label={ai.outcomes.map((o) => `${o.count} ${outcomeLabel(o.value).toLowerCase()}`).join(", ")}>
             {ai.outcomes.map((o) => (
               <span key={o.value} className={OUTCOME_FILL[o.value] ?? "bg-line-strong"} style={{ width: `${(o.count / total) * 100}%` }} />
             ))}
           </div>
-          <ul className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-[0.95rem]">
+          <ul className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-[1rem]">
             {ai.outcomes.map((o) => (
               <li key={o.value} className="flex items-center gap-2">
                 <span aria-hidden="true" className={`size-2.5 rounded-full ${OUTCOME_FILL[o.value] ?? "bg-line-strong"}`} />
@@ -65,8 +65,8 @@ export function AiFindings({ ai }: { ai: PlanAi }) {
               {ai.quotes.map((q) => (
                 <li key={q.url}>
                   <figure>
-                    <blockquote className="font-serif text-[1.12rem] leading-relaxed text-ink">&ldquo;{q.text}&rdquo;</blockquote>
-                    <figcaption className="mt-1.5 text-[0.9rem] text-faint">
+                    <blockquote className="font-serif text-[1.125rem] leading-relaxed text-ink">&ldquo;{q.text}&rdquo;</blockquote>
+                    <figcaption className="mt-1.5 text-[0.875rem] text-faint">
                       A maintainer on{" "}
                       <a href={q.url} target="_blank" rel="noopener noreferrer" className="text-link">
                         #{q.number}

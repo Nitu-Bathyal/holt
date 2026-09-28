@@ -65,7 +65,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
         <h1 className="display max-w-3xl text-[clamp(2rem,6vw,3.4rem)]">
           Finding a project is free. <span className="text-green">It always will be.</span>
         </h1>
-        <p className="prose-sans mt-5 max-w-2xl text-[1.05rem]">
+        <p className="prose-sans mt-5 max-w-2xl text-[1rem]">
           Money never changes a verdict. AI writes the explanation. The rules still decide.
         </p>
       </PageHead>
@@ -74,20 +74,20 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
         <ul className="grid gap-4 md:grid-cols-2">
           {PLANS.map((p) => (
             <li key={p.name} className={`relative flex flex-col border bg-panel p-6 ${p.accent} ${p.featured ? "shadow-card" : "shadow-soft"}`}>
-              {p.featured && <span className="absolute -top-3 left-6 bg-blue px-2 py-0.5 text-[0.78rem] font-semibold text-on-accent">start here</span>}
-              <p className="text-[0.85rem] uppercase tracking-[0.08em] text-faint">{p.name}</p>
-              <p className="mt-3 text-[2.4rem] font-semibold leading-none tracking-tight">
-                {p.price} <span className="text-[0.89rem] font-normal tracking-normal text-muted">{p.tag}</span>
+              {p.featured && <span className="absolute -top-3 left-6 bg-blue px-2 py-0.5 text-[0.8125rem] font-semibold text-on-accent">start here</span>}
+              <p className="text-[0.875rem] text-faint">{p.name}</p>
+              <p className="mt-3 text-[2.25rem] font-semibold leading-none tracking-tight">
+                {p.price} <span className="text-[0.875rem] font-normal tracking-normal text-muted">{p.tag}</span>
               </p>
               <p className="mt-3 font-sans text-muted">{p.body}</p>
-              <ul className="mt-5 flex-1 space-y-2 font-sans text-[0.92rem]">
+              <ul className="mt-5 flex-1 space-y-2 font-sans text-[0.875rem]">
                 {p.items.map((i) => (
                   <li key={i} className="flex gap-2"><span aria-hidden="true" className="text-green">✓</span>{i}</li>
                 ))}
               </ul>
               <Link href={p.cta.href} className="btn-ghost mt-6 w-full">{p.cta.label} →</Link>
               {p.example && (
-                <Link href={EXAMPLE_PATH} className="text-link mt-3 text-center font-sans text-[0.9rem]" data-example-link>
+                <Link href={EXAMPLE_PATH} className="text-link mt-3 text-center font-sans text-[0.875rem]" data-example-link>
                   or read an example AI report first
                 </Link>
               )}
@@ -97,18 +97,18 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
 
         {onSale.length > 0 && (
           <section id="packs" aria-labelledby="packs-h" className="mt-14 scroll-mt-24">
-            <h2 id="packs-h" className="text-[1.2rem] font-semibold tracking-tight">Credit packs</h2>
-            <p className="mt-2 max-w-2xl font-sans text-[0.95rem] text-muted">
+            <h2 id="packs-h" className="text-[1.125rem] font-semibold tracking-tight">Credit packs</h2>
+            <p className="mt-2 max-w-2xl font-sans text-[1rem] text-muted">
               Pay once. No subscription. Credits cover AI reports and paid extras once your free reports run out.
             </p>
             <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {onSale.map((p, i) => (
                 <li key={p.id} className="flex flex-col border border-line-strong bg-panel p-6 shadow-soft">
-                  <p className="text-[0.85rem] uppercase tracking-[0.08em] text-faint">{p.name}</p>
-                  <p className="mt-3 text-[2.4rem] font-semibold leading-none tracking-tight">
-                    {formatPrice(p.amount, p.currency)} <span className="text-[0.89rem] font-normal tracking-normal text-muted">once</span>
+                  <p className="text-[0.875rem] text-faint">{p.name}</p>
+                  <p className="mt-3 text-[2.25rem] font-semibold leading-none tracking-tight">
+                    {formatPrice(p.amount, p.currency)} <span className="text-[0.875rem] font-normal tracking-normal text-muted">once</span>
                   </p>
-                  <ul className="mt-5 flex-1 space-y-2 font-sans text-[0.92rem]">
+                  <ul className="mt-5 flex-1 space-y-2 font-sans text-[0.875rem]">
                     <li className="flex gap-2"><span aria-hidden="true" className="text-green">✓</span>{creditsLabel(p.credits)}</li>
                     <li className="flex gap-2"><span aria-hidden="true" className="text-green">✓</span>{expiryLine(p)}</li>
                   </ul>
@@ -123,7 +123,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
                 </li>
               ))}
             </ul>
-            <p className="mt-4 max-w-2xl font-sans text-[0.89rem] text-muted">
+            <p className="mt-4 max-w-2xl font-sans text-[0.875rem] text-muted">
               Paid in INR through Razorpay (UPI, cards, netbanking), billed as <span className="text-ink">Githolt</span>. See the{" "}
               <Link href="/refunds" className="text-link">refund policy</Link>.
             </p>
@@ -131,16 +131,16 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
         )}
 
         <div className="band-alt mt-14 py-10">
-        <h2 id="plans" className="scroll-mt-24 text-[1.2rem] font-semibold tracking-tight">Paid plans</h2>
+        <h2 id="plans" className="scroll-mt-24 text-[1.125rem] font-semibold tracking-tight">Paid plans</h2>
         {plansOnSale.length > 0 && (
           <ul className="mt-4 grid gap-4 sm:grid-cols-2">
             {plansOnSale.map((p) => (
               <li key={p.id} className="flex flex-col border border-green bg-panel p-6 shadow-card">
-                <p className="text-[0.85rem] uppercase tracking-[0.08em] text-faint">{p.name}</p>
-                <p className="mt-3 text-[2.4rem] font-semibold leading-none tracking-tight">
-                  {formatPrice(p.amount, p.currency)} <span className="text-[0.89rem] font-normal tracking-normal text-muted">a month</span>
+                <p className="text-[0.875rem] text-faint">{p.name}</p>
+                <p className="mt-3 text-[2.25rem] font-semibold leading-none tracking-tight">
+                  {formatPrice(p.amount, p.currency)} <span className="text-[0.875rem] font-normal tracking-normal text-muted">a month</span>
                 </p>
-                <ul className="mt-5 flex-1 space-y-2 font-sans text-[0.92rem]">
+                <ul className="mt-5 flex-1 space-y-2 font-sans text-[0.875rem]">
                   {p.features.map((f) => (
                     <li key={f.id} className="flex gap-2"><span aria-hidden="true" className="text-green">✓</span>{planFeatureLine(f)}</li>
                   ))}
@@ -164,17 +164,17 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
                 <p className="font-semibold">{s.name}</p>
                 <span className="chip border-amber/60 text-amber">coming soon</span>
               </div>
-              <p className="mt-2 font-sans text-[0.92rem] text-muted">{s.body}</p>
+              <p className="mt-2 font-sans text-[0.875rem] text-muted">{s.body}</p>
             </li>
           ))}
         </ul>
-        <p className="mt-6 max-w-2xl font-sans text-[0.9rem] text-muted">
+        <p className="mt-6 max-w-2xl font-sans text-[0.875rem] text-muted">
           Paid plans bill as <span className="text-ink">Githolt</span>, in INR through Razorpay or in USD through Dodo Payments.
           Cancel any time and keep access until the paid period ends. Details in the{" "}
           <Link href="/refunds" className="text-link">refund and cancellation policy</Link>.
         </p>
-        <p className="mt-8 font-sans text-[0.95rem] text-muted">
-          Still deciding? <Link href="/" className="bracket-link">[ check a repo for free → ]</Link>
+        <p className="mt-8 font-sans text-[1rem] text-muted">
+          Still deciding? <Link href="/" className="bracket-link">Check a repo for free →</Link>
         </p>
         </div>
       </div>

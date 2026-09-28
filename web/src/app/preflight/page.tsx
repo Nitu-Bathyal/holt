@@ -41,7 +41,7 @@ export default async function PreflightPage({ searchParams }: PageProps<"/prefli
           <h1 className="display max-w-3xl text-[clamp(2rem,6vw,3.2rem)]">
             Check your PR <span className="text-blue">against what gets merged.</span>
           </h1>
-          <p className="prose-sans mt-5 max-w-2xl text-[1.05rem]">
+          <p className="prose-sans mt-5 max-w-2xl text-[1rem]">
             Paste your PR. Holt holds it up against a year of PRs this repo merged, point by point, with the evidence.
             It never comments on GitHub or touches your code.
           </p>

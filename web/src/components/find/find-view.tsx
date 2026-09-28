@@ -151,7 +151,7 @@ function Results({ shown, pending, fit, days, saved, picks, setPicks, onRetry, c
 
   return (
     <section aria-label="Results" aria-busy={pending || (!raw && !error)} className="mt-5">
-      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-[0.87rem] text-faint">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-[0.875rem] text-faint">
         <p aria-live="polite" className="flex items-center gap-x-2">
           {pending ? (
             <>
@@ -173,8 +173,8 @@ function Empty({ picks, setPicks }: { picks: Picks; setPicks: (p: Picks) => void
   const fixes = widen(picks);
   return (
     <div className="border border-dashed border-line-strong p-6 text-center sm:p-8">
-      <CatFace mood="thinking" className="text-[1.6rem]" />
-      <p className="mt-4 text-[1.1rem] font-semibold">No repos match all of that.</p>
+      <CatFace mood="thinking" className="text-[1.75rem]" />
+      <p className="mt-4 text-[1.125rem] font-semibold">No repos match all of that.</p>
       <p className="mt-2 font-sans text-muted">{fixes.length ? "Loosen one thing:" : "Try another language."}</p>
       {fixes.length > 0 && (
         <div className="mt-4 flex flex-wrap justify-center gap-2">
