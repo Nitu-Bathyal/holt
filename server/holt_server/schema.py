@@ -46,7 +46,7 @@ class Model(BaseModel):
 # --- errors ------------------------------------------------------------------------
 
 ErrorCode = Literal["unauthorized", "not_found", "invalid_repo", "invalid_request",
-                    "rate_limited", "quota_exceeded", "needs_key", "claim_not_ready",
+                    "rate_limited", "quota_exceeded", "needs_plan", "needs_key", "claim_not_ready",
                     "ai_unavailable", "upstream", "internal", "not_implemented"]
 
 
@@ -645,3 +645,123 @@ class ContributionMetric(Model):
     users_with_pr_after_holt: int
     prs_after_holt: int
     prs_after_holt_merged: int
+
+
+# --- the playbook ("How to get merged here") -----------------------------------------
+
+PlaybookSectionKey = Literal["must_do", "size_and_scope", "reviewers", "closing_reasons",
+                             "checklist"]
+
+
+class PlaybookSource(Model):
+    """A counted fact behind a playbook item."""
+
+    statement: str
+    # "Seen in `seen` of `of`" pull requests; null for a fact from a document
+    # (the contributing guide, CODEOWNERS) rather than a count.
+    seen: int | None = None
+    of: int | None = None
+    # Example pull requests (or the document) on GitHub.
+    links: list[str] = Field(default_factory=list)
+
+
+class PlaybookItem(Model):
+    # Plain English; may contain Markdown code spans (check names, paths), never HTML.
+    text: str
+    sources: list[PlaybookSource] = Field(default_factory=list)
+
+
+class PlaybookExample(Model):
+    """A closed pull request and what someone in the project wrote on it."""
+
+    number: int
+    url: str
+    title: str = ""
+    who: str
+    quote: str
+
+
+class PlaybookClosingReason(Model):
+    reason: str
+    explanation: str = ""
+    # Closed outside pull requests that showed this reason, of those read.
+    seen: int
+    of: int
+    examples: list[PlaybookExample] = Field(default_factory=list)
+
+
+class PlaybookSections(Model):
+    """In display order. Any may be empty: show nothing for an empty one."""
+
+    must_do: list[PlaybookItem] = Field(default_factory=list)
+    size_and_scope: list[PlaybookItem] = Field(default_factory=list)
+    reviewers: list[PlaybookItem] = Field(default_factory=list)
+    closing_reasons: list[PlaybookClosingReason] = Field(default_factory=list)
+    checklist: list[PlaybookItem] = Field(default_factory=list)
+
+
+class Playbook(Model):
+    repo: str
+    generated_at: str
+    # The model that worded it. It never decides a count or a quote.
+    model: str | None = None
+    # Say once, near the top, when present (e.g. the counts cover everyone's
+    # pull requests because too few outside ones were merged).
+    note: str | None = None
+    # How far back pull requests were read.
+    window_days: int | None = None
+    archived: bool = False
+    sections: PlaybookSections
+
+
+class PlaybookTeaserSection(Model):
+    key: PlaybookSectionKey
+    count: int
+
+
+class PlaybookTeaser(Model):
+    """What anyone sees before paying: which sections this repository's
+    playbook has, and its first must-do."""
+
+    sections: list[PlaybookTeaserSection]
+    first: PlaybookItem | None
+    generated_at: str
+
+
+class PlaybookJob(Model):
+    job_id: str
+    status: JobState
+    stage: str | None = None
+    progress: float
+
+
+class PlaybookState(Model):
+    """GET /v1/playbook/{owner}/{repo}."""
+
+    repo: str
+    # False when this server runs without paid features: hide the section.
+    available: bool
+    # Null until someone has had this repository's playbook written.
+    teaser: PlaybookTeaser | None
+    # The full playbook, only for a signed-in user who unlocked it.
+    playbook: Playbook | None
+    unlocked: bool
+    # Signed in: whether they can unlock it now and what it costs. Null when signed out.
+    access: Access | None
+    # Whether any way to pay for a playbook is on sale (a plan or a credit pack).
+    on_sale: bool
+    # This user's playbook for this repository, while it is being written.
+    job: PlaybookJob | None
+
+
+class PlaybookDone(Model):
+    status: Literal["done"] = "done"
+    playbook: Playbook
+
+
+class PlaybookJobStatus(Model):
+    status: JobState
+    stage: str | None = None
+    progress: float
+    playbook: Playbook | None
+    error: Error | None

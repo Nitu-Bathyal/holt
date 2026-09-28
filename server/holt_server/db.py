@@ -173,7 +173,7 @@ class Job(Base):
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True,
                                     default=lambda: uuid.uuid4().hex)
-    kind: Mapped[str] = mapped_column(String(20), default="analysis")  # analysis | find
+    kind: Mapped[str] = mapped_column(String(20), default="analysis")  # analysis | find | playbook
     repo: Mapped[str | None] = mapped_column(String(200), nullable=True)
     repo_key: Mapped[str | None] = mapped_column(String(200), nullable=True)
     mode: Mapped[str] = mapped_column(String(10), default="rules")
@@ -472,3 +472,33 @@ class RepoUserStats(Base):
     closed: Mapped[int] = mapped_column(Integer)
     waiting: Mapped[int] = mapped_column(Integer)
     computed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class Playbook(Base):
+    """The latest "How to get merged here" playbook per repository
+    (playbook.py), as the paid-features service wrote it. Replaced when a
+    newer one is written."""
+
+    __tablename__ = "playbooks"
+
+    repo_key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    repo: Mapped[str] = mapped_column(String(200))
+    playbook: Mapped[dict] = mapped_column(JSON)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class PlaybookUnlock(Base):
+    """A user who paid for one repository's playbook. `paid` is what
+    `entitlements.charge` took (kept for the refund); `job_id` is the job the
+    playbook was still being written by, or NULL when it was served from the
+    cache. If that job fails, the row is deleted and `paid` given back."""
+
+    __tablename__ = "playbook_unlocks"
+
+    user_id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    repo_key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    paid: Mapped[dict] = mapped_column(JSON)
+    job_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+    __table_args__ = (Index("ix_playbook_unlocks_job", "job_id"),)

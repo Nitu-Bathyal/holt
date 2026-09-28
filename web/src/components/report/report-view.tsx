@@ -11,6 +11,7 @@ import { BadgeSnippet } from "./badge-snippet";
 import { EvidenceList } from "./evidence-list";
 import { HoltUsersLine } from "./holt-users-line";
 import { LandingMap } from "./landing-map";
+import { PlaybookSection } from "./playbook-section";
 import { ShareBar } from "./share-bar";
 import { StatsGrid } from "./stats-grid";
 import { TONE, TONE_MOOD } from "./tone";
@@ -127,6 +128,8 @@ export function ReportView({
             <Link href="/find" className="bracket-link">[ find a welcoming project → ]</Link>
           </div>
         )}
+
+        <PlaybookSection repo={repo} signedIn={signedIn} />
 
         <Section n="01" id="issues" title={viable ? "Your first contribution" : "Starter issues"} note="open and unclaimed, best first" reveal={reveal ? 180 : undefined}>
           {issues}
