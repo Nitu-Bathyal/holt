@@ -45,7 +45,8 @@ export function fromFind(r: FindResult): CardRepo {
   };
 }
 
-function fullStats(s: Recommendation["stats"]): CardStats {
+/** Card stats from a full report or board entry. */
+export function fullStats(s: Recommendation["stats"]): CardStats {
   return { attempts: s.outsider_attempts, merged: s.outsider_merged, noReply: s.no_reply, closedSilently: s.closed_silently, stillOpen: s.still_open, firstTimers: s.first_time_merged_authors, replyHours: n(s.median_first_response_hours) };
 }
 
