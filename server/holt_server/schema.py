@@ -52,7 +52,7 @@ class Model(BaseModel):
 ErrorCode = Literal["unauthorized", "not_found", "invalid_repo", "invalid_request",
                     "rate_limited", "quota_exceeded", "needs_key", "claim_not_ready",
                     "ai_unavailable", "upstream", "internal", "not_implemented",
-                    "payments_off", "payment_unconfirmed"]
+                    "payments_off", "payment_unconfirmed", "already_subscribed"]
 
 
 class Error(Model):
@@ -797,6 +797,99 @@ class OrderConfirmed(Model):
 
     order: Order
     credits: Credits
+
+
+# --- plans and subscriptions (subscriptions.py) -------------------------------------------
+
+SubscriptionStatus = Literal["created", "authenticated", "active", "pending", "halted",
+                             "paused", "cancelled", "completed", "expired"]
+
+
+class PlanOfferFeature(Model):
+    id: str
+    # The feature's name, for people.
+    name: str
+    # Uses per calendar month (UTC); null when unlimited.
+    per_month: int | None
+    unlimited: bool
+
+
+class PlanOffer(Model):
+    id: str
+    name: str
+    # The monthly price in minor units (paise for INR).
+    amount: int
+    currency: str
+    features: list[PlanOfferFeature]
+
+
+class Plans(Model):
+    """GET /v1/plans. `on_sale` is false, and `plans` empty, while subscriptions are off."""
+
+    on_sale: bool
+    plans: list[PlanOffer]
+
+
+class SubscriptionCheckout(Model):
+    """POST /v1/me/subscription: what Razorpay Checkout needs to start the subscription."""
+
+    subscription_id: str
+    provider: Literal["razorpay"]
+    # Razorpay's public key id (safe to show the browser).
+    key_id: str
+    provider_subscription_id: str
+    plan: str
+    # What the payment page shows.
+    name: str
+    description: str
+    # Each monthly charge, in minor units.
+    amount: int
+    currency: str
+
+
+class SubscriptionInfo(Model):
+    id: str
+    plan: str
+    # The plan's name, for people.
+    name: str
+    status: SubscriptionStatus
+    amount: int
+    currency: str
+    # The end of the last billing period paid for; null before the first payment.
+    paid_until: str | None
+    # When the next charge is due; null once it won't renew.
+    next_charge_at: str | None
+    # Cancelled by the user: the plan runs to `paid_until`, then stops.
+    cancel_at_period_end: bool
+    created_at: str
+    ended_at: str | None
+
+
+class SubscriptionChargeInfo(Model):
+    # Razorpay's payment id (for support).
+    id: str
+    amount: int
+    currency: str
+    period_start: str | None
+    period_end: str | None
+    # "held": the amount didn't match the plan; nothing was given, a person looks.
+    status: Literal["paid", "held"]
+    paid_at: str
+
+
+class MySubscription(Model):
+    """GET /v1/me/subscription: the latest subscription and every charge, newest first."""
+
+    subscription: SubscriptionInfo | None
+    charges: list[SubscriptionChargeInfo]
+
+
+class SubscriptionConfirmed(Model):
+    """POST /v1/me/subscription/confirm and /cancel: the subscription and the plan in force."""
+
+    subscription: SubscriptionInfo | None
+    plan: str
+    plan_expires_at: str | None
 
 
 class AdminLot(Model):

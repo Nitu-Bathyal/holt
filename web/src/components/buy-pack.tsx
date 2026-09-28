@@ -29,7 +29,7 @@ declare global {
 
 const SCRIPT = "https://checkout.razorpay.com/v1/checkout.js";
 let loader: Promise<void> | null = null;
-function loadRazorpay(): Promise<void> {
+export function loadRazorpay(): Promise<void> {
   if (window.Razorpay) return Promise.resolve();
   loader ??= new Promise((resolve, reject) => {
     const s = document.createElement("script");
@@ -52,7 +52,7 @@ const MESSAGES: Partial<Record<ApiError["code"], string>> = {
     "We couldn't confirm that payment with Razorpay. If money left your account, your credits will appear in Settings in a few minutes, or it will be refunded.",
 };
 
-async function post<T>(url: string, body: unknown): Promise<{ ok: true; data: T } | { ok: false; code?: string; message: string }> {
+export async function post<T>(url: string, body: unknown): Promise<{ ok: true; data: T } | { ok: false; code?: string; message: string }> {
   try {
     const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
     const data = await res.json().catch(() => null);

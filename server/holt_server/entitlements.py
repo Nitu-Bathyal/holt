@@ -201,18 +201,33 @@ async def refund_job(s: AsyncSession, job: Job) -> None:
 async def set_plan(svc: Services, user_id: str, plan: str, *, expires_at: datetime | None,
                    reason: str, actor: str, reference: str | None = None) -> None:
     """Put a user on `plan` until `expires_at` (None: until changed). For the
-    admin CLI now, and the payment code once a subscription is confirmed."""
+    admin CLI; the subscription code uses `write_plan` inside its own
+    transaction."""
+    _check_plan(svc, plan, reason)
+    await credits.ensure_user(svc, user_id)
+    async with svc.db.session() as s:
+        await write_plan(s, svc, user_id, plan, expires_at=expires_at, reason=reason,
+                         actor=actor, reference=reference)
+        await s.commit()
+
+
+async def write_plan(s: AsyncSession, svc: Services, user_id: str, plan: str, *,
+                     expires_at: datetime | None, reason: str, actor: str,
+                     reference: str | None = None) -> None:
+    """`set_plan` in the caller's transaction (the user row must exist): the
+    plan change and its `PlanEvent` commit with the caller's work."""
+    _check_plan(svc, plan, reason)
+    if plan == pricing.FREE:
+        expires_at = None
+    await s.execute(update(User).where(User.id == user_id)
+                    .values(plan=plan, plan_expires_at=expires_at))
+    s.add(PlanEvent(user_id=user_id, plan=plan, expires_at=expires_at, reason=reason,
+                    actor=actor, reference=reference, created_at=now()))
+
+
+def _check_plan(svc: Services, plan: str, reason: str) -> None:
     cat = catalogue(svc)
     if plan not in cat.plans:
         raise ValueError(f"no plan {plan!r} in the pricing file (have {sorted(cat.plans)})")
     if not reason.strip():
         raise ValueError("say why (--reason)")
-    if plan == pricing.FREE:
-        expires_at = None
-    await credits.ensure_user(svc, user_id)
-    async with svc.db.session() as s:
-        await s.execute(update(User).where(User.id == user_id)
-                        .values(plan=plan, plan_expires_at=expires_at))
-        s.add(PlanEvent(user_id=user_id, plan=plan, expires_at=expires_at, reason=reason,
-                        actor=actor, reference=reference, created_at=now()))
-        await s.commit()

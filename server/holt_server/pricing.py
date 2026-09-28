@@ -64,6 +64,9 @@ class Plan(Strict):
     # How long one payment keeps the plan; None: until changed.
     period_days: int | None = Field(None, ge=1)
     price: Price = Price()
+    # The Razorpay plan (created in its dashboard, same price and period) a
+    # subscription to this plan bills through; None: it can't be subscribed to.
+    razorpay_plan_id: str | None = Field(None, pattern=r"^plan_[A-Za-z0-9]{1,40}$")
     features: dict[str, PlanFeature] = {}
 
 
@@ -91,6 +94,8 @@ class Catalogue(Strict):
             raise ValueError(f"there must be a {FREE!r} plan")
         if self.plans[FREE].on_sale:
             raise ValueError("the free plan can't be on sale")
+        if self.plans[FREE].razorpay_plan_id:
+            raise ValueError("the free plan can't have a Razorpay plan")
         for name, plan in self.plans.items():
             unknown = set(plan.features) - set(self.features)
             if unknown:

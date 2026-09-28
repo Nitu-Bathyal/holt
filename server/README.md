@@ -63,6 +63,8 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `HOLT_CLAIM_EVERY_DAYS` | `7` | After that, one more can be claimed each time this many days have passed since the last claim (or the welcome grant). |
 | `HOLT_PRICING_FILE` | the catalogue shipped in the package (`holt_server/pricing.json`) | Features, plans and credit packs, with prices (TBD) in INR and USD. See [Credits and plans](#credits-and-plans). A file that doesn't parse stops startup. |
 | `HOLT_PAYMENTS_ENABLED` | `0` | `1` switches the credit-pack checkout on (it also needs the Razorpay keys and a pack on sale). See [Credit-pack checkout](#credit-pack-checkout). |
+| `HOLT_SUBSCRIPTIONS_ENABLED` | `0` | `1` switches monthly plans on (it also needs the Razorpay keys and a plan on sale with a `razorpay_plan_id`). Separate from `HOLT_PAYMENTS_ENABLED`. See [Monthly plans](#monthly-plans-subscriptions). |
+| `HOLT_SUBSCRIPTION_GRACE_DAYS` | `7` | How long a paid plan outlives its billing period while Razorpay retries a failed renewal. |
 | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | *(empty)* | Razorpay API keys (`rzp_test_…` for test mode). Empty: no checkout. |
 | `RAZORPAY_WEBHOOK_SECRET` | *(empty)* | The secret set on the webhook in the Razorpay dashboard. Empty: webhooks are refused. |
 | `HOLT_ADMIN_USERS` | *(empty)* | Comma-separated user ids that may read `/v1/admin/*`. Empty means nobody. |
@@ -143,7 +145,8 @@ and raises `quota_exceeded` or `needs_plan`. A job keeps what it was charged
 in `params["charge"]`, and a failed job gives it back to the same pool in the
 transaction that marks it failed. `entitlements.check` answers the same
 question without charging (`GET /v1/me/entitlements`, the admin view).
-Plans change only through `entitlements.set_plan`, which writes `plan_events`.
+Plans change only through `entitlements.set_plan` (or `write_plan`, its
+in-transaction form), which writes `plan_events`.
 
 **Admin.** Changes go through the CLI, which runs against `$DATABASE_URL` and
 prints the user's state afterwards (in production, run it inside the API
@@ -190,6 +193,45 @@ pack on sale (copy `pricing.json`, set `on_sale: true` and a price, point
 `HOLT_PRICING_FILE` at it) and `HOLT_PAYMENTS_ENABLED=1`. Razorpay can't reach
 a local webhook, so the callback does the crediting; test the webhook on
 staging.
+
+## Monthly plans (subscriptions)
+
+`holt_server/subscriptions.py`: Razorpay subscriptions, INR. **Off by
+default, with its own switch**, separate from credit packs:
+`HOLT_SUBSCRIPTIONS_ENABLED=1`, the Razorpay keys, and a plan with
+`on_sale: true`, an `inr_paise` price and a `razorpay_plan_id`. Create that
+plan in the Razorpay dashboard (Subscriptions → Plans, monthly, the same
+price); the server fetches it before each new subscription and refuses if its
+price differs. Endpoints and behaviour are in API.md ("Plans"); the short
+version:
+
+- A `subscriptions` row per subscription (at most one live per user, a partial
+  unique index), and a `subscription_charges` row per payment (unique payment
+  id: the billing history, and what makes a replayed `subscription.charged`
+  a no-op).
+- The plan is set with `entitlements.write_plan` (the in-transaction form of
+  `set_plan`), `actor=razorpay`, `reference=<Razorpay subscription id>`, to the
+  end of the period Razorpay says was paid for plus
+  `HOLT_SUBSCRIPTION_GRACE_DAYS` (7). Halted/paused ends it now;
+  cancelled/completed ends it with the paid period. Only the subscription
+  named on the user's latest `plan_events` row can end their plan, so admin
+  grants are never undone by a webhook.
+- Events about an older period than the row holds are ignored; a cancelled,
+  completed or expired subscription never comes back.
+- Cancelling from Settings stops renewal at the end of the paid period
+  (Razorpay `cancel_at_cycle_end=1`); an unpaid subscription, or one whose
+  renewal is failing, is cancelled at once.
+- With the switch off, existing subscriptions still renew, lapse and can be
+  cancelled.
+
+Webhook: the same Razorpay webhook as the packs; also tick
+`subscription.authenticated`, `.activated`, `.charged`, `.pending`, `.halted`,
+`.paused`, `.resumed`, `.cancelled` and `.completed`.
+
+Trying it locally in test mode: as for packs, plus a test-mode plan in the
+Razorpay dashboard, its id as `razorpay_plan_id` in your pricing file, and
+`HOLT_SUBSCRIPTIONS_ENABLED=1`. Sign webhooks yourself with a local
+`RAZORPAY_WEBHOOK_SECRET` to try renewals and failures.
 
 Per process (fine for one server; revisit with more): rate-limit counters,
 the badge lane's concurrency count and the repo-name cache are in memory. SSE
