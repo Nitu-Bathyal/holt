@@ -8,9 +8,10 @@ app and API server.
 | `server/Dockerfile` | API server (`server/`) plus the engine (`src/holt`). uv, slim Python, non-root. Build context: repo root. uv's cache is a BuildKit cache mount. |
 | `web/Dockerfile` | Web app (`web/`). Next.js standalone output when `web/next.config` sets `output: "standalone"`, otherwise `next start` with production `node_modules`. Build context: `web/`. npm's cache and `.next/cache` (Turbopack's incremental build cache) are BuildKit cache mounts, so a small change rebuilds only what it touches. |
 | `staging/compose.yml` | The staging stack, compose project `stage-holt-new`: Postgres, one-shot web and server migrations, server, web, and a small nginx `edge` that serves `/__build` and proxies everything else to web. Only `edge` publishes a port, on `127.0.0.1:9110`. Every URL in it comes from `STAGING_HOST`. |
-| `staging/preview.sh` | One update: build `origin/main` + every open PR labelled `staging` + `staging/extra-branches`, rebuild only the images whose inputs changed, restart the stack, then start the smoke tests. |
-| `staging/install.sh` | One-time setup: the timer's copy of `preview.sh` (and `edge.sh`), the systemd `--user` timer (1 minute after the last run ends) and the smoke-test unit. It does not touch the public route. |
+| `staging/preview.sh` | One update: build `origin/main` + every open PR labelled `staging` + `staging/extra-branches`, rebuild only the images whose inputs changed, run the migrations, swap server and web with no gap (`swap.sh`), then start the smoke tests. |
+| `staging/install.sh` | One-time setup: the timer's copy of `preview.sh` (and `edge.sh`, `swap.sh`), the systemd `--user` timer (1 minute after the last run ends) and the smoke-test unit. It does not touch the public route. |
 | `edge.sh` | Sourced by `prod/deploy.sh` and `staging/preview.sh`: when `edge.conf` changed, checks it with `nginx -t` in the running edge and reloads it (the port stays open); a rejected config is put back and the run fails. |
+| `swap.sh` | Sourced by `prod/deploy.sh` and `staging/preview.sh`: `swap_service` replaces a service's container with no gap (the new one starts beside the old one; the old one goes once the new one is healthy). The edges also show a "Holt is updating" page (503, never cached) if web can't be reached; see [`prod/README.md`](prod/README.md#the-updating-page). |
 | `staging/compose.pro.yml` | The optional paid-features service beside staging, compose project `stage-holt-pro`, joined to the staging network as `pro`, no published port. `preview.sh` runs it; see "Paid features". |
 | `staging/make-env.sh` | Writes `staging/.env` (gitignored): random keys, `gh auth token` (overridden on each run, see "The GitHub token"), `STAGING_HOST`. |
 | `prod/` | Production, https://githolt.com: compose project `holt-prod` on `127.0.0.1:8310` behind a Cloudflare tunnel, built only from `origin/main` by `prod/deploy.sh` (never on a timer), nightly backups. See [`prod/README.md`](prod/README.md) and [`prod/TUNNEL.md`](prod/TUNNEL.md). |
@@ -35,7 +36,7 @@ when to refresh:
 |---|---|
 | `waiting` | A change is queued; the server is too busy to build yet. |
 | `building` | Building; `now.message` names the image (`building web (abc1234)`). |
-| `starting` | Images built; the stack is restarting (the site may blink). |
+| `starting` | Images built; new containers start beside the old ones and take over once healthy (no gap). |
 | `live` | The latest build is up. Refresh. |
 | `smoke` | The latest build is up (refresh) and the smoke tests are running on it. |
 | `failed` | The last build failed (`last_attempt` says why); the site shows the build before it. |
