@@ -9,16 +9,16 @@ import { PageTransition } from "@/components/motion/page-transition";
 
 export const metadata: Metadata = {
   title: "How Holt decides",
-  description: "Holt gathers pull request history, turns it into cited findings, checks every source, and applies one fixed set of rules.",
+  description: "Models read the pull request history. Written rules pick the verdict. Every claim links to the GitHub page it came from.",
   alternates: { canonical: "/how-it-works" },
 };
 
 const TRACE = [
-  { i: "A", name: "classify", copy: "What kind of repository is this?", owner: "model" },
-  { i: "B", name: "opportunity", copy: "Is there a real route in for outside work?", owner: "model" },
+  { i: "A", name: "classify", copy: "What kind of repo is this?", owner: "model" },
+  { i: "B", name: "opportunity", copy: "Is there a way in for outside work?", owner: "model" },
   { i: "C", name: "outcomes", copy: "What happened to outsiders who tried?", owner: "model" },
-  { i: "D", name: "verify", copy: "Open every citation; drop anything that doesn't check out", owner: "no model" },
-  { i: "→", name: "verdict.py", copy: "One written rule over the verified evidence", owner: "no model", decision: true },
+  { i: "D", name: "verify", copy: "Open every citation. Drop whatever doesn't check out.", owner: "no model" },
+  { i: "→", name: "verdict.py", copy: "Written rules pick the verdict from what's left", owner: "no model", decision: true },
   { i: "E", name: "narrate", copy: "Explain an answer it cannot change", owner: "model" },
 ];
 
@@ -43,15 +43,15 @@ export default function HowItWorks() {
         <PageHead>
           <p className="rail mb-4 flex gap-2"><strong className="m-0">how it works</strong><span>for the curious</span></p>
           <h1 className="display max-w-4xl text-[clamp(2.1rem,6vw,3.8rem)]">
-            One procedure. <span className="text-orange">A verdict you can check.</span>
+            Models read. <span className="text-orange">Rules decide.</span>
           </h1>
           <p className="prose-sans mt-6 max-w-2xl text-[1.08rem]">
-            Holt gathers contribution history, turns it into cited findings, checks every source, and applies a fixed set
-            of rules. A model can explain the evidence, but it can&apos;t override the final decision.
+            Holt keeps only the evidence it can trace to a real GitHub page, then runs the same written rules on every
+            repo.
           </p>
         </PageHead>
 
-        <Block n="01" label="the pipeline" title="Models read. Rules decide.">
+        <Block n="01" label="the pipeline" title="Six steps. One of them decides.">
           <div className="relative border-t border-line-strong">
             {TRACE.map((t) => (
               <div
@@ -66,18 +66,18 @@ export default function HowItWorks() {
             ))}
           </div>
           <p className="mt-6 text-[0.82rem] text-muted">
-            <strong className="font-medium text-ink">Typical input:</strong> 642 evidence records across 200 pull-request conversations.
+            <strong className="font-medium text-ink">Typical input:</strong> 642 pieces of evidence from 200 pull request threads.
           </p>
         </Block>
 
-        <Block alt n="02" label="confidence" title="Useful enough to guide you. Open enough to question.">
+        <Block alt n="02" label="confidence" title="Don't take our word for it.">
           <p className="prose-sans mb-10 max-w-[740px] text-[1.05rem]">
-            No score makes every call right, so the evidence behind the verdict stays visible: open any citation and
-            check it against the real GitHub thread yourself.
+            No verdict is right every time, so the evidence stays on the page. Open any citation and check it against
+            the GitHub thread yourself.
           </p>
           <ul className="grid border-y border-line md:grid-cols-3">
             {[
-              ["55 / 55", "verdicts identical across three runs"],
+              ["55 / 55", "same verdict on all three runs"],
               ["read-only", "never writes to GitHub"],
               ["every claim", "links to a real GitHub page"],
             ].map(([a, b], i) => (
@@ -88,8 +88,7 @@ export default function HowItWorks() {
             ))}
           </ul>
           <p className="mt-6 text-[0.82rem] text-faint">
-            Holt started as a benchmarked competition entry; that evaluation is now historical research, not a live
-            product claim.{" "}
+            That 55/55 is from Holt&apos;s competition days. Treat it as history, not a promise.{" "}
             <a className="text-link" href={`${GITHUB_REPO_URL}/blob/main/docs/research/REPRODUCTION.md`}>[ reproduce it → ]</a>{" "}
             <a className="text-link" href={`${GITHUB_REPO_URL}/blob/main/docs/research/EVALUATION.md`}>[ full evaluation ]</a>
           </p>
@@ -97,8 +96,8 @@ export default function HowItWorks() {
 
         <Block n="03" label="terminal" title="Prefer the terminal? Same engine.">
           <p className="prose-sans mb-8 max-w-[740px] text-[1.05rem]">
-            The Holt CLI and terminal app run the same rules on your machine with your own GitHub token. Handy if you
-            live in the terminal, or want to check repos from a script.
+            Same rules, on your machine, with your own GitHub token. Good for scripts, and for people who never leave
+            the terminal.
           </p>
           <div className="mb-10 grid max-w-[760px] grid-cols-[auto_1fr_auto] items-center border border-line-strong bg-panel">
             <span aria-hidden="true" className="pl-4 text-amber">$</span>
@@ -107,7 +106,7 @@ export default function HowItWorks() {
           </div>
           <figure className="m-0 border border-line-strong bg-[#101010]">
             <div className="flex min-h-10 items-center justify-between border-b border-[#292b29] px-4 text-[0.7rem] text-[#8a8a83]">
-              <span>repository assessment / terminal interface</span>
+              <span>holt / terminal app</span>
               <span className="text-[#69c7a6]">● read-only</span>
             </div>
             <Image src={tui} alt="Holt terminal interface listing assessed repositories and their verdicts" sizes="(min-width: 1120px) 900px, 100vw" className="h-auto w-full" placeholder="blur" />

@@ -11,7 +11,7 @@ export function Footer() {
             <CatFace /> check before you contribute.
           </p>
           <p className="max-w-md font-sans text-[0.8rem]">
-            Holt only reads public GitHub data. It never posts, comments, or opens pull requests for you.
+            Holt only reads public GitHub data. It never posts, comments or opens a PR. Not even a typo fix.
           </p>
         </div>
         <nav aria-label="Footer" className="grid grid-cols-2 gap-x-8 gap-y-1 sm:text-right">
