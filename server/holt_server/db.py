@@ -177,6 +177,83 @@ class Order(Base):
     __table_args__ = (Index("ix_orders_user", "user_id", "created_at"),)
 
 
+class Subscription(Base):
+    """One monthly plan bought through Razorpay (subscriptions.py). The price
+    and the Razorpay plan are copied from the pricing file when it starts.
+    Only Razorpay's word (a signed webhook, or a fetch after a signed
+    checkout) moves it on, and only forward: an event about an older billing
+    period than the one held here changes nothing.
+
+    status is Razorpay's: `created` (checkout opened), `authenticated`
+    (mandate set up, nothing paid yet), `active`, `pending` (a renewal failed
+    and Razorpay is retrying: the plan continues through the grace period),
+    `halted` (the retries failed: the plan ends), `paused`, `cancelled`,
+    `completed`, `expired`. At most one per user is live (created to pending).
+    """
+
+    __tablename__ = "subscriptions"
+
+    id: Mapped[str] = mapped_column(String(32), primary_key=True,
+                                    default=lambda: uuid.uuid4().hex)
+    user_id: Mapped[str] = mapped_column(String(200))
+    plan_id: Mapped[str] = mapped_column(String(40))
+    provider: Mapped[str] = mapped_column(String(20))
+    provider_subscription_id: Mapped[str] = mapped_column(String(100), unique=True)
+    provider_plan_id: Mapped[str] = mapped_column(String(100))
+    # Each charge, in minor units (paise).
+    amount: Mapped[int] = mapped_column(Integer)
+    currency: Mapped[str] = mapped_column(String(3))
+    status: Mapped[str] = mapped_column(String(20), default="created")
+    # The billing period paid for most recently, and the next charge.
+    current_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                           nullable=True)
+    current_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                         nullable=True)
+    charge_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # The user asked to stop at the end of the period they paid for.
+    cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False,
+                                                       server_default=text("false"))
+    # The plan expiry this subscription last gave the user (period end + grace).
+    granted_until: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                           nullable=True)
+    note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    ended_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        Index("ix_subscriptions_user", "user_id", "created_at"),
+        Index("ux_subscriptions_live_user", "user_id", unique=True,
+              postgresql_where=text(
+                  "status IN ('created', 'authenticated', 'active', 'pending')"),
+              sqlite_where=text(
+                  "status IN ('created', 'authenticated', 'active', 'pending')")),
+    )
+
+
+class SubscriptionCharge(Base):
+    """One payment Razorpay took for a subscription: the billing history. One
+    row per payment id, so a replayed `subscription.charged` adds nothing.
+    status: `paid`, or `held` (the amount didn't match: no plan given)."""
+
+    __tablename__ = "subscription_charges"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    subscription_id: Mapped[str] = mapped_column(String(32))
+    user_id: Mapped[str] = mapped_column(String(200))
+    provider_payment_id: Mapped[str] = mapped_column(String(100), unique=True)
+    amount: Mapped[int] = mapped_column(Integer)
+    currency: Mapped[str] = mapped_column(String(3))
+    period_start: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                          nullable=True)
+    period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                        nullable=True)
+    status: Mapped[str] = mapped_column(String(10), default="paid")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+    __table_args__ = (Index("ix_subscription_charges_user", "user_id", "created_at"),)
+
+
 class PlanEvent(Base):
     """Every change to `User.plan` / `plan_expires_at`, and why."""
 

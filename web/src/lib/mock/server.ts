@@ -3,7 +3,7 @@
 import "server-only";
 import type {
   AnalysisStart, ApiError, Credits, DiscoverOut, DiscoverRepo, DiscoverSort, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, HistoryItem,
-  ContributionType, JobStatus, Me, Mode, Packs, ProfileOut, ProfilePrefs, Recommendation, Recommendations, Report, Result, Stats, StarterIssue,
+  ContributionType, JobStatus, Me, Mode, Packs, Plans, ProfileOut, ProfilePrefs, Recommendation, Recommendations, Report, Result, Stats, StarterIssue,
 } from "../types";
 import type { FeedbackInput } from "../feedback";
 import { verdictView, withDerived } from "./derived";
@@ -343,6 +343,15 @@ export async function claimCredit(userId: string): Promise<Result<Credits>> {
 // Payments stay off in the mock: no packs, no orders.
 export async function packs(): Promise<Result<Packs>> {
   return { ok: true, data: { on_sale: false, packs: [] } };
+}
+
+// Plans stay off in the mock too: nothing on sale, no subscription.
+export async function plans(): Promise<Result<Plans>> {
+  return { ok: true, data: { on_sale: false, plans: [] } };
+}
+
+export async function subscribe(): Promise<Result<never>> {
+  return err(403, "payments_off", "Paid plans aren't on sale yet. Everything free in Holt keeps working.");
 }
 
 export async function createOrder(): Promise<Result<never>> {

@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { packs } from "@/lib/api";
-import { creditsLabel, expiryLine, formatPrice, packToBuy } from "@/lib/payments";
+import { packs, plans } from "@/lib/api";
+import { creditsLabel, expiryLine, formatPrice, packToBuy, planFeatureLine } from "@/lib/payments";
 import { currentUser } from "@/lib/session";
 import { EXAMPLE_PATH } from "@/lib/example-report";
 import { CLAIM_EVERY_DAYS, WELCOME_AI_CREDITS } from "@/lib/site";
 import { BuyPack } from "@/components/buy-pack";
+import { SubscribePlan } from "@/components/subscribe-plan";
 import { PageHead } from "@/components/page-head";
 import { PageTransition } from "@/components/motion/page-transition";
 
@@ -49,10 +50,13 @@ const SOON = [
 ];
 
 export default async function PricingPage({ searchParams }: PageProps<"/pricing">) {
-  // Credit packs appear only while the server has them on sale (payments on).
-  const [sale, user, sp] = await Promise.all([packs(), currentUser(), searchParams]);
+  // Credit packs and monthly plans appear only while the server has them on
+  // sale (each has its own switch there).
+  const [sale, monthly, user, sp] = await Promise.all([packs(), plans(), currentUser(), searchParams]);
   const onSale = sale.ok && sale.data.on_sale ? sale.data.packs : [];
+  const plansOnSale = monthly.ok && monthly.data.on_sale ? monthly.data.plans : [];
   const buy = packToBuy(sp.buy, onSale);
+  const subscribeTo = packToBuy(sp.subscribe, plansOnSale);
   return (
     <PageTransition>
       <>
@@ -127,9 +131,34 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
         )}
 
         <div className="band-alt mt-14 py-10">
-        <h2 className="text-[1.2rem] font-semibold tracking-tight">Paid plans</h2>
+        <h2 id="plans" className="scroll-mt-24 text-[1.2rem] font-semibold tracking-tight">Paid plans</h2>
+        {plansOnSale.length > 0 && (
+          <ul className="mt-4 grid gap-4 sm:grid-cols-2">
+            {plansOnSale.map((p) => (
+              <li key={p.id} className="flex flex-col border border-green bg-panel p-6 shadow-card">
+                <p className="text-[0.78rem] uppercase tracking-[0.08em] text-faint">{p.name}</p>
+                <p className="mt-3 text-[2.4rem] font-semibold leading-none tracking-tight">
+                  {formatPrice(p.amount, p.currency)} <span className="text-[0.85rem] font-normal tracking-normal text-muted">a month</span>
+                </p>
+                <ul className="mt-5 flex-1 space-y-2 font-sans text-[0.92rem]">
+                  {p.features.map((f) => (
+                    <li key={f.id} className="flex gap-2"><span aria-hidden="true" className="text-green">✓</span>{planFeatureLine(f)}</li>
+                  ))}
+                  <li className="flex gap-2"><span aria-hidden="true" className="text-green">✓</span>Cancel anytime in Settings</li>
+                </ul>
+                <SubscribePlan
+                  plan={p.id}
+                  label={`subscribe for ${formatPrice(p.amount, p.currency)} a month →`}
+                  signedIn={Boolean(user)}
+                  prefill={{ name: user?.name, email: user?.email }}
+                  autoStart={subscribeTo === p.id}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
         <ul className="mt-4 grid gap-4 sm:grid-cols-2">
-          {SOON.map((s) => (
+          {SOON.filter((s) => !(plansOnSale.length > 0 && s.name === "Student Pro")).map((s) => (
             <li key={s.name} className="border border-dashed border-line-strong bg-panel/60 p-5">
               <div className="flex items-center justify-between gap-3">
                 <p className="font-semibold">{s.name}</p>

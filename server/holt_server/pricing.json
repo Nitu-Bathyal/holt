@@ -15,6 +15,7 @@
       "on_sale": false,
       "period_days": 30,
       "price": {"inr_paise": null, "usd_cents": null},
+      "razorpay_plan_id": null,
       "features": {
         "playbook": {"per_month": 10},
         "preflight": {"per_month": 10},

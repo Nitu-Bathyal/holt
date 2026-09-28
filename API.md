@@ -32,14 +32,15 @@ with codes: `unauthorized`, `not_found` (repo missing or private),
 `needs_plan` (the feature comes only with a paid plan), `needs_key` (AI report requested without
 signing in), `ai_unavailable` (AI reports are switched off: the server has no
 model key), `claim_not_ready` (a weekly claim before it is due),
-`payments_off` (credit packs aren't on sale), `payment_unconfirmed` (a
+`payments_off` (credit packs or plans aren't on sale), `payment_unconfirmed` (a
 payment's signature didn't check out; nothing was credited),
+`already_subscribed` (the user already has a paid plan),
 `upstream` (GitHub/model failure), `internal`.
 
 HTTP statuses: `unauthorized` 401, `not_found` 404, `invalid_repo` and
 `invalid_request` (malformed body or query) 400, `rate_limited` 429 (also sent
 as a `Retry-After` header), `quota_exceeded` 402, `needs_plan` 402, `needs_key` 403,
-`claim_not_ready` 409, `payments_off` 403, `payment_unconfirmed` 400, `ai_unavailable` 503, `upstream` 502, `internal` 500, `not_implemented` 501 (starter issues and find,
+`claim_not_ready` 409, `already_subscribed` 409, `payments_off` 403, `payment_unconfirmed` 400, `ai_unavailable` 503, `upstream` 502, `internal` 500, `not_implemented` 501 (starter issues and find,
 until the engine side ships).
 
 ## Rate limits
@@ -465,6 +466,63 @@ webhooks arrives first, however often they repeat: marking the order paid and
 adding its credits happen in one transaction, and a payment id can pay only
 one order. With payments switched off, orders that already exist are still
 confirmed, so someone who paid just before the switch gets their credits.
+
+#### Plans (subscriptions)
+
+A monthly plan through Razorpay subscriptions, INR. **Switched off** by its
+own flag, separate from credit packs: plans are offered only when the server
+has `HOLT_SUBSCRIPTIONS_ENABLED=1` and its Razorpay keys, and a plan in the
+catalogue has `on_sale: true`, an INR price and a `razorpay_plan_id` (a plan
+made in the Razorpay dashboard; the server checks it charges the catalogue's
+price before anyone pays). While off, `GET /v1/plans` offers nothing and
+`POST /v1/me/subscription` answers 403 `payments_off`.
+
+- `GET /v1/plans` (internal key; no user needed) → `{"on_sale": false, "plans": [PlanOffer]}`,
+  `PlanOffer`: `{"id": "pro", "name": "Pro", "amount": 19900, "currency": "INR", "features": [{"id": "playbook", "name": "…", "per_month": 10, "unlimited": false}]}`
+  (`amount` in paise, per month).
+- `POST /v1/me/subscription {"plan": "pro"}` → `SubscriptionCheckout`:
+  `{"subscription_id", "provider": "razorpay", "key_id", "provider_subscription_id", "plan", "name", "description", "amount", "currency"}`.
+  Checkout opens with `subscription_id: provider_subscription_id`. A second
+  call while the first is still unpaid returns the same subscription. 400
+  `invalid_request` for a plan not on sale, 403 `payments_off`, 409
+  `already_subscribed` when the user already has a plan that is paid for (or
+  being paid), 502 `upstream` when Razorpay fails or its plan's price doesn't
+  match. Counts against the user's hourly work limit.
+- `POST /v1/me/subscription/confirm {"razorpay_payment_id", "razorpay_subscription_id", "razorpay_signature"}`
+  (what Checkout's success handler receives) → `SubscriptionConfirmed`:
+  `{"subscription": Subscription | null, "plan": "pro", "plan_expires_at": "…" | null}`.
+  The server checks the signature (HMAC of `payment_id|subscription_id`), then
+  asks Razorpay for the subscription and the payment. The plan starts when
+  Razorpay says the subscription is active; otherwise the webhook starts it.
+  400 `payment_unconfirmed` for a bad signature, 404 for a subscription that
+  isn't this user's. Safe to repeat.
+- `GET /v1/me/subscription?limit=50` → `{"subscription": Subscription | null, "charges": [Charge]}`:
+  the latest subscription (unpaid checkouts left out) and every payment,
+  newest first. `Subscription`: `{"id", "plan", "name", "status", "amount", "currency", "paid_until", "next_charge_at", "cancel_at_period_end", "created_at", "ended_at"}`,
+  `status` one of `created`, `authenticated`, `active`, `pending` (a renewal
+  failed; Razorpay is retrying), `halted` (the retries failed), `paused`,
+  `cancelled`, `completed`, `expired`. `next_charge_at` is null once it won't
+  renew. `Charge`: `{"id" (Razorpay's payment id), "amount", "currency", "period_start", "period_end", "status": "paid"|"held", "paid_at"}`.
+- `POST /v1/me/subscription/cancel` → `SubscriptionConfirmed`. An active plan
+  stops renewing and runs to the end of the period paid for
+  (`cancel_at_period_end: true`); an unpaid one, or one whose renewal is
+  failing, is cancelled now. 404 when there is nothing to cancel. Works with
+  the switch off.
+- Webhooks arrive on `POST /v1/payments/razorpay/webhook` (above). Handled:
+  `subscription.authenticated`, `.activated`, `.charged`, `.pending`,
+  `.halted`, `.paused`, `.resumed`, `.cancelled`, `.completed`, `.expired`;
+  results `activated`, `charged`, `already_charged`, `held`, `stale`, `ended`,
+  `unknown_subscription`, ….
+
+What the plan does (`Me.plan`, `Me.plan_expires_at`): each payment gives the
+plan to the end of the period Razorpay says was paid for, plus a grace period
+(`HOLT_SUBSCRIPTION_GRACE_DAYS`, 7) so a failed renewal that Razorpay retries
+doesn't cut anyone off. Halted or paused ends it now. Cancelled or completed
+ends it with the paid period (no grace). Each payment is recorded once, events
+about an older period than the server holds change nothing, and a cancelled
+subscription never comes back. Only the subscription that gave the plan can
+end it, so a plan an admin gave is never taken away by a webhook. With the
+switch off, existing subscriptions still renew, lapse and can be cancelled.
 
 ### Admin (read-only)
 
