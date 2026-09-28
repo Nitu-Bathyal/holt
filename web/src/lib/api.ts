@@ -4,7 +4,7 @@ import "server-only";
 import { cache } from "react";
 import type {
   AnalysisStart, ApiError, Checkout, Contributions, Credits, DiscoverOut, DiscoverSort, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection,
-  HistoryItem, JobStatus, Me, Mode, Order, OrderConfirmed, Packs, ProfileOut, ProfilePrefs, RazorpaySuccess, Recommendations, Report, Result, StarterIssue,
+  HistoryItem, JobStatus, Me, Mode, Order, OrderConfirmed, Packs, PlaybookStart, PlaybookState, ProfileOut, ProfilePrefs, RazorpaySuccess, Recommendations, Report, Result, StarterIssue,
 } from "./types";
 import type { FeedbackInput } from "./feedback";
 import { isJobId } from "./ids";
@@ -89,8 +89,10 @@ export async function jobStatus(jobId: string): Promise<Result<JobStatus>> {
   return call(`/v1/analyses/${enc(jobId)}`);
 }
 
-/** Raw upstream SSE response for a job (analyses or find). */
-export async function jobEvents(kind: "analyses" | "find", jobId: string, signal: AbortSignal): Promise<Response> {
+export type JobKind = "analyses" | "find" | "playbook-jobs";
+
+/** Raw upstream SSE response for a job (analyses, find or a playbook). */
+export async function jobEvents(kind: JobKind, jobId: string, signal: AbortSignal): Promise<Response> {
   if (!isJobId(jobId)) {
     return new Response(`event: error\ndata: ${JSON.stringify({ error: BAD_JOB.error })}\n\n`, { status: 400, headers: { "Content-Type": "text/event-stream" } });
   }
@@ -160,6 +162,20 @@ export const discover = cache(async (sort: DiscoverSort, language: string | null
   if (topic) q.set("topic", topic);
   return call(`/v1/discover?${q}`);
 });
+
+/** "How to get merged here" (API.md, Playbook): the teaser for anyone, the whole playbook once unlocked. */
+export async function playbookState(repo: string, caller: Caller): Promise<Result<PlaybookState>> {
+  if (!repoOk(repo)) return BAD_REPO;
+  if (MOCK) return mock.playbookState(repo, caller.userId ?? undefined);
+  return call(`/v1/playbook/${repoPath(repo)}`, { caller });
+}
+
+/** Unlock a repository's playbook: the server checks and charges the user, then serves or queues it. */
+export async function unlockPlaybook(repo: string, userId: string): Promise<Result<PlaybookStart>> {
+  if (!repoOk(repo)) return BAD_REPO;
+  if (MOCK) return mock.unlockPlaybook(repo, userId);
+  return call(`/v1/me/playbook/${repoPath(repo)}`, { method: "POST", caller: { userId } });
+}
 
 /** "Was this verdict right?" (API.md, Feedback). One answer per person per report version. */
 export async function sendFeedback(input: FeedbackInput, caller: Caller): Promise<Result<FeedbackOut>> {

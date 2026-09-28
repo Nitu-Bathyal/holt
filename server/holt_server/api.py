@@ -350,6 +350,8 @@ def job_body(job: Job) -> dict[str, Any]:
     }
     if job.kind == "find":
         body["results"] = (job.result or {}).get("results") if job.status == "done" else None
+    elif job.kind == "playbook":
+        body["playbook"] = job.result if job.status == "done" else None
     else:
         body["report"] = job.result if job.status == "done" else None
     return body

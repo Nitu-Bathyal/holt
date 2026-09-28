@@ -29,6 +29,10 @@ log = logging.getLogger("holt_server.pro")
 
 CONNECT_TIMEOUT_S = 2.0
 READ_TIMEOUT_S = 10.0
+# POST /v1/playbook may read GitHub and then wait on a model (CONTRACT.md).
+PLAYBOOK_TIMEOUT_S = 300.0
+# How far back the playbook reads pull requests (the service's default).
+PLAYBOOK_DAYS = 365
 RETRY_DELAY_S = 0.5
 
 UNAVAILABLE = "This feature is unavailable right now. Please try again later."
@@ -92,6 +96,16 @@ class ProClient:
         return Ping(ok=bool(body.get("ok")), service=str(body.get("service", "")),
                     version=str(body.get("version", "")), engine=str(body.get("engine", "")),
                     user_id=body.get("user_id"))
+
+    async def playbook(self, repo: str, days: int = PLAYBOOK_DAYS, *,
+                       user_id: str | None = None,
+                       request_id: str | None = None) -> dict[str, Any]:
+        """The written "How to get merged here" playbook for `repo`, as the
+        service sends it. Slow on a cache miss: call it from a job."""
+        return await self._call("POST", "/v1/playbook",
+                                json={"repo": repo, "days": days, "refresh": False},
+                                user_id=user_id, request_id=request_id,
+                                timeout=PLAYBOOK_TIMEOUT_S)
 
     async def ready(self) -> Readiness:
         """The service's own health check. Never raises."""

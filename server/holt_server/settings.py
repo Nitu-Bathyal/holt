@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     # The optional internal service for paid features. Empty URL = off.
     pro_url: str = Field("", alias="HOLT_PRO_URL")
     pro_key: str = Field("", alias="HOLT_PRO_KEY")
+    # How long a written playbook is served before the next unlock asks the
+    # service for a new one. Playbook jobs use HOLT_JOB_TIMEOUT_AI.
+    playbook_cache_hours: float = Field(168, alias="HOLT_PLAYBOOK_CACHE_HOURS")
 
     openrouter_api_key: str = Field("", alias="OPENROUTER_API_KEY")
     openrouter_model: str = Field("openai/gpt-5-mini", alias="OPENROUTER_MODEL")

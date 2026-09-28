@@ -8,6 +8,9 @@ import type {
 import type { FeedbackInput } from "../feedback";
 import { verdictView, withDerived } from "./derived";
 import { canonicalName, isMockNotFound, mockFindPool, mockIssues, mockReport, PRECACHED } from "./fixtures";
+import { playbookEvents } from "./playbook";
+
+export { playbookState, unlockPlaybook } from "./playbook";
 
 const JOB_MS = Number(process.env.MOCK_JOB_MS || 6500);
 const WELCOME_CREDITS = Number(process.env.NEXT_PUBLIC_FREE_AI_QUOTA || 3);
@@ -162,8 +165,9 @@ function sse(event: string, data: unknown) {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
-export function jobEvents(kind: "analyses" | "find", id: string, signal: AbortSignal): Response {
+export function jobEvents(kind: "analyses" | "find" | "playbook-jobs", id: string, signal: AbortSignal): Response {
   if (kind === "find") return findEvents(id, signal);
+  if (kind === "playbook-jobs") return playbookEvents(id, signal);
   const job = state().jobs.get(id);
   const enc = new TextEncoder();
   const stream = new ReadableStream<Uint8Array>({

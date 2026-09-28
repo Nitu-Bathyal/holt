@@ -51,7 +51,16 @@ export interface RazorpaySuccess {
   razorpay_signature: string;
 }
 
+export type Access = S.Access;
+export type Playbook = S.Playbook;
+export type PlaybookItem = S.PlaybookItem;
+export type PlaybookSource = S.PlaybookSource;
+export type PlaybookClosingReason = S.PlaybookClosingReason;
+export type PlaybookState = S.PlaybookState;
+export type PlaybookSectionKey = S.PlaybookTeaserSection["key"];
+
 export type AnalysisStart = S.AnalysisDone | S.Queued;
+export type PlaybookStart = S.PlaybookDone | S.Queued;
 export type FindStart = S.FindDone | S.Queued;
 
 /** Result of a call: either data or a plain-English error. */
