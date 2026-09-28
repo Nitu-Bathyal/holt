@@ -140,7 +140,7 @@ export function FindFilters({ picks, onChange, hf }: { picks: Picks; onChange: (
             }}
           >
             <label htmlFor={`${panelId}-topics`} className="mb-2 block text-[0.8rem] text-faint">
-              Topics <span className="font-sans">(GitHub topics, comma separated; they narrow things a lot)</span>
+              Topics <span className="font-sans">(GitHub topics, separated by commas)</span>
             </label>
             <div className="flex gap-2">
               <input

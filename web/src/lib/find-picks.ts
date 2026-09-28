@@ -115,7 +115,7 @@ export function extraCount(p: Picks): number {
 export function widen(p: Picks): { label: string; picks: Picks }[] {
   const out: { label: string; picks: Picks }[] = [];
   if (p.topics.length) out.push({ label: "Drop the topics", picks: { ...p, topics: [] } });
-  if (p.hf) out.push({ label: "Include projects outside Hacktoberfest", picks: { ...p, hf: false } });
+  if (p.hf) out.push({ label: "Include repos outside Hacktoberfest", picks: { ...p, hf: false } });
   if (p.level === "newcomer") out.push({ label: "Show all starter issues", picks: { ...p, level: "experienced" } });
   if (p.langs.length) out.push({ label: "Any language", picks: { ...p, langs: [] } });
   if (p.days < 30) out.push({ label: "I have a month", picks: { ...p, days: 30 } });

@@ -59,7 +59,7 @@ test("counts the tucked-away filters", () => {
 test("widen offers at most three fixes, each loosening one pick", () => {
   assert.deepEqual(widen(base({ days: 30 })), []);
   const w = widen(base({ langs: ["go"], topics: ["cli"], hf: true, level: "newcomer" }));
-  assert.deepEqual(w.map((x) => x.label), ["Drop the topics", "Include projects outside Hacktoberfest", "Show all starter issues"]);
+  assert.deepEqual(w.map((x) => x.label), ["Drop the topics", "Include repos outside Hacktoberfest", "Show all starter issues"]);
   assert.deepEqual(w[0].picks.topics, []);
   assert.deepEqual(w[0].picks.langs, ["go"]);
   assert.deepEqual(widen(base({ langs: ["go"] })).map((x) => x.label), ["Any language", "I have a month"]);

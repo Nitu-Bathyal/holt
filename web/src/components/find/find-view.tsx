@@ -129,7 +129,7 @@ function Results({ shown, pending, fit, days, picks, setPicks, onRetry, children
     body = <ErrorPanel error={error} onRetry={onRetry} />;
   } else if (!raw) {
     const pct = Math.round(Math.min(1, Math.max(0.05, job.stage.progress)) * 100);
-    status = "Checking which projects reply to outside contributors. The first time for a search takes up to a minute.";
+    status = "Checking which repos reply to outsiders. A new search takes up to a minute.";
     body = (
       <>
         <div className="mb-5 h-1 bg-panel-2" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Search progress">
@@ -143,7 +143,7 @@ function Results({ shown, pending, fit, days, picks, setPicks, onRetry, children
     if (!list.length) {
       body = <Empty picks={picks} setPicks={setPicks} />;
     } else {
-      status = `${list.length} project${list.length === 1 ? "" : "s"} that merge outside work, best starter issues first`;
+      status = `${list.length} repo${list.length === 1 ? "" : "s"} that merge outside PRs, best starter issues first`;
       body = <FindResults results={list} days={days} />;
     }
   }
@@ -173,7 +173,7 @@ function Empty({ picks, setPicks }: { picks: Picks; setPicks: (p: Picks) => void
   return (
     <div className="border border-dashed border-line-strong p-6 text-center sm:p-8">
       <CatFace mood="thinking" className="text-[1.6rem]" />
-      <p className="mt-4 text-[1.1rem] font-semibold">No projects match all of that.</p>
+      <p className="mt-4 text-[1.1rem] font-semibold">No repos match all of that.</p>
       <p className="mt-2 font-sans text-muted">{fixes.length ? "Loosen one thing:" : "Try another language."}</p>
       {fixes.length > 0 && (
         <div className="mt-4 flex flex-wrap justify-center gap-2">

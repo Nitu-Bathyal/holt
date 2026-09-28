@@ -42,7 +42,7 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
       <>
       <PageHead compact>
         <h1 className="text-[clamp(1.45rem,3.4vw,2.1rem)] font-semibold leading-tight tracking-tight">Which one will review your pull request?</h1>
-        <p className="mt-2 hidden max-w-2xl font-sans text-[0.95rem] text-muted sm:block">Up to {MAX} repositories, the same rules and numbers for each, side by side.</p>
+        <p className="mt-2 hidden max-w-2xl font-sans text-[0.95rem] text-muted sm:block">Up to {MAX} repos. Same rules, same numbers.</p>
 
         <form action="/compare" method="get" className="mt-5 grid max-w-2xl grid-cols-[1fr_auto] border border-line-strong bg-panel shadow-soft focus-within:border-blue">
           <input type="hidden" name="repos" value={all.join(",")} />
@@ -82,7 +82,7 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
         )}
         {shown.length === 0 ? (
           <div className="border border-dashed border-line-strong p-8 font-sans text-muted">
-            Type two or more repositories above, separated by commas or spaces, to see them side by side.
+            Type two or more repos above, separated by commas or spaces.
           </div>
         ) : (
           <ul className={`grid gap-4 sm:grid-cols-2 ${shown.length >= 3 ? "lg:grid-cols-3" : ""} ${shown.length === 4 ? "xl:grid-cols-4" : ""}`}>
