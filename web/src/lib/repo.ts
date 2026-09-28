@@ -64,3 +64,16 @@ export function redirectTargetForPath(pathname: string, search = ""): string | n
   }
   return null;
 }
+
+// First segments of the app's own two-segment routes (/me/history,
+// /discover/python, /settings/profile, /pricing/thanks, /lab/expressive), so
+// /[owner]/[repo] never claims them. Add a folder here when you add one under
+// src/app with pages below it.
+const APP_ROUTES = new Set(["me", "discover", "pricing", "settings", "lab"]);
+
+/** "owner/repo" when a request path is a report page to check on GitHub; null for app routes and anything else. */
+export function repoFromPath(pathname: string): string | null {
+  const parts = pathname.split("/").filter(Boolean);
+  if (parts.length !== 2 || APP_ROUTES.has(parts[0].toLowerCase()) || !isValidRepo(parts[0], parts[1])) return null;
+  return `${parts[0]}/${parts[1]}`;
+}
