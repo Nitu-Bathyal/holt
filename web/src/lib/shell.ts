@@ -36,6 +36,17 @@ export function jumpHref(pathname: string, signedIn: boolean, id: LandingSection
   return signedIn ? `/?landing=1#${id}` : `/#${id}`;
 }
 
+/**
+ * What the header logo does. Signed in, it always goes to your home. Signed
+ * out, on the landing page it glides back to the hero (a link to the page
+ * you're on does nothing); anywhere else it goes to the landing page.
+ */
+export function logoAction(pathname: string, signedIn: boolean, home: string): { hero: true } | { href: string } {
+  if (signedIn) return { href: home };
+  if ((pathname.replace(/\/+$/, "") || "/") === "/") return { hero: true };
+  return { href: "/" };
+}
+
 export type IconName =
   | "home" | "check" | "find" | "browse" | "compare" | "leaf" | "pr" | "pr-check"
   | "saved" | "history" | "settings" | "help" | "signout";
