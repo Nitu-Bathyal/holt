@@ -740,6 +740,23 @@
     transform: scale(1.04);
   }
 }
+/* The save button's bookmark drops into place when a repo is saved. */
+@media (prefers-reduced-motion: no-preference) {
+  .save-drop {
+    animation: save-drop var(--dur-slow) var(--ease-out);
+  }
+}
+@keyframes save-drop {
+  0% {
+    transform: translateY(-0.3em) scaleY(0.8);
+  }
+  60% {
+    transform: translateY(0.06em) scaleY(1.04);
+  }
+  100% {
+    transform: none;
+  }
+}
 @keyframes cat-squint {
   from {
     transform: scaleY(0.1);

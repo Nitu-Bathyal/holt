@@ -106,13 +106,16 @@ def _norm(value: str | None) -> str | None:
     return value or None
 
 
-async def _latest(svc: Services) -> list[tuple]:
-    """(repo, report fields..., meta) for the newest 7-day rules report of each repo.
-    Only the fields a card needs come out of the report JSON, not whole bodies.
-    Reports from an older engine are left out until the warm pass redoes them."""
+async def _latest(svc: Services, keys: list[str] | None = None) -> list[tuple]:
+    """(repo, report fields..., meta) for the latest 7-day rules report of each
+    repo (only those in `keys`, when given). Only the fields a card needs come
+    out of the report JSON, not whole bodies. Reports from an older engine are
+    left out until the warm pass redoes them."""
     latest = (select(func.max(Report.id).label("id"))
-              .where(Report.mode == "rules", Report.days == DAYS, current_engine())
-              .group_by(Report.repo_key).subquery())
+              .where(Report.mode == "rules", Report.days == DAYS, current_engine()))
+    if keys is not None:
+        latest = latest.where(Report.repo_key.in_(keys))
+    latest = latest.group_by(Report.repo_key).subquery()
     async with svc.db.session() as s:
         return (await s.execute(
             select(Report.repo, Report.repo_key, Report.created_at,

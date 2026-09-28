@@ -30,6 +30,9 @@ export type ProfilePrefs = S.ProfilePrefs;
 export type Recommendations = S.Recommendations;
 export type Recommendation = S.Recommendation;
 export type RecommendationBasis = S.RecommendationBasis;
+export type SavedList = S.SavedList;
+export type SavedItem = S.SavedItem;
+export type SavedState = S.SavedState;
 export type ContributionType = ProfilePrefs["contributions"][number];
 export type Level = ProfilePrefs["level"];
 

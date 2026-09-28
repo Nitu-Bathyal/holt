@@ -3,7 +3,7 @@
 import "server-only";
 import type {
   AnalysisStart, ApiError, Credits, DiscoverOut, DiscoverRepo, DiscoverSort, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, HistoryItem,
-  ContributionType, JobStatus, Me, Mode, Packs, Plans, ProfileOut, ProfilePrefs, Recommendation, Recommendations, Report, Result, Stats, StarterIssue,
+  ContributionType, JobStatus, Me, Mode, Packs, Plans, ProfileOut, ProfilePrefs, Recommendation, Recommendations, Report, Result, SavedList, SavedState, Stats, StarterIssue,
 } from "../types";
 import type { FeedbackInput } from "../feedback";
 import { verdictView, withDerived } from "./derived";
@@ -584,4 +584,31 @@ export async function saveProfile(userId: string, body: Omit<ProfilePrefs, "upda
 export async function deleteProfile(userId: string): Promise<Result<ProfileOut>> {
   profiles().delete(userId);
   return getProfile(userId);
+}
+
+// Saved repos: in memory per user, newest first; cards from the cached reports.
+const g5 = globalThis as unknown as { holtMockSaved?: Map<string, Map<string, { repo: string; saved_at: string }>> };
+const savedOf = (userId: string) => {
+  const all = (g5.holtMockSaved ??= new Map());
+  if (!all.has(userId)) all.set(userId, new Map());
+  return all.get(userId)!;
+};
+
+export async function savedRepos(userId: string): Promise<Result<SavedList>> {
+  const cards = new Map(((await discover("stars", null, null, 1000)) as { ok: true; data: DiscoverOut }).data.repos.map((c) => [c.repo.toLowerCase(), c]));
+  const rows = [...savedOf(userId).values()].sort((a, b) => b.saved_at.localeCompare(a.saved_at));
+  return { ok: true, data: { saved: rows.map((r) => ({ ...r, card: cards.get(r.repo.toLowerCase()) ?? null })), max_saved: 500 } };
+}
+
+export async function savedState(userId: string, repo: string): Promise<Result<SavedState>> {
+  const row = savedOf(userId).get(repo.toLowerCase());
+  return { ok: true, data: row ? { ...row, saved: true } : { repo, saved: false, saved_at: null } };
+}
+
+export async function setSaved(userId: string, repo: string, saved: boolean): Promise<Result<SavedState>> {
+  const mine = savedOf(userId);
+  const key = repo.toLowerCase();
+  if (!saved) mine.delete(key);
+  else if (!mine.has(key)) mine.set(key, { repo: canonicalName(repo), saved_at: new Date().toISOString() });
+  return savedState(userId, repo);
 }

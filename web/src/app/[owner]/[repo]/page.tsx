@@ -11,7 +11,7 @@ import { ReportView } from "@/components/report/report-view";
 import { StarterIssues, StarterIssuesSkeleton } from "@/components/report/starter-issues";
 import { LinkHint } from "@/components/motion/link-hint";
 import { SkeletonReveal } from "@/components/motion/reveal";
-import { getReport, me, recordView, starterIssues } from "@/lib/api";
+import { getReport, me, recordView, savedState, starterIssues } from "@/lib/api";
 import { budgetFrom, reportHref } from "@/lib/budget";
 import { isValidRepo } from "@/lib/repo";
 import { caller, currentUser, type SessionUser } from "@/lib/session";
@@ -19,6 +19,7 @@ import { humanHours } from "@/lib/format";
 import { SITE_URL } from "@/lib/site";
 import type { Credits, Mode, Report } from "@/lib/types";
 import { PageTransition } from "@/components/motion/page-transition";
+import { SaveButton } from "@/components/save-button";
 
 type Props = PageProps<"/[owner]/[repo]">;
 
@@ -85,8 +86,12 @@ export default async function RepoPage({ params, searchParams }: Props) {
   const signedIn = Boolean(user);
   if (mode === "ai" && !signedIn) redirect(`/signin?callbackUrl=${encodeURIComponent(`/${name}?mode=ai`)}`);
 
-  // Only the report blocks the page; starter issues (a live GitHub call) stream in.
-  const report = await getReport(name, mode, days);
+  // Only the report (and, signed in, whether it's saved: one database read)
+  // blocks the page; starter issues (a live GitHub call) stream in.
+  const [report, saved] = await Promise.all([
+    getReport(name, mode, days),
+    user ? savedState(user.id, name) : null,
+  ]);
 
   // Normalise to GitHub's casing so shared links and caches agree.
   if (report.ok && report.data.repo !== name && report.data.repo.toLowerCase() === name.toLowerCase()) {
@@ -126,6 +131,9 @@ export default async function RepoPage({ params, searchParams }: Props) {
               github.com/{display} ↗
             </a>
           </div>
+          {/* A failed lookup shows "save"; saving again is harmless. Keyed so
+              moving to another repo's report starts from that repo's state. */}
+          <SaveButton key={display} repo={display} saved={user ? Boolean(saved?.ok && saved.data.saved) : null} />
           <nav aria-label="Report type" className="relative grid w-full grid-cols-2 border border-line-strong text-center text-[0.78rem] sm:w-auto">
             {/* One pill under both tabs; it slides to the current one. */}
             <span aria-hidden="true" className={`tab-pill absolute inset-y-0 left-0 w-1/2 ${mode === "ai" ? "translate-x-full bg-blue" : "bg-ink"}`} />
