@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { EXAMPLE_PATH } from "@/lib/example-report";
 import { WELCOME_AI_CREDITS } from "@/lib/site";
 
 export function UpgradeCard({ repo, signedIn }: { repo: string; signedIn: boolean }) {
@@ -20,6 +21,9 @@ export function UpgradeCard({ repo, signedIn }: { repo: string; signedIn: boolea
           {signedIn ? "uses 1 of your free AI reports" : `sign in for ${WELCOME_AI_CREDITS} free AI reports`}
         </span>
       </div>
+      <p className="mt-3 font-sans text-[0.85rem] text-muted">
+        Not sure yet? <Link href={EXAMPLE_PATH} className="text-link">Read an example AI report</Link>, free.
+      </p>
     </div>
   );
 }

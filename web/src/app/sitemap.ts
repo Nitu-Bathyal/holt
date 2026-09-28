@@ -13,6 +13,7 @@ const STATIC: { path: string; priority: number; changeFrequency: "daily" | "week
   { path: "/how-it-works", priority: 0.5, changeFrequency: "weekly" },
   { path: "/badge", priority: 0.5, changeFrequency: "weekly" },
   { path: "/pricing", priority: 0.4, changeFrequency: "weekly" },
+  { path: "/example-ai-report", priority: 0.5, changeFrequency: "weekly" },
   { path: "/terms", priority: 0.2, changeFrequency: "weekly" },
   { path: "/privacy", priority: 0.2, changeFrequency: "weekly" },
   { path: "/refunds", priority: 0.2, changeFrequency: "weekly" },

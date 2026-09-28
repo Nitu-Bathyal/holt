@@ -1,0 +1,188 @@
+{
+  "verdict": "viable",
+  "repo": "home-assistant/core",
+  "mode": "ai",
+  "days": 7,
+  "bottom_line": "You can expect a prompt first reply (median 2.3 hours) and outsiders do get merged—28 distinct first-time authors had PRs merged in the sample. However responsiveness is inconsistent: 55 of 119 outsider PRs were left without any visible response.",
+  "summary": "The clearest signal is that outside contributions are accepted and often get a fast initial reaction: 28 first-time PRs by 28 distinct authors were merged out of 119 outsider attempts by 81 people, and the median time to first response was 2.3 hours. This is a real application repository (Home Assistant core) with substantive onboarding: the CONTRIBUTING guide gives a concrete PR process and points to developer documentation and discussion venues.\n\nThat positive behaviour sits alongside notable inconsistency. In the sample 55 of 119 outsider threads received no visible response, some PRs were closed dismissively, and many threads show changes requested rather than quick merges. Maintainer comments range from constructive review—\"Looks good, but please address the valid bot comments.\"—to silence, and the bot share is low (≈5.5%), so most interactions are with humans and vary by area and reviewer.",
+  "stats": {
+    "outsider_attempts": 119,
+    "outsider_merged": 28,
+    "distinct_outsiders": 81,
+    "first_time_merged_authors": 28,
+    "no_reply": 55,
+    "median_first_response_hours": 2.3,
+    "bot_share": 0.055
+  },
+  "decided_by": [
+    "28 pull requests from outside contributors were merged, by 28 different people, out of 119 attempts by 81 people. Of those who got a reply, half heard back within 2.3 hours. 55 attempts got no reply at all and weren't merged."
+  ],
+  "rule_codes": [
+    "merges"
+  ],
+  "unknowns": [
+    "I could not determine how consistently maintainers will help an outsider who is blocked by local setup, failing CI, or other hands-on onboarding problems."
+  ],
+  "landing": [
+    {
+      "path": "homeassistant/components",
+      "merged": 26,
+      "attempted": 104
+    },
+    {
+      "path": "tests/components",
+      "merged": 16,
+      "attempted": 84
+    },
+    {
+      "path": "(root)",
+      "merged": 5,
+      "attempted": 26
+    },
+    {
+      "path": "homeassistant/brands",
+      "merged": 1,
+      "attempted": 2
+    }
+  ],
+  "never_landed": [],
+  "evidence": [
+    {
+      "id": "repo:home-assistant/core:meta",
+      "url": "https://github.com/home-assistant/core",
+      "kind": "repo_kind",
+      "value": "real_software",
+      "text": "The repository is the Home Assistant core project (an open-source home automation platform). The merged PRs modify application code, integration components, tests, and CI workflows (not just catalogue entries or a curated list). Examples…",
+      "quote": null
+    },
+    {
+      "id": "repo:home-assistant/core:contributing",
+      "url": "https://github.com/home-assistant/core/blob/93615edc60547e00d0bca06888e69410713cb517/CONTRIBUTING.md",
+      "kind": "onboarding",
+      "value": "substantive",
+      "text": "The CONTRIBUTING file gives a clear, actionable route for outsiders: it invites contributions, lists a step-by-step process for proposing code (read PR guidance, fork the repo, write code, ensure tests pass, create a PR against the dev…",
+      "quote": null
+    },
+    {
+      "id": "pr:home-assistant/core#172481:opened",
+      "url": "https://github.com/home-assistant/core/pull/172481",
+      "kind": "outsider_posture",
+      "value": "mixed",
+      "text": "Some PRs receive substantive review and are merged after feedback (welcoming), while many others are left open with little or no visible response (ignored) or closed without engagement. Overall this shows an active review culture in places…",
+      "quote": null
+    },
+    {
+      "id": "pr:home-assistant/core#172481:opened",
+      "url": "https://github.com/home-assistant/core/pull/172481",
+      "kind": "outcome",
+      "value": "changes_requested",
+      "text": "Changes requested",
+      "quote": "We need to override `async_update` and trigger release coordinator refresh, because now the main coordinator is triggered."
+    },
+    {
+      "id": "pr:home-assistant/core#172384:opened",
+      "url": "https://github.com/home-assistant/core/pull/172384",
+      "kind": "outcome",
+      "value": "ignored",
+      "text": "Ignored, with nothing said",
+      "quote": null
+    },
+    {
+      "id": "pr:home-assistant/core#172460:opened",
+      "url": "https://github.com/home-assistant/core/pull/172460",
+      "kind": "outcome",
+      "value": "changes_requested",
+      "text": "Changes requested, with nothing said",
+      "quote": null
+    },
+    {
+      "id": "pr:home-assistant/core#172542:opened",
+      "url": "https://github.com/home-assistant/core/pull/172542",
+      "kind": "outcome",
+      "value": "ignored",
+      "text": "Ignored, with nothing said",
+      "quote": null
+    },
+    {
+      "id": "pr:home-assistant/core#172613:opened",
+      "url": "https://github.com/home-assistant/core/pull/172613",
+      "kind": "outcome",
+      "value": "changes_requested",
+      "text": "Changes requested, with nothing said",
+      "quote": null
+    },
+    {
+      "id": "pr:home-assistant/core#172500:opened",
+      "url": "https://github.com/home-assistant/core/pull/172500",
+      "kind": "outcome",
+      "value": "merged_after_review",
+      "text": "Merged after review",
+      "quote": "Looks good, but please address the valid bot comments."
+    },
+    {
+      "id": "pr:home-assistant/core#172611:opened",
+      "url": "https://github.com/home-assistant/core/pull/172611",
+      "kind": "outcome",
+      "value": "changes_requested",
+      "text": "Changes requested",
+      "quote": "I would make 2 PRs: one for integration and one for tests"
+    },
+    {
+      "id": "pr:home-assistant/core#172550:opened",
+      "url": "https://github.com/home-assistant/core/pull/172550",
+      "kind": "outcome",
+      "value": "changes_requested",
+      "text": "Changes requested, with nothing said",
+      "quote": null
+    },
+    {
+      "id": "pr:home-assistant/core#172555:opened",
+      "url": "https://github.com/home-assistant/core/pull/172555",
+      "kind": "outcome",
+      "value": "closed_dismissive",
+      "text": "Closed dismissive, with nothing said",
+      "quote": null
+    },
+    {
+      "id": "pr:home-assistant/core#172595:opened",
+      "url": "https://github.com/home-assistant/core/pull/172595",
+      "kind": "outcome",
+      "value": "ignored",
+      "text": "Ignored, with nothing said",
+      "quote": null
+    },
+    {
+      "id": "pr:home-assistant/core#172647:opened",
+      "url": "https://github.com/home-assistant/core/pull/172647",
+      "kind": "outcome",
+      "value": "changes_requested",
+      "text": "Changes requested",
+      "quote": "As discussed on Discord, I'd prefer to have information visible to the user so they're aware of the automatic installation by the provider."
+    },
+    {
+      "id": "pr:home-assistant/core#172472:opened",
+      "url": "https://github.com/home-assistant/core/pull/172472",
+      "kind": "outcome",
+      "value": "changes_requested",
+      "text": "Changes requested, with nothing said",
+      "quote": null
+    }
+  ],
+  "evidence_until": "2026-06-01T00:00:00Z",
+  "generated_at": "2026-06-01T00:00:00Z",
+  "cost": {
+    "model": "gpt-5-mini-2025-08-07",
+    "input_tokens": 5945,
+    "output_tokens": 5400,
+    "usd": 0.01229,
+    "seconds": null
+  },
+  "headline": "Worth your time",
+  "tone": "good",
+  "verdict_line": "Outside contributors do get merged here (28 of 119 recently), but about half get no reply, so start with one of the starter issues below.",
+  "odds": {
+    "level": "fair",
+    "tone": "warn",
+    "text": "some outside pull requests land; a well-chosen starter issue helps"
+  }
+}
