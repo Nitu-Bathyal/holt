@@ -36,8 +36,8 @@ export function jumpHref(pathname: string, signedIn: boolean, id: LandingSection
   return signedIn ? `/?landing=1#${id}` : `/#${id}`;
 }
 
-/** Try Holt without an account: a full example report. */
-export const EXAMPLE_HREF = "/example-ai-report";
+/** Try Holt without an account: the example reports (EXAMPLES_PATH in lib/examples.ts once #140 is on main). */
+export const EXAMPLE_HREF = "/examples";
 
 export type IconName =
   | "home" | "check" | "find" | "browse" | "compare" | "leaf" | "pr" | "pr-check"

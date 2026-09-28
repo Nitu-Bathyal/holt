@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { activeItem, CHECK_HREF, jumpHref, LANDING_SECTIONS, RETIRED, retiredRedirect, shellFor, sidebarGroups } from "./shell.ts";
+import { activeItem, CHECK_HREF, EXAMPLE_HREF, jumpHref, LANDING_SECTIONS, RETIRED, retiredRedirect, shellFor, sidebarGroups } from "./shell.ts";
 
 test("signed out, every page wears the marketing shell", () => {
   for (const p of ["/", "/me", "/find", "/pallets/flask", "/settings/profile", "/pricing"]) assert.equal(shellFor(p, false), "marketing", p);
@@ -25,6 +25,7 @@ test("jump links glide on the landing page and go to it from anywhere else", () 
   // Signed in, "/" goes home, so the landing page is /?landing=1.
   assert.equal(jumpHref("/pricing", true, "answer"), "/?landing=1#answer");
   assert.deepEqual(LANDING_SECTIONS.map((s) => s.id), ["answer", "what-it-checks", "verdicts", "open-source"]);
+  assert.equal(EXAMPLE_HREF, "/examples");
 });
 
 test("the sidebar holds every signed-in page, each once, with a plain label and an icon", () => {
