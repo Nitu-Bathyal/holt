@@ -517,6 +517,43 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/saved": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Saved */
+        get: operations["get_saved_v1_me_saved_get"];
+        put?: never;
+        post?: never;
+        /** Delete Saved */
+        delete: operations["delete_saved_v1_me_saved_delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/saved/{owner}/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Saved Repo */
+        get: operations["get_saved_repo_v1_me_saved__owner___name__get"];
+        /** Put Saved Repo */
+        put: operations["put_saved_repo_v1_me_saved__owner___name__put"];
+        post?: never;
+        /** Delete Saved Repo */
+        delete: operations["delete_saved_repo_v1_me_saved__owner___name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/subscription": {
         parameters: {
             query?: never;
@@ -2441,6 +2478,33 @@ export interface components {
             /** Team Pull Requests */
             team_pull_requests: number;
         };
+        /** SavedItem */
+        SavedItem: {
+            card: components["schemas"]["DiscoverRepo"] | null;
+            /** Repo */
+            repo: string;
+            /** Saved At */
+            saved_at: string;
+        };
+        /** SavedList */
+        SavedList: {
+            /**
+             * Max Saved
+             * @default 500
+             */
+            max_saved: number;
+            /** Saved */
+            saved: components["schemas"]["SavedItem"][];
+        };
+        /** SavedState */
+        SavedState: {
+            /** Repo */
+            repo: string;
+            /** Saved */
+            saved: boolean;
+            /** Saved At */
+            saved_at: string | null;
+        };
         /** StarterIssue */
         StarterIssue: {
             /** Areas */
@@ -2735,6 +2799,9 @@ export type Report = components['schemas']['Report'];
 export type ReportList = components['schemas']['ReportList'];
 export type ReportListItem = components['schemas']['ReportListItem'];
 export type Sample = components['schemas']['Sample'];
+export type SavedItem = components['schemas']['SavedItem'];
+export type SavedList = components['schemas']['SavedList'];
+export type SavedState = components['schemas']['SavedState'];
 export type StarterIssue = components['schemas']['StarterIssue'];
 export type StarterIssues = components['schemas']['StarterIssues'];
 export type Stats = components['schemas']['Stats'];
@@ -3936,6 +4003,180 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Recommendations"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_saved_v1_me_saved_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedList"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    delete_saved_v1_me_saved_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedList"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_saved_repo_v1_me_saved__owner___name__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedState"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    put_saved_repo_v1_me_saved__owner___name__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedState"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    delete_saved_repo_v1_me_saved__owner___name__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SavedState"];
                 };
             };
             /** @description Default Response */

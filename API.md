@@ -55,7 +55,8 @@ signed in:
   120/h). Viewing, reloading and sharing report pages can never use up work.
 
 `GET /v1/reports/…` reads only the cache and is not rate limited.
-`POST /v1/feedback` has a small bucket of its own (see Feedback).
+`POST /v1/feedback` has a small bucket of its own (see Feedback), and so do
+saving and unsaving repos (see Saved repos).
 
 ## Repo identifiers
 
@@ -679,6 +680,34 @@ also shows issues asking for help and small unlabelled fixes. Issues whose
 `areas` match `contributions` come first. The web applies `level` and
 `contributions` to find results itself, so they don't change the find search
 or its cache.
+
+### Saved repos
+
+Repositories a signed-in user saved to come back to later. Stored in
+`saved_repos`: the user, the repository and when it was saved, nothing else.
+Every route needs a signed-in user (401 `unauthorized` otherwise). Nothing
+here calls GitHub.
+
+`SavedState` = `{"repo": "owner/repo", "saved": true, "saved_at": "…"|null}`.
+`SavedList` = `{"saved": [SavedItem], "max_saved": 500}`, newest first, where
+`SavedItem` = `{"repo": "owner/repo", "saved_at": "…", "card": DiscoverRepo | null}`.
+`card` is what `/v1/discover` shows for the repo (verdict, reason, stats,
+description, language, stars, topics), read fresh from its latest 7-day rules
+report and `repo_meta`; null while Holt has no current report for it.
+
+- `GET /v1/me/saved` → `SavedList`. Not rate limited.
+- `GET /v1/me/saved/{owner}/{repo}` → `SavedState` (is this one saved?).
+- `PUT /v1/me/saved/{owner}/{repo}` (no body) → `SavedState`. Idempotent:
+  saving again keeps the first `saved_at`. The name is stored with GitHub's
+  casing when Holt already knows the repo. Bad name → 400 `invalid_repo`; a
+  new save past `max_saved` → 400 `invalid_request`.
+- `DELETE /v1/me/saved/{owner}/{repo}` → `SavedState` with `saved: false`,
+  also when it wasn't saved.
+- `DELETE /v1/me/saved` → `SavedList` with `saved: []`: removes every saved
+  repo (part of deleting a user's data).
+
+Writes (`PUT` and both `DELETE`s) have a bucket of their own, 300 an hour per
+user, apart from work and read; over it → 429 `rate_limited`.
 
 ### Playbook: "How to get merged here" (paid)
 

@@ -664,3 +664,18 @@ class Preflight(Base):
     __table_args__ = (
         Index("ix_preflights_target", "user_id", "repo_key", "target", "created_at"),
     )
+
+
+class SavedRepo(Base):
+    """A repository a signed-in user saved to come back to later (saved.py).
+    One row per user and repo; saving again keeps the first `saved_at`."""
+
+    __tablename__ = "saved_repos"
+
+    user_id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    repo_key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    # owner/name as it was saved (GitHub's casing when Holt knows it).
+    repo: Mapped[str] = mapped_column(String(200))
+    saved_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+    __table_args__ = (Index("ix_saved_repos_user", "user_id", "saved_at"),)
