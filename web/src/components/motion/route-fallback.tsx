@@ -21,14 +21,17 @@ import CompareLoading from "@/app/compare/loading";
 import FindLoading from "@/app/find/loading";
 import HacktoberfestLoading from "@/app/hacktoberfest/loading";
 import HowItWorksLoading from "@/app/how-it-works/loading";
+import ContributionsLoading from "@/app/me/contributions/loading";
 import HistoryLoading from "@/app/me/history/loading";
+import HomeLoading from "@/app/me/loading";
+import SavedLoading from "@/app/me/saved/loading";
 import PricingLoading from "@/app/pricing/loading";
 import SettingsLoading from "@/app/settings/loading";
 import SigninLoading from "@/app/signin/loading";
 import ReportLoading from "@/app/[owner]/[repo]/loading";
 import RootLoading from "@/app/loading";
 import { PageHeadSkeleton } from "../page-head-skeleton";
-import { SkeletonRegion } from "../skeleton";
+import { Skeleton, SkeletonRegion } from "../skeleton";
 import { LoadingTransition } from "./page-transition";
 
 const MAIN_ID = "content";
@@ -40,7 +43,10 @@ const ROUTES: Record<string, React.ReactElement> = {
   "/find": <FindLoading />,
   "/hacktoberfest": <HacktoberfestLoading />,
   "/how-it-works": <HowItWorksLoading />,
+  "/me": <HomeLoading />,
+  "/me/contributions": <ContributionsLoading />,
   "/me/history": <HistoryLoading />,
+  "/me/saved": <SavedLoading />,
   "/pricing": <PricingLoading />,
   "/signin": <SigninLoading />,
 };
@@ -55,12 +61,12 @@ const GENERIC = (
 
 /** Settings pages share a layout, and its loading.tsx only covers the section. */
 const SETTINGS = (
-  <>
-    <PageHeadSkeleton headline={1} lead={0} />
-    <div className="wrap pb-14 pt-6 md:pt-10 md:pl-[13.5rem]">
-      <SettingsLoading />
+  <div className="wrap max-w-3xl pb-14">
+    <div className="pb-6 pt-8 sm:pt-10">
+      <Skeleton className="h-8 w-40" />
     </div>
-  </>
+    <SettingsLoading />
+  </div>
 );
 
 function loadingFor(pathname: string): React.ReactElement {

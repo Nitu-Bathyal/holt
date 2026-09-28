@@ -5,12 +5,13 @@ import { CatFace } from "@/components/cat-face";
 import { PrList } from "@/components/contributions/pr-list";
 import { RefreshButton } from "@/components/contributions/refresh-button";
 import { ErrorPanel } from "@/components/error-panel";
-import { PageHead } from "@/components/page-head";
+import { AppPageHeader } from "@/components/shell/app-page";
 import { PageTransition } from "@/components/motion/page-transition";
 import { ForYouCard } from "@/components/recommendations/for-you-card";
 import { contributions, recommendations } from "@/lib/api";
 import { foundViaHoltLine, landedLine, landedPct } from "@/lib/contributions";
 import { timeAgo } from "@/lib/format";
+import { outsidePulls } from "@/lib/home";
 import { currentUser } from "@/lib/session";
 import { refresh } from "./actions";
 
@@ -47,17 +48,8 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
   return (
     <PageTransition>
       <>
-      <PageHead narrow>
-        <p className="rail mb-4 flex gap-2">
-          <strong className="m-0">contributions</strong>
-          <span>{d ? `@${d.login}` : user.name || user.email}</span>
-        </p>
-        <h1 className="display text-[clamp(2rem,6vw,3rem)]">Your pull requests</h1>
-        <p className="prose-sans mt-3 max-w-xl text-muted">
-          Your public pull requests to other people&apos;s repos from the last 12 months, with Holt&apos;s verdict on each repo.
-        </p>
-      </PageHead>
-      <div className="wrap max-w-3xl pb-14 pt-2 sm:pb-16">
+      <div className="wrap max-w-3xl pb-14 sm:pb-16">
+        <AppPageHeader title="Your pull requests" lead={<>Your public PRs to other people&apos;s repos from the last 12 months, with Holt&apos;s verdict on each repo.{d && <span className="text-faint"> As @{d.login}.</span>}</>} />
         {notice && d && <p role="status" className={`mt-6 border px-4 py-3 font-sans text-[0.9rem] ${notice.tone}`}>{notice.text}</p>}
 
         {notConnected ? (
@@ -99,7 +91,7 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
                   <Link href="/find" className="bracket-link mt-6">[ find a project → ]</Link>
                 </div>
               ) : (
-                <PrList prs={d.pull_requests} />
+                <PrList prs={outsidePulls(d.pull_requests, d.login)} />
               )}
             </div>
 

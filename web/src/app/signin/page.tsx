@@ -7,6 +7,7 @@ import { PageTransition } from "@/components/motion/page-transition";
 import { TONE_MOOD } from "@/components/report/tone";
 import { VerdictPill } from "@/components/report/verdict-pill";
 import { EXAMPLE_PATH, EXAMPLE_REPORT, exampleRecordedOn } from "@/lib/example-report";
+import { EXAMPLES_PATH } from "@/lib/examples";
 import { humanHours } from "@/lib/format";
 import { afterSignIn } from "@/lib/home";
 import { currentUser } from "@/lib/session";
@@ -112,7 +113,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
             </div>
 
             <p className="mt-6 font-sans text-[0.9rem] text-muted">
-              Only checking a repo? <Link href="/" className="text-link">That never needs an account</Link>.
+              Just curious? <Link href={EXAMPLES_PATH} className="text-link">Try an example report →</Link>
             </p>
           </section>
 

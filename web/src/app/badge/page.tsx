@@ -5,8 +5,10 @@ import { BadgeLive } from "@/components/badge/badge-live";
 import { BadgeResult } from "@/components/badge/badge-result";
 import { PageTransition } from "@/components/motion/page-transition";
 import { PageHead } from "@/components/page-head";
+import { SignInToCheck } from "@/components/sign-in-to-check";
 import { getReport } from "@/lib/api";
 import { parseRepoInput } from "@/lib/repo";
+import { currentUser } from "@/lib/session";
 import { SITE_URL } from "@/lib/site";
 
 export const metadata: Metadata = {
@@ -22,7 +24,7 @@ export default async function BadgePage({ searchParams }: PageProps<"/badge">) {
   const name = ref && `${ref.owner}/${ref.repo}`;
   // Keep the URL tidy and shareable: whatever was pasted becomes owner/repo.
   if (name && raw !== name) redirect(`/badge?repo=${name}`);
-  const report = name ? await getReport(name) : null;
+  const [report, user] = await Promise.all([name ? getReport(name) : null, currentUser()]);
   if (report?.ok && name && report.data.repo !== name) redirect(`/badge?repo=${report.data.repo}`);
 
   return (
@@ -75,7 +77,7 @@ export default async function BadgePage({ searchParams }: PageProps<"/badge">) {
           ) : report?.ok ? (
             <BadgeResult report={report.data} site={SITE_URL} />
           ) : report?.error.code === "not_found" ? (
-            <BadgeLive key={name} repo={name} site={SITE_URL} />
+            user ? <BadgeLive key={name} repo={name} site={SITE_URL} /> : <SignInToCheck back={`/badge?repo=${name}`} className="panel p-5" />
           ) : (
             <p role="alert" className="panel p-5 font-sans text-[0.92rem] text-orange">{report?.error.message}</p>
           )}
