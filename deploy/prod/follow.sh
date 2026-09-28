@@ -88,11 +88,13 @@ PY
     tail -n 2000 "$FLOG" > "$FLOG.tmp" && mv "$FLOG.tmp" "$FLOG"
 }
 
+pause_reason() { local r; r="$(cat "$PAUSE" 2>/dev/null || true)"; echo "${r:-paused by hand}"; }
+
 # --- commands ----------------------------------------------------------------
 case "${1:-}" in
     --pause)
-        shift; printf '%s\n' "${*:-paused by hand}" > "$PAUSE"
-        status paused "$(cat "$STATE/current" 2>/dev/null || true)" "paused: $(cat "$PAUSE"); follow.sh --resume to start again"
+        shift; printf '%s\n' "$*" > "$PAUSE"
+        status paused "$(cat "$STATE/current" 2>/dev/null || true)" "$(pause_reason); follow.sh --resume to start again"
         exit 0 ;;
     --resume)
         rm -f "$PAUSE"
@@ -105,7 +107,7 @@ case "${1:-}" in
         rm -f "$FAILED"; log "forgot the failed commits; the next tick may try them again"; exit 0 ;;
     --status)
         cat "$STATUS" 2>/dev/null || echo "no status yet"
-        [[ -f "$PAUSE" ]] && echo "PAUSED: $(cat "$PAUSE")"
+        [[ -f "$PAUSE" ]] && echo "PAUSED: $(pause_reason)"
         [[ -s "$FAILED" ]] && { echo "failed, not retried:"; sed 's/^/  /' "$FAILED"; }
         echo "recent:"; tail -n 10 "$FLOG" 2>/dev/null | sed 's/^/  /'
         exit 0 ;;
@@ -119,7 +121,7 @@ if ! flock -n 8; then log "another tick is running; skipping"; exit 0; fi
 current="$(cat "$STATE/current" 2>/dev/null || true)"
 
 if [[ -f "$PAUSE" ]]; then
-    status paused "$current" "paused: $(cat "$PAUSE"); follow.sh --resume to start again"; exit 0
+    status paused "$current" "$(pause_reason); follow.sh --resume to start again"; exit 0
 fi
 
 # --- origin/main ---------------------------------------------------------------
@@ -141,7 +143,7 @@ last_live="$(cat "$LAST_LIVE" 2>/dev/null || true)"
 if [[ -n "$current" && -n "$last_live" && "$current" != "$last_live" ]] && is_ancestor "$current" "$last_live"; then
     echo "production was rolled back by hand from ${last_live:0:7} to ${current:0:7}" > "$PAUSE"
     echo "$current" > "$LAST_LIVE"
-    status paused "$current" "paused: $(cat "$PAUSE"); follow.sh --resume to follow main again"; exit 0
+    status paused "$current" "$(pause_reason); follow.sh --resume to follow main again"; exit 0
 fi
 [[ -n "$current" ]] && echo "$current" > "$LAST_LIVE"
 
@@ -188,7 +190,8 @@ esac
 staging="$(curl -fsS --max-time 10 "$STAGING_URL" 2>/dev/null \
     | python3 -c 'import json,sys; print(((json.load(sys.stdin).get("live") or {}).get("main") or {}).get("sha") or "")' 2>/dev/null || true)"
 if [[ "$staging" != "$sha" ]]; then
-    status waiting "$sha" "CI is green on $short; staging isn't live on it yet (staging is on ${staging:+${staging:0:7}}${staging:-nothing: /__build unreachable})"
+    on="${staging:0:7}"; on="${on:-nothing: its /__build didn't answer}"
+    status waiting "$sha" "CI is green on $short; staging isn't live on it yet (staging is on $on)"
     exit 0
 fi
 
