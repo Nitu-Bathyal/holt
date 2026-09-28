@@ -75,6 +75,7 @@ responses. The server also accepts and normalises full URLs
   "verdict_line": "string",           // one plain sentence under the headline
   "odds": { "level": "good" | "fair" | "long", "tone": "good" | "warn" | "bad",
             "text": "most outside pull requests get a reply, and plenty get merged" } | null,
+  "bottom_line": "string | null",     // ai mode: at most two model-written sentences, the lead of the AI explanation
   "summary": "string | null",         // ai mode: short plain-English paragraph
   "stats": {
     "outsider_attempts": 100, "outsider_merged": 15, "distinct_outsiders": 72,
@@ -92,9 +93,34 @@ responses. The server also accepts and normalises full URLs
   ],
   "evidence_until": "2026-06-01T00:00:00Z", // or null
   "generated_at": "2026-09-25T12:00:00Z",
-  "cost": { "model": "…", "input_tokens": 9000, "output_tokens": 6000 } // ai only, else null
+  "cost": { "model": "…", "input_tokens": 9000, "output_tokens": 6000,
+            "usd": 0.0123, "seconds": 48.2 }, // ai only, else null
+  "holt_users": { "people": 9, "pull_requests": 12, "merged": 7, "closed": 2,
+                  "waiting": 3, "window_days": 365, "computed_at": "…" } | null
 }
 ```
+
+`bottom_line` and `summary` are null in rules mode (the headline and
+`verdict_line` already are the rules report's bottom line). In AI mode they are
+the model's words, checked by the engine before they are stored; either can be
+null on a report where the model wrote nothing usable, and `bottom_line` is
+null on AI reports cached before it existed. Show them as AI-written.
+
+`cost` is for operators, not the product: `usd` is what the model calls cost
+(from the engine's price table), `seconds` the whole run's wall time. Both are
+null on reports cached before they were recorded. Per-stage timings go to the
+server log, not the report.
+
+`holt_users` is what connected Holt users' public pull requests to this
+repository came to (from My Contributions, the last `window_days`): counts only,
+never who. It is filled only by `GET /v1/reports/{owner}/{repo}` (null on the
+analysis endpoints and never stored with the report), and only when at least 5
+different people make up the numbers: one person with many pull requests
+counts once. Users who turned on `stats_opt_out` are never counted. The numbers
+are recounted by the daily contributions refresh (and
+`python -m holt_server.contributions stats`); opting out or disconnecting
+recounts that user's repositories at once. Surfaces show them as they come and
+never rank or name anyone.
 
 Every evidence item MUST have a clickable `url`.
 
@@ -147,6 +173,9 @@ newest first-timer pull requests behind the counts instead, as
 
 ### `POST /v1/analyses`
 Body: `{"repo": "owner/repo", "mode": "rules"|"ai", "days": 7, "refresh": false}`
+- Model choice is server configuration (`OPENROUTER_MODEL`); a `model` field in
+  the request is ignored. It is accepted (not a 400) for older clients, and it
+  never reaches the engine, the job or the cache key.
 - Returns `200 {"status":"done","report":Report}` immediately when a cached
   report exists (same repo/mode/days, younger than 24h) and `refresh` is false.
 - Otherwise `202 {"status":"queued","job_id":"…"}`.
@@ -217,6 +246,38 @@ StarterIssue:
 `beginner` and `areas` are worked out from the labels and title every time an
 issue is sent, so cached issues have them too. The web uses them with a
 profile (see Profile); they never change a verdict or which repos are listed.
+
+### `GET /v1/discover?sort=welcoming|stars|trending&language=python&topic=cli&limit=24`
+Browse the repositories Holt has checked, built only from each repo's latest
+7-day **rules** report (never the model) and ranking repositories, never
+people. Reads only the database: no GitHub call and no rate limit.
+
+- `sort=welcoming` (default; the "Most welcoming <language> repos" boards):
+  only repos whose verdict is `viable`, best odds first (good, fair, long),
+  then the share of outside pull requests merged (a small sample is pulled
+  toward a typical share, so 6 of 8 doesn't outrank 60 of 105), the median
+  reply time and how many outsiders tried.
+- `sort=stars`: GitHub stars, every verdict.
+- `sort=trending`: people who asked for the repo's report on Holt in the last
+  7 days (each person counted once per UTC day), only repos with at least
+  `trending_min` (5).
+- `language` and `topic` filter case-insensitively (`c++`, `Python`). `limit`
+  1–100, default 24.
+
+```jsonc
+{ "sort": "welcoming", "language": "Python", "topic": null, "trending_min": 5,
+  "repos": [ { "repo": "owner/repo", "verdict": "viable", "headline": "Worth your time",
+    "tone": "good", "reason": "…the report's verdict_line…", "stats": Stats,
+    "description": "…"|null, "language": "Python"|null, "stars": 123|null,
+    "topics": ["cli"], "pushed_at": "…"|null,
+    "checked_this_week": 12|null,     // null below trending_min
+    "generated_at": "…" } ],
+  "languages": [ { "name": "Python", "repos": 40 } ] }  // filter chips, most repos first
+```
+
+`description`, `language`, `stars`, `topics` and `pushed_at` come from
+`repo_meta`, which the warm pass fills from GitHub (one GraphQL query per
+hundred repositories, re-read daily); they are null or empty until then.
 
 ### `GET /badge/{owner}/{repo}.svg` (no internal key; public; `Cache-Control: public, max-age=3600, stale-while-revalidate=86400`)
 Shields-style SVG badge. Maintainers embed it in READMEs; it links back to the
@@ -378,8 +439,10 @@ the user's GitHub token. Stored in `github_connections` and `repo_views`.
   `invalid_repo`.
 
 A connected user's public contributions may be counted, anonymously, in
-cross-user repo statistics (shown only when 5+ people contribute) unless
-`stats_opt_out` is true.
+cross-user repo statistics (the report's `holt_users`, shown only when 5+
+people contribute) unless `stats_opt_out` is true. Turning it on (PATCH, or a
+POST that changes it) or disconnecting takes them out of every repository's
+numbers in the same request.
 
 ### My Contributions
 

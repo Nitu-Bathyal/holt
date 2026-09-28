@@ -3,8 +3,8 @@
 import "server-only";
 import { cache } from "react";
 import type {
-  AnalysisStart, ApiError, Checkout, Contributions, Credits, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection, HistoryItem, JobStatus, Me,
-  Mode, Order, OrderConfirmed, Packs, ProfileOut, ProfilePrefs, RazorpaySuccess, Report, Result, StarterIssue,
+  AnalysisStart, ApiError, Checkout, Contributions, Credits, DiscoverOut, DiscoverSort, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection,
+  HistoryItem, JobStatus, Me, Mode, Order, OrderConfirmed, Packs, ProfileOut, ProfilePrefs, RazorpaySuccess, Report, Result, StarterIssue,
 } from "./types";
 import type { FeedbackInput } from "./feedback";
 import { isJobId } from "./ids";
@@ -77,10 +77,10 @@ function repoOk(repo: string) {
   return rest.length === 0 && Boolean(o && r) && isValidRepo(o, r);
 }
 
-/** `model` is a web model id (lib/models.ts); the server ignores it until it supports model choice. */
-export function startAnalysis(repo: string, mode: Mode, days: number, refresh: boolean, caller: Caller, model?: string): Promise<Result<AnalysisStart>> {
-  if (MOCK) return mock.startAnalysis(repo, mode, days, refresh, caller.userId ?? undefined, model);
-  return call("/v1/analyses", { method: "POST", body: JSON.stringify({ repo, mode, days, refresh, ...(model ? { model } : {}) }), caller });
+/** The model for AI reports is server configuration; the web never picks one. */
+export function startAnalysis(repo: string, mode: Mode, days: number, refresh: boolean, caller: Caller): Promise<Result<AnalysisStart>> {
+  if (MOCK) return mock.startAnalysis(repo, mode, days, refresh, caller.userId ?? undefined);
+  return call("/v1/analyses", { method: "POST", body: JSON.stringify({ repo, mode, days, refresh }), caller });
 }
 
 export async function jobStatus(jobId: string): Promise<Result<JobStatus>> {
@@ -151,6 +151,15 @@ export async function find(q: FindQuery, caller: Caller): Promise<Result<FindSta
   if (r.data.job_id) return { ok: true, data: { status: "queued", job_id: r.data.job_id } };
   return { ok: true, data: { status: "done", results: r.data.results ?? [] } };
 }
+
+/** Checked repos, filtered and ranked from rules verdicts (API.md, GET /v1/discover). Reads only the database. */
+export const discover = cache(async (sort: DiscoverSort, language: string | null, topic: string | null, limit = 30): Promise<Result<DiscoverOut>> => {
+  if (MOCK) return mock.discover(sort, language, topic, limit);
+  const q = new URLSearchParams({ sort, limit: String(limit) });
+  if (language) q.set("language", language);
+  if (topic) q.set("topic", topic);
+  return call(`/v1/discover?${q}`);
+});
 
 /** "Was this verdict right?" (API.md, Feedback). One answer per person per report version. */
 export async function sendFeedback(input: FeedbackInput, caller: Caller): Promise<Result<FeedbackOut>> {

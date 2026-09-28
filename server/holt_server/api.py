@@ -10,7 +10,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 
@@ -19,6 +19,7 @@ from holt_server import (
     badge,
     credits,
     entitlements,
+    repo_stats,
     repos,
     schema,
     starter,
@@ -81,6 +82,11 @@ async def me_body(svc: Services, user: User) -> schema.Me:
 
 
 class AnalysisIn(BaseModel):
+    # Model choice is server configuration (OPENROUTER_MODEL). Clients from
+    # when the web had a model picker still send `model`; unknown keys are
+    # dropped here, so it never reaches the engine, the job or its cache key.
+    model_config = ConfigDict(extra="ignore")
+
     repo: str = Field(max_length=500)
     mode: Literal["rules", "ai"] = "rules"
     days: int = Field(7, ge=1, le=90)
@@ -258,7 +264,9 @@ async def get_report(owner: str, repo: str, request: Request,
     latest = await latest_report(svc, name, mode, days)
     if latest is None:
         raise ApiError("not_found", f"There's no report for {name} yet.")
-    return schema.Report.model_validate(latest.report)
+    report = schema.Report.model_validate(latest.report)
+    report.holt_users = await repo_stats.for_repo(svc, name)
+    return report
 
 
 # --- analyses -------------------------------------------------------------------

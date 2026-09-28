@@ -120,6 +120,10 @@ class Cost(Model):
     model: str
     input_tokens: int
     output_tokens: int
+    # What the model calls cost in US dollars, and how long the whole run took.
+    # Null on reports cached before these were recorded.
+    usd: float | None = None
+    seconds: float | None = None
 
 
 class Odds(Model):
@@ -183,10 +187,12 @@ RUBBER_STAMP_LINE = ("Outside pull requests here get merged without anyone revie
                      "them, so you wouldn't get feedback on yours.")
 
 
-def verdict_line(verdict: str, s: Stats, decided_by: list[str], rule_codes: list[str]) -> str:
+def verdict_line(verdict: str, s: Stats, decided_by: list[str], rule_codes: list[str],
+                 starter_issues_below: bool = True) -> str:
     """One sentence under the headline. It explains the verdict and never
     oversells it: "Worth your time" with a low merge rate or many ignored pull
-    requests says so plainly."""
+    requests says so plainly. `starter_issues_below=False` where no starter
+    issues follow (Discover cards)."""
     n = s.outsider_attempts
     merged = f"{s.outsider_merged} of {n}"
     if verdict == "viable":
@@ -198,8 +204,10 @@ def verdict_line(verdict: str, s: Stats, decided_by: list[str], rule_codes: list
                 "most pull requests don't land" if low_merge else "",
                 f"{_silent_phrase(silent)} get no reply" if many_silent else "",
             ) if b]
+            advice = (", so start with one of the starter issues below" if starter_issues_below
+                      else ", so pick your first issue carefully")
             return (f"Outside contributors do get merged here ({merged} recently), but "
-                    f"{' and '.join(buts)}, so start with one of the starter issues below.")
+                    f"{' and '.join(buts)}{advice}.")
         if silent < 0.3:
             return ("Outside contributors get real replies here, and "
                     f"{merged} of their recent pull requests were merged.")
@@ -238,10 +246,29 @@ class VerdictView(Model):
         return TONES[self.verdict]
 
 
+class HoltUsers(Model):
+    """Pull requests that connected Holt users sent to this repository in the
+    last `window_days`: counts only. Present only when at least 5 people who
+    didn't opt out of statistics make up the numbers (repo_stats.py)."""
+
+    people: int
+    pull_requests: int
+    merged: int
+    # Closed without being merged.
+    closed: int
+    # Still open.
+    waiting: int
+    window_days: int
+    computed_at: str
+
+
 class Report(VerdictView):
     repo: str
     mode: Mode
     days: int
+    # AI mode only: at most two model-written sentences, the lead of the AI
+    # explanation. Null in rules mode and on reports cached before it existed.
+    bottom_line: str | None = None
     summary: str | None = None
     stats: Stats
     decided_by: list[str] = Field(default_factory=list)
@@ -256,6 +283,9 @@ class Report(VerdictView):
     evidence_until: str | None = None
     generated_at: str
     cost: Cost | None = None
+    # Filled when the report is served (GET /v1/reports/{owner}/{repo}), never
+    # stored with it; null when too few Holt users sent pull requests here.
+    holt_users: HoltUsers | None = None
 
     @computed_field
     @property
