@@ -7,7 +7,8 @@ import { RefreshButton } from "@/components/contributions/refresh-button";
 import { ErrorPanel } from "@/components/error-panel";
 import { PageHead } from "@/components/page-head";
 import { PageTransition } from "@/components/motion/page-transition";
-import { contributions } from "@/lib/api";
+import { ForYouCard } from "@/components/recommendations/for-you-card";
+import { contributions, recommendations } from "@/lib/api";
 import { foundViaHoltLine, landedLine, landedPct } from "@/lib/contributions";
 import { timeAgo } from "@/lib/format";
 import { currentUser } from "@/lib/session";
@@ -36,7 +37,7 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
   const user = await currentUser();
   if (!user) redirect("/signin?callbackUrl=/me/contributions");
   const sp = await searchParams;
-  const r = await contributions(user.id);
+  const [r, picks] = await Promise.all([contributions(user.id), recommendations(user.id, 2)]);
   const notConnected = !r.ok && r.error.code === "not_found";
   const notice = typeof sp.refresh === "string" ? NOTICES[sp.refresh] : undefined;
   const d = r.ok ? r.data : null;
@@ -79,6 +80,7 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
               <Tile label="Landed" value={pct == null ? "–" : `${pct}%`} note={landedLine(d.summary) ?? "nothing decided yet"} />
             </section>
             {via && <p className="prose-sans mt-4 text-[0.9rem] text-blue">{via}</p>}
+            {picks.ok && <ForYouCard data={picks.data} />}
 
             <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
               <p className="text-[0.75rem] text-faint">

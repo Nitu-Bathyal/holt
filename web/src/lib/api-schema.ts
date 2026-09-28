@@ -463,6 +463,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/recommendations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Recommendations
+         * @description Reads only the database: no GitHub call, no model, no rate limit.
+         */
+        get: operations["get_recommendations_v1_me_recommendations_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/metrics/contributions": {
         parameters: {
             query?: never;
@@ -1565,6 +1585,89 @@ export interface components {
             status: "queued";
         };
         /**
+         * Recommendation
+         * @description One pick: a repository Holt rates "Worth your time" that fits the user.
+         */
+        Recommendation: {
+            /** Checked At */
+            checked_at: string | null;
+            /** Description */
+            description: string | null;
+            /** Headline */
+            readonly headline: string;
+            /** Issues */
+            issues: components["schemas"]["StarterIssue"][];
+            /** Language */
+            language: string | null;
+            /**
+             * Numbers Line
+             * @description The report's counts line, without its dates (a pick doesn't carry them).
+             */
+            readonly numbers_line: string;
+            readonly odds: components["schemas"]["Odds"] | null;
+            /** Reason */
+            reason: string;
+            /** Repo */
+            repo: string;
+            /** Stars */
+            stars: number | null;
+            stats: components["schemas"]["Stats"];
+            /**
+             * Tone
+             * @enum {string}
+             */
+            readonly tone: "good" | "bad" | "warn";
+            /** Topics */
+            topics: string[];
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "viable" | "not_viable" | "insufficient_evidence";
+            /** Why */
+            why: string[];
+        };
+        /**
+         * RecommendationBasis
+         * @description What the picks were matched on, so the page can say so.
+         */
+        RecommendationBasis: {
+            /** Already Contributing */
+            already_contributing: number;
+            /** Connected */
+            connected: boolean;
+            /** Contributions */
+            contributions: ("code" | "docs" | "tests" | "design" | "translations")[];
+            /** Has Profile */
+            has_profile: boolean;
+            /** History Languages */
+            history_languages: string[];
+            /** Languages */
+            languages: string[];
+            /**
+             * Level
+             * @enum {string}
+             */
+            level: "newcomer" | "experienced";
+            /** Topics */
+            topics: string[];
+        };
+        /**
+         * Recommendations
+         * @description GET /v1/me/recommendations.
+         */
+        Recommendations: {
+            basis: components["schemas"]["RecommendationBasis"];
+            /** Computed At */
+            computed_at: string;
+            /** Full */
+            full: boolean;
+            /** Locked */
+            locked: number;
+            /** Picks */
+            picks: components["schemas"]["Recommendation"][];
+        };
+        /**
          * RepoVerdict
          * @description Holt's latest rules verdict for a repository, from the report cache.
          */
@@ -1828,6 +1931,9 @@ export type ProfileIn = components['schemas']['ProfileIn'];
 export type ProfileOut = components['schemas']['ProfileOut'];
 export type ProfilePrefs = components['schemas']['ProfilePrefs'];
 export type Queued = components['schemas']['Queued'];
+export type Recommendation = components['schemas']['Recommendation'];
+export type RecommendationBasis = components['schemas']['RecommendationBasis'];
+export type Recommendations = components['schemas']['Recommendations'];
 export type RepoVerdict = components['schemas']['RepoVerdict'];
 export type Report = components['schemas']['Report'];
 export type ReportList = components['schemas']['ReportList'];
@@ -2910,6 +3016,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["ProfileOut"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_recommendations_v1_me_recommendations_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+            };
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Recommendations"];
                 };
             };
             /** @description Default Response */

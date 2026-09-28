@@ -4,7 +4,7 @@ import "server-only";
 import { cache } from "react";
 import type {
   AnalysisStart, ApiError, Checkout, Contributions, Credits, DiscoverOut, DiscoverSort, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection,
-  HistoryItem, JobStatus, Me, Mode, Order, OrderConfirmed, Packs, ProfileOut, ProfilePrefs, RazorpaySuccess, Report, Result, StarterIssue,
+  HistoryItem, JobStatus, Me, Mode, Order, OrderConfirmed, Packs, ProfileOut, ProfilePrefs, RazorpaySuccess, Recommendations, Report, Result, StarterIssue,
 } from "./types";
 import type { FeedbackInput } from "./feedback";
 import { isJobId } from "./ids";
@@ -236,6 +236,12 @@ export function contributions(userId: string): Promise<Result<Contributions>> {
 export function refreshContributions(userId: string): Promise<Result<Contributions>> {
   if (MOCK) return mock.refreshContributions(userId);
   return call("/v1/me/contributions/refresh", { method: "POST", caller: { userId }, signal: AbortSignal.timeout(60_000) });
+}
+
+/** Recommendations for you (API.md). Ranked by rules from cached data; the server shows 2 picks without a plan. */
+export function recommendations(userId: string, limit = 10): Promise<Result<Recommendations>> {
+  if (MOCK) return mock.recommendations(userId, limit);
+  return call(`/v1/me/recommendations?limit=${Math.min(10, Math.max(1, Math.floor(limit)))}`, { caller: { userId } });
 }
 
 /** A signed-in user opened a report page. The server keeps it only while GitHub is connected. */
