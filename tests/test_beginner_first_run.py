@@ -106,6 +106,8 @@ def test_no_token_is_a_sentence_with_the_link(home, capsys):
 
 def test_no_model_set_up_means_rules_only(home, monkeypatch, capsys):
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    # The hint prints once per process; an earlier test may have used it up.
+    monkeypatch.setattr(cli, "_hinted", False)
     code = cli.main(["analyze", "NixOS/nixpkgs"])
     out, err = capsys.readouterr()
     assert code == 0
@@ -268,8 +270,7 @@ def test_version_fallback_when_metadata_missing(monkeypatch, capsys):
     with pytest.raises(SystemExit) as exc:
         cli.main(["--version"])
     assert exc.value.code == 0
-    out = capsys.readouterr().out
-    assert "holt" in out
+    assert capsys.readouterr().out.strip() == "holt dev"
 
 
 # ─── the report ─────────────────────────────────────────────────────────────

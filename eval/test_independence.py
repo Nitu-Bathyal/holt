@@ -12,7 +12,7 @@ from pathlib import Path
 import pytest
 
 LABELS_DIR = Path(__file__).parent / "labels"
-FORBIDDEN_PREFIXES = ("holt.agent", "holt.baseline")
+FORBIDDEN_PREFIXES = ("holt.agent", "eval.baseline")
 
 
 def label_modules() -> list[Path]:

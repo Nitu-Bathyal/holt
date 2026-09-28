@@ -7,12 +7,14 @@ is the model's judgement.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from datetime import timedelta
+from pathlib import Path
 
 import pytest
 
-from holt import baseline
+from eval import baseline
 from holt.evidence.fixtures import FixtureProvider, write_fixture
 from holt.model import Usage, call_key
 from holt.report import Verdict
@@ -90,3 +92,21 @@ def test_replay_is_declared_in_the_rendered_report(provider):
 def test_replay_key_changes_when_the_prompt_changes():
     """A stale recording must not be served for a question that has changed."""
     assert call_key("baseline", "sys", "p1") != call_key("baseline", "sys", "p2")
+
+
+def documented_baseline_repos() -> list[str]:
+    """Every `python -m eval.baseline <repo>` the reproduction guide prints."""
+    text = Path("docs/research/REPRODUCTION.md").read_text(encoding="utf-8")
+    return re.findall(r"python -m eval\.baseline (\S+/\S+)", text)
+
+
+def test_the_guide_documents_the_baseline():
+    assert documented_baseline_repos(), "REPRODUCTION.md no longer shows the baseline"
+
+
+@pytest.mark.parametrize("repo", documented_baseline_repos())
+def test_every_documented_baseline_command_replays(repo, capsys):
+    """The documented baseline answers from the committed recordings, no key."""
+    assert baseline.main([repo]) == 0
+    out = capsys.readouterr().out
+    assert repo in out and "Replaying recorded model output" in out
