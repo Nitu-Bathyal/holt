@@ -2,8 +2,8 @@
 
 // The site cat from the original landing page. Static HTML first; GSAP and
 // ScrollTrigger load after the page is idle, and never when the visitor
-// prefers reduced motion. Scrolling stays native: a smooth-scroll library here
-// made the wheel lag behind the hand, and only on this page, only once idle.
+// prefers reduced motion. Smooth scrolling is site-wide (motion/smooth-scroll.tsx),
+// which keeps ScrollTrigger in step with it.
 import { useEffect, useRef } from "react";
 import { CAT, type CatMood } from "@/lib/cat";
 
