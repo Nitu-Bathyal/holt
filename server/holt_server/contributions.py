@@ -9,7 +9,7 @@
 The pull requests come from GitHub's public search (`is:pr is:public
 author:<login>`), read with the server's token pool, never the user's token:
 the last `WINDOW_DAYS`, at most `MAX_PRS`, leaving out the user's own
-repositories. They are fetched when GitHub is connected, again once a day in
+repositories and the projects they help run (`own_projects`). They are fetched when GitHub is connected, again once a day in
 the background (HOLT_CONTRIBUTIONS_REFRESH_HOURS), and when the user presses
 refresh. Each fetch replaces the user's rows; disconnecting deletes them.
 
@@ -81,6 +81,7 @@ query($q:String!, $n:Int!, $cursor:String) {
     nodes {
       ... on PullRequest {
         number title url state isDraft createdAt closedAt mergedAt
+        authorAssociation mergedBy { login }
         repository { nameWithOwner isPrivate owner { login } }
       }
     }
@@ -114,9 +115,33 @@ def _when(value: Any) -> datetime | None:
     return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
 
 
+# GitHub's word for someone with a say in the repository. A private org
+# membership reads as CONTRIBUTOR to our tokens, so self-merges count too.
+_TEAM = {"OWNER", "MEMBER", "COLLABORATOR"}
+
+
+def own_projects(nodes: Iterable[dict[str, Any] | None], login: str) -> set[str]:
+    """Repository keys the user helps run, so their pull requests there aren't
+    outside contributions: GitHub calls them an owner, member or collaborator
+    on one of them, or they merged one of their own (only people with write
+    access can). One such pull request marks the whole repository."""
+    me = login.lower()
+    own = set()
+    for node in nodes:
+        name = ((node or {}).get("repository") or {}).get("nameWithOwner")
+        if not name:
+            continue
+        merger = ((node.get("mergedBy") or {}).get("login") or "").lower()
+        if node.get("authorAssociation") in _TEAM or merger == me:
+            own.add(repos.key(name))
+    return own
+
+
 def parse(nodes: Iterable[dict[str, Any] | None], login: str) -> list[dict[str, Any]]:
-    """Search nodes -> row values. Private repositories and the user's own are
-    left out even if a token could see them."""
+    """Search nodes -> row values. Private repositories, the user's own and the
+    ones they help run are left out even if a token could see them."""
+    nodes = list(nodes)
+    own = own_projects(nodes, login)
     out, seen = [], set()
     for node in nodes:
         repo = (node or {}).get("repository") or {}
@@ -124,6 +149,8 @@ def parse(nodes: Iterable[dict[str, Any] | None], login: str) -> list[dict[str, 
         if not name or repo.get("isPrivate") or not node.get("number"):
             continue
         if ((repo.get("owner") or {}).get("login") or "").lower() == login.lower():
+            continue
+        if repos.key(name) in own:
             continue
         key = (repos.key(name), int(node["number"]))
         if key in seen:
