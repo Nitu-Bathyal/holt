@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { creditsNote, mergeTone, noReplyTone, statLines } from "./format.ts";
+import { creditsNote, evidenceLabel, mergeTone, noReplyTone, statLines } from "./format.ts";
 
 const stats = (attempts: number, merged: number, noReply: number) => ({
   outsider_attempts: attempts, outsider_merged: merged, no_reply: noReply,
@@ -27,6 +27,15 @@ test("flask-like numbers colour the tiles honestly", () => {
 test("partial stats (find results) only show what they have", () => {
   const keys = statLines({ outsider_merged: 4, outsider_attempts: 10 }).map((l) => l.key);
   assert.deepEqual(keys, ["merged"]);
+});
+
+test("evidence labels are plain words, never the engine's values", () => {
+  assert.deepEqual(evidenceLabel({ kind: "outcome", value: "closed_dismissive" }),
+    { label: "Closed with no way forward", bad: true });
+  assert.deepEqual(evidenceLabel({ kind: "outcome", value: "merged_after_review" }),
+    { label: "Merged after review", bad: false });
+  assert.equal(evidenceLabel({ kind: "repo_kind", value: "real_software" }).label, "Kind of project");
+  assert.equal(evidenceLabel({ kind: "onboarding", value: "boilerplate" }).label, "Contributor guide");
 });
 
 test("creditsNote says free only when every credit is free", () => {

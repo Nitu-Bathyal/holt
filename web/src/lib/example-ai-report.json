@@ -58,7 +58,7 @@
       "url": "https://github.com/home-assistant/core",
       "kind": "repo_kind",
       "value": "real_software",
-      "text": "The repository is the Home Assistant core project (an open-source home automation platform). The merged PRs modify application code, integration components, tests, and CI workflows (not just catalogue entries or a curated list). Examples…",
+      "text": "A software project. The repository is the Home Assistant core project (an open-source home automation platform). The merged PRs modify application code, integration components, tests, and CI workflows (not just catalogue entries or a curated list). Examples…",
       "quote": null
     },
     {
@@ -66,7 +66,7 @@
       "url": "https://github.com/home-assistant/core/blob/93615edc60547e00d0bca06888e69410713cb517/CONTRIBUTING.md",
       "kind": "onboarding",
       "value": "substantive",
-      "text": "The CONTRIBUTING file gives a clear, actionable route for outsiders: it invites contributions, lists a step-by-step process for proposing code (read PR guidance, fork the repo, write code, ensure tests pass, create a PR against the dev…",
+      "text": "Clear enough to follow. The CONTRIBUTING file gives a clear, actionable route for outsiders: it invites contributions, lists a step-by-step process for proposing code (read PR guidance, fork the repo, write code, ensure tests pass, create a PR against the dev…",
       "quote": null
     },
     {
@@ -74,7 +74,7 @@
       "url": "https://github.com/home-assistant/core/pull/172481",
       "kind": "outsider_posture",
       "value": "mixed",
-      "text": "Some PRs receive substantive review and are merged after feedback (welcoming), while many others are left open with little or no visible response (ignored) or closed without engagement. Overall this shows an active review culture in places…",
+      "text": "Mixed. Some PRs receive substantive review and are merged after feedback (welcoming), while many others are left open with little or no visible response (ignored) or closed without engagement. Overall this shows an active review culture in places…",
       "quote": null
     },
     {
@@ -90,7 +90,7 @@
       "url": "https://github.com/home-assistant/core/pull/172384",
       "kind": "outcome",
       "value": "ignored",
-      "text": "Ignored, with nothing said",
+      "text": "No reply",
       "quote": null
     },
     {
@@ -98,7 +98,7 @@
       "url": "https://github.com/home-assistant/core/pull/172460",
       "kind": "outcome",
       "value": "changes_requested",
-      "text": "Changes requested, with nothing said",
+      "text": "Changes requested",
       "quote": null
     },
     {
@@ -106,7 +106,7 @@
       "url": "https://github.com/home-assistant/core/pull/172542",
       "kind": "outcome",
       "value": "ignored",
-      "text": "Ignored, with nothing said",
+      "text": "No reply",
       "quote": null
     },
     {
@@ -114,7 +114,7 @@
       "url": "https://github.com/home-assistant/core/pull/172613",
       "kind": "outcome",
       "value": "changes_requested",
-      "text": "Changes requested, with nothing said",
+      "text": "Changes requested",
       "quote": null
     },
     {
@@ -138,7 +138,7 @@
       "url": "https://github.com/home-assistant/core/pull/172550",
       "kind": "outcome",
       "value": "changes_requested",
-      "text": "Changes requested, with nothing said",
+      "text": "Changes requested",
       "quote": null
     },
     {
@@ -146,7 +146,7 @@
       "url": "https://github.com/home-assistant/core/pull/172555",
       "kind": "outcome",
       "value": "closed_dismissive",
-      "text": "Closed dismissive, with nothing said",
+      "text": "Closed with no explanation",
       "quote": null
     },
     {
@@ -154,7 +154,7 @@
       "url": "https://github.com/home-assistant/core/pull/172595",
       "kind": "outcome",
       "value": "ignored",
-      "text": "Ignored, with nothing said",
+      "text": "No reply",
       "quote": null
     },
     {
@@ -170,7 +170,7 @@
       "url": "https://github.com/home-assistant/core/pull/172472",
       "kind": "outcome",
       "value": "changes_requested",
-      "text": "Changes requested, with nothing said",
+      "text": "Changes requested",
       "quote": null
     }
   ],

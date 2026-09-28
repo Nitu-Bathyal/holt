@@ -260,9 +260,10 @@ def cmd_analyze(args: argparse.Namespace) -> int:
         emit_markdown(assessment.render())
     if not args.replay and client is not None:
         u = client.usage
+        timing = ", ".join(f"{k} {v / 1000:.1f}s" for k, v in u.stage_ms().items())
         print(
             f"<!-- {u.input_tokens} in / {u.output_tokens} out tokens, "
-            f"${u.cost_usd:.4f} -->",
+            f"${u.cost_usd:.4f}" + (f"; model time: {timing}" if timing else "") + " -->",
             file=sys.stderr,
         )
     return 0

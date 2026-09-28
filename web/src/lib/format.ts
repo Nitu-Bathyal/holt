@@ -145,6 +145,26 @@ export function statLines(s: Partial<Stats>): StatLine[] {
 const humanize = (k: string) => k.replace(/[_-]+/g, " ").replace(/^\w/, (c) => c.toUpperCase());
 const NEGATIVE = /no_reply|ignored|closed|reject|stale|declin|abandon|negative|hostile/;
 
+// Plain labels for the engine's values. The same table as the engine's
+// src/holt/agent/labels.py (tests/test_labels.py holds the two together).
+const OUTCOME_LABELS: Record<string, string> = {
+  merged_after_review: "Merged after review",
+  merged_without_engagement: "Merged without review comments",
+  changes_requested: "Changes requested",
+  closed_with_guidance: "Closed, with a pointer elsewhere",
+  closed_dismissive: "Closed with no way forward",
+  ignored: "No reply",
+};
+const FIELD_LABELS: Record<string, string> = {
+  repo_kind: "Kind of project",
+  onboarding: "Contributor guide",
+  outsider_posture: "How outside contributors are treated",
+  governance_flags: "Before you contribute",
+  is_archived: "Archived",
+  inactive: "Activity",
+  contribute_elsewhere: "Where to contribute",
+};
+
 /**
  * Label and tone for an evidence item. Rules mode lists newcomer PRs as
  * kind "outsider_pr" (value "merged" | "no_reply"); AI mode uses "outcome"
@@ -156,8 +176,8 @@ export function evidenceLabel(e: { kind: string; value: string | null }): { labe
   if (e.kind === "outsider_pr") {
     return { label: e.value === "merged" ? "Newcomer PR merged" : e.value === "no_reply" ? "Newcomer PR, no reply" : `Newcomer PR: ${humanize(value).toLowerCase()}`, bad };
   }
-  if (e.kind === "outcome") return { label: humanize(value), bad };
-  return { label: humanize(e.kind), bad };
+  if (e.kind === "outcome") return { label: OUTCOME_LABELS[value] ?? humanize(value), bad };
+  return { label: FIELD_LABELS[e.kind] ?? humanize(e.kind), bad };
 }
 
 /** "#526518" or a short id for an evidence link. */

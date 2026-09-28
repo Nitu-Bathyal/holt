@@ -118,25 +118,34 @@ def test_ai_report_end_to_end(make_harness):
 # --- serializer ---------------------------------------------------------------
 
 
-def test_claim_parsing():
+def test_evidence_cards_read_plainly():
     records = {}
-    item = report_mod.evidence_item(
-        "merged after review — “thanks, merging”", "pr:o/r#5:opened", records)
+    item = report_mod.evidence_item(Claim(
+        "Merged after review — “thanks, merging”", "pr:o/r#5:opened",
+        kind="outcome", value="merged_after_review", quote="thanks, merging"), records)
     assert item == {"id": "pr:o/r#5:opened", "url": "https://github.com/o/r/pull/5",
                     "kind": "outcome", "value": "merged_after_review",
                     "text": "Merged after review", "quote": "thanks, merging"}
-    item = report_mod.evidence_item("ignored, nothing said", "pr:o/r#6:opened", records)
-    assert item["kind"] == "outcome" and item["quote"] is None
-    item = report_mod.evidence_item(
-        "onboarding: substantive (AI's reading, not a quote: CONTRIBUTING explains setup)",
-        "repo:o/r:contributing", records)
+    item = report_mod.evidence_item(Claim(
+        "Closed with no explanation", "pr:o/r#6:opened",
+        kind="outcome", value="closed_dismissive"), records)
+    assert item["quote"] is None and item["text"] == "Closed with no explanation"
+    item = report_mod.evidence_item(Claim(
+        "Contributor guide: generic, with little to follow (AI's reading, not a quote: "
+        "CONTRIBUTING only restates the code of conduct)", "repo:o/r:contributing",
+        kind="onboarding", value="boilerplate",
+        note="CONTRIBUTING only restates the code of conduct"), records)
     assert (item["kind"], item["value"], item["text"]) == (
-        "onboarding", "substantive", "CONTRIBUTING explains setup")
+        "onboarding", "boilerplate",
+        "Generic, with little to follow. CONTRIBUTING only restates the code of conduct")
     assert item["url"] == "https://github.com/o/r"
-    assert report_mod.evidence_item("x", None, records) is None
-    item = report_mod.evidence_item("is archived: True", "repo:o/r:meta", records)
-    assert (item["kind"], item["value"], item["text"]) == (
-        "is_archived", "True", "Is archived: True")
+    assert report_mod.evidence_item(Claim("x", None), records) is None
+    item = report_mod.evidence_item(
+        Claim("Archived: yes", "repo:o/r:meta", kind="is_archived", value="True"), records)
+    assert (item["kind"], item["value"], item["text"]) == ("is_archived", "True", "Yes.")
+    # A hand-built claim with nothing structured is shown as written.
+    item = report_mod.evidence_item(Claim("a note", "repo:o/r:meta"), records)
+    assert (item["kind"], item["value"], item["text"]) == ("claim", None, "a note")
 
 
 def test_ai_all_claims_dropped_is_stated():
@@ -203,7 +212,7 @@ def test_ai_cost_records_dollars_seconds_and_logs_one_line(caplog):
 
 
 def test_claim_without_url_is_left_out():
-    item = report_mod.evidence_item("a: b", "weird-id", {})
+    item = report_mod.evidence_item(Claim("a: b", "weird-id"), {})
     assert item is None
     a = Assessment(repo="o/r", verdict=Verdict.VIABLE, summary="",
                    claims=[Claim("a: b", "weird-id")])

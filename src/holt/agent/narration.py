@@ -178,3 +178,17 @@ def check_narration(
         out[name] = checked.text
         removed += [(name, s, why) for s, why in checked.dropped]
     return out, removed
+
+
+def retry_note(lost: Iterable[tuple[str, str]]) -> str:
+    """What the narrator is told when its opening was removed, for one more try."""
+    lines = [
+        "A check removed these sentences from the opening of your previous draft, "
+        "so the reader would have lost its main point:",
+    ]
+    lines += [f'  - "{sentence}" ({why})' for sentence, why in lost]
+    lines.append(
+        "Write all three parts again. Make the same points, in plain words, using "
+        "only numbers given above and no internal names."
+    )
+    return "\n".join(lines)

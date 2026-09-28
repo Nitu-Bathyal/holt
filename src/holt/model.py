@@ -19,6 +19,7 @@ import json
 import os
 import re
 import threading
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Protocol
@@ -396,11 +397,27 @@ class Usage:
     # sees every call: on replay it is the ids from the recording, not whatever
     # the reader happens to have configured today.
     models: list[str] = field(default_factory=list)
+    # One entry per call, in the order they finished: {"label", "model",
+    # "input_tokens", "output_tokens", "ms"}. `ms` is how long the provider
+    # took, None on a replay, which has no real clock.
+    calls: list[dict] = field(default_factory=list)
 
-    def add(self, model: str, inp: int, out: int) -> None:
+    def add(self, model: str, inp: int, out: int, label: str = "",
+            ms: int | None = None) -> None:
         # Stages A, B and C run at once and share one Usage.
         with _USAGE_LOCK:
             self._add(model, inp, out)
+            self.calls.append({"label": label, "model": model, "input_tokens": inp,
+                               "output_tokens": out, "ms": ms})
+
+    def stage_ms(self) -> dict[str, int]:
+        """Milliseconds per stage, summed over its calls (a retried narration
+        counts both). Replayed calls have no time and are left out."""
+        out: dict[str, int] = {}
+        for call in self.calls:
+            if call["ms"] is not None:
+                out[call["label"]] = out.get(call["label"], 0) + call["ms"]
+        return out
 
     def _add(self, model: str, inp: int, out: int) -> None:
         # Through the alias table: a run on `gpt-5` spends real money, and
@@ -464,6 +481,7 @@ class OpenAIModel:
 
     def complete(self, *, label: str, system: str, prompt: str, schema: dict) -> dict:
         model = model_for(label)
+        started = time.monotonic()
         response = self._client.chat.completions.create(
             model=model,
             messages=[
@@ -479,7 +497,8 @@ class OpenAIModel:
         _check_finished(label, model, getattr(response.choices[0], "finish_reason", None))
         parsed = json.loads(response.choices[0].message.content)
         u = response.usage
-        self.usage.add(model, u.prompt_tokens, u.completion_tokens)
+        self.usage.add(model, u.prompt_tokens, u.completion_tokens,
+                       label=label, ms=_elapsed_ms(started))
         if self.record:
             write_trajectory(self.trajectory_path, {
                 "key": call_key(label, system, prompt),
@@ -494,6 +513,10 @@ class OpenAIModel:
                 },
             })
         return parsed
+
+
+def _elapsed_ms(started: float) -> int:
+    return round((time.monotonic() - started) * 1000)
 
 
 def _output_cap(label: str) -> dict[str, int]:
@@ -548,6 +571,7 @@ class AnthropicModel:
 
     def complete(self, *, label: str, system: str, prompt: str, schema: dict) -> dict:
         model = model_for(label)
+        started = time.monotonic()
         response = self._client.messages.create(
             model=model,
             max_tokens=max_output_tokens(label),
@@ -564,7 +588,8 @@ class AnthropicModel:
         text = next(b.text for b in response.content if b.type == "text")
         parsed = json.loads(text)
         u = response.usage
-        self.usage.add(model, u.input_tokens, u.output_tokens)
+        self.usage.add(model, u.input_tokens, u.output_tokens,
+                       label=label, ms=_elapsed_ms(started))
         if self.record:
             write_trajectory(self.trajectory_path, {
                 "key": call_key(label, system, prompt),
@@ -668,7 +693,8 @@ class ReplayModel:
         if entry is None:
             raise KeyError(self._miss(label, system, prompt, key))
         u = entry.get("usage", {})
-        self.usage.add(entry["model"], u.get("input_tokens", 0), u.get("output_tokens", 0))
+        self.usage.add(entry["model"], u.get("input_tokens", 0), u.get("output_tokens", 0),
+                       label=label)
         return entry["response"]
 
 

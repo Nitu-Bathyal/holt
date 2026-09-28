@@ -15,13 +15,13 @@ from datetime import UTC, datetime
 from typing import Any
 
 from holt.agent import asks as asks_mod
+from holt.agent import labels
 from holt.agent import landing as landing_mod
 from holt.agent import rates
 from holt.agent.landing_detection import VIA
-from holt.agent.pipeline import MODEL_NOTE_LABEL
 from holt.agent.signals import Signals, Thread, Threads, build_threads, outsider_threads
 from holt.agent.verdict import rule_codes, slow_note, slow_sentence
-from holt.report import Assessment
+from holt.report import Assessment, Claim
 from holt.types import EvidenceRecord
 
 from holt_server import schema
@@ -40,12 +40,6 @@ ALL_DROPPED_UNKNOWN = (
     "it up. The verdict and the numbers don't depend on the AI and still stand."
 )
 
-_OUTCOME = re.compile(r"^(?P<outcome>[^—“]+?) — “(?P<quote>.*)”$", re.S)
-_NOTHING = re.compile(r"^(?P<outcome>.+), nothing said$", re.S)
-# `field words: value`, optionally `(AI's reading, not a quote: note)`.
-_FIELD = re.compile(
-    r"^(?P<field>[a-z][a-z ]*?): (?P<value>.*?)"
-    rf"(?: \({re.escape(MODEL_NOTE_LABEL)}: (?P<note>.*)\))?$", re.S)
 
 
 def iso(value: datetime | None) -> str | None:
@@ -75,26 +69,23 @@ def url_for(evidence_id: str, records: dict[str, EvidenceRecord]) -> str | None:
     return base
 
 
-def evidence_item(text: str, evidence_id: str | None,
-                  records: dict[str, EvidenceRecord]) -> dict[str, Any] | None:
-    if not evidence_id:
+def evidence_item(claim: Claim, records: dict[str, EvidenceRecord]) -> dict[str, Any] | None:
+    """One evidence card. `kind` and `value` stay machine values (API.md); the
+    text is in plain words (agent/labels.py)."""
+    if not claim.evidence_id:
         return None
-    url = url_for(evidence_id, records)
+    url = url_for(claim.evidence_id, records)
     if not url:
         return None  # API.md: every evidence item must be clickable.
-    kind, value, body, quote = "claim", None, text, None
-    if m := _OUTCOME.match(text):
-        kind, value, quote = "outcome", m["outcome"].strip(), m["quote"].strip() or None
-        body = value.capitalize()
-    elif m := _NOTHING.match(text):
-        kind, value = "outcome", m["outcome"].strip()
-        body = f"{value.capitalize()}, with nothing said"
-    elif m := _FIELD.match(text):
-        kind, value = m["field"].strip().replace(" ", "_"), m["value"].strip()
-        body = (m["note"] or "").strip() or f"{m['field'].capitalize()}: {value}"
+    kind, value, body, quote = claim.kind or "claim", claim.value or None, claim.text, None
     if kind == "outcome" and value:
-        value = value.replace(" ", "_")
-    return {"id": evidence_id, "url": url, "kind": kind, "value": value,
+        quote = claim.quote or None
+        body = labels.outcome(value, quoted=bool(quote))
+    elif claim.kind and value:
+        said = labels.value(kind, value)
+        said = said[:1].upper() + said[1:] + ("" if said.endswith((".", "!", "?")) else ".")
+        body = f"{said} {claim.note}" if claim.note else said
+    return {"id": claim.evidence_id, "url": url, "kind": kind, "value": value,
             "text": body, "quote": quote}
 
 
@@ -208,7 +199,7 @@ def build(
 
     evidence = []
     for claim in assessment.claims:
-        item = evidence_item(claim.text, claim.evidence_id, by_id)
+        item = evidence_item(claim, by_id)
         if item is not None:
             evidence.append(item)
     if mode == "rules":

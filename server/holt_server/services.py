@@ -80,5 +80,7 @@ class Services:
             # Refused before queueing too; this covers a key removed since.
             raise ApiError("ai_unavailable", "AI reports aren't switched on yet. "
                            "Your free AI report was not used up.")
-        return llm.ModelSpec(provider="openrouter", model=s.openrouter_model,
-                             api_key=s.openrouter_api_key, base_url=s.openrouter_base_url)
+        return llm.ModelSpec(
+            provider=s.model_provider or llm.provider_for(s.openrouter_base_url),
+            model=s.openrouter_model, api_key=s.openrouter_api_key,
+            base_url=s.openrouter_base_url, reasoning_effort=s.model_reasoning_effort)

@@ -84,3 +84,78 @@ def test_a_cut_off_answer_raises_and_is_an_upstream_error(client):
     translated = engine.translate(err.value, "o/r")
     assert isinstance(translated, ApiError) and translated.code == "upstream"
     assert "AI model" in translated.message
+
+
+# --- OpenAI-compatible endpoints ------------------------------------------------
+
+
+@pytest.mark.parametrize(("url", "provider"), [
+    ("https://openrouter.ai/api/v1", "openrouter"),
+    ("https://api.openai.com/v1", "openai"),
+    ("https://generativelanguage.googleapis.com/v1beta/openai/", "gemini"),
+    (None, "openrouter"),
+])
+def test_the_provider_is_read_from_the_endpoint(url, provider):
+    assert llm.provider_for(url) == provider
+
+
+def test_openai_gets_its_own_names_for_the_cap_and_the_effort():
+    fake = FakeChat()
+    client = llm.OpenAICompatible(llm.ModelSpec(
+        provider="openai", model="gpt-5-mini", api_key="sk-test",
+        reasoning_effort="low"), _client=fake)
+    call(client)
+    assert fake.kwargs["max_completion_tokens"] == max_output_tokens("narrate")
+    assert fake.kwargs["reasoning_effort"] == "low"
+    assert "max_tokens" not in fake.kwargs and "extra_body" not in fake.kwargs
+
+
+def test_a_model_without_reasoning_gets_no_effort():
+    fake = FakeChat()
+    client = llm.OpenAICompatible(llm.ModelSpec(
+        provider="openai", model="gpt-4.1-mini", api_key="sk-test",
+        reasoning_effort="low"), _client=fake)
+    call(client)
+    assert "reasoning_effort" not in fake.kwargs
+
+
+def test_openrouter_gets_max_tokens_and_its_reasoning_field():
+    fake = FakeChat()
+    client = llm.OpenAICompatible(llm.ModelSpec(
+        provider="openrouter", model="openai/gpt-5-mini", api_key="sk-test",
+        reasoning_effort="low"), _client=fake)
+    call(client)
+    assert fake.kwargs["max_tokens"] == max_output_tokens("narrate")
+    assert fake.kwargs["extra_body"] == {"reasoning": {"effort": "low"}}
+    assert "reasoning_effort" not in fake.kwargs
+    # No effort configured: nothing is sent, the provider's default applies.
+    fake = FakeChat()
+    call(llm.OpenAICompatible(spec("openrouter"), _client=fake))
+    assert "extra_body" not in fake.kwargs
+
+
+def test_each_call_records_its_stage_and_time():
+    client = llm.OpenAICompatible(spec("openrouter"), _client=FakeChat())
+    call(client)
+    [entry] = client.usage.calls
+    assert entry["label"] == "narrate" and entry["output_tokens"] == 50
+    assert isinstance(entry["ms"], int) and entry["ms"] >= 0
+    assert set(client.usage.stage_ms()) == {"narrate"}
+
+
+@pytest.mark.parametrize(("env", "provider"), [
+    ({}, "openrouter"),
+    ({"OPENROUTER_BASE_URL": "https://api.openai.com/v1"}, "openai"),
+    ({"OPENROUTER_BASE_URL": "https://proxy.local/v1", "HOLT_MODEL_PROVIDER": "openai"},
+     "openai"),
+])
+def test_the_servers_spec_follows_its_endpoint(tmp_path, env, provider):
+    import asyncio
+
+    from conftest import make_settings
+    from holt_server.services import Services
+
+    svc = Services(make_settings(tmp_path, OPENROUTER_API_KEY="sk-test",
+                                 HOLT_MODEL_REASONING_EFFORT="low", **env))
+    made = asyncio.run(svc.model_spec_for(None))
+    assert (made.provider, made.reasoning_effort) == (provider, "low")
