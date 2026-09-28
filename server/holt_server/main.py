@@ -21,6 +21,7 @@ from holt_server import (
     feedback,
     payments,
     playbook,
+    preflight,
     pro,
     profiles,
     recommendations,
@@ -87,6 +88,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(payments.router)
     app.include_router(playbook.router)
     app.include_router(recommendations.router)
+    app.include_router(preflight.router)
     return app
 
 

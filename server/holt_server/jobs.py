@@ -281,8 +281,8 @@ class JobRunner:
         return s.job_timeout_ai if job.mode == "ai" else s.job_timeout_rules
 
     async def _run(self, job: Job, lane: str = USER_LANE) -> None:
-        # Here, not at the top: playbook.py imports the API module, which imports this one.
-        from holt_server import playbook
+        # Here, not at the top: these import the API module, which imports this one.
+        from holt_server import playbook, preflight
 
         loop = asyncio.get_running_loop()
         self.hub.publish(job.id, "stage", {"stage": "Starting", "progress": 0.01})
@@ -311,6 +311,10 @@ class JobRunner:
                 elif job.kind == "playbook":
                     # An HTTP call to the paid-features service: no thread needed.
                     result = await self._in_loop(stop, limit, playbook.write(
+                        self.services, job, emit))
+                elif job.kind == "preflight":
+                    # An HTTP call to the paid-features service: no thread needed.
+                    result = await self._in_loop(stop, limit, preflight.run(
                         self.services, job, emit))
                 else:
                     # The key is only ever held in memory: the jobs table records
@@ -422,8 +426,8 @@ class JobRunner:
         self.hub.publish(job_id, "stage", {"stage": stage, "progress": progress})
 
     async def _finish(self, job: Job, result: dict[str, Any]) -> None:
-        # Here, not at the top: playbook.py imports the API module, which imports this one.
-        from holt_server import playbook
+        # Here, not at the top: these import the API module, which imports this one.
+        from holt_server import playbook, preflight
 
         async with self.services.db.session() as s:
             done = await s.execute(self._mine(job.id).values(
@@ -439,6 +443,8 @@ class JobRunner:
                 await store_find(s, job.params or {}, job.days, result)
             elif job.kind == "playbook":
                 await playbook.store(s, job, result)
+            elif job.kind == "preflight":
+                await preflight.store(s, job, result)
             await s.commit()
         self.hub.publish(job.id, "done", done_payload(job.kind, result))
 
@@ -496,4 +502,6 @@ def done_payload(kind: str, result: dict[str, Any] | None) -> dict[str, Any]:
         return dict(result or {"results": []})
     if kind == "playbook":
         return {"playbook": result}
+    if kind == "preflight":
+        return {"preflight": result}
     return {"report": result}
