@@ -21,6 +21,7 @@ from datetime import datetime
 from typing import Literal
 
 from holt.agent.verdict import headline as verdict_headline
+from holt.agent.rates import SETTLE_DAYS
 from holt.agent.verdict import MIN_MERGES, hours_phrase
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_serializer
 
@@ -70,6 +71,9 @@ class ErrorBody(Model):
 
 
 class Stats(Model):
+    # Decided attempts only (merged, closed, or open past the settle window):
+    # the denominator of every rate here. `still_open` are too new to count;
+    # `closed_silently` were closed with no reply, which is not `no_reply`.
     outsider_attempts: int
     outsider_merged: int
     distinct_outsiders: int
@@ -77,6 +81,8 @@ class Stats(Model):
     no_reply: int
     median_first_response_hours: float | None
     bot_share: float
+    still_open: int = 0
+    closed_silently: int = 0
 
 
 class PartialStats(Model):
@@ -306,25 +312,37 @@ def period(sample: Sample | None) -> str | None:
 
 def numbers_line(s: Stats, sample: Sample | None) -> str:
     """The second line: what happened to outside contributors, with the dates
-    it covers. The same counts as the stat tiles and the verdict's rules."""
+    it covers. The same counts as the stat tiles and the verdict's rules:
+    rates are over decided pull requests, and the ones still too new to judge
+    are said apart."""
     n = s.outsider_attempts
     when = period(sample)
     when = f" ({when})" if when else ""
-    if not n:
+    if not n and not s.still_open:
         return f"Nobody outside the project's team opened a pull request{when}."
-    out = [f"Of {n} pull request{'' if n == 1 else 's'} from outside contributors{when}, "
-           f"{s.outsider_merged} {'was' if s.outsider_merged == 1 else 'were'} merged "
-           f"({_pct(s.outsider_merged, n)}%)."]
+    if not n:
+        return (f"Outside contributors opened {s.still_open} pull "
+                f"request{'' if s.still_open == 1 else 's'}{when}, all still open and "
+                f"too new to judge (less than {SETTLE_DAYS} days old).")
+    decided = " that have had time for an answer" if s.still_open else ""
+    out = [f"Of {n} pull request{'' if n == 1 else 's'} from outside contributors{when}"
+           f"{decided}, {s.outsider_merged} {'was' if s.outsider_merged == 1 else 'were'} "
+           f"merged ({_pct(s.outsider_merged, n)}%)."]
     if s.median_first_response_hours is not None:
         # The median is over the ones that got a reply; say so, or a fast
-        # median hides a silent majority (the next sentence gives its size).
+        # median hides a silent majority (the next sentences give its size).
         # The engine's phrasing, so it reads the same as the rule that decided.
         out.append("When a maintainer replied, it was typically within "
                    f"{hours_phrase(s.median_first_response_hours)}.")
     else:
         out.append("No maintainer replied to any of them.")
+    if s.closed_silently:
+        out.append(f"{_pct(s.closed_silently, n)}% were closed without a word.")
     if s.no_reply:
         out.append(f"{_pct(s.no_reply, n)}% got no reply at all.")
+    if s.still_open:
+        out.append(f"Another {s.still_open} {'is' if s.still_open == 1 else 'are'} still "
+                   "open and too new to count.")
     return " ".join(out)
 
 

@@ -2,7 +2,7 @@
 // reports return at once, anything else becomes a job with stages over SSE.
 import "server-only";
 import type {
-  AnalysisStart, ApiError, Credits, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, HistoryItem,
+  AnalysisStart, ApiError, Credits, DiscoverOut, DiscoverRepo, DiscoverSort, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, HistoryItem,
   JobStatus, Me, Mode, ProfileOut, ProfilePrefs, Report, Result, StarterIssue,
 } from "../types";
 import type { FeedbackInput } from "../feedback";
@@ -201,6 +201,18 @@ export async function listReports(limit: number): Promise<Result<{ reports: { re
     .map((r) => ({ repo: r.repo, mode: r.mode, generated_at: r.generated_at, verdict: r.verdict }))
     .sort((a, b) => b.generated_at.localeCompare(a.generated_at));
   return { ok: true, data: { reports: rows.slice(0, limit) } };
+}
+
+/** Discover over the cached reports. The mock has no GitHub details, so language and stars are empty. */
+export async function discover(sort: DiscoverSort, language: string | null, topic: string | null, limit: number): Promise<Result<DiscoverOut>> {
+  const cards: DiscoverRepo[] = [...state().cache.values()]
+    .filter((r) => r.mode === "rules" && r.days === 7)
+    .map((r) => ({
+      repo: r.repo, verdict: r.verdict, headline: r.headline, tone: r.tone, reason: r.verdict_line, stats: r.stats,
+      description: null, language: null, stars: null, topics: [], pushed_at: null, checked_this_week: null, generated_at: r.generated_at,
+    }));
+  const chosen = language || topic || sort === "trending" ? [] : sort === "welcoming" ? cards.filter((c) => c.verdict === "viable") : cards;
+  return { ok: true, data: { sort, language, topic, repos: chosen.slice(0, limit), languages: [], trending_min: 5 } };
 }
 
 export async function getReport(repoIn: string, mode: Mode, days: number): Promise<Result<Report>> {

@@ -236,3 +236,17 @@ def test_how_this_was_counted():
     # A report cached before `sample` existed still says what it can.
     old = top("viable", stats(120, 22, 30), evidence_until="2026-09-26T00:00:00Z")
     assert old.counted[0].text == "The newest pull requests on GitHub, up to 26 Sep 2026."
+
+
+def test_numbers_line_keeps_still_open_and_silent_closes_apart():
+    """pytorch after ticket 06: most outside pull requests are too new to judge."""
+    s = stats(18, 7, 0) | {"still_open": 42, "closed_silently": 5}
+    assert top("viable", s, sample=SAMPLE).numbers_line == (
+        "Of 18 pull requests from outside contributors (3 Jun – 26 Sep 2026) that have had "
+        "time for an answer, 7 were merged (39%). When a maintainer replied, it was "
+        "typically within 2 hours. 28% were closed without a word. Another 42 are still "
+        "open and too new to count.")
+    fresh = stats(0, 0, 0) | {"still_open": 3}
+    assert top("insufficient_evidence", fresh).numbers_line == (
+        "Outside contributors opened 3 pull requests, all still open and too new to judge "
+        "(less than 14 days old).")

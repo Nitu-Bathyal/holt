@@ -11,7 +11,7 @@ from pathlib import Path
 
 from holt import baseline, credentials, model, paths, reponame
 from holt.models_help import MODELS_HELP_EPILOG
-from holt.agent import entry, pipeline
+from holt.agent import entry, pipeline, rates
 from holt.evidence.fixtures import FixtureProvider
 from holt.evidence.provider import EvidenceProvider
 from holt.agent.verdict import headline
@@ -150,13 +150,15 @@ def stats_from(signals) -> dict | None:
     if signals is None:
         return None
     return {
-        "outsider_attempts": signals.outsider_threads,
+        "outsider_attempts": signals.outsider_judgeable,
         "outsider_merged": signals.outsider_merged,
         "distinct_outsiders": signals.distinct_outsider_authors,
         "first_time_merged_authors": signals.distinct_first_timer_merged_authors,
         "no_reply": signals.outsider_ignored,
         "median_first_response_hours": signals.median_first_response_hours,
         "bot_share": signals.bot_share,
+        "still_open": signals.outsider_still_open,
+        "closed_silently": signals.outsider_closed_silently,
         "first_timer_attempts": signals.first_timer_threads,
         "first_timer_merged": signals.first_timer_merged,
     }
@@ -295,13 +297,13 @@ def cmd_compare(args: argparse.Namespace) -> int:
             repo, provider, client, contributor_days=args.days, as_of=as_of
         )
         signals = trace.signals
-        landed = f"{signals.outsider_merged}/{signals.outsider_threads}"
+        landed = f"{signals.outsider_merged}/{signals.outsider_judgeable}"
         reply = (f"{signals.median_first_response_hours:.1f}h"
                  if signals.median_first_response_hours is not None else "never")
         # The rule that fired, not a summary of the prose. If nothing fired the
         # verdict came from the default path and saying so is more honest than
         # inventing a reason.
-        why = assessment.rules[0] if assessment.rules else "no rule fired"
+        why = rates.first_deciding(assessment.rules) or "no rule fired"
         why = why if len(why) <= 58 else why[:57].rstrip(" ,;:") + "…"
         rows.append((repo, headline(assessment.verdict), landed, reply, why))
         reports.append(assessment.to_dict(
