@@ -27,7 +27,7 @@ Skills used: `marketing-skills:onboarding`, `marketing-skills:signup`,
 
 | After sign-in (today) | `/me` (today) |
 |---|---|
-| ![](signed-in-home/before-after-signin-desktop.jpg) | ![](signed-in-home/before-me-phone.jpg) |
+| [screenshot](https://github.com/holt-oss/holt/blob/03925fb/docs/design/signed-in-home/before-after-signin-desktop.jpg) | [screenshot](https://github.com/holt-oss/holt/blob/03925fb/docs/design/signed-in-home/before-me-phone.jpg) |
 
 ## What a signed-in person gets (value proposition)
 
@@ -117,10 +117,11 @@ The prototype:
 
 | First visit (A, phone) | Returning, rows (D) |
 |---|---|
-| ![](signed-in-home/proto-a-first-visit-phone.jpg) | ![](signed-in-home/proto-d-rows-returning-desktop.jpg) |
+| [screenshot](https://github.com/holt-oss/holt/blob/03925fb/docs/design/signed-in-home/proto-a-first-visit-phone.jpg) | [screenshot](https://github.com/holt-oss/holt/blob/03925fb/docs/design/signed-in-home/proto-d-rows-returning-desktop.jpg) |
 
-More in `signed-in-home/`: B (two columns with a side rail), C (next step
-first, three short lists), D on a phone. **Recommendation: C's next-step
+The before and prototype screenshots stay off main, on the throwaway ref
+`shots/signed-in-home-plan` ([all of them](https://github.com/holt-oss/holt/tree/03925fb/docs/design/signed-in-home/)). They include B (two columns
+with a side rail), C (next step first, three short lists) and D on a phone. **Recommendation: C's next-step
 card on top, D's rows below.** A lists everything with the same weight, so a
 returning user scrolls past setup they've done. B's side rail becomes a
 second page on a phone.

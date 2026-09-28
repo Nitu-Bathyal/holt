@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { afterSignIn, fastestReplies, landingRedirect, nextStep, replyLine, setupLeft, setupSteps, showProfilePrompt, type HomeState } from "./home.ts";
+import { HOME_REDIRECT_CACHE, afterSignIn, fastestReplies, landingRedirect, nextStep, replyLine, setupLeft, setupSteps, showProfilePrompt, type HomeState } from "./home.ts";
 import type { ContributionPR, DiscoverRepo } from "./types";
 
 test("sign-in without somewhere to go back to lands on the home", () => {
@@ -33,6 +33,12 @@ test("/ sends signed-in people home, and nobody else", () => {
   assert.equal(landingRedirect(true, ""), null);
   assert.equal(landingRedirect(true, ["1"]), null);
   assert.equal(landingRedirect(false, "1"), null);
+});
+
+test("the redirect from / is never cached for anyone else", () => {
+  const parts = HOME_REDIRECT_CACHE.split(",").map((p) => p.trim());
+  assert.ok(parts.includes("private") && parts.includes("no-store"));
+  assert.ok(!parts.some((p) => p === "public" || p.startsWith("s-maxage") || p.startsWith("max-age")));
 });
 
 test("the profile prompt shows until it's saved or skipped", () => {

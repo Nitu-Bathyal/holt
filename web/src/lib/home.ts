@@ -16,6 +16,9 @@ export function afterSignIn(callbackUrl: string | string[] | undefined | null): 
   return to === "/" ? HOME : to;
 }
 
+/** On the redirect from "/": it depends on who's asking, so no cache (Cloudflare included) may keep it. */
+export const HOME_REDIRECT_CACHE = "private, no-store";
+
 /** "/" for a signed-in person is their home, unless they asked for the landing page. */
 export function landingRedirect(signedIn: boolean, landing: string | string[] | undefined): string | null {
   return signedIn && landing === undefined ? HOME : null;
