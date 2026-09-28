@@ -16,6 +16,8 @@ ran on replays and fake clients.
     1 pre-flight with summary through the web UI.
   - Direct to holt-pro: 2 more playbooks and 2 more pre-flight summaries.
   - The example-report regeneration (#98), replay only.
+- **Tested code:** Holt `main` at 48e8744 (before #107 and the 30 Sep verdict
+  review) and holt-pro `main` at 89f90d5.
 - **Nothing touched prod or staging.** Credits were granted with the admin
   CLI on the local database only.
 
