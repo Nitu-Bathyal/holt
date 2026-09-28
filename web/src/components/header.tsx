@@ -26,8 +26,8 @@ export async function Header() {
     <header className="site-header sticky top-0 z-40 border-b border-line bg-header" style={{ viewTransitionName: "site-header" }}>
       <MenuAutoClose />
       <div className="wrap flex min-h-[60px] items-center gap-4">
-        <Link href="/" className="mr-auto inline-flex min-h-11 items-center gap-3">
-          <CatFace className="text-[1.05rem]" />
+        <Link href="/" className="cat-perk mr-auto inline-flex min-h-11 items-center gap-3">
+          <CatFace className="text-[1.05rem]" perk />
           <span className="text-[0.95rem] font-semibold tracking-tight">holt<span className="sr-only"> home</span></span>
         </Link>
 
