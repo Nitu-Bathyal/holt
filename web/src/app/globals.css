@@ -877,13 +877,9 @@
     }
   }
 
-  /* While the landing's scroll companion is out and about, it is the cat:
-     the footer's own stays hidden until the companion settles into its spot. */
-  :root[data-cat-away] [data-footer-cat] {
-    visibility: hidden;
-  }
   @media (prefers-reduced-motion: no-preference) {
-    /* Its own name, so the squash replays when the companion lands. */
+    /* Its own name, so the squash replays when the landing's companion
+       hands over to it (motion/cat-companion.tsx). */
     [data-footer-cat][data-landed] .rcat-face {
       animation: rcat-land 460ms var(--ease-expressive);
     }
@@ -1457,6 +1453,14 @@
   --gut: clamp(16px, 4vw, 80px);
   width: min(calc(100% - 2 * var(--gut)), 1680px);
 }
+/* Desktop: the gutters are at least 136px wide, a lane where the companion cat,
+   which walks to the right edge (motion/cat-companion.tsx: an 84px face,
+   22px from the edge), never sits on a section's text, cards or buttons. */
+@media (min-width: 1024px) {
+  .landing-wide {
+    --gut: max(clamp(16px, 4vw, 80px), 136px);
+  }
+}
 .landing-wide .h2 {
   max-width: 22ch;
   font-size: clamp(1.75rem, min(4.6vw, 7.6svh), 4.6rem);
@@ -1479,13 +1483,7 @@
 [data-hero] .ls-kicker {
   margin-bottom: 0;
 }
-.ls-subhead {
-  color: var(--muted);
-  font-size: clamp(1rem, min(1.4vw, 2.6svh), 1.4rem);
-  font-weight: 600;
-  letter-spacing: -0.02em;
-}
-/* Text beside its demo from 1024px: section 02 (words | replay), 04 (flip | form). */
+/* Section 02: the headline beside the replay from 1024px. */
 .ls-split {
   display: grid;
   gap: clamp(1.5rem, 4svh, 3rem);
@@ -1495,9 +1493,6 @@
     grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
     align-items: center;
     gap: clamp(2rem, 4vw, 5rem);
-  }
-  .ls-split--even {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   }
 }
 
@@ -1558,14 +1553,39 @@
   }
 }
 
-/* The companion cat starts top right of the hero, beside the kicker, where
-   the full-scale headline leaves room (the sub-line sits at the headline's
-   foot). The -20px is the button's padding: the face lines up with the
-   content edge. */
+/* "actually merge": point at the headline and its highlighter sweeps in
+   again, like section 05's receipts. Mouse only (the highlight is a plain
+   background everywhere else, and on phones the words may wrap); still
+   under reduced motion. The band matches .marker's gradient (62% to 92%). */
+@media (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  .hero-h1 .marker {
+    position: relative;
+    z-index: 0;
+    background: none;
+  }
+  .hero-h1 .marker::before {
+    position: absolute;
+    inset: 62% 0 8% 0;
+    z-index: -1;
+    background: var(--marker);
+    content: "";
+    transform-origin: left;
+  }
+  .hero-h1:hover .marker::before {
+    animation: ls-fill 620ms var(--ease-expressive) both;
+  }
+}
+
+/* The companion cat starts top right of the hero, beside the kicker (whose
+   row keeps room for it, page.tsx), where the full-scale headline leaves room:
+   the sub-line sits at the headline's foot. */
 @media (min-width: 1024px) {
   [data-cat-companion] {
     top: calc(61px + clamp(0.4rem, 2.5svh, 2rem));
-    right: calc(max(clamp(16px, 4vw, 80px), 50% - 840px) - 20px);
+    /* The face's right edge 22px from the viewport's, as at the side (the
+       button's 20px padding is outside the face), so it only has to shrink
+       and drop into the lane when the walk starts. */
+    right: 2px;
   }
 }
 /* Reduced motion: the companion cat doesn't travel (cat-companion.tsx never
@@ -1691,9 +1711,12 @@
     border-color var(--dur-base) var(--ease-out);
 }
 @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  .ls-lift[data-hot="true"],
   .ls-thread.ls-lift:hover {
     translate: 0 -6px;
+  }
+  /* 03's cards: a couple of pixels, nothing more. */
+  .ls-person:hover {
+    translate: 0 -2px;
   }
 }
 
@@ -1833,33 +1856,13 @@
 .ls-person-body {
   font-size: clamp(0.95rem, min(1.05vw, 2svh), 1.1rem);
 }
-.ls-person[data-hot="true"] {
-  border-color: var(--blue);
-}
-.ls-person--you[data-hot="true"] {
-  border-color: var(--orange);
-}
+/* Pointing at a card lights its border (and lifts it 2px, above). */
 @media (hover: hover) {
-  .ls-people[data-hot] .ls-person:not([data-hot="true"]) {
-    opacity: 0.55;
+  .ls-person:hover {
+    border-color: var(--blue);
   }
-  /* The example waits beside its card, dimmed, and slides in when pointed at. */
-  .ls-person-example {
-    opacity: 0.5;
-    transition:
-      opacity var(--dur-base) var(--ease-out),
-      translate var(--dur-base) var(--ease-out);
-  }
-  .ls-person[data-hot="true"] .ls-person-example {
-    opacity: 1;
-  }
-}
-@media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  .ls-person-example {
-    translate: 0 6px;
-  }
-  .ls-person[data-hot="true"] .ls-person-example {
-    translate: none;
+  .ls-person--you:hover {
+    border-color: var(--orange);
   }
 }
 @media (prefers-reduced-motion: no-preference) and (min-width: 1024px) {
@@ -1989,6 +1992,15 @@
 .ls-answer-bar {
   transform-origin: left;
 }
+/* Pointing at an answer only thickens its colour bar: nothing else moves. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .ls-answer-bar {
+    transition: scale var(--dur-base) var(--ease-out);
+  }
+  .ls-answer:hover .ls-answer-bar {
+    scale: 2 1;
+  }
+}
 .ls-answer-word {
   font-size: clamp(1.7rem, min(5.4vw, 8svh), 6.4rem);
   line-height: 1;
@@ -1999,35 +2011,6 @@
 }
 .ls-answer-text {
   font-size: clamp(0.95rem, min(1.15vw, 2.1svh), 1.2rem);
-}
-@media (hover: hover) {
-  .ls-answers[data-hot] .ls-answer:not([data-hot="true"]) {
-    opacity: 0.4;
-  }
-  /* What to do waits a step back, and comes forward when pointed at. */
-  .ls-answer-next {
-    opacity: 0.6;
-    transition:
-      opacity var(--dur-base) var(--ease-out),
-      translate var(--dur-base) var(--ease-out);
-  }
-  .ls-answer[data-hot="true"] .ls-answer-next {
-    opacity: 1;
-  }
-}
-@media (hover: hover) and (prefers-reduced-motion: no-preference) {
-  .ls-answer-next {
-    translate: -8px 0;
-  }
-  .ls-answer[data-hot="true"] .ls-answer-next {
-    translate: none;
-  }
-  .ls-answer-bar {
-    transition: scale var(--dur-base) var(--ease-out);
-  }
-  .ls-answer[data-hot="true"] .ls-answer-bar {
-    scale: 2 1;
-  }
 }
 @media (prefers-reduced-motion: no-preference) and (min-width: 1024px) {
   .ls-answers[data-phase="wait"] .ls-answer-word {

@@ -33,7 +33,7 @@ test("landing, signed out: pasting any other repo goes to sign-in, then back to 
   await page.goto("/");
   const box = page.getByLabel("GitHub repository or URL");
   await box.fill("octocat/Hello-World");
-  await page.locator("form").filter({ has: box }).getByRole("button", { name: /sign in to check/i }).click();
+  await page.locator("form").filter({ has: box }).getByRole("button", { name: /check this repo/i }).click();
   await expect(page).toHaveURL(/\/signin\?callbackUrl=%2Foctocat%2FHello-World$/);
 });
 

@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { EXAMPLES, isExample } from "./examples.ts";
-import { findGate, pasteHref, reportAccess, signInHref, startGate } from "./gate.ts";
+import { findGate, pasteHref, pasteTarget, reportAccess, signInHref, startGate } from "./gate.ts";
 import { afterSignIn } from "./home.ts";
 
 const back = (href: string) => new URL(href, "https://holt.test").searchParams.get("callbackUrl");
@@ -74,4 +74,20 @@ test("the extension's public API stays open: it never reads the session or the g
     const src = readFileSync(join(import.meta.dirname, `../app/api/public/${kind}/[owner]/[repo]/route.ts`), "utf-8");
     assert.doesNotMatch(src, /@\/lib\/(session|gate)|@\/auth\b/);
   }
+});
+
+test("a paste box asks whether the repo exists before a sign-in wall, and only then", async () => {
+  const asked: string[] = [];
+  const says = (answer: boolean) => async (r: string) => (asked.push(r), answer);
+  // Signed out, a real repo: sign in first.
+  assert.equal(await pasteTarget("octo/real", false, says(true)), "/signin?callbackUrl=%2Focto%2Freal");
+  // Signed out, a typo: the report URL, which answers 404 (the not-found page).
+  assert.equal(await pasteTarget("octo/typo", false, says(false)), "/octo/typo");
+  // The check failing never blocks the way in.
+  assert.equal(await pasteTarget("octo/real", false, async () => { throw new Error("offline"); }), "/signin?callbackUrl=%2Focto%2Freal");
+  // Signed in, or an example: straight to the report (its 404 is the proxy's), no question asked.
+  asked.length = 0;
+  assert.equal(await pasteTarget("octo/typo", true, says(false)), "/octo/typo");
+  assert.equal(await pasteTarget(EXAMPLES[0].repo, false, says(false)), `/${EXAMPLES[0].repo}`);
+  assert.deepEqual(asked, []);
 });
