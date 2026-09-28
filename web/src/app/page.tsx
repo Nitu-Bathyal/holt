@@ -7,9 +7,6 @@ import { SwapHost } from "@/components/motion/swap-host";
 import { ScrollMarquee } from "@/components/motion/scroll-marquee";
 import { PasteBox } from "@/components/paste-box";
 import { UrlTrick } from "@/components/url-trick";
-import { LiveSample } from "@/components/sample-report";
-import { SampleReportSkeleton } from "@/components/sample-report-skeleton";
-import { SkeletonReveal } from "@/components/motion/reveal";
 import { EXAMPLE_PATH, EXAMPLE_REPORT } from "@/lib/example-report";
 import { humanHours } from "@/lib/format";
 import { buildReplay } from "@/lib/landing-replay";
@@ -57,7 +54,6 @@ function people(): Person[] {
       title: "Your first PR",
       body: "Skip the repos where outside PRs sit in silence. Start where someone answers.",
       mood: "startled",
-      hover: "celebrating",
       example: { repo: r.repo, fact: `${s.first_time_merged_authors} people got their first PR merged` },
     },
     {
@@ -66,7 +62,6 @@ function people(): Person[] {
       title: "Your next project",
       body: "Spend your evenings where outside work gets merged, and see which folders it lands in.",
       mood: "determined",
-      hover: "adoring",
       example: { repo: r.repo, fact: top ? `${top.merged} of ${top.attempted} merged in ${top.path}` : `${s.outsider_merged} of ${s.outsider_attempts} outside PRs merged` },
     },
     {
@@ -75,7 +70,6 @@ function people(): Person[] {
       title: "A fix you need upstream",
       body: "Find out if they take outside patches before you tell your team it'll land by Friday.",
       mood: "thinking",
-      hover: "determined",
       example: { repo: r.repo, fact: `a first reply typically took ${humanHours(s.median_first_response_hours)}` },
     },
   ];
@@ -110,7 +104,8 @@ export default async function Home() {
           <CatCompanion />
           <Grid>
             <div className="relative z-10 min-w-0">
-              <div className="fade-up mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 low:mb-3 short:mb-2" style={{ ["--d" as string]: ".1s" }}>
+              {/* Desktop: room on the right for the companion cat, which starts there. */}
+              <div className="fade-up mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 low:mb-3 short:mb-2 lg:pr-[clamp(12rem,15.5vw,17rem)]" style={{ ["--d" as string]: ".1s" }}>
                 <p className="ls-kicker text-muted">
                   <span className="text-blue">01</span> holt / free / for your first PR or your fiftieth
                 </p>
@@ -178,14 +173,12 @@ export default async function Home() {
               </div>
               <div className="min-w-0" data-reveal>
                 <CheckReplay replay={REPLAY} />
+                {/* An example report: open to everyone, signed in or not. */}
+                <Link href={`/${REPLAY.repo}`} className="bracket-link mt-5">
+                  [ read the full report → ]
+                </Link>
               </div>
             </div>
-            <h3 className="ls-subhead mb-6 mt-16" data-reveal>
-              The answer, with receipts: a real report, today.
-            </h3>
-            <SkeletonReveal fallback={<SampleReportSkeleton />}>
-              <LiveSample />
-            </SkeletonReveal>
           </Grid>
         </section>
 

@@ -24,6 +24,21 @@ export function pasteHref(repo: string, signedIn: boolean): string {
   return reportAccess(repo, signedIn) === "full" ? report : signInHref(report);
 }
 
+/** What a paste box says when the input can't be a repo. */
+export const NOT_A_REPO = "That doesn't look like a repo. Try owner/name or a github.com link.";
+
+/**
+ * Where a paste box goes, like pasteHref, except that before a sign-in wall
+ * it asks whether the repo exists: a typo then lands on the not-found page
+ * (the report URL, which answers 404) rather than on sign-in. Any doubt (the
+ * check failed) keeps the sign-in route.
+ */
+export async function pasteTarget(repo: string, signedIn: boolean, exists: (repo: string) => Promise<boolean>): Promise<string> {
+  const href = pasteHref(repo, signedIn);
+  if (href === `/${repo}`) return href;
+  return (await exists(repo).catch(() => true)) ? href : `/${repo}`;
+}
+
 type Refusal = { status: 401; error: ApiError };
 
 const refuse = (message: string): Refusal => ({ status: 401, error: { code: "unauthorized", message } });

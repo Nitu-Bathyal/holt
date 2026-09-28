@@ -107,14 +107,13 @@ export function CheckReplay({ replay }: { replay: Replay }) {
         <TerminalMode replay={replay} at={mode === "terminal" ? at : Infinity} animate={armed && mode === "terminal"} hidden={mode !== "terminal"} key={`t${run}`} />
       </div>
 
-      <div className="flex items-center justify-between gap-3 border-t border-dashed border-line px-4 py-1 text-[0.8rem] text-faint">
-        <span>a real check, recorded. the numbers are the example report&apos;s.</span>
-        {!reduced && (
+      {!reduced && (
+        <div className="flex justify-end border-t border-dashed border-line px-4 py-1 text-[0.8rem]">
           <button type="button" className="min-h-11 shrink-0 px-2 text-muted hover:text-ink disabled:opacity-40" onClick={() => restart(mode)} disabled={busy}>
             [ replay ]
           </button>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
