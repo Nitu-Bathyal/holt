@@ -23,7 +23,9 @@ repos only.
 
 Language, stars, topics and descriptions live in `repo_meta`: read right
 after a repo's report is stored (meta_refresh.py), and daily by the warm pass
-(`warm_meta`), one GraphQL query per hundred repositories.
+(`warm_meta`), one GraphQL query per hundred repositories, for every reported
+repo and every repo a find returned in the last day. Find results take their
+description, language and stars from it too (`with_meta`).
 """
 
 from __future__ import annotations
@@ -38,7 +40,7 @@ from pydantic import Field
 from sqlalchemy import func, select
 
 from holt_server import repos, schema
-from holt_server.db import RepoMeta, Report, Usage, current_engine, iso, now, utc
+from holt_server.db import FindCache, RepoMeta, Report, Usage, current_engine, iso, now, utc
 from holt_server.deps import internal, services
 from holt_server.github import DETAILS_BATCH
 from holt_server.schema import Model, Stats, VerdictView, odds_for, verdict_line
@@ -235,8 +237,9 @@ async def discover(request: Request,
 
 
 async def stale_meta(svc: Services, extra: list[str] = ()) -> list[str]:
-    """Repositories with a rules report (plus `extra`) whose details are
-    missing or older than META_MAX_AGE_HOURS."""
+    """Repositories with a rules report, in a find stored in the last
+    META_MAX_AGE_HOURS, or in `extra`, whose details are missing or older than
+    that."""
     cutoff = now() - timedelta(hours=META_MAX_AGE_HOURS)
     async with svc.db.session() as s:
         reported = (await s.execute(
@@ -244,11 +247,33 @@ async def stale_meta(svc: Services, extra: list[str] = ()) -> list[str]:
             .where(Report.mode == "rules").group_by(Report.repo_key))).all()
         fetched = dict((await s.execute(
             select(RepoMeta.repo_key, RepoMeta.fetched_at))).all())
+        finds = (await s.execute(
+            select(FindCache.results).where(FindCache.created_at >= cutoff))).scalars()
+        found = [r["repo"] for results in finds for r in results or []
+                 if isinstance(r, dict) and r.get("repo")]
     names = {key: repo for key, repo in reported}
-    for repo in extra:
+    for repo in [*found, *extra]:
         names.setdefault(repos.key(repo), repo)
     return [repo for key, repo in names.items()
             if key not in fetched or utc(fetched[key]) < cutoff]
+
+
+async def with_meta(s, results: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    """Find results with the description, language and stars `repo_meta` has
+    for them: the finder screens repos without reading those. A repo with no
+    details yet keeps what its result had (null). No GitHub call."""
+    keys = {repos.key(r["repo"]) for r in results if isinstance(r, dict) and r.get("repo")}
+    if not keys:
+        return results
+    metas = {m.repo_key: m for m in (await s.execute(
+        select(RepoMeta).where(RepoMeta.repo_key.in_(keys)))).scalars()}
+    out = []
+    for r in results:
+        m = metas.get(repos.key(r.get("repo") or "")) if isinstance(r, dict) else None
+        out.append(r if m is None else {
+            **r, "description": m.description or r.get("description"),
+            "language": m.language or r.get("language"), "stars": m.stars})
+    return out
 
 
 def _parse_ts(value: Any) -> datetime | None:

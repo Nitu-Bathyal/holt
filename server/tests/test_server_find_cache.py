@@ -8,7 +8,7 @@ import types
 from datetime import timedelta
 
 import pytest
-from holt_server.db import FindCache, now
+from holt_server.db import FindCache, RepoMeta, now
 from sqlalchemy import update
 
 LANGS = ["python", "javascript", "typescript", "go", "rust"]
@@ -101,3 +101,50 @@ def test_limit_beyond_what_was_computed_is_a_miss(h, finder):
     assert r.status_code == 200 and len(r.json()["results"]) == 3
     assert len(find(h, languages=["go"], limit=2).json()["results"]) == 2
     assert finder.calls[0][2] == 20  # computed for at least the default page
+
+
+def add(h, *items):
+    async def go():
+        async with h.svc.db.session() as s:
+            s.add_all(items)
+            await s.commit()
+    h.client.portal.call(go)
+
+
+def meta(repo, **kw):
+    return RepoMeta(repo_key=repo.lower(), repo=repo, description=kw.get("description"),
+                    language=kw.get("language"), stars=kw.get("stars", 0), topics=[])
+
+
+def details(results):
+    return {r["repo"]: (r["description"], r["language"], r["stars"]) for r in results}
+
+
+def test_results_carry_the_repo_details_holt_already_has(h, finder):
+    # The finder knows nothing about a repo beyond its screen; `repo_meta` does.
+    add(h, meta("Octo/Go-0", description="A tool.", language="Go", stars=321))
+    done = h.wait(find(h, languages=["go"]).json()["job_id"], kind="find")
+    assert details(done["results"]) == {
+        "octo/go-0": ("A tool.", "Go", 321),
+        "octo/go-1": (None, None, None),  # not fetched yet: null, never guessed
+        "octo/go-2": (None, None, None),
+    }
+    assert details(find(h, languages=["go"]).json()["results"])["octo/go-0"] == (
+        "A tool.", "Go", 321)
+
+
+def test_a_cached_search_picks_up_details_that_arrived_later(h, finder):
+    h.wait(find(h, languages=["go"]).json()["job_id"], kind="find")
+    add(h, meta("octo/go-1", description="Later.", language="Go", stars=7))
+    got = details(find(h, languages=["go"]).json()["results"])
+    assert got["octo/go-1"] == ("Later.", "Go", 7)
+    assert got["octo/go-0"] == (None, None, None)
+
+
+def test_the_warm_pass_fetches_details_for_found_repos(h, finder):
+    from holt_server import discover
+
+    h.wait(find(h, languages=["go"]).json()["job_id"], kind="find")
+    add(h, meta("octo/go-0", language="Go"))
+    stale = h.client.portal.call(discover.stale_meta, h.svc)
+    assert sorted(stale) == ["octo/go-1", "octo/go-2"]

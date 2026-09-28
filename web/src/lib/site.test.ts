@@ -26,6 +26,17 @@ test("the campaign page knows when October is over", async () => {
   assert.equal(hacktoberfestOver(2026, new Date("2026-11-01T00:00:00Z")), true);
 });
 
+test("the find switch shows in the countdown but starts on only in October", async () => {
+  const { hacktoberfestSwitch } = await import("./site.ts");
+  const sw = (iso: string) => hacktoberfestSwitch(new Date(iso));
+  assert.deepEqual(sw("2026-09-28T20:00:00Z"), { on: false, note: "starts in 3 days" });
+  assert.equal(sw("2026-09-30T23:59:59Z")?.on, false);
+  assert.deepEqual(sw("2026-10-01T00:00:00Z"), { on: true, note: "31 days left" });
+  assert.equal(sw("2026-10-31T23:59:59Z")?.on, true);
+  assert.equal(sw("2026-11-01T00:00:00Z"), null);
+  assert.equal(sw("2026-07-01T00:00:00Z"), null);
+});
+
 test("contact details fall back to visible placeholders", async () => {
   const { CONTACT_EMAIL, CONTACT_CITY, LEGAL_PAGES, LEGAL_UPDATED } = await import("./site.ts");
   assert.equal(CONTACT_EMAIL, process.env.NEXT_PUBLIC_CONTACT_EMAIL || "CONTACT_EMAIL");
