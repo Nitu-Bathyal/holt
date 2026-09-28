@@ -11,7 +11,6 @@ import { StarterIssues, StarterIssuesSkeleton } from "@/components/report/starte
 import { LinkHint } from "@/components/motion/link-hint";
 import { SkeletonReveal } from "@/components/motion/reveal";
 import { getReport, me, recordView, starterIssues } from "@/lib/api";
-import type { ModelAccess } from "@/lib/models";
 import { isValidRepo } from "@/lib/repo";
 import { caller, currentUser, type SessionUser } from "@/lib/session";
 import { humanHours } from "@/lib/format";
@@ -21,11 +20,10 @@ import { PageTransition } from "@/components/motion/page-transition";
 
 type Props = PageProps<"/[owner]/[repo]">;
 
-/** What the signed-in user may run (a paid plan or the free tier) and their free AI reports. */
-async function aiAccount(userId: string): Promise<{ access: ModelAccess; credits: Credits | null }> {
+/** The signed-in user's AI credits, for the note on the AI tab's start card. */
+async function aiCredits(userId: string): Promise<Credits | null> {
   const r = await me(userId);
-  if (!r.ok) return { access: { kind: "free" }, credits: null };
-  return { access: r.data.plan && r.data.plan !== "free" ? { kind: "plan" } : { kind: "free" }, credits: r.data.credits };
+  return r.ok ? r.data.credits : null;
 }
 
 function opts(sp: Record<string, string | string[] | undefined>): { mode: Mode; days: number } {
@@ -81,7 +79,6 @@ export default async function RepoPage({ params, searchParams }: Props) {
   if (!isValidRepo(owner, repo)) notFound();
   const sp = await searchParams;
   const { mode, days } = opts(sp);
-  const requestedModel = typeof sp.model === "string" ? sp.model : undefined;
   const name = `${owner}/${repo}`;
   const user = await currentUser();
   const signedIn = Boolean(user);
@@ -168,7 +165,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
               />
             ) : report.error.code === "not_found" ? (
               mode === "ai" && user ? (
-                <AiStart repo={name} days={days} signedIn={signedIn} {...await aiAccount(user.id)} requested={requestedModel} />
+                <AiStart repo={name} days={days} signedIn={signedIn} credits={await aiCredits(user.id)} />
               ) : (
                 <AnalysisRunner repo={name} mode={mode} days={days} signedIn={signedIn} />
               )

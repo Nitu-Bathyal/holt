@@ -10,7 +10,7 @@ from typing import Any, Literal
 
 from fastapi import APIRouter, Depends, Query, Request, Response
 from fastapi.responses import JSONResponse, StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 
@@ -81,6 +81,11 @@ async def me_body(svc: Services, user: User) -> schema.Me:
 
 
 class AnalysisIn(BaseModel):
+    # Model choice is server configuration (OPENROUTER_MODEL). Clients from
+    # when the web had a model picker still send `model`; unknown keys are
+    # dropped here, so it never reaches the engine, the job or its cache key.
+    model_config = ConfigDict(extra="ignore")
+
     repo: str = Field(max_length=500)
     mode: Literal["rules", "ai"] = "rules"
     days: int = Field(7, ge=1, le=90)

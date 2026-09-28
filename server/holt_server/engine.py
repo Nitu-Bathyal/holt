@@ -8,15 +8,19 @@ passes them on, never letting the bar go backwards and holding back the final
 
 from __future__ import annotations
 
+import logging
 from collections.abc import Callable
 from datetime import UTC, datetime
 from typing import Any
 
 from holt.agent import pipeline
 from holt.evidence.errors import AuthError, GitHubError, RateLimited, RepoNotFound
+from holt.model import OutputLimitReached
 from holt.types import EvidenceRecord, Window
 from holt_server import report as report_mod
 from holt_server.errors import ApiError, github_rate_limited, not_found_repo, upstream
+
+log = logging.getLogger("holt_server.engine")
 
 Emit = Callable[[str, float], None]
 
@@ -104,16 +108,31 @@ def analyze(
     progress(FINAL_STAGE, 0.95)
     cost = None
     if mode == "ai" and model is not None:
-        usage = model.usage
-        cost = {
-            "model": ", ".join(usage.models) or getattr(getattr(model, "spec", None), "model", ""),
-            "input_tokens": usage.input_tokens,
-            "output_tokens": usage.output_tokens,
-        }
+        cost = ai_cost(repo, model, getattr(trace, "timings", None) or {})
     return report_mod.build(
         repo=repo, mode=mode, assessment=assessment, signals=trace.signals,
         records=recording.records, cost=cost, generated_at=datetime.now(UTC),
     )
+
+
+def ai_cost(repo: str, model, timings: dict[str, float]) -> dict[str, Any]:
+    """The report's `cost`, and one log line with what the run spent and how
+    long each stage took. Counts and names only: no evidence text, no keys."""
+    usage = model.usage
+    name = ", ".join(usage.models) or getattr(getattr(model, "spec", None), "model", "")
+    usd = float(getattr(usage, "cost_usd", 0.0) or 0.0)
+    seconds = float(timings.get("total", 0.0) or 0.0)
+    stages = " ".join(f"{k}={float(v):.1f}s" for k, v in timings.items() if k != "total")
+    log.info("ai report %s: model=%s input_tokens=%d output_tokens=%d usd=%.5f "
+             "total=%.1fs %s", repo, name, usage.input_tokens, usage.output_tokens,
+             usd, seconds, stages or "stages=unknown")
+    return {
+        "model": name,
+        "input_tokens": usage.input_tokens,
+        "output_tokens": usage.output_tokens,
+        "usd": round(usd, 5),
+        "seconds": round(seconds, 1),
+    }
 
 
 def translate(exc: Exception, repo: str) -> ApiError:
@@ -127,6 +146,9 @@ def translate(exc: Exception, repo: str) -> ApiError:
         return upstream()
     if isinstance(exc, GitHubError):
         return upstream()
+    if isinstance(exc, OutputLimitReached):
+        # The model ran out of room mid-answer; the stage said so in the log.
+        return upstream("The AI model")
     module = type(exc).__module__ or ""
     if module.startswith(("openai", "anthropic")):
         name = type(exc).__name__

@@ -73,6 +73,7 @@ responses. The server also accepts and normalises full URLs
   "verdict_line": "string",           // one plain sentence under the headline
   "odds": { "level": "good" | "fair" | "long", "tone": "good" | "warn" | "bad",
             "text": "most outside pull requests get a reply, and plenty get merged" } | null,
+  "bottom_line": "string | null",     // ai mode: at most two model-written sentences, the lead of the AI explanation
   "summary": "string | null",         // ai mode: short plain-English paragraph
   "stats": {
     "outsider_attempts": 100, "outsider_merged": 15, "distinct_outsiders": 72,
@@ -90,9 +91,21 @@ responses. The server also accepts and normalises full URLs
   ],
   "evidence_until": "2026-06-01T00:00:00Z", // or null
   "generated_at": "2026-09-25T12:00:00Z",
-  "cost": { "model": "…", "input_tokens": 9000, "output_tokens": 6000 } // ai only, else null
+  "cost": { "model": "…", "input_tokens": 9000, "output_tokens": 6000,
+            "usd": 0.0123, "seconds": 48.2 } // ai only, else null
 }
 ```
+
+`bottom_line` and `summary` are null in rules mode (the headline and
+`verdict_line` already are the rules report's bottom line). In AI mode they are
+the model's words, checked by the engine before they are stored; either can be
+null on a report where the model wrote nothing usable, and `bottom_line` is
+null on AI reports cached before it existed. Show them as AI-written.
+
+`cost` is for operators, not the product: `usd` is what the model calls cost
+(from the engine's price table), `seconds` the whole run's wall time. Both are
+null on reports cached before they were recorded. Per-stage timings go to the
+server log, not the report.
 
 Every evidence item MUST have a clickable `url`.
 
@@ -145,6 +158,9 @@ newest first-timer pull requests behind the counts instead, as
 
 ### `POST /v1/analyses`
 Body: `{"repo": "owner/repo", "mode": "rules"|"ai", "days": 7, "refresh": false}`
+- Model choice is server configuration (`OPENROUTER_MODEL`); a `model` field in
+  the request is ignored. It is accepted (not a 400) for older clients, and it
+  never reaches the engine, the job or the cache key.
 - Returns `200 {"status":"done","report":Report}` immediately when a cached
   report exists (same repo/mode/days, younger than 24h) and `refresh` is false.
 - Otherwise `202 {"status":"queued","job_id":"…"}`.
