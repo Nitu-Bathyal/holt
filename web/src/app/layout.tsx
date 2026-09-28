@@ -19,15 +19,15 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Holt — find an open-source project that will actually merge your first PR",
+    default: "Holt — check whether a repo actually merges outsiders' PRs",
     template: "%s · Holt",
   },
   description:
-    "Paste any GitHub repo. Holt reads its recent pull requests and tells you, in plain English, whether newcomers get replies, get merged, and where their work lands.",
+    "Paste any GitHub repo. Holt reads its recent pull requests and tells you, in plain English, whether outside contributors get replies, get merged, and where their work lands.",
   openGraph: {
     siteName: "Holt",
     type: "website",
-    title: "Holt — find an open-source project that will actually merge your first PR",
+    title: "Holt — check whether a repo actually merges outsiders' PRs",
     description: "See how a project treats outside contributors before you spend your week on it. Swap hub for holt in any GitHub link.",
   },
   twitter: { card: "summary_large_image" },

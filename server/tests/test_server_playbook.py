@@ -96,7 +96,7 @@ def call(h, fn, *args, **kw):
     async def go():
         return await fn(*args, **kw)
 
-    return asyncio.run(go())
+    return h.client.portal.call(go)
 
 
 def gift(h, user: str, n: int = 1) -> None:
@@ -112,7 +112,7 @@ def rows(h, model, *where):
         async with h.svc.db.session() as s:
             return (await s.execute(select(model).where(*where))).scalars().all()
 
-    return asyncio.run(q())
+    return h.client.portal.call(q)
 
 
 def state(h, repo: str = "pallets/flask", user: str | None = None) -> dict:
@@ -257,7 +257,7 @@ def test_a_stale_playbook_is_written_again_free_for_those_who_unlocked(hp, fake)
             await s.execute(update(Playbook).values(created_at=now() - timedelta(days=30)))
             await s.commit()
 
-    asyncio.run(age())
+    hp.client.portal.call(age)
     r = unlock(hp, "u")
     assert r.status_code == 202
     assert wait(hp, r.json()["job_id"])["status"] == "done"
@@ -356,7 +356,7 @@ def test_refunding_twice_gives_back_once(hp, fake):
             await s.commit()
             return first, second
 
-    assert asyncio.run(refund_twice()) == (1, 0)
+    assert hp.client.portal.call(refund_twice) == (1, 0)
     fake.gate.set()
     wait(hp, job_id)
     assert balance(hp, "u")["purchased"] == 1

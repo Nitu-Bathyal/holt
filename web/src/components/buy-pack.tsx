@@ -1,0 +1,158 @@
+"use client";
+
+// One credit pack's buy button: start an order on the server, take the
+// payment in Razorpay Checkout, hand what Checkout returns back to the server,
+// then show the thank-you page. Nothing here adds credits: the server checks
+// Razorpay's signature and asks Razorpay about the payment first.
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useCallback, useEffect, useRef, useState } from "react";
+import type { ApiError, Checkout, OrderConfirmed, RazorpaySuccess } from "@/lib/types";
+
+type Phase =
+  | { t: "idle" }
+  | { t: "starting" }
+  | { t: "paying" }
+  | { t: "confirming" }
+  | { t: "failed"; message: string }
+  | { t: "dismissed" };
+
+interface RazorpayInstance {
+  open(): void;
+  on(event: "payment.failed", cb: (r: { error?: { description?: string } }) => void): void;
+}
+declare global {
+  interface Window {
+    Razorpay?: new (options: Record<string, unknown>) => RazorpayInstance;
+  }
+}
+
+const SCRIPT = "https://checkout.razorpay.com/v1/checkout.js";
+let loader: Promise<void> | null = null;
+function loadRazorpay(): Promise<void> {
+  if (window.Razorpay) return Promise.resolve();
+  loader ??= new Promise((resolve, reject) => {
+    const s = document.createElement("script");
+    s.src = SCRIPT;
+    s.async = true;
+    s.onload = () => resolve();
+    s.onerror = () => {
+      loader = null;
+      s.remove();
+      reject(new Error("load"));
+    };
+    document.head.appendChild(s);
+  });
+  return loader;
+}
+
+const MESSAGES: Partial<Record<ApiError["code"], string>> = {
+  payments_off: "Credit packs aren't on sale right now. Everything free in Holt keeps working.",
+  payment_unconfirmed:
+    "We couldn't confirm that payment with Razorpay. If money left your account, your credits will appear in Settings in a few minutes, or it will be refunded.",
+};
+
+async function post<T>(url: string, body: unknown): Promise<{ ok: true; data: T } | { ok: false; code?: string; message: string }> {
+  try {
+    const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    const data = await res.json().catch(() => null);
+    if (res.ok) return { ok: true, data: data as T };
+    const e = (data as { error?: ApiError } | null)?.error;
+    return { ok: false, code: e?.code, message: (e && MESSAGES[e.code]) || e?.message || "Something went wrong. Try again in a minute." };
+  } catch {
+    return { ok: false, message: "Couldn't reach Holt. Check your connection and try again." };
+  }
+}
+
+export interface BuyPackProps {
+  pack: string;
+  label: string;
+  signedIn: boolean;
+  prefill?: { name?: string | null; email?: string | null };
+  /** Start straight away (back from signing in with `?buy=`). */
+  autoStart?: boolean;
+  primary?: boolean;
+}
+
+export function BuyPack({ pack, label, signedIn, prefill, autoStart, primary }: BuyPackProps) {
+  const router = useRouter();
+  const [phase, setPhase] = useState<Phase>({ t: "idle" });
+  const started = useRef(false);
+
+  const confirm = useCallback(
+    async (orderId: string, paid: RazorpaySuccess) => {
+      setPhase({ t: "confirming" });
+      const r = await post<OrderConfirmed>("/api/orders/confirm", paid);
+      // Unless the signature was refused, a failure here (Razorpay slow, a
+      // dropped connection) may still be finished by Razorpay's webhook: the
+      // thank-you page waits for it.
+      if (!r.ok && r.code === "payment_unconfirmed") {
+        setPhase({ t: "failed", message: r.message });
+        return;
+      }
+      router.push(`/pricing/thanks?order=${orderId}`);
+    },
+    [router],
+  );
+
+  const start = useCallback(async () => {
+    setPhase({ t: "starting" });
+    const r = await post<Checkout>("/api/orders", { pack });
+    if (!r.ok) {
+      setPhase({ t: "failed", message: r.message });
+      return;
+    }
+    const order = r.data;
+    try {
+      await loadRazorpay();
+    } catch {
+      setPhase({ t: "failed", message: "Razorpay's payment window didn't load. An ad blocker may be stopping it; allow checkout.razorpay.com and try again." });
+      return;
+    }
+    setPhase({ t: "paying" });
+    const rzp = new window.Razorpay!({
+      key: order.key_id,
+      order_id: order.provider_order_id,
+      amount: order.amount,
+      currency: order.currency,
+      name: order.name,
+      description: order.description,
+      prefill: { name: prefill?.name ?? undefined, email: prefill?.email ?? undefined },
+      notes: { holt_order: order.order_id },
+      theme: { color: "#15755a" },
+      handler: (paid: RazorpaySuccess) => void confirm(order.order_id, paid),
+      modal: { ondismiss: () => setPhase((p) => (p.t === "paying" ? { t: "dismissed" } : p)) },
+    });
+    // Checkout shows the failure itself and lets them retry; this is for after it closes.
+    rzp.on("payment.failed", (e) => setPhase({ t: "failed", message: e.error?.description || "The payment didn't go through. You haven't been charged." }));
+    rzp.open();
+  }, [pack, prefill, confirm]);
+
+  useEffect(() => {
+    if (autoStart && signedIn && !started.current) {
+      started.current = true;
+      void start();
+    }
+  }, [autoStart, signedIn, start]);
+
+  const cls = `${primary ? "btn-primary" : "btn-ghost"} mt-6 w-full`;
+  if (!signedIn) {
+    return (
+      <Link href={`/signin?callbackUrl=${encodeURIComponent(`/pricing?buy=${pack}`)}`} className={cls}>
+        sign in to buy →
+      </Link>
+    );
+  }
+  const busy = phase.t === "starting" || phase.t === "paying" || phase.t === "confirming";
+  return (
+    <div>
+      <button type="button" className={cls} onClick={() => void start()} disabled={busy} aria-busy={busy}>
+        {phase.t === "starting" ? "opening checkout…" : phase.t === "paying" ? "paying in Razorpay…" : phase.t === "confirming" ? "confirming your payment…" : label}
+      </button>
+      <p aria-live="polite" className="mt-3 min-h-[1.25rem] font-sans text-[0.85rem]">
+        {phase.t === "failed" && <span role="alert" className="text-orange">{phase.message}</span>}
+        {phase.t === "dismissed" && <span className="text-muted">Checkout closed. You haven&apos;t been charged.</span>}
+      </p>
+    </div>
+  );
+}

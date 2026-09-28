@@ -9,7 +9,7 @@ from typing import Any
 
 import httpx
 
-from holt_server import engine, llm, pro
+from holt_server import engine, llm, payments, pro
 from holt_server.db import Database, Job
 from holt_server.errors import ApiError
 from holt_server.github import GitHubLookup, TokenPool
@@ -30,6 +30,8 @@ class Services:
         self.lookup = GitHubLookup(self.pool, self.http)
         # Paid features: None when HOLT_PRO_URL is not set.
         self.pro: pro.ProClient | None = pro.build(settings)
+        # Credit-pack checkout: None when the Razorpay keys are not set.
+        self.razorpay: payments.Razorpay | None = payments.build(settings)
         # Work (new analyses, find) and reads (cache misses on starter issues)
         # draw on separate counters.
         self.limiter = RateLimiter()
