@@ -1,61 +1,44 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { MergePlanView } from "@/components/merge-plan/merge-plan-view";
 import { PageTransition } from "@/components/motion/page-transition";
-import { ReportView } from "@/components/report/report-view";
-import { EXAMPLE_PATH, EXAMPLE_REPORT, exampleRecordedOn } from "@/lib/example-report";
-import { WELCOME_AI_CREDITS } from "@/lib/site";
+import { EXAMPLE_PATH } from "@/lib/example-report";
+import type { MergePlan } from "@/lib/merge-plan";
+import data from "@/lib/example-merge-plan.json";
 
-const report = EXAMPLE_REPORT;
-const recorded = exampleRecordedOn(report);
-const [owner, repo] = report.repo.split("/");
+// A recorded merge plan for pallets/click: the counts, quotes and links are
+// real (holt-pro's playbook replayed from its test fixture, the free report
+// and starter issue from the live API); the call and step wording stand in
+// for the model until holt-pro writes merge plans.
+const plan = data as MergePlan;
+const recorded = new Date(plan.recorded_on).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 
 export const metadata: Metadata = {
   title: "Example AI report",
-  description: `A full AI report on ${report.repo}, free to read: the written explanation, quoted PR threads and the evidence. Recorded ${recorded}.`,
+  description: `A full AI report on ${plan.repo}, free to read: what to do for your first pull request, what gets merged, what gets closed and who reviews. Recorded ${recorded}.`,
   alternates: { canonical: EXAMPLE_PATH },
 };
 
-export default function ExampleAiReportPage() {
+export default async function ExampleAiReportPage({ searchParams }: PageProps<"/example-ai-report">) {
+  const locked = (await searchParams).view === "locked";
   return (
     <PageTransition>
-      <div className="relative">
-        <div aria-hidden="true" className="hero-backdrop bottom-auto h-[560px] [mask-image:linear-gradient(#000_55%,transparent)]" />
-        <div className="wrap relative py-8 sm:py-12">
-          <aside className="mb-6 border border-blue/50 bg-blue/[0.06] p-4 sm:p-5" data-example-banner>
-            <p className="text-[0.8rem] uppercase tracking-[0.08em] text-blue">Example AI report (recorded {recorded})</p>
-            <p className="mt-2 max-w-3xl font-sans text-[0.95rem] text-ink">
-              A recorded example, not a live report, from GitHub activity up to {recorded}. Free to read. No account
-              needed.
-            </p>
-            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1">
-              <Link href="/" className="bracket-link">[ get one for your repo → ]</Link>
-              <Link href={`/${report.repo}`} className="text-link font-sans text-[0.89rem]">today&apos;s free report for {report.repo}</Link>
-              <Link href="/signin" className="text-link font-sans text-[0.89rem]">sign in for {WELCOME_AI_CREDITS} free AI reports</Link>
-            </div>
-          </aside>
-
-          <div className="mb-6 min-w-0">
-            <p className="text-[1.05rem] font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-[1.25rem]">
-              <span className="text-muted">{owner}/</span>
-              {repo}
-            </p>
-            <a href={`https://github.com/${report.repo}`} target="_blank" rel="noopener noreferrer" className="flex min-h-11 items-center truncate text-[0.82rem] text-faint hover:text-blue sm:block sm:min-h-0">
-              github.com/{report.repo} ↗
-            </a>
+      <div className="wrap py-8 sm:py-12">
+        <aside className="mb-10 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border border-dashed border-line-strong px-4 py-3" data-example-banner>
+          <p className="font-sans text-[0.92rem] text-muted">
+            <span className="font-mono text-[0.82rem] uppercase tracking-[0.08em] text-ink">Example</span> · recorded {recorded}, not live. Free
+            to read, no account needed.
+          </p>
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[0.88rem]">
+            <Link href={locked ? EXAMPLE_PATH : `${EXAMPLE_PATH}?view=locked`} className="text-link">
+              {locked ? "see the whole plan" : "what free users see"}
+            </Link>
+            <Link href="/" className="text-link">
+              get one for your repo
+            </Link>
           </div>
-
-          <ReportView
-            report={report}
-            signedIn={false}
-            example
-            issues={
-              <p className="border border-dashed border-line-strong p-4 font-sans text-[0.95rem] text-muted">
-                Starter issues change daily, so this example skips them.{" "}
-                <Link href={`/${report.repo}`} className="text-link">See today&apos;s starter issues for {report.repo}</Link>.
-              </p>
-            }
-          />
-        </div>
+        </aside>
+        <MergePlanView plan={plan} locked={locked} />
       </div>
     </PageTransition>
   );

@@ -1,0 +1,377 @@
+{
+  "repo": "pallets/click",
+  "recorded_on": "2026-09-27T20:04:55+00:00",
+  "generated_at": "2026-09-28T20:13:33+00:00",
+  "model": "openai/gpt-5-mini",
+  "window": {
+    "days": 365,
+    "since": "2025-09-27"
+  },
+  "sample": {
+    "merged": 50,
+    "closed": 25,
+    "merged_outside": 5,
+    "closed_outside": 25
+  },
+  "note": "Only 5 merged pull requests from people outside the project turned up in the last 365 days, too few to count on their own, so these counts cover pull requests from everyone except bots.",
+  "verdict": {
+    "verdict": "viable",
+    "headline": "Worth your time",
+    "tone": "good",
+    "line": "Outside contributors get real replies here, and their work gets merged.",
+    "numbers": [
+      {
+        "value": "5 of 8",
+        "label": "outside PRs merged"
+      },
+      {
+        "value": "4.4 h",
+        "label": "typical first reply"
+      },
+      {
+        "value": "1 of 8",
+        "label": "got no reply"
+      }
+    ]
+  },
+  "call": {
+    "text": "Go for it, but write it yourself: a small, tested change lands here, and pull requests written with AI tools get closed.",
+    "sources": [
+      {
+        "statement": "3 of 5 outside pull requests that touched tests/ were merged.",
+        "seen": 3,
+        "of": 5,
+        "links": []
+      },
+      {
+        "statement": "8 of 25 closed outside pull requests were closed for being written with AI tools.",
+        "seen": 8,
+        "of": 25,
+        "links": [
+          "https://github.com/pallets/click/pull/3874",
+          "https://github.com/pallets/click/pull/3870",
+          "https://github.com/pallets/click/pull/3868",
+          "https://github.com/pallets/click/pull/3867",
+          "https://github.com/pallets/click/pull/3864"
+        ]
+      }
+    ]
+  },
+  "steps": [
+    {
+      "title": "Pick #3696, or a small fix in `tests/`",
+      "detail": "“Increasing utilities quality and documentation” is open and labelled docs, typing. Outside work lands most often in `tests/`: 3 of 5 merged.",
+      "link": {
+        "label": "#3696 on GitHub",
+        "url": "https://github.com/pallets/click/issues/3696"
+      },
+      "copy": null,
+      "sources": [
+        {
+          "statement": "3 of 5 outside pull requests that touched tests/ were merged.",
+          "seen": 3,
+          "of": 5,
+          "links": []
+        }
+      ]
+    },
+    {
+      "title": "Ask before you start",
+      "detail": "Someone asked for this issue 49 days ago. Check it's still free, and say what you plan to change.",
+      "link": null,
+      "copy": {
+        "label": "Comment to post",
+        "text": "Hi! I'd like to work on this. My plan: <one line on what you'll change>. Is it still free, or is someone already on it?"
+      },
+      "sources": []
+    },
+    {
+      "title": "Write the code yourself",
+      "detail": "The maintainers close pull requests written with AI tools and link their policy when they do.",
+      "link": {
+        "label": "Their AI policy",
+        "url": "https://palletsprojects.com/contributing/llm-ai"
+      },
+      "copy": null,
+      "sources": [
+        {
+          "statement": "8 of 25 closed outside pull requests were closed for this.",
+          "seen": 8,
+          "of": 25,
+          "links": [
+            "https://github.com/pallets/click/pull/3874",
+            "https://github.com/pallets/click/pull/3870",
+            "https://github.com/pallets/click/pull/3868",
+            "https://github.com/pallets/click/pull/3867",
+            "https://github.com/pallets/click/pull/3864"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Keep it to about 70 lines in 3 files",
+      "detail": "That's a typical merged pull request here. 38 of 50 changed 239 lines or fewer.",
+      "link": null,
+      "copy": null,
+      "sources": [
+        {
+          "fact_id": "size-4",
+          "statement": "A typical merged pull request changed about 72 lines in 3 files; 38 of 50 changed 239 lines or fewer. Those closed without merging typically changed about 52 lines.",
+          "seen": 38,
+          "of": 50,
+          "links": [
+            "https://github.com/pallets/click/pull/3793",
+            "https://github.com/pallets/click/pull/3685",
+            "https://github.com/pallets/click/pull/3817",
+            "https://github.com/pallets/click/pull/3787",
+            "https://github.com/pallets/click/pull/3801",
+            "https://github.com/pallets/click/pull/3656",
+            "https://github.com/pallets/click/pull/3671",
+            "https://github.com/pallets/click/pull/3829"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Make `main` and the docs build pass",
+      "detail": "Both checks passed on every merged pull request. Get them green before you ask for a review.",
+      "link": null,
+      "copy": null,
+      "sources": [
+        {
+          "fact_id": "checks-1",
+          "statement": "These checks passed on all 50 merged pull requests that ran checks: \"docs/readthedocs.org:pallets-click\", \"main\". Expect them to be required: make them pass before asking for a review.",
+          "seen": 50,
+          "of": 50,
+          "links": [
+            "https://github.com/pallets/click/pull/3876",
+            "https://github.com/pallets/click/pull/3866",
+            "https://github.com/pallets/click/pull/3865",
+            "https://github.com/pallets/click/pull/3861",
+            "https://github.com/pallets/click/pull/3860",
+            "https://github.com/pallets/click/pull/3858",
+            "https://github.com/pallets/click/pull/3851",
+            "https://github.com/pallets/click/pull/3850"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Expect @Rowlando13 to review",
+      "detail": "The first reply usually comes within about 4 hours. Answer review comments on the same thread.",
+      "link": null,
+      "copy": null,
+      "sources": [
+        {
+          "fact_id": "reviewers_by_path-8",
+          "statement": "@Rowlando13 reviewed 27 of 50 merged pull requests that touched tests/, files at the top level, src/, docs/ or .github/: 17 of 34 for tests/, 16 of 31 for files at the top level, 17 of 31 for src/, 14 of 20 for docs/, 2 of 3 for .github/",
+          "seen": 27,
+          "of": 50,
+          "links": [
+            "https://github.com/pallets/click/pull/3866",
+            "https://github.com/pallets/click/pull/3865",
+            "https://github.com/pallets/click/pull/3861",
+            "https://github.com/pallets/click/pull/3860",
+            "https://github.com/pallets/click/pull/3858",
+            "https://github.com/pallets/click/pull/3821",
+            "https://github.com/pallets/click/pull/3808",
+            "https://github.com/pallets/click/pull/3805"
+          ]
+        }
+      ]
+    }
+  ],
+  "merged": [
+    {
+      "value": "72",
+      "unit": "lines",
+      "label": "typical merged pull request, in about 3 files",
+      "seen": 38,
+      "of": 50,
+      "sources": [
+        {
+          "fact_id": "size-4",
+          "statement": "A typical merged pull request changed about 72 lines in 3 files; 38 of 50 changed 239 lines or fewer. Those closed without merging typically changed about 52 lines.",
+          "seen": 38,
+          "of": 50,
+          "links": [
+            "https://github.com/pallets/click/pull/3793",
+            "https://github.com/pallets/click/pull/3685",
+            "https://github.com/pallets/click/pull/3817",
+            "https://github.com/pallets/click/pull/3787",
+            "https://github.com/pallets/click/pull/3801",
+            "https://github.com/pallets/click/pull/3656",
+            "https://github.com/pallets/click/pull/3671",
+            "https://github.com/pallets/click/pull/3829"
+          ]
+        }
+      ]
+    },
+    {
+      "value": "50",
+      "unit": "of 50",
+      "label": "passed `main` and the docs build",
+      "seen": 50,
+      "of": 50,
+      "sources": [
+        {
+          "fact_id": "checks-1",
+          "statement": "These checks passed on all 50 merged pull requests that ran checks: \"docs/readthedocs.org:pallets-click\", \"main\". Expect them to be required: make them pass before asking for a review.",
+          "seen": 50,
+          "of": 50,
+          "links": [
+            "https://github.com/pallets/click/pull/3876",
+            "https://github.com/pallets/click/pull/3866",
+            "https://github.com/pallets/click/pull/3865",
+            "https://github.com/pallets/click/pull/3861",
+            "https://github.com/pallets/click/pull/3860",
+            "https://github.com/pallets/click/pull/3858",
+            "https://github.com/pallets/click/pull/3851",
+            "https://github.com/pallets/click/pull/3850"
+          ]
+        }
+      ]
+    },
+    {
+      "value": "38",
+      "unit": "of 50",
+      "label": "had a review or comment from the project",
+      "seen": 38,
+      "of": 50,
+      "sources": [
+        {
+          "fact_id": "reviewers-7",
+          "statement": "38 of 50 merged pull requests had a review or comment from the project. The most active reviewers: @Rowlando13 (27), @davidism (15), @kdeldycke (9).",
+          "seen": 38,
+          "of": 50,
+          "links": [
+            "https://github.com/pallets/click/pull/3866",
+            "https://github.com/pallets/click/pull/3865",
+            "https://github.com/pallets/click/pull/3861",
+            "https://github.com/pallets/click/pull/3860",
+            "https://github.com/pallets/click/pull/3858",
+            "https://github.com/pallets/click/pull/3829",
+            "https://github.com/pallets/click/pull/3821",
+            "https://github.com/pallets/click/pull/3820"
+          ]
+        }
+      ]
+    }
+  ],
+  "closed": [
+    {
+      "reason": "Written with AI tools",
+      "seen": 8,
+      "of": 25,
+      "quote": {
+        "text": "https://palletsprojects.com/contributing/llm-ai",
+        "who": "davidism",
+        "url": "https://github.com/pallets/click/pull/3874",
+        "number": 3874
+      },
+      "examples": [
+        {
+          "number": 3874,
+          "url": "https://github.com/pallets/click/pull/3874"
+        },
+        {
+          "number": 3870,
+          "url": "https://github.com/pallets/click/pull/3870"
+        },
+        {
+          "number": 3868,
+          "url": "https://github.com/pallets/click/pull/3868"
+        },
+        {
+          "number": 3867,
+          "url": "https://github.com/pallets/click/pull/3867"
+        },
+        {
+          "number": 3864,
+          "url": "https://github.com/pallets/click/pull/3864"
+        }
+      ]
+    },
+    {
+      "reason": "Practice pull requests",
+      "seen": 2,
+      "of": 25,
+      "quote": {
+        "text": "This is not a playground. Use your own repos to learn how to use Git/GitHub",
+        "who": "ThiefMaster",
+        "url": "https://github.com/pallets/click/pull/3873",
+        "number": 3873
+      },
+      "examples": [
+        {
+          "number": 3873,
+          "url": "https://github.com/pallets/click/pull/3873"
+        },
+        {
+          "number": 3872,
+          "url": "https://github.com/pallets/click/pull/3872"
+        }
+      ]
+    }
+  ],
+  "reviewers": {
+    "people": [
+      {
+        "login": "Rowlando13",
+        "reviewed": 27,
+        "of": 50,
+        "areas": [
+          "tests/",
+          "src/",
+          "docs/"
+        ]
+      },
+      {
+        "login": "davidism",
+        "reviewed": 15,
+        "of": 50,
+        "areas": []
+      },
+      {
+        "login": "kdeldycke",
+        "reviewed": 9,
+        "of": 50,
+        "areas": []
+      }
+    ],
+    "sources": [
+      {
+        "fact_id": "reviewers-7",
+        "statement": "38 of 50 merged pull requests had a review or comment from the project. The most active reviewers: @Rowlando13 (27), @davidism (15), @kdeldycke (9).",
+        "seen": 38,
+        "of": 50,
+        "links": [
+          "https://github.com/pallets/click/pull/3866",
+          "https://github.com/pallets/click/pull/3865",
+          "https://github.com/pallets/click/pull/3861",
+          "https://github.com/pallets/click/pull/3860",
+          "https://github.com/pallets/click/pull/3858",
+          "https://github.com/pallets/click/pull/3829",
+          "https://github.com/pallets/click/pull/3821",
+          "https://github.com/pallets/click/pull/3820"
+        ]
+      },
+      {
+        "fact_id": "reviewers_by_path-8",
+        "statement": "@Rowlando13 reviewed 27 of 50 merged pull requests that touched tests/, files at the top level, src/, docs/ or .github/: 17 of 34 for tests/, 16 of 31 for files at the top level, 17 of 31 for src/, 14 of 20 for docs/, 2 of 3 for .github/",
+        "seen": 27,
+        "of": 50,
+        "links": [
+          "https://github.com/pallets/click/pull/3866",
+          "https://github.com/pallets/click/pull/3865",
+          "https://github.com/pallets/click/pull/3861",
+          "https://github.com/pallets/click/pull/3860",
+          "https://github.com/pallets/click/pull/3858",
+          "https://github.com/pallets/click/pull/3821",
+          "https://github.com/pallets/click/pull/3808",
+          "https://github.com/pallets/click/pull/3805"
+        ]
+      }
+    ]
+  }
+}
