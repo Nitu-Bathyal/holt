@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { signOut } from "@/auth";
+import { HOME, LANDING } from "@/lib/home";
 import { currentUser } from "@/lib/session";
 import { GITHUB_REPO_URL } from "@/lib/site";
 import { CatFace } from "./cat-face";
@@ -26,7 +27,7 @@ export async function Header() {
     <header className="site-header sticky top-0 z-40 border-b border-line bg-header" style={{ viewTransitionName: "site-header" }}>
       <MenuAutoClose />
       <div className="wrap flex min-h-[60px] items-center gap-4">
-        <Link href="/" className="cat-perk mr-auto inline-flex min-h-11 items-center gap-3">
+        <Link href={user ? HOME : "/"} className="cat-perk mr-auto inline-flex min-h-11 items-center gap-3">
           <CatFace className="text-[1.05rem]" perk />
           <span className="text-[0.95rem] font-semibold tracking-tight">holt<span className="sr-only"> home</span></span>
         </Link>
@@ -59,10 +60,12 @@ export async function Header() {
               </button>
               <div id="account-menu" popover="auto" className="menu w-56 text-[0.82rem]">
                 <p className="truncate px-3 py-2 text-faint">{user.name || user.email}</p>
+                <Link href={HOME} className="block px-3 py-2.5 transition-colors hover:bg-panel-2">home</Link>
                 <Link href="/for-you" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">picked for you</Link>
                 <Link href="/me/history" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">your history</Link>
                 <Link href="/me/contributions" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">your contributions</Link>
                 <Link href="/settings" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">settings</Link>
+                <Link href={LANDING} className="block px-3 py-2.5 transition-colors hover:bg-panel-2">about Holt</Link>
                 <Link href="/privacy" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">privacy</Link>
                 <form action={doSignOut}>
                   <button type="submit" className="block w-full px-3 py-2.5 text-left text-muted transition-colors hover:bg-panel-2">sign out</button>
