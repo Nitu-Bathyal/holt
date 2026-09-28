@@ -14,7 +14,7 @@ app and API server.
 | `swap.sh` | Sourced by `prod/deploy.sh` and `staging/preview.sh`: `swap_service` replaces a service's container with no gap (the new one starts beside the old one; the old one goes once the new one is healthy). The edges also show a "Holt is updating" page (503, never cached) if web can't be reached; see [`prod/README.md`](prod/README.md#the-updating-page). |
 | `staging/compose.pro.yml` | The optional paid-features service beside staging, compose project `stage-holt-pro`, joined to the staging network as `pro`, no published port. `preview.sh` runs it; see "Paid features". |
 | `staging/make-env.sh` | Writes `staging/.env` (gitignored): random keys, `gh auth token` (overridden on each run, see "The GitHub token"), `STAGING_HOST`. |
-| `prod/` | Production, https://githolt.com: compose project `holt-prod` on `127.0.0.1:8310` behind a Cloudflare tunnel, built only from `origin/main` by `prod/deploy.sh` (never on a timer), nightly backups. See [`prod/README.md`](prod/README.md) and [`prod/TUNNEL.md`](prod/TUNNEL.md). |
+| `prod/` | Production, https://githolt.com: compose project `holt-prod` on `127.0.0.1:8310` behind a Cloudflare tunnel, built only from `origin/main` by `prod/deploy.sh`, which `prod/follow.sh` runs by itself for each main commit once CI and staging are green on it (pausable), nightly backups. See [`prod/README.md`](prod/README.md) and [`prod/TUNNEL.md`](prod/TUNNEL.md). |
 
 ## Staging: https://staging.githolt.com
 

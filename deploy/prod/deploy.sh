@@ -17,8 +17,12 @@
 # (never a restart); a rejected config is put back and the run fails. Then
 # prune only this stack's images.
 #
-# Only the orchestrator runs it, when the user approves a deploy. Nothing
-# runs it on a timer: production never auto-updates.
+# follow.sh (the holt-prod-follow timer, install-follow.sh) runs it for each
+# new main commit once CI and staging are green on it; by hand it works as
+# before (README.md, "Deploying").
+#
+# Exit status: 0 live (or already live), 75 didn't start (another deploy
+# holds the lock, or the box stayed busy; try again later), 1 failed.
 #
 # State: ~/.local/share/holt-prod/  .env (make-env.sh), src/ (clone at the
 # deployed commit), current + previous (image tags), build/build.json
@@ -31,6 +35,7 @@ export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:${PATH:-}"
 here="$(cd "$(dirname "$0")" && pwd)"
 log() { printf '%s %s\n' "$(date -u +%FT%TZ)" "$*"; }
 die() { log "ERROR: $*"; exit 1; }
+busy() { log "ERROR: $*"; exit 75; }   # not a failure of the commit: nothing was changed
 # shellcheck source=env.sh
 . "$here/env.sh"   # STATE, PROJECT, SECRETS, load_prod_env
 # shellcheck source=../edge.sh
@@ -52,7 +57,7 @@ WANT="${1:-origin/main}"
 mkdir -p "$STATE/logs" "$STATE/build"
 
 exec 9>"$STATE/lock"
-flock -n 9 || die "another deploy is in progress"
+flock -n 9 || busy "another deploy is in progress"
 
 # --- env and secrets ---------------------------------------------------------
 [[ -f "$STATE/.env" ]] || "$here/make-env.sh"
@@ -93,7 +98,26 @@ fi
 # --- compose --------------------------------------------------------------------
 export HOLT_SRC="$SRC" HOLT_TAG="$sha" HOLT_PROD_HOME="$STATE"
 export COMPOSE_PROJECT_NAME="$PROJECT" HOLT_PROD_PROJECT="$PROJECT" BUILDX_BUILDER="$BUILDER"
-compose() { docker compose -p "$PROJECT" -f "$here/compose.yml" --env-file "$STATE/.env" "$@"; }
+# The compose file: this checkout's for the deploy; the rollback uses the
+# file the previous release was started with (releases/<sha>/compose.yml,
+# kept below), so a commit that breaks compose.yml can still be rolled back.
+# The project directory (where ./initdb and ./migrate-web.sh resolve) is the
+# state clone, whichever checkout runs this: a bind mount whose source path
+# changes makes compose recreate the container, and the db must not be
+# recreated because follow.sh and a person deploy from different checkouts.
+COMPOSE_YML="$here/compose.yml"
+RELEASES="$STATE/releases"
+compose() { docker compose -p "$PROJECT" -f "$COMPOSE_YML" --project-directory "$SRC/deploy/prod" --env-file "$STATE/.env" "$@"; }
+# release_compose <sha>: the compose file <sha> went live with, else the
+# one in its commit (releases before this existed), else nothing.
+release_compose() {
+    if [[ -f "$RELEASES/$1/compose.yml" ]]; then echo "$RELEASES/$1/compose.yml"; return; fi
+    mkdir -p "$RELEASES/$1"
+    git -C "$SRC" show "$1:deploy/prod/compose.yml" > "$RELEASES/$1/compose.yml.tmp" 2>/dev/null \
+        && mv "$RELEASES/$1/compose.yml.tmp" "$RELEASES/$1/compose.yml" \
+        && echo "$RELEASES/$1/compose.yml" && return
+    rm -rf "$RELEASES/$1"
+}
 EDGE_CONF="$SRC/deploy/prod/edge.conf"   # the deployed commit's; the edge reads a copy in $STATE/edge
 dlog="$STATE/logs/deploy-$(date -u +%Y%m%dT%H%M%SZ)-$short.log"
 log "log: $dlog"
@@ -119,6 +143,13 @@ try:
 except FileNotFoundError:
     live = None
 doc = {"site": "https://githolt.com", "live": live, "last_attempt": attempt}
+try:   # follow.sh's status (the auto-deploy) stays on /__build
+    with open(env["OUT"], encoding="utf-8") as f:
+        auto = json.load(f).get("autodeploy")
+    if auto:
+        doc["autodeploy"] = auto
+except (FileNotFoundError, ValueError):
+    pass
 tmp = env["OUT"] + ".tmp"
 with open(tmp, "w", encoding="utf-8") as f:
     json.dump(doc, f, indent=2); f.write("\n")
@@ -149,7 +180,7 @@ if [[ "$FORCE" != 1 ]]; then
         load="$(cut -d' ' -f1 /proc/loadavg)"
         avail="$(awk '/^MemAvailable:/{print int($2/1024)}' /proc/meminfo)"
         awk -v l="$load" -v m="$MAX_LOAD" 'BEGIN{exit !(l < m)}' && (( avail > MIN_AVAIL_MB )) && break
-        (( waited >= MAX_WAIT )) && die "still busy after ${MAX_WAIT}s (load $load, ${avail} MB free); try again later"
+        (( waited >= MAX_WAIT )) && busy "still busy after ${MAX_WAIT}s (load $load, ${avail} MB free); try again later"
         (( waited == 0 )) && log "waiting for room: load $load (< $MAX_LOAD), MemAvailable ${avail} MB (> $MIN_AVAIL_MB)"
         sleep 30; waited=$((waited + 30))
     done
@@ -209,13 +240,20 @@ swap_all && swapped=1
 if (( swapped )) && healthy; then
     [[ -n "$current" && "$current" != "$sha" ]] && echo "$current" > "$STATE/previous"
     echo "$sha" > "$STATE/current"
+    mkdir -p "$RELEASES/$sha" && cp "$COMPOSE_YML" "$RELEASES/$sha/compose.yml"
     write_build_json live "live"
     log "live: $short on 127.0.0.1:$port"
 else
     compose logs --tail 50 server web >>"$dlog" 2>&1 || true
     if [[ -n "$current" && "$current" != "$sha" ]]; then
-        log "rolling back to ${current:0:7}"
-        HOLT_TAG="$current" swap_all || true
+        how="the compose file it went live with"
+        [[ -f "$RELEASES/$current/compose.yml" ]] || how="its commit's compose.yml (from git)"
+        prev_yml="$(release_compose "$current")"
+        if [[ -n "$prev_yml" ]]; then log "rolling back to ${current:0:7} with $how"
+        else log "rolling back to ${current:0:7} with this commit's compose file (none kept for ${current:0:7})"; fi
+        # swap_all (and swap.sh inside it) go through compose(), which reads
+        # COMPOSE_YML: every step of the rollback uses the previous release's file.
+        COMPOSE_YML="${prev_yml:-$COMPOSE_YML}" HOLT_TAG="$current" swap_all || true
         if healthy; then
             write_build_json failed "$short failed its health check; rolled back to ${current:0:7}"
             die "$short failed its health check; rolled back to ${current:0:7} (see $dlog)"
@@ -249,6 +287,9 @@ fi
 # of this stack, then prune only images labelled holt.stack=prod and only this
 # builder's cache. Nothing else on the box is touched.
 keep=" $sha $(cat "$STATE/previous" 2>/dev/null || true) "
+for d in "$RELEASES"/*/; do
+    [[ -d "$d" && "$keep" != *" $(basename "$d") "* ]] && rm -rf "$d"
+done
 for img in $(docker images --filter "label=$LABEL" --format '{{.Repository}}:{{.Tag}}' | grep -E "^$PROJECT-(server|web):[0-9a-f]{40}\$"); do
     [[ "$keep" == *" ${img#*:} "* ]] || docker image rm "$img" >/dev/null 2>&1 || true
 done

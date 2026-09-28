@@ -4,16 +4,20 @@ The production stack on this box (until it moves to Hetzner): Postgres, the
 API server, the web app and a small nginx `edge`, compose project
 **`holt-prod`**, published only on **127.0.0.1:8310**. Cloudflare's tunnel
 is the public route ([TUNNEL.md](TUNNEL.md)). It is built **only from
-`origin/main`** and **never updates on its own**: the orchestrator runs
-`deploy.sh` when the user approves a deploy.
+`origin/main`**, and it **deploys itself**: every new commit on main goes
+live once its CI is green and staging is running it
+([Auto-deploy](#auto-deploy)). Merging to main is shipping. The owner can
+pause it, and `deploy.sh` still works by hand.
 
 | File | What |
 |---|---|
 | `compose.yml` | The stack. Images are tagged with the deployed commit (`holt-prod-web:<sha>`), everything is labelled `holt.stack=holt-prod`, memory limits web 512m / server 512m / db 256m / edge 32m. |
+| `follow.sh` | The auto-deploy: one tick checks origin/main against CI and staging and runs `deploy.sh` for it. `--status`, `--pause`, `--resume`, `--retry`. See [Auto-deploy](#auto-deploy). |
+| `install-follow.sh` | One-time: the timer that runs `follow.sh` every 2 minutes (`--remove` takes it out). |
 | `deploy.sh` | One deploy: build main's images, migrate, swap, health-check, roll back on failure, prune only this stack's images, stop the builder container. |
 | `env.sh` | Sourced by `deploy.sh` and `warm.sh`: state paths, `secrets.env` and the GitHub token fallback (`load_prod_env`). |
 | `make-env.sh` | Writes `~/.local/share/holt-prod/.env` once: fresh `AUTH_SECRET`, `HOLT_INTERNAL_KEY`, `HOLT_SECRET_KEY`, db password. Nothing shared with staging. |
-| `install.sh` | One-time: the env file plus the nightly backup timer. No deploy timer, on purpose. |
+| `install.sh` | One-time: the env file plus the nightly backup timer. The deploy timer is `install-follow.sh`. |
 | `backup.sh` | `pg_dump` of both databases to `~/backups/holt/<stamp>/`, keeps 14 days. |
 | `warm.sh` | Runs `python -m holt_server.warm` detached in the server image (fills the caches), with the same secrets and token as a deploy. |
 | `edge.conf` | nginx: keeps the port across deploys, `/__build`, `www` → apex redirect, SSE-friendly proxy, the Umami paths. A deploy puts changes live with a reload ([Edge config](#edge-config)). |
@@ -27,7 +31,9 @@ is the public route ([TUNNEL.md](TUNNEL.md)). It is built **only from
 State lives in `~/.local/share/holt-prod/` (outside every checkout, so
 removing a worktree can't delete secrets): `.env`, `src/` (a clone at the
 deployed commit), `current` and `previous` (image tags), `build/build.json`
-(served at `/__build`), `edge/default.conf` (the edge's live nginx config,
+(served at `/__build`), `releases/<sha>/compose.yml` (the compose file
+each kept release went live with, for rollbacks), `autodeploy.json`, `AUTODEPLOY_PAUSED`,
+`follow/` (the follower's clone and its failed commits), `edge/default.conf` (the edge's live nginx config,
 plus `default.conf.prev`), `logs/`.
 
 ## Environment
@@ -62,9 +68,83 @@ deploy/prod/deploy.sh         # clone, build, migrate, start; ~10 min
 deploy/prod/warm.sh           # fill the empty cache (detached; --status / --logs)
 ```
 
-Then the tunnel: [TUNNEL.md](TUNNEL.md).
+Then the tunnel: [TUNNEL.md](TUNNEL.md), and the auto-deploy:
+
+```sh
+deploy/prod/install-follow.sh # the 2-minute timer (holt-prod-follow.timer)
+```
+
+## Auto-deploy
+
+`holt-prod-follow.timer` runs `follow.sh` every 2 minutes (the copy in
+`~/.local/share/holt-prod/bin/`, installed by `install-follow.sh`; re-run
+that after changing `follow.sh`). It pulls: nothing on GitHub can reach
+the box, and there is no self-hosted runner (the repository is public).
+
+**One tick:**
+
+1. Fetch `origin/main`. Same as the live commit (`current`)? Nothing to do.
+2. **CI gate.** On that exact commit, GitHub must have at least one check
+   run, and every check run and every workflow run must be completed with
+   *success* or *skipped* (`gh api repos/holt-oss/holt/commits/<sha>/check-runs`
+   and `.../actions/runs?head_sha=<sha>`, with the box's `gh` login).
+   Still running: wait. Anything else (failure, cancelled, timed out): wait
+   for a newer commit; a re-run that goes green counts.
+3. **Staging gate.** Staging must be live on the same commit:
+   `live.main.sha` on http://127.0.0.1:9110/__build. Staging follows main
+   by itself, so this also means the commit built, migrated and started
+   there.
+4. Deploy: takes `deploy.sh` (and `compose.yml`, `warm.sh`) from that
+   commit, in the follower's own clone, and runs `deploy.sh <sha>`: the
+   usual build, migrate, swap, health check, roll back on failure. A
+   manual deploy holding the lock, or a box too busy for 30 minutes, isn't
+   a failure: the next tick tries again.
+5. When `src/holt/engine_version.py` differs between the old and the new
+   commit, stop a running warm pass and start `warm.sh --stale-only`.
+
+It only ever deploys the tip of main, never a PR or an older commit.
+
+**A failed deploy is not retried.** `deploy.sh` has already rolled back to
+the last good commit; the follower records the commit in
+`follow/failed` and leaves production there until main moves on (a fix
+merged) or someone runs `follow.sh --retry`. A deploy that is killed
+half-way counts as failed too.
+
+**Where to look:**
+
+```sh
+curl -s https://githolt.com/__build | jq .autodeploy      # {state, sha, at, message}
+~/.local/share/holt-prod/bin/follow.sh --status             # the same, plus failed commits and recent changes
+systemctl --user list-timers holt-prod-follow.timer
+journalctl --user -u holt-prod-follow -n 50                 # every tick
+less ~/.local/share/holt-prod/logs/follow.log               # one line per change of state
+ls -t ~/.local/share/holt-prod/logs/autodeploy-*.log        # one per deploy (last 20), next to deploy.sh's own
+```
+
+`state` is `up_to_date`, `waiting` (CI running, or staging not on it
+yet), `blocked` (CI red), `deploying`, `deployed`, `failed`, `held` (a
+failed commit, not retried), `busy` (another deploy or a busy box),
+`paused` or `error` (GitHub or the fetch didn't answer; next tick).
+
+**Pause and resume** (the timer keeps running and does nothing):
+
+```sh
+F=~/.local/share/holt-prod/bin/follow.sh
+$F --pause "launch day, hands off"     # or: touch ~/.local/share/holt-prod/AUTODEPLOY_PAUSED
+$F --resume                            # or: rm that file
+```
+
+Deploying an older commit by hand (a rollback, `deploy.sh <sha>`) pauses
+it by itself, so the next tick doesn't put main straight back; `--resume`
+once main has the fix.
+
+**Deploying by hand** still works, with or without the timer: `deploy.sh`
+([Deploying](#deploying)). They share a lock, so the two never run at
+once. To turn the auto-deploy off for good: `install-follow.sh --remove`.
 
 ## Deploying
+
+By hand (the auto-deploy does the first line for you):
 
 ```sh
 deploy/prod/deploy.sh                 # origin/main; no-op if it is already live
@@ -75,7 +155,8 @@ REBUILD=1 deploy/prod/deploy.sh       # rebuild the images for the tag
 
 What one run does, in order:
 
-1. Takes a lock (`~/.local/share/holt-prod/lock`); a second run exits.
+1. Takes a lock (`~/.local/share/holt-prod/lock`); a second run exits
+   (status 75, like a box that stays too busy: nothing was changed).
 2. Reads `secrets.env`, fetches `origin/main`, checks the commit is on it.
 3. Waits until the 1-minute load is under 6 and MemAvailable over 3 GB
    (up to 30 min; `FORCE=1` skips this).
@@ -96,9 +177,18 @@ What one run does, in order:
    healthy is removed and the old one keeps serving. Then `compose up -d`
    for the rest (db, edge, umami). If web still can't be reached, the edge
    shows the [updating page](#the-updating-page) instead of Cloudflare's 502.
+   Compose's project directory is always the state clone
+   (`src/deploy/prod`), whichever checkout runs `deploy.sh`: the db's
+   `./initdb` mount then never changes path, so `follow.sh` and a person
+   deploying by hand never make compose recreate the db. (The first deploy
+   with this recreates the db once, a few seconds, because the mount moves
+   from the checkout it was started from.)
 7. Health check: `/` answers 200 and `POST /api/analyses` for
    `pallets/flask` is accepted (200/202), within 5 minutes.
-8. On failure: the same swap back to the previous tag, checks again, records
+8. On failure: the same swap back to the previous tag **with the previous
+   release's own `compose.yml`** (kept in `releases/<sha>/` for the live and
+   the previous release, or taken from that commit in git), so a commit that
+   breaks `compose.yml` itself still rolls back; checks again, records
    the failure on `/__build`, exits 1. On success: records `current`/`previous`.
 9. Edge config: when the deployed commit's `edge.conf` differs from the
    edge's, installs it, runs `nginx -t` in the running edge and reloads
@@ -166,7 +256,8 @@ curl -sI -H 'Host: githolt.com' http://127.0.0.1:8310/  # 200 normally
 ```sh
 P=~/projects/holt/deploy/prod; S=~/.local/share/holt-prod
 dc() { HOLT_SRC=$S/src HOLT_TAG=$(cat $S/current) HOLT_PROD_HOME=$S \
-       docker compose -p holt-prod -f $P/compose.yml --env-file $S/.env "$@"; }
+       docker compose -p holt-prod -f $P/compose.yml --project-directory $S/src/deploy/prod \
+       --env-file $S/.env "$@"; }
 
 curl -s http://127.0.0.1:8310/__build | jq '.live.main.short, .last_attempt'
 dc ps
@@ -230,9 +321,9 @@ deploy/prod/warm.sh                 # then --status or --logs
 `src/holt/engine_version.py` went up), every stored report from the old
 engine is out of date. Nobody is served one: report pages re-run it, the
 badge and the extension say "updating", and Discover and recommendations
-leave it out until it is redone. To redo the seed list's reports straight
-away rather than as people visit, run the stale-only pass once the deploy
-is up:
+leave it out until it is redone. The auto-deploy starts the stale-only
+pass by itself after such a deploy (stopping a pass that is still running).
+After a deploy by hand, run it once the deploy is up:
 
 ```sh
 deploy/prod/warm.sh --dry-run --stale-only   # "would analyse …" per outdated seed
@@ -270,6 +361,21 @@ built), and deploy again with a loop of requests running against
 `127.0.0.1:$PORT`: every answer should be a 200/202 (or a 429 from the rate
 limit), never a 502 or the updating page.
 
+The follower on top: the same three variables, plus a fake origin (a bare
+repository whose `main` you move), a stand-in for `gh` that prints the
+check runs' TSV from files, and a fake staging `/__build`:
+
+```sh
+export HOLT_PROD_PROJECT=$COMPOSE_PROJECT_NAME HOLT_PROD_HOME=$R/home HOLT_PROD_PORT=$PORT
+export HOLT_FOLLOW_REMOTE=$R/origin.git HOLT_FOLLOW_GH=$R/gh
+export HOLT_FOLLOW_STAGING_URL=http://127.0.0.1:$((PORT+1))/__build
+export HOLT_SECRETS_FILE=$R/secrets.env      # fake CONTACT_EMAIL / CONTACT_CITY
+git clone $R/origin.git $R/home/src          # so deploy.sh fetches the fake origin too
+deploy/prod/follow.sh                        # one tick
+```
+
+Never run it without `HOLT_PROD_HOME`: it would deploy the real stack.
+
 The edge step alone needs no images: point `HOLT_PROD_HOME` at a scratch
 directory with a `.env` (the `:?` variables set to anything,
 `HOLT_PROD_PORT=$PORT`) and `src/deploy/prod/edge.conf`, source `edge.sh`,
@@ -280,6 +386,7 @@ on the port to show it never drops.
 ## Removing it
 
 ```sh
+deploy/prod/install-follow.sh --remove
 systemctl --user disable --now holt-prod-backup.timer
 dc down            # add -v to drop the database too (take a backup first)
 docker buildx rm holt-prod
