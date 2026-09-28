@@ -1106,14 +1106,23 @@ def test_what_next_keeps_answering_while_the_evidence_is_being_read(
     to read, which on a live repository is a minute of network, the screen took
     no keys at all. Escape is the one that matters: the way out.
     """
-    import time as _time
+    import threading
 
     from holt.tui import session as session_module
     from holt.tui.screens.next_steps import NextScreen
 
+    # The read blocks until the test lets it go, rather than sleeping for a
+    # second: under load a fixed sleep could end before the assertions below
+    # ran, and the test then failed on a screen that had already moved on.
+    started = threading.Event()
+    release = threading.Event()
+    finished = threading.Event()
+
     class Slow:
         def fetch(self, repo):
-            _time.sleep(1.0)
+            started.set()
+            release.wait(10)
+            finished.set()
             return []
 
     monkeypatch.setattr(session_module, "_provider", lambda live: Slow())
@@ -1121,19 +1130,24 @@ def test_what_next_keeps_answering_while_the_evidence_is_being_read(
     async def body(app, pilot):
         app.session = fake_run.finished()
         await app.push_screen(NextScreen(CLEAN))
-        await pilot.pause(0.3)
-        await type_repo(pilot, "frenck")
-        await pilot.press("enter")
-        await pilot.pause(0.2)
-        # Enter came back before the read did. It used to return only once the
-        # whole thing had finished, which is the freeze.
-        assert "reading" in screen_text(app), (
-            "pressing enter did not return until the evidence had been read"
-        )
+        # Keys go to the login box once the screen has focused it.
+        await settle(pilot, lambda: getattr(app.focused, "id", None) == "login-input")
+        try:
+            await type_repo(pilot, "frenck")
+            await pilot.press("enter")
+            await settle(pilot, lambda: "reading" in screen_text(app))
+            # Enter came back while the read was still blocked. It used to
+            # return only once the whole thing had finished, which is the freeze.
+            assert started.is_set() and not finished.is_set()
+            assert "reading" in screen_text(app), (
+                "pressing enter did not return until the evidence had been read"
+            )
 
-        await pilot.press("escape")
-        await pilot.pause(0.2)
-        assert app.screen.__class__.__name__ != "NextScreen"
+            await pilot.press("escape")
+            await settle(pilot, lambda: app.screen.__class__.__name__ != "NextScreen")
+            assert app.screen.__class__.__name__ != "NextScreen"
+        finally:
+            release.set()
 
     drive(body, tmp_path, size=(120, 44))
 
