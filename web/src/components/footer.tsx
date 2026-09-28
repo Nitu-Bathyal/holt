@@ -19,11 +19,12 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/analytics";
 import { inputMood, type CatMood } from "@/lib/cat";
-import { pasteHref } from "@/lib/gate";
+import { NOT_A_REPO, pasteTarget } from "@/lib/gate";
 import { timeAgo } from "@/lib/format";
 import { checkedLabel, type RecentChecks } from "@/lib/recent-checks";
 import { parseRepoInput } from "@/lib/repo";
 import { GITHUB_REPO_URL, LEGAL_PAGES, SITE_HOST } from "@/lib/site";
+import { askExists, useBusy } from "./paste-box";
 import { ReactiveCat } from "./reactive-cat";
 
 const SIGN_OFF = "git commit --to-the-right-repo";
@@ -42,7 +43,7 @@ export function Footer({ signedIn = false }: { signedIn?: boolean }) {
   const [value, setValue] = useState("");
   const [focused, setFocused] = useState(false);
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useBusy();
   const [seen, setSeen] = useState(false);
   const [waves, setWaves] = useState(0);
   const [recent, setRecent] = useState<RecentChecks | null>(null);
@@ -99,9 +100,9 @@ export function Footer({ signedIn = false }: { signedIn?: boolean }) {
     });
   };
 
-  const go = () => {
+  const go = async () => {
     if (!ref) {
-      setError("That doesn't look like a repo. Try pallets/flask or a github.com link.");
+      setError(NOT_A_REPO);
       return;
     }
     setError("");
@@ -109,7 +110,7 @@ export function Footer({ signedIn = false }: { signedIn?: boolean }) {
     const repo = `${ref.owner}/${ref.repo}`;
     // Like the paste box: signed out, through sign-in (examples need none).
     track("paste-submit", { repo, signedIn: signedIn ? "yes" : "no", from: "footer" });
-    router.push(pasteHref(repo, signedIn));
+    router.push(await pasteTarget(repo, signedIn, askExists));
   };
 
   const react = (m: CatMood) => ({
@@ -123,8 +124,8 @@ export function Footer({ signedIn = false }: { signedIn?: boolean }) {
     <footer ref={root} onPointerMove={onMove} className="mt-auto overflow-clip border-t border-line bg-panel">
       <div className="wrap relative pb-10 pt-16 md:pt-24">
         {/* Top right, in the padding above the sign-off. On the landing, the
-            scroll companion glides down into this spot and becomes this cat
-            (motion/cat-companion.tsx; data-footer-cat). */}
+            scroll companion fades out as the footer arrives and this cat
+            lands (motion/cat-companion.tsx; data-footer-cat). */}
         <button
           ref={cat}
           type="button"
@@ -174,7 +175,7 @@ export function Footer({ signedIn = false }: { signedIn?: boolean }) {
             <form
               onSubmit={(e) => {
                 e.preventDefault();
-                go();
+                void go();
               }}
               className="mt-10 grid max-w-[820px] grid-cols-[auto_minmax(0,1fr)_auto] items-stretch border border-line-strong bg-bg transition-colors focus-within:border-blue"
             >
@@ -207,14 +208,13 @@ export function Footer({ signedIn = false }: { signedIn?: boolean }) {
                 {...react("celebrating")}
                 className="border-l border-line-strong px-4 font-semibold text-blue transition-colors hover:bg-blue hover:text-on-accent sm:px-6"
               >
-                {busy ? "opening…" : signedIn ? "check →" : "sign in to check →"}
+                {busy ? "opening…" : "check →"}
               </button>
             </form>
             <p id="footer-repo-error" role={error ? "alert" : undefined} className="mt-2 min-h-6 font-sans text-[0.9rem] text-orange">
               {error}
             </p>
             <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-2">
-              <span className="font-sans text-[0.95rem] text-muted">No repo yet?</span>
               <Link href="/find" {...react("celebrating")} className="bracket-link bracket-link--orange">
                 [ find a project → ]
               </Link>

@@ -3,14 +3,9 @@
 // A repo that doesn't exist on GitHub gets the 404 page with a 404 status.
 import { NextResponse, type NextRequest } from "next/server";
 import { isAppRoute } from "@/lib/app-routes";
-import { isMockNotFound } from "@/lib/mock/fixtures";
 import { isValidRepo, redirectTargetForPath } from "@/lib/repo";
 import { retiredRedirect } from "@/lib/shell";
-import { probeGitHub, repoExistsChecker } from "@/lib/repo-exists";
-
-const repoExists = repoExistsChecker({
-  probe: process.env.MOCK_API === "1" ? async (r) => (isMockNotFound(r) ? "missing" : "exists") : probeGitHub,
-});
+import { repoExists } from "@/lib/repo-exists-check";
 
 export async function proxy(req: NextRequest) {
   const target = redirectTargetForPath(req.nextUrl.pathname, req.nextUrl.search);

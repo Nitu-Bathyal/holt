@@ -1,12 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState } from "react";
 import { track } from "@/lib/analytics";
 import { EXAMPLES, EXAMPLES_PATH } from "@/lib/examples";
-import { pasteHref } from "@/lib/gate";
+import { NOT_A_REPO, pasteTarget } from "@/lib/gate";
 import { parseRepoInput } from "@/lib/repo";
+
+/** Does github.com/{repo} exist? Any doubt (offline, rate limited) says yes. */
+export async function askExists(repo: string): Promise<boolean> {
+  const r = await fetch(`/api/repo-exists?repo=${encodeURIComponent(repo)}`);
+  if (!r.ok) return true;
+  const d = await r.json().catch(() => null);
+  return d?.exists !== false;
+}
+
+/**
+ * "Opening…" until the page changes. Reset when it does, so coming back (the
+ * footer stays mounted across pages; Back restores the landing) never finds
+ * the button stuck.
+ */
+export function useBusy(): [boolean, (on: boolean) => void] {
+  const path = usePathname();
+  const [busy, setBusy] = useState(false);
+  // A new page drops it (adjusting state during render, not in an effect).
+  const [at, setAt] = useState(path);
+  if (at !== path) {
+    setAt(path);
+    setBusy(false);
+  }
+  return [busy, setBusy];
+}
 
 // `id` and `label` let a page hold a second box: ids stay unique, and the
 // smoke test's getByLabel("GitHub repository or URL") still finds one input.
@@ -31,19 +56,19 @@ export function PasteBox({
   const router = useRouter();
   const [value, setValue] = useState("");
   const [error, setError] = useState("");
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useBusy();
 
-  function go(input: string) {
+  async function go(input: string) {
     const ref = parseRepoInput(input);
     if (!ref) {
-      setError("That doesn't look like a repo. Try pallets/flask or a github.com link.");
+      setError(NOT_A_REPO);
       return;
     }
     setError("");
     setBusy(true);
     const repo = `${ref.owner}/${ref.repo}`;
     track("paste-submit", { repo, signedIn: signedIn ? "yes" : "no" });
-    router.push(pasteHref(repo, signedIn));
+    router.push(await pasteTarget(repo, signedIn, askExists));
   }
 
   return (
@@ -51,7 +76,7 @@ export function PasteBox({
       <form
         onSubmit={(e) => {
           e.preventDefault();
-          go(value);
+          void go(value);
         }}
         className="group relative grid grid-cols-1 border border-line-strong bg-panel shadow-card transition-colors focus-within:border-blue sm:grid-cols-[auto_1fr_auto]"
       >
@@ -71,7 +96,7 @@ export function PasteBox({
             if (parseRepoInput(text)) {
               e.preventDefault();
               setValue(text.trim());
-              go(text);
+              void go(text);
             }
           }}
           autoFocus={autoFocus}
@@ -90,7 +115,7 @@ export function PasteBox({
           disabled={busy}
           className={`btn-primary m-1.5 sm:m-2 ${size === "lg" ? "sm:min-h-12" : ""}`}
         >
-          {busy ? "opening…" : signedIn ? "check this repo" : "sign in to check, free"} <span aria-hidden="true">→</span>
+          {busy ? "opening…" : "check this repo"} <span aria-hidden="true">→</span>
         </button>
       </form>
       {error && (
@@ -100,12 +125,12 @@ export function PasteBox({
       )}
       {examples && (
         <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.82rem] text-faint">
-          <span>{signedIn ? "try" : "try an example, no account needed:"}</span>
+          <span>try</span>
           {EXAMPLES.map(({ repo }) => (
             <button
               key={repo}
               type="button"
-              onClick={() => go(repo)}
+              onClick={() => void go(repo)}
               className="min-h-11 border-b border-dashed border-line-strong text-muted transition-colors hover:border-blue hover:text-ink"
             >
               {repo}

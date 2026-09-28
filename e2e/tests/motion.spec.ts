@@ -4,7 +4,7 @@
 import { expect, test, type Page } from "@playwright/test";
 
 const VERDICT = /Worth your time|Not worth your time|Not enough evidence/;
-// The home page's sample report ("Fig. 01", web/src/components/sample-report.tsx) links here.
+// The landing page's "read the full report" link, under the replay in section 02, goes here.
 const SAMPLE = "/home-assistant/core";
 
 /** Starts summing layout shifts (not caused by input) from the first paint. */
