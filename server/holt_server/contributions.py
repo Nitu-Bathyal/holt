@@ -9,9 +9,10 @@
 The pull requests come from GitHub's public search (`is:pr is:public
 author:<login>`), read with the server's token pool, never the user's token:
 the last `WINDOW_DAYS`, at most `MAX_PRS`, leaving out the user's own
-repositories and the projects they help run (`own_projects`). They are fetched when GitHub is connected, again once a day in
-the background (HOLT_CONTRIBUTIONS_REFRESH_HOURS), and when the user presses
-refresh. Each fetch replaces the user's rows; disconnecting deletes them.
+repositories and the projects they help run (`own_projects`). They are
+fetched when GitHub is connected, again once a day in the background
+(HOLT_CONTRIBUTIONS_REFRESH_HOURS), and when the user presses refresh. Each
+fetch replaces the user's rows; disconnecting deletes them.
 
 Each pull request carries Holt's latest rules verdict for its repository when
 the report cache has one. Nothing here starts an analysis.
