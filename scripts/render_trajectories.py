@@ -20,7 +20,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from holt import baseline, baseline_matched
+from eval import baseline, baseline_matched
 from holt.agent.pipeline import analyze
 from holt.evidence.fixtures import FixtureProvider
 from holt.model import PRICES, ReplayModel, TRAJECTORY_DIR

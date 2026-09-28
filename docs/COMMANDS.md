@@ -44,13 +44,13 @@ PYTHONPATH=. uv run holt analyze NixOS/nixpkgs --replay
 ```
 
 In a clone, a repository with committed evidence is answered from that snapshot
-unless you pass `--live`. The hidden flags `--replay`, `--baseline` and
+unless you pass `--live`. The hidden flags `--replay` and
 `--show-verification` exist for evaluation work and are documented in
-docs/research/REPRODUCTION.md.
+docs/research/REPRODUCTION.md, along with the benchmark's one-prompt baseline
+(`python -m eval.baseline <repo>`, from a clone).
 
 ---|---|---|
 | `holt analyze <repo>` | the full assessment for one repository | 5 stages |
-| `holt analyze <repo> --baseline` | the baseline arm: one prompt over README + metadata | 1 |
 | `holt analyze <repo> --no-model` | the verdict from the rules alone | 0 |
 | `holt compare <repo>…` | a shortlist side by side | 5 per repo |
 | `holt discover` | source candidates, screen them free, analyse survivors | survivors only |

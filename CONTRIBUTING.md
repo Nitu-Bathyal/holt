@@ -60,6 +60,10 @@ it. Link the issue with `Fixes #123`.
 
 ## Before you start
 
+- **The command line and the terminal interface are feature-frozen.** They
+  stay free and keep getting engine updates, bug fixes and documentation, but
+  new features go to the web app (`web/` and `server/`). A pull request that
+  adds a new `holt` command or flag will be pointed there.
 - Search existing issues and pull requests before opening a duplicate.
 - For a substantial feature or a change to the verdict rules, open a feature
   request first. The evidence model and evaluation design are part of the

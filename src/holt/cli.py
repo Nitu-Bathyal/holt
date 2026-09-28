@@ -9,7 +9,7 @@ import sys
 from datetime import UTC, datetime
 from pathlib import Path
 
-from holt import baseline, credentials, model, paths, reponame
+from holt import credentials, model, paths, reponame
 from holt.models_help import MODELS_HELP_EPILOG
 from holt.agent import entry, pipeline, rates
 from holt.evidence.fixtures import FixtureProvider
@@ -231,36 +231,29 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     # Not built at all without a model: rules-only needs no key and spends
     # nothing, and constructing a live client would demand one.
     client = model_client(repo, args, quiet=args.json)
-    if args.baseline and client is None:
-        raise UserError("--baseline asks a model for its answer, so it needs one "
-                        "set up. See: holt models")
 
-    trace = None
-    if args.baseline:
-        assessment = baseline.assess(repo, provider, client)
-    else:
-        assessment, trace = pipeline.analyze(
-            repo, provider, None if args.no_model else client,
-            contributor_days=args.days, as_of=as_of,
+    assessment, trace = pipeline.analyze(
+        repo, provider, None if args.no_model else client,
+        contributor_days=args.days, as_of=as_of,
+    )
+    if args.show_verification:
+        print(
+            f"<!-- findings before verification: {trace.before_verification}, "
+            f"after: {trace.after_verification}, dropped: {len(trace.dropped)}, "
+            f"unquoted: {len(trace.invented)} -->",
+            file=sys.stderr,
         )
-        if args.show_verification:
-            print(
-                f"<!-- findings before verification: {trace.before_verification}, "
-                f"after: {trace.after_verification}, dropped: {len(trace.dropped)}, "
-                f"unquoted: {len(trace.invented)} -->",
-                file=sys.stderr,
-            )
-            for d in trace.dropped:
-                print(f"<!-- DROPPED {d.field}={d.value!r} cited {list(d.evidence_ids)} -->",
-                      file=sys.stderr)
-            for d in trace.invented:
-                print(f"<!-- UNQUOTED {d.field}={d.value!r} cited {list(d.evidence_ids)}: "
-                      "the thread resolves and does not say this -->", file=sys.stderr)
-    if not args.baseline and args.entry_points:
+        for d in trace.dropped:
+            print(f"<!-- DROPPED {d.field}={d.value!r} cited {list(d.evidence_ids)} -->",
+                  file=sys.stderr)
+        for d in trace.invented:
+            print(f"<!-- UNQUOTED {d.field}={d.value!r} cited {list(d.evidence_ids)}: "
+                  "the thread resolves and does not say this -->", file=sys.stderr)
+    if args.entry_points:
         add_entry_points(assessment, repo, provider, args)
     if args.json:
         emit_json(assessment.to_dict(
-            stats=stats_from(getattr(trace, "signals", None)),
+            stats=stats_from(trace.signals),
             mode="ai" if client is not None else "rules",
         ))
     else:
@@ -707,14 +700,15 @@ def friendly_error(exc: BaseException, repo: str | None = None,
 
 
 def _installed_version() -> str:
-    """The installed package version, or a fallback for source trees."""
-    try:
-        from importlib.metadata import PackageNotFoundError, version
+    """The installed package version, or "dev" for a source tree.
 
-        try:
-            return version("holt-cli")
-        except PackageNotFoundError:
-            return version("holt")
+    Only `holt-cli` is asked. An unrelated PyPI package called `holt` could
+    otherwise answer with its own version.
+    """
+    try:
+        from importlib.metadata import version
+
+        return version("holt-cli")
     except Exception:
         return "dev"
 
@@ -741,16 +735,15 @@ def main(argv: list[str] | None = None) -> int:
         version=f"%(prog)s {_installed_version()}",
     )
     # Not required: bare `holt` opens the interface. Every existing invocation
-    # keeps working unchanged, and the eval harness calls `holt analyze`
-    # explicitly, so the reproduction path is unaffected either way.
+    # keeps working unchanged.
     sub = parser.add_subparsers(dest="command")
 
     analyze = sub.add_parser("analyze", help="assess one repository")
     analyze.add_argument("repo", help="owner/name or a github.com URL")
-    # For contributors to Holt itself: the benchmark's comparison baseline and
-    # the recorded model output that ships in a clone. Hidden from --help,
-    # which is read by people deciding where to contribute, not by us.
-    analyze.add_argument("--baseline", action="store_true", help=argparse.SUPPRESS)
+    # For contributors to Holt itself: the recorded model output that ships in
+    # a clone. Hidden from --help, which is read by people deciding where to
+    # contribute, not by us. The benchmark's one-prompt baseline is not a
+    # product command; it lives in eval/ (`python -m eval.baseline`).
     analyze.add_argument("--replay", action="store_true", help=argparse.SUPPRESS)
     analyze.add_argument(
         "--days",
