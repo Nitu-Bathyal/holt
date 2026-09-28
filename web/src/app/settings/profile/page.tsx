@@ -9,7 +9,7 @@ import { PRIVACY_SETTINGS, PROFILE_SETTINGS } from "@/lib/settings";
 import { ProfileForm } from "@/components/profile-form";
 import { Notice, SectionHead } from "@/components/settings/section-head";
 
-export const metadata: Metadata = { title: "Your profile | Settings", robots: { index: false } };
+export const metadata: Metadata = { title: "Your profile · Settings", robots: { index: false } };
 
 export default async function ProfileSettings({ searchParams }: PageProps<"/settings/profile">) {
   const user = await currentUser();

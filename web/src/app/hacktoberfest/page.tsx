@@ -16,7 +16,7 @@ import { PageTransition } from "@/components/motion/page-transition";
 const YEAR = 2026;
 
 export const metadata: Metadata = {
-  title: { absolute: `Hacktoberfest ${YEAR}: contributions that actually land | Holt` },
+  title: { absolute: `Hacktoberfest ${YEAR}: contributions that actually land · Holt` },
   description:
     "Open-source projects that reply to and merge outside contributors, with specific issues by language, and five tips so your pull request gets reviewed.",
   alternates: { canonical: "/hacktoberfest" },

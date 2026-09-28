@@ -2,6 +2,7 @@
 // paths like /o/r/pulls all land on the report page /o/r.
 // A repo that doesn't exist on GitHub gets the 404 page with a 404 status.
 import { NextResponse, type NextRequest } from "next/server";
+import { isAppRoute } from "@/lib/app-routes";
 import { HOME_REDIRECT_CACHE, landingRedirect } from "@/lib/home";
 import { hasLiveSession } from "@/lib/live-session";
 import { isMockNotFound } from "@/lib/mock/fixtures";
@@ -11,9 +12,6 @@ import { probeGitHub, repoExistsChecker } from "@/lib/repo-exists";
 const repoExists = repoExistsChecker({
   probe: process.env.MOCK_API === "1" ? async (r) => (isMockNotFound(r) ? "missing" : "exists") : probeGitHub,
 });
-
-// Two-segment app routes that /[owner]/[repo] must not claim.
-const APP_ROUTES = new Set(["me", "discover", "pricing"]);
 
 export async function proxy(req: NextRequest) {
   const target = redirectTargetForPath(req.nextUrl.pathname, req.nextUrl.search);
@@ -27,7 +25,7 @@ export async function proxy(req: NextRequest) {
   }
 
   const parts = req.nextUrl.pathname.split("/").filter(Boolean);
-  if (parts.length === 2 && !APP_ROUTES.has(parts[0].toLowerCase()) && isValidRepo(parts[0], parts[1])) {
+  if (parts.length === 2 && !isAppRoute(parts[0]) && isValidRepo(parts[0], parts[1])) {
     if (!(await repoExists(`${parts[0]}/${parts[1]}`))) {
       return NextResponse.rewrite(new URL("/_not-found", req.url), { status: 404 });
     }
