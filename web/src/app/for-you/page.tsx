@@ -48,7 +48,7 @@ export default async function ForYouPage() {
                   Then this page fills with repos worth your time.
                 </p>
                 <div className="mt-6 flex flex-wrap justify-center gap-3">
-                  <Link href="/settings#profile" className="btn-primary inline-flex">set up your profile</Link>
+                  <Link href="/settings/profile" className="btn-primary inline-flex">set up your profile</Link>
                   {!d.basis.connected && <Link href="/connect" className="bracket-link">[ connect GitHub ]</Link>}
                 </div>
               </>
@@ -60,7 +60,7 @@ export default async function ForYouPage() {
                 </p>
                 <div className="mt-6 flex flex-wrap justify-center gap-3">
                   <Link href="/discover" className="btn-primary inline-flex">browse welcoming repos</Link>
-                  <Link href="/settings#profile" className="bracket-link">[ edit your profile ]</Link>
+                  <Link href="/settings/profile" className="bracket-link">[ edit your profile ]</Link>
                 </div>
               </>
             )}
@@ -69,7 +69,7 @@ export default async function ForYouPage() {
           <>
             {(basis || excluded) && (
               <p className="mt-6 font-sans text-[0.88rem] text-muted">
-                {basis} {excluded} <Link href="/settings#profile" className="text-link">Edit your profile</Link>
+                {basis} {excluded} <Link href="/settings/profile" className="text-link">Edit your profile</Link>
               </p>
             )}
             <div className="mt-6">

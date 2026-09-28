@@ -7,16 +7,17 @@ import { deleteProfile, saveProfile } from "@/lib/api";
 import { PICKS_COOKIE } from "@/lib/find-picks";
 import { findHref, fromForm, SKIP_COOKIE } from "@/lib/profile";
 import { currentUser } from "@/lib/session";
+import { PRIVACY_SETTINGS, PROFILE_SETTINGS } from "@/lib/settings";
 
 // Only our own pages, so a crafted form can't send people elsewhere.
-const PAGES = ["/", "/me", "/find", "/hacktoberfest", "/settings"];
+const PAGES = ["/", "/me", "/find", "/hacktoberfest", PROFILE_SETTINGS];
 function back(form: FormData): string {
   const v = String(form.get("back") ?? "");
-  return PAGES.includes(v) ? v : "/settings";
+  return PAGES.includes(v) ? v : PROFILE_SETTINGS;
 }
 
 function withNotice(path: string, notice: string) {
-  return path === "/settings" ? `/settings?profile=${notice}#profile` : `${path}?profile=${notice}`;
+  return `${path}?profile=${notice}`;
 }
 
 export async function save(form: FormData) {
@@ -47,8 +48,8 @@ export async function skip(form: FormData) {
 
 export async function remove() {
   const user = await currentUser();
-  if (!user) redirect("/signin?callbackUrl=/settings");
+  if (!user) redirect(`/signin?callbackUrl=${PRIVACY_SETTINGS}`);
   const r = await deleteProfile(user.id);
   revalidatePath("/", "layout");
-  redirect(withNotice("/settings", r.ok ? "deleted" : "error"));
+  redirect(withNotice(PRIVACY_SETTINGS, r.ok ? "deleted" : "error"));
 }

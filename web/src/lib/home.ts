@@ -53,7 +53,7 @@ export function setupSteps(s: HomeState): Step[] {
   return [
     { id: "signin", label: "Sign in", note: "Your free AI reports are in your account.", href: HOME, done: true },
     { id: "check", label: "Check a repo you're thinking about", note: "It's kept here, so you can come back to it.", href: "#check", done: s.checked > 0 },
-    { id: "profile", label: "Finish your profile", note: "Your languages and the time you have, so Holt can pick repos for you. 30 seconds.", href: "/settings#profile", done: s.hasProfile !== false },
+    { id: "profile", label: "Finish your profile", note: "Your languages and the time you have, so Holt can pick repos for you. 30 seconds.", href: "/settings/profile", done: s.hasProfile !== false },
     { id: "github", label: "Connect GitHub (optional)", note: "See your pull requests and whether they were merged.", href: "/connect", done: s.connected },
   ];
 }
@@ -93,7 +93,7 @@ export function nextStep(s: HomeState, ago: (iso: string) => string): NextStep {
     return {
       title: "Finish your profile",
       body: "Your languages and the time you have. Then Holt picks repos where maintainers reply right now.",
-      href: "/settings#profile",
+      href: "/settings/profile",
       cta: "finish your profile",
     };
   }

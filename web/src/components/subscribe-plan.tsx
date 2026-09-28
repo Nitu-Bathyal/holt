@@ -43,7 +43,7 @@ export function SubscribePlan({ plan, label, signedIn, prefill, autoStart }: Sub
       }
       // Anything else (Razorpay slow, a dropped connection) is finished by
       // Razorpay's webhook; Settings shows the plan once it is.
-      router.push("/settings?subscribed=1#plan");
+      router.push("/settings/ai-reports?subscribed=1#plan");
     },
     [router],
   );

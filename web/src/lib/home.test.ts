@@ -73,7 +73,7 @@ test("next step: first check, then a waiting pull request, then the profile, the
   assert.match(waiting.title, /pallets\/flask is still waiting/);
   assert.match(waiting.body, /3 days ago/);
 
-  assert.equal(nextStep(checked, ago).href, "/settings#profile");
+  assert.equal(nextStep(checked, ago).href, "/settings/profile");
   assert.equal(nextStep({ ...checked, hasProfile: true, topPick: { repo: "o/r", reason: "Why." } }, ago).href, "/o/r");
   assert.equal(nextStep({ ...checked, hasProfile: true }, ago).href, "/find");
   assert.equal(nextStep({ ...checked, hasProfile: null }, ago).href, "/find");

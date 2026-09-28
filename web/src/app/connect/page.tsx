@@ -24,7 +24,7 @@ export default async function ConnectPage({ searchParams }: PageProps<"/connect"
   const user = await currentUser();
   if (!user) redirect("/signin?callbackUrl=/connect");
   const [sp, conn, githubId] = await Promise.all([searchParams, githubConnection(user.id), linkedGitHubId(user.id)]);
-  if (conn.ok && conn.data.connected) redirect("/settings#github");
+  if (conn.ok && conn.data.connected) redirect("/settings/accounts");
   const error = typeof sp.error === "string" ? ERRORS[sp.error] : undefined;
   const viaGitHub = !githubId;
   const canLink = oauthProviders.some((p) => p.id === "github");
@@ -71,7 +71,7 @@ export default async function ConnectPage({ searchParams }: PageProps<"/connect"
             <button type="submit" className="btn-primary" disabled={viaGitHub && !canLink}>
               {viaGitHub ? "continue to GitHub" : "connect my GitHub account"}
             </button>
-            <Link href="/settings" className="text-[0.85rem] text-muted hover:text-ink">not now</Link>
+            <Link href="/settings/accounts" className="text-[0.85rem] text-muted hover:text-ink">not now</Link>
           </div>
           {viaGitHub && !canLink && <p className="mt-3 font-sans text-[0.85rem] text-faint">{ERRORS.unavailable}</p>}
           <p className="mt-6 font-sans text-[0.8rem] text-faint">

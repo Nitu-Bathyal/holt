@@ -56,7 +56,7 @@ export function AiStart({ repo, days, signedIn, credits }: { repo: string; days:
           {blocked && credits.ai_available && credits.can_claim && (
             <>
               {" "}
-              <Link href="/settings" className="text-link">claim it</Link>
+              <Link href="/settings/ai-reports" className="text-link">claim it</Link>
             </>
           )}
         </p>
