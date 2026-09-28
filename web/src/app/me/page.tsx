@@ -7,15 +7,13 @@ import { redirect } from "next/navigation";
 import { PageTransition } from "@/components/motion/page-transition";
 import { PasteBox } from "@/components/paste-box";
 import { ProfileOnboarding } from "@/components/profile-onboarding";
-import type { Tile } from "@/components/home/shelf";
-import { RepoRows, type RepoRow } from "@/components/repo-card/repo-grid";
-import { contributions, discover, getProfile, history, me, recommendations, savedRepos } from "@/lib/api";
-import { boardHref } from "@/lib/discover";
-import { timeAgo } from "@/lib/format";
-import { fastestReplies, groupPulls, nextStep, outsidePulls, replyLine, setupLeft, setupSteps, showProfilePrompt, type HomeState } from "@/lib/home";
+import { RepoTile, Shelf, type Tile } from "@/components/home/shelf";
+import { contributions, discover, getProfile, history, me, recommendations } from "@/lib/api";
+import { boardHref, compact } from "@/lib/discover";
+import { shortDate, timeAgo } from "@/lib/format";
+import { fastestReplies, nextStep, replyLine, setupLeft, setupSteps, showProfilePrompt, type HomeState } from "@/lib/home";
 import { SKIP_COOKIE } from "@/lib/profile";
 import { languageName } from "@/lib/recommendations";
-import { fromDiscover, fromPick, type CardRepo } from "@/lib/repo-card";
 import { currentUser } from "@/lib/session";
 import type { DiscoverRepo, DiscoverSort } from "@/lib/types";
 
@@ -33,14 +31,20 @@ const NOTICES: Record<string, { tone: string; text: string }> = {
 // discover(..., true) directly.
 const discoverWithHacktoberfest: (sort: DiscoverSort, language: string | null, topic: string | null, limit: number, hacktoberfest: boolean) => ReturnType<typeof discover> = discover;
 
-/** A board entry as a card; `line` replaces its reason (why it's in this row). */
-const discoverCard = (r: DiscoverRepo, line?: string | null): CardRepo => ({ ...fromDiscover(r), reason: line ?? r.reason });
+const discoverTile = (r: DiscoverRepo, line?: string | null): Tile => ({
+  key: r.repo,
+  repo: r.repo,
+  href: `/${r.repo}`,
+  verdict: { headline: r.headline, tone: r.tone },
+  line: line ?? r.description ?? r.reason,
+  meta: [r.language, r.stars != null ? `★ ${compact(r.stars)}` : null].filter(Boolean).join(" · ") || null,
+});
 
 export default async function HomePage({ searchParams }: PageProps<"/me">) {
   const user = await currentUser();
   if (!user) redirect("/signin?callbackUrl=/me");
   const [sp, jar] = await Promise.all([searchParams, cookies()]);
-  const [account, checks, picks, prs, profile, welcoming, trending, hacktoberfest, saved] = await Promise.all([
+  const [account, checks, picks, prs, profile, welcoming, trending, hacktoberfest] = await Promise.all([
     me(user.id),
     history(user.id, 20),
     recommendations(user.id, 10),
@@ -49,8 +53,6 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
     discover("welcoming", null, null, 100),
     discover("trending", null, null, 12),
     discoverWithHacktoberfest("welcoming", null, null, 20, true),
-    // One read for every save button on the page, and the Saved row.
-    savedRepos(user.id),
   ]);
   const hf = hacktoberfest.ok && (hacktoberfest.data as { hacktoberfest?: boolean }).hacktoberfest === true ? hacktoberfest.data.repos : [];
   const prefs = profile.ok ? profile.data.profile : null;
@@ -59,17 +61,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
 
   const done = checks.ok ? checks.data.items.filter((h) => h.status === "done" && h.headline && h.tone) : [];
   const recent = done.filter((h, i) => done.findIndex((x) => x.repo === h.repo) === i).slice(0, 10);
-  // Pull requests to other people's projects; the row and the next step skip your own.
-  const pulls = prs.ok ? outsidePulls(prs.data.pull_requests, prs.data.login) : [];
-  const savedItems = saved.ok ? saved.data.saved : [];
-  // A check gets a full card when a list on this page already has its numbers;
-  // history only knows the verdict, so the rest stay tiles.
-  const known = new Map<string, CardRepo>();
-  const learn = (r: DiscoverRepo) => known.set(r.repo.toLowerCase(), fromDiscover(r));
-  [welcoming, trending, ...byLang].forEach((x) => x.ok && x.data.repos.forEach(learn));
-  hf.forEach(learn);
-  savedItems.forEach((i) => i.card && learn(i.card as DiscoverRepo));
-  if (picks.ok) picks.data.picks.forEach((p) => known.set(p.repo.toLowerCase(), fromPick(p)));
+  const pulls = prs.ok ? prs.data.pull_requests : [];
   const waiting = pulls.filter((p) => p.state === "open");
   const state: HomeState = {
     checked: checks.ok ? checks.data.items.length : 0,
@@ -86,63 +78,59 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
   const credits = account.ok ? account.data.credits : null;
   const first = (user.name || "").trim().split(/\s+/)[0];
 
-  const rows: RepoRow[] = [
+  const rows: { title: string; more?: { href: string; label: string }; note?: string; tiles: Tile[] }[] = [
     {
       title: "Picked for you",
       more: { href: "/for-you", label: "all picks" },
       note: picks.ok && picks.data.locked > 0 ? `${picks.data.locked} more with Holt Pro` : undefined,
-      items: picks.ok ? picks.data.picks.map(fromPick) : [],
+      tiles: picks.ok ? picks.data.picks.map((p) => ({ key: p.repo, repo: p.repo, href: `/${p.repo}`, verdict: { headline: p.headline, tone: p.tone }, line: p.why[0] ?? p.reason, meta: p.language })) : [],
     },
     {
       title: "Your recent checks",
       more: { href: "/me/history", label: "all checks" },
-      items: recent.map((h): CardRepo | Tile => {
-        const card = known.get(h.repo.toLowerCase());
-        if (card) return { ...card, issues: [], reason: `You ${h.mode === "ai" ? "got an AI report" : "checked it"} ${timeAgo(h.created_at)}.` };
-        return { key: h.repo, repo: h.repo, href: `/${h.repo}${h.mode === "ai" ? "?mode=ai" : ""}`, verdict: { headline: h.headline!, tone: h.tone! }, line: null, meta: `${h.mode === "ai" ? "AI report" : "checked"} ${timeAgo(h.created_at)}` };
-      }),
+      tiles: recent.map((h) => ({
+        key: h.repo, repo: h.repo, href: `/${h.repo}${h.mode === "ai" ? "?mode=ai" : ""}`,
+        verdict: { headline: h.headline!, tone: h.tone! }, line: null, meta: `${h.mode === "ai" ? "AI report" : "checked"} ${timeAgo(h.created_at)}`,
+      })),
     },
     {
       title: "Your pull requests",
       more: { href: "/me/contributions", label: "all of them" },
-      // One card per repo; repos with one still waiting come first.
-      items: groupPulls(pulls).slice(0, 10),
+      // Waiting ones first: those are the ones to do something about.
+      tiles: [...waiting, ...pulls.filter((p) => p.state !== "open")].slice(0, 10).map((p) => ({
+        key: p.url, repo: p.repo, href: `/${p.repo}`, title: `${p.repo}#${p.number}`,
+        verdict: p.verdict ? { headline: p.verdict.headline, tone: p.verdict.tone } : null,
+        line: p.title,
+        meta: p.state === "open" ? `waiting, opened ${timeAgo(p.created_at)}` : p.state === "merged" ? `merged ${shortDate(p.merged_at ?? p.created_at)}` : `closed without merging`,
+      })),
     },
-    {
-      title: "Saved",
-      more: { href: "/me/saved", label: "all saved" },
-      items: savedItems.slice(0, 10).map((i): CardRepo | Tile =>
-        i.card
-          ? fromDiscover(i.card as DiscoverRepo)
-          : { key: i.repo, repo: i.repo, href: `/${i.repo}`, verdict: null, line: "No recent report. Open it to check it now.", meta: `saved ${timeAgo(i.saved_at)}` },
-      ),
-    },
-    ...langs.map((l, i): RepoRow => {
+    ...langs.map((l, i) => {
       const r = byLang[i];
       return {
         title: `Welcoming ${languageName(l)} repos`,
         more: { href: boardHref({ language: r.ok ? r.data.language ?? languageName(l) : languageName(l) }), label: "see the board" },
         note: "from your profile",
-        items: r.ok ? r.data.repos.map((x) => discoverCard(x)) : [],
+        tiles: r.ok ? r.data.repos.map((x) => discoverTile(x)) : [],
       };
     }),
     {
       title: "Fastest replies",
       more: { href: "/discover", label: "most welcoming" },
       note: "worth your time, quickest to answer",
-      items: welcoming.ok ? fastestReplies(welcoming.data.repos).map((r) => discoverCard(r, replyLine(r.stats.median_first_response_hours))) : [],
+      tiles: welcoming.ok ? fastestReplies(welcoming.data.repos).map((r) => discoverTile(r, replyLine(r.stats.median_first_response_hours))) : [],
     },
     {
       title: "Hacktoberfest",
       more: { href: "/hacktoberfest", label: "all of them" },
       note: "tagged for Hacktoberfest, worth your time",
-      items: hf.map((r) => discoverCard(r)),
+      tiles: hf.map((r) => discoverTile(r)),
     },
+    // Saved goes here once the save-a-repo API is on main.
     {
       title: "Trending on Holt",
       more: { href: boardHref({ sort: "trending" }), label: "see the board" },
       note: "most checked this week",
-      items: trending.ok ? trending.data.repos.map((r) => discoverCard(r, r.checked_this_week != null ? `${r.checked_this_week} people checked it this week.` : null)) : [],
+      tiles: trending.ok ? trending.data.repos.map((r) => discoverTile(r, r.checked_this_week != null ? `${r.checked_this_week} people checked it this week.` : null)) : [],
     },
   ];
 
@@ -205,8 +193,12 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
             </section>
           )}
 
-          <div className="mt-10">
-            <RepoRows rows={rows} saved={saved.ok ? savedItems.map((i) => i.repo) : []} />
+          <div className="mt-10 space-y-8">
+            {rows.filter((r) => r.tiles.length > 0).map((r) => (
+              <Shelf key={r.title} title={r.title} more={r.more} note={r.note}>
+                {r.tiles.map((t) => <RepoTile key={t.key} t={t} />)}
+              </Shelf>
+            ))}
           </div>
 
           {credits?.ai_available && (

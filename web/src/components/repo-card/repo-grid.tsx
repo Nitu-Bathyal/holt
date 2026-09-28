@@ -2,11 +2,8 @@
 
 import { useSearchParams } from "next/navigation";
 import { createContext, Suspense, use, useEffect, useRef, useState } from "react";
-import type { PullGroup } from "@/lib/home";
 import { neighbours, type CardRepo } from "@/lib/repo-card";
 import { savedSet, withSaved } from "@/lib/saved";
-import { PullStack } from "../home/pull-stack";
-import { RepoTile, Shelf, type Tile } from "../home/shelf";
 import { SaveButton } from "../save-button";
 import { RepoCard } from "./repo-card";
 import { RepoFocus } from "./repo-focus";
@@ -28,10 +25,7 @@ type Common = {
   fadeUnsaved?: boolean;
 };
 
-/** A themed row on the signed-in home: repo cards, a repo's pull requests, or tiles for a repo Holt has no card for. */
-export type RepoRow = { title: string; more?: { href: string; label: string }; note?: string; items: (CardRepo | Tile | PullGroup)[] };
-
-type Card = (r: CardRepo, list: number, i: number) => React.ReactNode;
+type Card = (r: CardRepo) => React.ReactNode;
 
 // Saves and unsaves made in this tab. A list that mounts again (new search
 // results, a page visited earlier) starts from what the server said then, so
@@ -40,8 +34,6 @@ const changed = new Map<string, boolean>();
 
 const PARAM = "focus";
 const reportHref = (repo: string, days?: number) => `/${repo}${days && days !== 7 ? `?days=${days}` : ""}`;
-const isCard = (x: RepoRow["items"][number]): x is CardRepo => "stats" in x;
-const isPulls = (x: RepoRow["items"][number]): x is PullGroup => "pulls" in x;
 
 function withFocus(repo: string | null): string {
   const u = new URL(window.location.href);
@@ -55,12 +47,12 @@ export function RepoGrid({ repos, ...common }: Common & { repos: CardRepo[] }) {
   return (
     <FocusList
       {...common}
-      lists={[repos]}
+      repos={repos}
       layout={(card) => (
         <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {repos.map((r, i) => (
             <li key={r.repo} className="reveal min-w-0" style={{ ["--i" as string]: i }}>
-              {card(r, 0, i)}
+              {card(r)}
             </li>
           ))}
         </ol>
@@ -69,45 +61,15 @@ export function RepoGrid({ repos, ...common }: Common & { repos: CardRepo[] }) {
   );
 }
 
-/** Themed rows that scroll sideways, with one focus view for all of them (prev and next stay in the row). */
-export function RepoRows({ rows, ...common }: Common & { rows: RepoRow[] }) {
-  const shown = rows.filter((r) => r.items.length > 0);
-  return (
-    <FocusList
-      {...common}
-      lists={shown.map((r) => r.items.filter(isCard))}
-      layout={(card, save) => (
-        <div className="space-y-8">
-          {shown.map((row, n) => (
-            <Shelf key={row.title} title={row.title} more={row.more} note={row.note}>
-              {row.items.map((x, i) =>
-                isCard(x) ? (
-                  <li key={x.repo} className="w-[17.5rem] shrink-0 snap-start sm:w-[19rem]">
-                    {card(x, n, i)}
-                  </li>
-                ) : isPulls(x) ? (
-                  <PullStack key={x.repo} g={x} />
-                ) : (
-                  <RepoTile key={x.key} t={x} actions={save(x.repo)} />
-                ),
-              )}
-            </Shelf>
-          ))}
-        </div>
-      )}
-    />
-  );
-}
+type ListProps = Common & { repos: CardRepo[]; layout: (card: Card) => React.ReactNode };
 
-type ListProps = Common & { lists: CardRepo[][]; layout: (card: Card, save: (repo: string) => React.ReactNode) => React.ReactNode };
-
-/** Owns which repos are saved, so every button for a repo agrees, and lays the cards out around one focus view. */
+/** Owns which repos are saved, so a card and its focus view agree, and lays the cards out around the focus view. */
 function FocusList(props: ListProps) {
   const { saved, actions, fadeUnsaved } = props;
   const [set, setSet] = useState(() => [...changed].reduce((s, [repo, v]) => withSaved(s, repo, v), savedSet(saved ?? [])));
   const isSaved = (repo: string) => set.has(repo.toLowerCase());
 
-  const save = (repo: string, compact = true) =>
+  const save = (repo: string, compact: boolean) =>
     saved === undefined ? null : (
       <SaveButton repo={repo} saved={saved === null ? null : isSaved(repo)} onChange={(v) => {
         changed.set(repo.toLowerCase(), v);
@@ -119,48 +81,41 @@ function FocusList(props: ListProps) {
     const button = save(repo, compact);
     return extra && button ? <>{extra}{button}</> : extra ?? button;
   };
-  const card: Card = (r, list) => (
-    <ListCard r={r} list={list} report={reportHref(r.repo, props.days)} actions={actionsFor(r.repo, true)} faded={Boolean(fadeUnsaved && saved && !isSaved(r.repo))} />
+  const card: Card = (r) => (
+    <ListCard r={r} report={reportHref(r.repo, props.days)} actions={actionsFor(r.repo, true)} faded={Boolean(fadeUnsaved && saved && !isSaved(r.repo))} />
   );
-  const tileSave = (repo: string) => save(repo);
 
   return (
-    <Suspense fallback={props.layout(card, tileSave)}>
-      <Focusable {...props} card={card} save={tileSave} actionsFor={actionsFor} />
+    <Suspense fallback={props.layout(card)}>
+      <Focusable {...props} card={card} actionsFor={actionsFor} />
     </Suspense>
   );
 }
 
 // Opens a card in the focus view; absent until the address can be read (then cards are plain links).
-const OpenFocus = createContext<((repo: string, list: number) => void) | null>(null);
+const OpenFocus = createContext<((repo: string) => void) | null>(null);
 
-function ListCard({ r, list, report, actions, faded }: { r: CardRepo; list: number; report: string; actions: React.ReactNode; faded: boolean }) {
+function ListCard({ r, report, actions, faded }: { r: CardRepo; report: string; actions: React.ReactNode; faded: boolean }) {
   const open = use(OpenFocus);
   return (
     <div className={`h-full transition-opacity duration-300 ${faded ? "opacity-55 focus-within:opacity-100 hover:opacity-100" : ""}`}>
-      <RepoCard r={r} report={report} focusHref={`?${PARAM}=${encodeURIComponent(r.repo)}`} onOpen={open ? () => open(r.repo, list) : undefined} actions={actions} />
+      <RepoCard r={r} report={report} focusHref={`?${PARAM}=${encodeURIComponent(r.repo)}`} onOpen={open ? () => open(r.repo) : undefined} actions={actions} />
     </div>
   );
 }
 
-function Focusable({ lists, layout, days, topicBase, card, save, actionsFor }: ListProps & {
+function Focusable({ repos, layout, days, topicBase, card, actionsFor }: ListProps & {
   card: Card;
-  save: (repo: string) => React.ReactNode;
   actionsFor: (repo: string, compact: boolean) => React.ReactNode;
 }) {
   const focus = useSearchParams().get(PARAM);
-  // The list the card was opened from (a repo can be in two rows); else the first that has it.
-  const [from, setFrom] = useState<number | null>(null);
-  const has = (list: CardRepo[] | undefined) => !!focus && !!list?.some((r) => r.repo.toLowerCase() === focus.toLowerCase());
-  const repos = (from !== null && has(lists[from]) ? lists[from] : lists.find(has)) ?? [];
   const nb = neighbours(repos.map((r) => r.repo), focus);
   const current = nb ? repos[nb.index] : null;
   const dialog = useRef<HTMLDialogElement>(null);
   const pushed = useRef(false);
   const touch = useRef<{ x: number; y: number } | null>(null);
 
-  const open = (repo: string, list: number) => {
-    setFrom(list);
+  const open = (repo: string) => {
     pushed.current = true;
     window.history.pushState(null, "", withFocus(repo));
   };
@@ -192,7 +147,7 @@ function Focusable({ lists, layout, days, topicBase, card, save, actionsFor }: L
 
   return (
     <>
-      <OpenFocus value={open}>{layout(card, save)}</OpenFocus>
+      <OpenFocus value={open}>{layout(card)}</OpenFocus>
       <dialog
         ref={dialog}
         aria-labelledby="focus-title"
