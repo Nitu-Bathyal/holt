@@ -1,7 +1,7 @@
 // PR pre-flight: the words and small rules the /preflight page uses. Pure, so
 // it can be tested without React. The checks and their verdicts come from the
 // server (API.md, PR pre-flight); nothing here decides one.
-import type { Access, Preflight, PreflightFor, PreflightVerdict } from "./types";
+import type { Access, Preflight, PreflightVerdict } from "./types";
 
 export const VERDICT_WORDS: Record<PreflightVerdict, string> = {
   ok: "Looks fine",
@@ -43,12 +43,6 @@ export function preflightHref(t: { pr?: string | null; repo?: string | null; bra
   }
   const s = q.toString();
   return s ? `/preflight?${s}` : "/preflight";
-}
-
-/** "pallets/click #3878" or "pallets/click, branch me:fix" for headings. */
-export function targetLabel(t: PreflightFor): string {
-  if (t.number != null) return `${t.repo} #${t.number}`;
-  return `${t.repo}, branch ${t.branch}${t.base ? ` (compared with ${t.base})` : ""}`;
 }
 
 /** Links go to GitHub only; anything else is dropped. */

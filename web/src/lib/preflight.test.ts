@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { checkOffer, codeSpans, countsLine, parsePrLink, preflightHref, sizeLine, targetLabel } from "./preflight.ts";
+import { checkOffer, codeSpans, countsLine, parsePrLink, preflightHref, sizeLine } from "./preflight.ts";
 import { EXAMPLE_PREFLIGHT } from "./preflight-example.ts";
 
 const access = (over: Record<string, unknown> = {}) => ({
@@ -30,9 +30,7 @@ test("counts read as words, zeros left out, worth fixing first", () => {
   assert.equal(countsLine({ ok: 1, worth_fixing: 0, unknown: 0 }), "1 looks fine");
 });
 
-test("labels and sizes", () => {
-  assert.equal(targetLabel({ repo: "o/r", number: 5, branch: null, base: null }), "o/r #5");
-  assert.equal(targetLabel({ repo: "o/r", number: null, branch: "me:x", base: "dev" }), "o/r, branch me:x (compared with dev)");
+test("sizes", () => {
   assert.equal(sizeLine(EXAMPLE_PREFLIGHT.target), "+86 −4 · 3 files");
   assert.equal(sizeLine({ ...EXAMPLE_PREFLIGHT.target, additions: null, deletions: null, files: 1 }), "90 lines · 1 file");
 });
