@@ -9,6 +9,7 @@ import { Track } from "../track";
 import { badgeOffered } from "@/lib/badge";
 import { BadgeSnippet } from "./badge-snippet";
 import { EvidenceList } from "./evidence-list";
+import { HoltUsersLine } from "./holt-users-line";
 import { LandingMap } from "./landing-map";
 import { ShareBar } from "./share-bar";
 import { StatsGrid } from "./stats-grid";
@@ -133,6 +134,7 @@ export function ReportView({
 
         <Section n="02" id="numbers" title="What happened to outside contributors">
           <StatsGrid stats={report.stats} reveal={reveal} />
+          <HoltUsersLine stats={report.holt_users} />
         </Section>
 
         <Section n="03" id="landing" title="Where newcomer work lands" reveal={reveal ? 230 : undefined}>
