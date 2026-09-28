@@ -3,7 +3,7 @@
 import "server-only";
 import type {
   AnalysisStart, ApiError, Credits, DiscoverOut, DiscoverRepo, DiscoverSort, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, HistoryItem,
-  JobStatus, Me, Mode, ProfileOut, ProfilePrefs, Report, Result, StarterIssue,
+  JobStatus, Me, Mode, Packs, ProfileOut, ProfilePrefs, Report, Result, StarterIssue,
 } from "../types";
 import type { FeedbackInput } from "../feedback";
 import { verdictView } from "./derived";
@@ -320,6 +320,15 @@ export async function claimCredit(userId: string): Promise<Result<Credits>> {
   c.can_claim = false;
   c.next_claim_at = new Date(Date.now() + CLAIM_EVERY_DAYS * DAY_MS).toISOString();
   return { ok: true, data: c };
+}
+
+// Payments stay off in the mock: no packs, no orders.
+export async function packs(): Promise<Result<Packs>> {
+  return { ok: true, data: { on_sale: false, packs: [] } };
+}
+
+export async function createOrder(): Promise<Result<never>> {
+  return err(403, "payments_off", "Credit packs aren't on sale yet. Everything free in Holt keeps working.");
 }
 
 export async function history(userId: string): Promise<Result<{ items: HistoryItem[] }>> {

@@ -53,6 +53,14 @@ class Settings(BaseSettings):
     # Features, plans and credit packs (pricing.py). Empty: the packaged
     # holt_server/pricing.json, where every price is still TBD.
     pricing_file: str = Field("", alias="HOLT_PRICING_FILE")
+    # Credit-pack checkout (payments.py). Off unless this is 1 AND the
+    # Razorpay keys are set: with it off, no pack is offered and no order can
+    # be created. Orders already paid for are still confirmed.
+    payments_enabled: bool = Field(False, alias="HOLT_PAYMENTS_ENABLED")
+    razorpay_key_id: str = Field("", alias="RAZORPAY_KEY_ID")
+    razorpay_key_secret: str = Field("", alias="RAZORPAY_KEY_SECRET")
+    # Set in the Razorpay dashboard with the webhook URL. Empty: webhooks refused.
+    razorpay_webhook_secret: str = Field("", alias="RAZORPAY_WEBHOOK_SECRET")
     # User ids (comma-separated) that may read /v1/admin/*. Empty: nobody.
     admin_users: str = Field("", alias="HOLT_ADMIN_USERS")
     # New work (jobs, starter-issue lookups) per hour.

@@ -51,7 +51,8 @@ class Model(BaseModel):
 
 ErrorCode = Literal["unauthorized", "not_found", "invalid_repo", "invalid_request",
                     "rate_limited", "quota_exceeded", "needs_key", "claim_not_ready",
-                    "ai_unavailable", "upstream", "internal", "not_implemented"]
+                    "ai_unavailable", "upstream", "internal", "not_implemented",
+                    "payments_off", "payment_unconfirmed"]
 
 
 class Error(Model):
@@ -730,6 +731,72 @@ class Entitlements(Model):
     plan: str
     plan_expires_at: str | None
     features: list[Access]
+
+
+# --- credit packs and orders (payments.py) -------------------------------------------
+
+OrderStatus = Literal["created", "paid", "failed", "held"]
+
+
+class PackOffer(Model):
+    id: str
+    name: str
+    credits: int
+    # Days the credits last once bought; null: they never expire.
+    expires_days: int | None
+    # The price in minor units (paise for INR).
+    amount: int
+    currency: str
+
+
+class Packs(Model):
+    """GET /v1/packs. `on_sale` is false, and `packs` empty, while payments are off."""
+
+    on_sale: bool
+    packs: list[PackOffer]
+
+
+class Checkout(Model):
+    """POST /v1/me/orders: what Razorpay Checkout needs to take the payment."""
+
+    order_id: str
+    provider: Literal["razorpay"]
+    # Razorpay's public key id (safe to show the browser).
+    key_id: str
+    provider_order_id: str
+    amount: int
+    currency: str
+    # What the payment page shows.
+    name: str
+    description: str
+    pack: str
+    credits: int
+
+
+class Order(Model):
+    """One credit-pack purchase, for the buyer's purchase history."""
+
+    id: str
+    pack: str
+    # The pack's name, for people.
+    name: str
+    credits: int
+    amount: int
+    currency: str
+    status: OrderStatus
+    created_at: str
+    paid_at: str | None
+
+
+class Orders(Model):
+    orders: list[Order]
+
+
+class OrderConfirmed(Model):
+    """POST /v1/me/orders/confirm: the order (paid, or still being confirmed) and balances."""
+
+    order: Order
+    credits: Credits
 
 
 class AdminLot(Model):
