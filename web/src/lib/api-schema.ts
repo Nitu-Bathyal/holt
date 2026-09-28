@@ -1599,6 +1599,11 @@ export interface components {
             issues: components["schemas"]["StarterIssue"][];
             /** Language */
             language: string | null;
+            /**
+             * Numbers Line
+             * @description The report's counts line, without its dates (a pick doesn't carry them).
+             */
+            readonly numbers_line: string;
             readonly odds: components["schemas"]["Odds"] | null;
             /** Reason */
             reason: string;

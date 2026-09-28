@@ -344,8 +344,7 @@ def pick(x: Scored) -> schema.Recommendation:
     return schema.Recommendation(
         repo=c.repo, verdict="viable", description=c.description, language=c.language,
         stars=c.stars, topics=c.topics,
-        reason=verdict_line("viable", c.stats, c.decided_by, c.rule_codes,
-                            starter_issues_below=False),
+        reason=verdict_line("viable", c.stats, c.decided_by, c.rule_codes),
         why=x.why, stats=c.stats, issues=x.issues, checked_at=c.checked_at)
 
 
@@ -354,7 +353,8 @@ async def recommend(svc: Services, user_id: str, limit: int = MAX_PICKS,
     b = await basis(svc, user_id)
     b.languages = [x.lower() for x in b.languages]
     b.topics = [x.lower() for x in b.topics]
-    pool = await candidates(svc)
+    # Issues are read only for repositories that fit without them.
+    pool = {k: c for k, c in (await candidates(svc)).items() if score(c, b, None)}
     cached = await starter_issues(svc, list(pool))
     scored = [x for c in pool.values()
               if (x := score(c, b, cached.get(c.key, c.issues))) is not None]

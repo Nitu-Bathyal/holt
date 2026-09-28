@@ -119,6 +119,7 @@ def test_only_worth_your_time_with_maintainers_answering(h):
     assert "Maintainers usually reply within 3 hours." in p["why"]
     assert "6 people had their first pull request merged here recently." in p["why"]
     assert p["reason"].startswith("Outside contributors get real replies here")
+    assert p["numbers_line"].startswith("Of 20 pull requests from outside contributors")
 
 
 def test_the_newest_report_decides(h):

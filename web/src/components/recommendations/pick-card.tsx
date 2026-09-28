@@ -40,7 +40,7 @@ export function PickCard({ p, rank }: { p: Recommendation; rank: number }) {
               </li>
             ))}
           </ul>
-          <p className="mt-3 font-sans text-[0.85rem] text-muted">{p.reason}</p>
+          <p className="mt-3 font-sans text-[0.85rem] text-muted">{p.reason} {p.numbers_line}</p>
           {p.odds && (
             <p className="mt-1 font-sans text-[0.85rem] text-muted">
               Your odds: <span className={`font-semibold ${TONE[p.odds.tone].text}`}>{p.odds.level}</span>, {p.odds.text}.

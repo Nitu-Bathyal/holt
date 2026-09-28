@@ -607,6 +607,7 @@ only the database: no GitHub call, no model, no rate limit, never charged.
 ```jsonc
 { "picks": [ { "repo": "owner/repo", "verdict": "viable", "headline": "Worth your time",
     "tone": "good", "odds": Odds | null, "reason": "…the report's verdict_line…",
+    "numbers_line": "Of 42 pull requests from outside contributors, 19 were merged (45%). …",
     "why": ["Written in Python, one of your languages.",
             "Maintainers usually reply within 3 hours.",
             "6 people had their first pull request merged here recently."],

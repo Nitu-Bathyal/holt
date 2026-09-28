@@ -476,7 +476,7 @@ function mockPicks(): Recommendation[] {
   });
   const pick = (repo: string, language: string, description: string, stars: number, topics: string[], s: Stats, why: string[], issues: StarterIssue[]): Recommendation => {
     const r = withDerived({ ...mockReport(repo, "rules", 7), stats: s });
-    return { repo, ...verdictView("viable"), verdict: "viable", odds: r.odds, reason: r.verdict_line, why, stats: s, description, language, stars, topics, issues, checked_at: at(5) };
+    return { repo, ...verdictView("viable"), verdict: "viable", odds: r.odds, reason: r.verdict_line, numbers_line: r.numbers_line, why, stats: s, description, language, stars, topics, issues, checked_at: at(5) };
   };
   return [
     pick("pallets/click", "Python", "Python composable command line interface toolkit", 16_200, ["cli", "python"], stats(42, 19, 3, 6, 9), [

@@ -1030,6 +1030,12 @@ class Recommendation(VerdictView):
     def odds(self) -> Odds | None:
         return odds_for(self.verdict, self.stats)
 
+    @computed_field
+    @property
+    def numbers_line(self) -> str:
+        """The report's counts line, without its dates (a pick doesn't carry them)."""
+        return numbers_line(self.stats, None)
+
 
 class RecommendationBasis(Model):
     """What the picks were matched on, so the page can say so."""
