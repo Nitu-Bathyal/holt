@@ -74,10 +74,10 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
         <ul className="grid gap-4 md:grid-cols-2">
           {PLANS.map((p) => (
             <li key={p.name} className={`relative flex flex-col border bg-panel p-6 ${p.accent} ${p.featured ? "shadow-card" : "shadow-soft"}`}>
-              {p.featured && <span className="absolute -top-3 left-6 bg-blue px-2 py-0.5 text-[0.7rem] font-semibold text-on-accent">start here</span>}
-              <p className="text-[0.78rem] uppercase tracking-[0.08em] text-faint">{p.name}</p>
+              {p.featured && <span className="absolute -top-3 left-6 bg-blue px-2 py-0.5 text-[0.78rem] font-semibold text-on-accent">start here</span>}
+              <p className="text-[0.85rem] uppercase tracking-[0.08em] text-faint">{p.name}</p>
               <p className="mt-3 text-[2.4rem] font-semibold leading-none tracking-tight">
-                {p.price} <span className="text-[0.85rem] font-normal tracking-normal text-muted">{p.tag}</span>
+                {p.price} <span className="text-[0.89rem] font-normal tracking-normal text-muted">{p.tag}</span>
               </p>
               <p className="mt-3 font-sans text-muted">{p.body}</p>
               <ul className="mt-5 flex-1 space-y-2 font-sans text-[0.92rem]">
@@ -87,7 +87,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
               </ul>
               <Link href={p.cta.href} className="btn-ghost mt-6 w-full">{p.cta.label} →</Link>
               {p.example && (
-                <Link href={EXAMPLE_PATH} className="text-link mt-3 text-center font-sans text-[0.88rem]" data-example-link>
+                <Link href={EXAMPLE_PATH} className="text-link mt-3 text-center font-sans text-[0.9rem]" data-example-link>
                   or read an example AI report first
                 </Link>
               )}
@@ -104,9 +104,9 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
             <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {onSale.map((p, i) => (
                 <li key={p.id} className="flex flex-col border border-line-strong bg-panel p-6 shadow-soft">
-                  <p className="text-[0.78rem] uppercase tracking-[0.08em] text-faint">{p.name}</p>
+                  <p className="text-[0.85rem] uppercase tracking-[0.08em] text-faint">{p.name}</p>
                   <p className="mt-3 text-[2.4rem] font-semibold leading-none tracking-tight">
-                    {formatPrice(p.amount, p.currency)} <span className="text-[0.85rem] font-normal tracking-normal text-muted">once</span>
+                    {formatPrice(p.amount, p.currency)} <span className="text-[0.89rem] font-normal tracking-normal text-muted">once</span>
                   </p>
                   <ul className="mt-5 flex-1 space-y-2 font-sans text-[0.92rem]">
                     <li className="flex gap-2"><span aria-hidden="true" className="text-green">✓</span>{creditsLabel(p.credits)}</li>
@@ -123,7 +123,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
                 </li>
               ))}
             </ul>
-            <p className="mt-4 max-w-2xl font-sans text-[0.85rem] text-muted">
+            <p className="mt-4 max-w-2xl font-sans text-[0.89rem] text-muted">
               Paid in INR through Razorpay (UPI, cards, netbanking), billed as <span className="text-ink">Githolt</span>. See the{" "}
               <Link href="/refunds" className="text-link">refund policy</Link>.
             </p>
@@ -136,9 +136,9 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
           <ul className="mt-4 grid gap-4 sm:grid-cols-2">
             {plansOnSale.map((p) => (
               <li key={p.id} className="flex flex-col border border-green bg-panel p-6 shadow-card">
-                <p className="text-[0.78rem] uppercase tracking-[0.08em] text-faint">{p.name}</p>
+                <p className="text-[0.85rem] uppercase tracking-[0.08em] text-faint">{p.name}</p>
                 <p className="mt-3 text-[2.4rem] font-semibold leading-none tracking-tight">
-                  {formatPrice(p.amount, p.currency)} <span className="text-[0.85rem] font-normal tracking-normal text-muted">a month</span>
+                  {formatPrice(p.amount, p.currency)} <span className="text-[0.89rem] font-normal tracking-normal text-muted">a month</span>
                 </p>
                 <ul className="mt-5 flex-1 space-y-2 font-sans text-[0.92rem]">
                   {p.features.map((f) => (

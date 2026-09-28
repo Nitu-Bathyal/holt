@@ -35,3 +35,9 @@ export async function unlinkGitHubIfNotSignIn(userId: string): Promise<void> {
   if (!other) return;
   await db.delete(accounts).where(and(eq(accounts.userId, userId), eq(accounts.provider, "github")));
 }
+
+/** The providers this person can sign in with ("github", "google"), for settings. */
+export async function signInProviders(userId: string): Promise<string[]> {
+  const rows = await db.select({ provider: accounts.provider }).from(accounts).where(eq(accounts.userId, userId));
+  return [...new Set(rows.map((r) => r.provider))].sort();
+}

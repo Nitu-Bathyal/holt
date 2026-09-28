@@ -149,7 +149,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
           <div className={`mt-6 grid gap-5 ${prompt ? "" : "lg:grid-cols-2"}`}>
             {!prompt && next.href !== "#check" && (
               <section aria-labelledby="next-h" className="border border-line-strong bg-panel p-5 shadow-card sm:p-6">
-                <p className="text-[0.8rem] text-blue">Your next step</p>
+                <p className="text-[0.87rem] text-blue">Your next step</p>
                 <h2 id="next-h" className="mt-1 text-[1.2rem] font-semibold tracking-tight [overflow-wrap:anywhere]">{next.title}</h2>
                 <p className="prose-sans mt-2 text-[0.95rem] text-muted">{next.body}</p>
                 <Link href={next.href} className="btn-primary mt-4 inline-flex">{next.cta}</Link>
@@ -170,7 +170,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
             <section aria-labelledby="setup-h" className="mt-8 border border-blue/40 bg-panel p-5 shadow-soft sm:p-6">
               <div className="flex items-baseline justify-between gap-4">
                 <h2 id="setup-h" className="text-[1.05rem] font-semibold tracking-tight">Get set up</h2>
-                <span className="text-[0.75rem] text-faint">{steps.length - setupLeft(steps)} of {steps.length} done</span>
+                <span className="text-[0.82rem] text-faint">{steps.length - setupLeft(steps)} of {steps.length} done</span>
               </div>
               <div aria-hidden="true" className="mt-3 h-1 bg-line">
                 <div className="h-1 bg-blue" style={{ width: `${((steps.length - setupLeft(steps)) / steps.length) * 100}%` }} />
@@ -184,7 +184,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
                     ) : (
                       <span>
                         <Link href={s.href} className="font-semibold text-blue hover:underline">{s.label}</Link>
-                        <span className="block font-sans text-[0.85rem] text-muted">{s.note}</span>
+                        <span className="block font-sans text-[0.89rem] text-muted">{s.note}</span>
                       </span>
                     )}
                   </li>
@@ -205,9 +205,9 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
             <p className="mt-10 font-sans text-[0.9rem] text-muted">
               <strong className="text-ink">{credits.balance}</strong> {credits.purchased > 0 ? "AI report credits" : "free AI reports"} left.{" "}
               {credits.can_claim ? (
-                <Link href="/settings" className="text-link">Claim this week&apos;s free one</Link>
+                <Link href="/settings/ai-reports" className="text-link">Claim this week&apos;s free one</Link>
               ) : (
-                <Link href="/settings" className="text-link">How they work</Link>
+                <Link href="/settings/ai-reports" className="text-link">How they work</Link>
               )}
             </p>
           )}

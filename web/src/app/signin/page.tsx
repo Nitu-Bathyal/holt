@@ -67,22 +67,22 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
                   </button>
                 </form>
               ) : (
-                <div key={p.id} className="flex min-h-13 w-full items-center justify-center gap-3 border border-dashed border-line-strong text-[0.88rem] text-faint" aria-disabled="true">
+                <div key={p.id} className="flex min-h-13 w-full items-center justify-center gap-3 border border-dashed border-line-strong text-[0.9rem] text-faint" aria-disabled="true">
                   {ICONS[p.id]} {p.name} sign-in isn&apos;t set up here
                 </div>
               ),
             )}
           </div>
 
-          <p className="mt-4 font-sans text-[0.8rem] leading-relaxed text-muted">
+          <p className="mt-4 font-sans text-[0.87rem] leading-relaxed text-muted">
             By signing in you agree to the <Link href="/terms" className="text-link">Terms</Link> and{" "}
             <Link href="/privacy#google" className="text-link">Privacy Policy</Link>.
           </p>
 
           {devSignInEnabled && (
             <form action="/api/dev-signin" method="post" className="mt-8 border border-amber/50 bg-amber/10 p-4">
-              <p className="text-[0.72rem] uppercase tracking-[0.08em] text-amber">development only</p>
-              <p className="mt-1 font-sans text-[0.88rem] text-muted">No OAuth app is configured, so you can sign in as a local test user.</p>
+              <p className="text-[0.8rem] uppercase tracking-[0.08em] text-amber">development only</p>
+              <p className="mt-1 font-sans text-[0.9rem] text-muted">No OAuth app is configured, so you can sign in as a local test user.</p>
               <input type="hidden" name="callbackUrl" value={callbackUrl} />
               <div className="mt-3 grid grid-cols-[1fr_auto] gap-2">
                 <label htmlFor="dev-name" className="sr-only">Test user name</label>
@@ -92,7 +92,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
             </form>
           )}
 
-          <p className="mt-8 font-sans text-[0.8rem] text-faint">
+          <p className="mt-8 font-sans text-[0.87rem] text-faint">
             Holt gets your name, email and avatar. Nothing else. It can&apos;t see your repos and never posts.
           </p>
         </div>

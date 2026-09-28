@@ -6,7 +6,7 @@ import { ErrorPanel } from "@/components/error-panel";
 import { PageTransition } from "@/components/motion/page-transition";
 import { PageHead } from "@/components/page-head";
 import { RepoGrid } from "@/components/repo-card/repo-grid";
-import { recommendations } from "@/lib/api";
+import { recommendations, savedNames } from "@/lib/api";
 import { fromPick } from "@/lib/repo-card";
 import { basisLine, emptyReason, excludedLine, lockedLine } from "@/lib/recommendations";
 import { currentUser } from "@/lib/session";
@@ -16,7 +16,7 @@ export const metadata: Metadata = { title: "Picked for you", robots: { index: fa
 export default async function ForYouPage() {
   const user = await currentUser();
   if (!user) redirect("/signin?callbackUrl=/for-you");
-  const r = await recommendations(user.id);
+  const [r, saved] = await Promise.all([recommendations(user.id), savedNames(user.id)]);
   const d = r.ok ? r.data : null;
   const basis = d ? basisLine(d.basis) : null;
   const excluded = d ? excludedLine(d.basis.already_contributing) : null;
@@ -48,7 +48,7 @@ export default async function ForYouPage() {
                   Then this page fills with repos worth your time.
                 </p>
                 <div className="mt-6 flex flex-wrap justify-center gap-3">
-                  <Link href="/settings#profile" className="btn-primary inline-flex">set up your profile</Link>
+                  <Link href="/settings/profile" className="btn-primary inline-flex">set up your profile</Link>
                   {!d.basis.connected && <Link href="/connect" className="bracket-link">[ connect GitHub ]</Link>}
                 </div>
               </>
@@ -60,7 +60,7 @@ export default async function ForYouPage() {
                 </p>
                 <div className="mt-6 flex flex-wrap justify-center gap-3">
                   <Link href="/discover" className="btn-primary inline-flex">browse welcoming repos</Link>
-                  <Link href="/settings#profile" className="bracket-link">[ edit your profile ]</Link>
+                  <Link href="/settings/profile" className="bracket-link">[ edit your profile ]</Link>
                 </div>
               </>
             )}
@@ -68,24 +68,24 @@ export default async function ForYouPage() {
         ) : d && (
           <>
             {(basis || excluded) && (
-              <p className="mt-6 font-sans text-[0.88rem] text-muted">
-                {basis} {excluded} <Link href="/settings#profile" className="text-link">Edit your profile</Link>
+              <p className="mt-6 font-sans text-[0.9rem] text-muted">
+                {basis} {excluded} <Link href="/settings/profile" className="text-link">Edit your profile</Link>
               </p>
             )}
             <div className="mt-6">
-              <RepoGrid repos={d.picks.map(fromPick)} />
+              <RepoGrid repos={d.picks.map(fromPick)} saved={saved} />
             </div>
             {d.locked > 0 && (
               <div className="mt-6 border border-blue/50 bg-blue/[0.06] p-5 sm:p-6">
-                <p className="text-[0.72rem] uppercase tracking-[0.08em] text-blue">Holt Pro</p>
+                <p className="text-[0.8rem] uppercase tracking-[0.08em] text-blue">Holt Pro</p>
                 <h2 className="mt-1 text-[1.15rem] font-semibold tracking-tight">{lockedLine(d.locked)}</h2>
                 <p className="mt-2 font-sans text-[0.92rem] text-muted">
                   The full list, refreshed every day, comes with Holt Pro. Pro isn&apos;t on sale yet; these two picks are free.
                 </p>
-                <Link href="/pricing" className="mt-4 inline-block text-[0.85rem] text-blue hover:underline">[ see plans ]</Link>
+                <Link href="/pricing" className="mt-4 inline-block text-[0.89rem] text-blue hover:underline">[ see plans ]</Link>
               </div>
             )}
-            <p className="mt-6 font-sans text-[0.8rem] text-faint">
+            <p className="mt-6 font-sans text-[0.87rem] text-faint">
               Built from Holt&apos;s latest checks. We look again as repos are re-checked and your pull requests are read, every day.
               Repos you already contribute to, archived repos and forks are left out.
             </p>

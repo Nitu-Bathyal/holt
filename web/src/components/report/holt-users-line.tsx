@@ -11,7 +11,7 @@ export function HoltUsersLine({ stats }: { stats: HoltUsers | null }) {
         <span className="text-muted">Holt users who sent PRs here: </span>
         {holtUsersLine(stats)}
       </p>
-      <details className="group mt-1 text-[0.8rem] text-faint">
+      <details className="group mt-1 text-[0.87rem] text-faint">
         <summary className="inline-flex min-h-11 cursor-pointer list-none items-center hover:text-ink sm:min-h-0 [&::-webkit-details-marker]:hidden">
           what&apos;s this?
         </summary>

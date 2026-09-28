@@ -73,7 +73,7 @@ function SampleFigure({ sample }: { sample: Sample }) {
   const max = Math.max(1, ...sample.lands.map(([, , a]) => a));
   return (
     <figure className="relative m-0 border border-line-strong bg-panel shadow-card">
-      <div className="flex min-h-10 items-center justify-between border-b border-line px-4 text-[0.7rem] text-faint">
+      <div className="flex min-h-10 items-center justify-between border-b border-line px-4 text-[0.78rem] text-faint">
         <span>{sample.repo} / report</span>
         <span className="text-green">● read-only</span>
       </div>
@@ -91,7 +91,7 @@ function SampleFigure({ sample }: { sample: Sample }) {
             {sample.stats.map(([big, label]) => (
               <li key={label} className="bg-panel p-3">
                 <p className="text-[1.15rem] font-semibold tracking-tight">{big}</p>
-                <p className="font-sans text-[0.78rem] leading-snug text-muted">{label}</p>
+                <p className="font-sans text-[0.85rem] leading-snug text-muted">{label}</p>
               </li>
             ))}
           </ul>
@@ -99,11 +99,11 @@ function SampleFigure({ sample }: { sample: Sample }) {
         <div className="space-y-6">
           {sample.lands.length > 0 && (
             <div>
-              <p className="mb-3 text-[0.7rem] uppercase tracking-[0.08em] text-faint">where newcomer work lands</p>
+              <p className="mb-3 text-[0.78rem] uppercase tracking-[0.08em] text-faint">where newcomer work lands</p>
               <ul className="space-y-3">
                 {sample.lands.map(([path, m, a]) => (
                   <li key={path}>
-                    <div className="flex justify-between gap-3 text-[0.78rem]">
+                    <div className="flex justify-between gap-3 text-[0.85rem]">
                       <code className="truncate">{path}</code>
                       <span className="shrink-0 text-muted">
                         <span className="text-green">{m}</span> of {a} merged
@@ -120,16 +120,16 @@ function SampleFigure({ sample }: { sample: Sample }) {
           )}
           {sample.issue && (
             <div className="border border-line p-4">
-              <p className="text-[0.7rem] text-blue">
+              <p className="text-[0.78rem] text-blue">
                 #{sample.issue.n} · {sample.issue.label}
               </p>
               <p className="mt-1 font-sans text-[0.92rem] font-semibold">{sample.issue.title}</p>
-              <p className="mt-2 text-[0.75rem] text-green">→ {sample.issue.step}</p>
+              <p className="mt-2 text-[0.82rem] text-green">→ {sample.issue.step}</p>
             </div>
           )}
         </div>
       </div>
-      <figcaption className="flex flex-col justify-between gap-1 border-t border-line px-4 py-3 text-[0.72rem] text-faint sm:flex-row">
+      <figcaption className="flex flex-col justify-between gap-1 border-t border-line px-4 py-3 text-[0.8rem] text-faint sm:flex-row">
         <span>
           <em className="not-italic text-muted">Fig. 01</em> — {sample.caption}
         </span>

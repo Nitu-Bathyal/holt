@@ -87,12 +87,12 @@ export function PasteBox({
         </button>
       </form>
       {error && (
-        <p id={`${id}-error`} role="alert" className="mt-2 font-sans text-[0.85rem] text-orange">
+        <p id={`${id}-error`} role="alert" className="mt-2 font-sans text-[0.89rem] text-orange">
           {error}
         </p>
       )}
       {examples && (
-        <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.75rem] text-faint">
+        <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.82rem] text-faint">
           <span>try</span>
           {EXAMPLES.map((ex) => (
             <button

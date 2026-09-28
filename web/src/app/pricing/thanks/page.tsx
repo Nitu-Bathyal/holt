@@ -17,8 +17,8 @@ export default async function ThanksPage({ searchParams }: PageProps<"/pricing/t
   const sp = await searchParams;
   const id = isOrderId(sp.order) ? sp.order : null;
   const user = await currentUser();
-  if (!user) redirect(`/signin?callbackUrl=${encodeURIComponent(id ? `/pricing/thanks?order=${id}` : "/settings")}`);
-  if (!id) redirect("/settings#purchases");
+  if (!user) redirect(`/signin?callbackUrl=${encodeURIComponent(id ? `/pricing/thanks?order=${id}` : "/settings/ai-reports")}`);
+  if (!id) redirect("/settings/ai-reports#purchases");
 
   const [list, account] = await Promise.all([orders(user.id), me(user.id)]);
   const order = list.ok ? list.data.orders.find((o) => o.id === id) : undefined;
@@ -76,7 +76,7 @@ export default async function ThanksPage({ searchParams }: PageProps<"/pricing/t
             ) : (
               <Link href="/" className="btn-primary">check a repo →</Link>
             )}
-            <Link href="/settings#purchases" className="btn-ghost">your purchases</Link>
+            <Link href="/settings/ai-reports#purchases" className="btn-ghost">your purchases</Link>
           </div>
         </div>
       </>

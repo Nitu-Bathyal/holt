@@ -222,7 +222,7 @@
   /* Numbered section rail: "01 / start here". */
   .rail {
     color: var(--faint);
-    font-size: 0.72rem;
+    font-size: 0.8rem;
     letter-spacing: 0.08em;
     text-transform: uppercase;
   }
@@ -283,7 +283,7 @@
     padding: 0 16px;
     border: 1px solid var(--green);
     color: var(--green);
-    font-size: 0.82rem;
+    font-size: 0.88rem;
     transition:
       color var(--dur-fast) var(--ease-out),
       background-color var(--dur-fast) var(--ease-out),
@@ -474,7 +474,7 @@
     padding: 0 14px;
     border: 1px solid var(--line-strong);
     color: var(--ink);
-    font-size: 0.82rem;
+    font-size: 0.88rem;
     background: var(--panel);
     transition:
       border-color var(--dur-fast) var(--ease-out),
@@ -503,7 +503,7 @@
     padding: 0 9px;
     border: 1px solid var(--line-strong);
     color: var(--muted);
-    font-size: 0.72rem;
+    font-size: 0.8rem;
     line-height: 1.2;
   }
 
@@ -514,7 +514,7 @@
     overflow: hidden;
     border: 1px solid color-mix(in oklab, var(--orange) 55%, transparent);
     border-radius: 3px;
-    font-size: 0.68rem;
+    font-size: 0.76rem;
     line-height: 1.25;
   }
   .award-badge > span:first-child {
@@ -556,6 +556,13 @@
   }
   .cat-face .cat-ear {
     transform-origin: center bottom;
+  }
+  /* Hover face: caret eyes next to raised caret ears need a little air. */
+  .cat-face.is-happy .cat-eye {
+    margin-inline: 0.07em;
+  }
+  .cat-face.is-happy .cat-ear {
+    margin-inline: 0.05em;
   }
 
   /* The header logo cat perks up like the hero cat (^ eyes, ᴗ mouth, ears up,

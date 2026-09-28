@@ -6,17 +6,19 @@ import { revalidatePath } from "next/cache";
 import { deleteProfile, saveProfile } from "@/lib/api";
 import { PICKS_COOKIE } from "@/lib/find-picks";
 import { findHref, fromForm, SKIP_COOKIE } from "@/lib/profile";
+import { answer, BLANK, current, QUESTIONS, type Prefs } from "@/lib/profile-flow";
 import { currentUser } from "@/lib/session";
+import { PRIVACY_SETTINGS, PROFILE_SETTINGS } from "@/lib/settings";
 
 // Only our own pages, so a crafted form can't send people elsewhere.
-const PAGES = ["/", "/me", "/find", "/hacktoberfest", "/settings"];
+const PAGES = ["/", "/me", "/find", "/hacktoberfest", PROFILE_SETTINGS];
 function back(form: FormData): string {
   const v = String(form.get("back") ?? "");
-  return PAGES.includes(v) ? v : "/settings";
+  return PAGES.includes(v) ? v : PROFILE_SETTINGS;
 }
 
 function withNotice(path: string, notice: string) {
-  return path === "/settings" ? `/settings?profile=${notice}#profile` : `${path}?profile=${notice}`;
+  return `${path}?profile=${notice}`;
 }
 
 export async function save(form: FormData) {
@@ -47,8 +49,32 @@ export async function skip(form: FormData) {
 
 export async function remove() {
   const user = await currentUser();
-  if (!user) redirect("/signin?callbackUrl=/settings");
+  if (!user) redirect(`/signin?callbackUrl=${PRIVACY_SETTINGS}`);
   const r = await deleteProfile(user.id);
   revalidatePath("/", "layout");
-  redirect(withNotice("/settings", r.ok ? "deleted" : "error"));
+  redirect(withNotice(PRIVACY_SETTINGS, r.ok ? "deleted" : "error"));
+}
+
+/**
+ * One answer from the first-time flow on /me. Saves the whole profile so far
+ * and returns, without revalidating or touching cookies: either would refresh
+ * /me and close the flow mid-way. `finish` does that at the end. It sends
+ * adult_confirmed, so call it only after the 18+ start button (ProfileFlow).
+ */
+export async function saveStep(p: Prefs): Promise<{ ok: true } | { ok: false; adult: boolean }> {
+  const user = await currentUser();
+  if (!user) return { ok: false, adult: false };
+  // Rebuilt from the answers, so only valid values reach the API.
+  let clean = BLANK;
+  for (const q of QUESTIONS) clean = answer(clean, q.id, current({ ...BLANK, ...p }, q.id));
+  const r = await saveProfile(user.id, { ...clean, adult_confirmed: true });
+  if (r.ok) return { ok: true };
+  return { ok: false, adult: r.status === 400 && r.error.message.includes("18") };
+}
+
+/** The end of the flow: the picks on /find start from the profile now, then on to the picks. */
+export async function finish() {
+  revalidatePath("/", "layout");
+  (await cookies()).delete(PICKS_COOKIE);
+  redirect("/for-you");
 }

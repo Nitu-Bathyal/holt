@@ -8,6 +8,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { connectGitHub } from "@/lib/api";
 import { linkedGitHubId, PENDING_COOKIE } from "@/lib/github-account";
 import { currentUser } from "@/lib/session";
+import { ACCOUNT_SETTINGS } from "@/lib/settings";
 
 export async function GET(req: NextRequest) {
   const go = (path: string) => NextResponse.redirect(new URL(path, req.url), 303);
@@ -22,5 +23,5 @@ export async function GET(req: NextRequest) {
   if (!githubId) return go("/connect?error=link");
   const r = await connectGitHub(user.id, githubId, pending === "opt-out");
   if (!r.ok) return go(`/connect?error=${r.status === 409 ? "taken" : "save"}`);
-  return go("/settings?github=connected#github");
+  return go(`${ACCOUNT_SETTINGS}?github=connected`);
 }

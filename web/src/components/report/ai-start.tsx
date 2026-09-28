@@ -32,7 +32,7 @@ export function AiStart({ repo, days, signedIn, credits }: { repo: string; days:
       className="border border-line-strong bg-panel p-5 shadow-card sm:p-8"
       data-ai-start
     >
-      <p className="text-[0.72rem] uppercase tracking-[0.08em] text-blue">AI report · {repo}</p>
+      <p className="text-[0.8rem] uppercase tracking-[0.08em] text-blue">AI report · {repo}</p>
       <h1 className="mt-2 text-[1.6rem] font-semibold tracking-tight sm:text-[2rem]">Get the AI report</h1>
       <p className="mt-2 max-w-2xl font-sans text-muted">
         An AI reads the PR threads and explains the verdict in plain English. The rules pick the verdict. The AI
@@ -56,7 +56,7 @@ export function AiStart({ repo, days, signedIn, credits }: { repo: string; days:
           {blocked && credits.ai_available && credits.can_claim && (
             <>
               {" "}
-              <Link href="/settings" className="text-link">claim it</Link>
+              <Link href="/settings/ai-reports" className="text-link">claim it</Link>
             </>
           )}
         </p>

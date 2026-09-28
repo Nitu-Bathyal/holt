@@ -5,7 +5,7 @@ import { SkeletonCard, SkeletonRegion } from "../skeleton";
 export function StarterIssueCard({ issue, compact = false }: { issue: StarterIssue; compact?: boolean }) {
   return (
     <li className="card-hover group relative border border-line bg-panel p-4 shadow-soft sm:p-5">
-      <div className="flex flex-wrap items-center gap-2 text-[0.72rem] text-faint">
+      <div className="flex flex-wrap items-center gap-2 text-[0.8rem] text-faint">
         <span className="text-blue">#{issue.number}</span>
         {issue.labels.slice(0, 3).map((l) => (
           <span key={l} className="chip min-h-0 py-0.5">{l}</span>
@@ -22,7 +22,7 @@ export function StarterIssueCard({ issue, compact = false }: { issue: StarterIss
         </a>
       </h3>
       {!compact && issue.why.length > 0 && (
-        <ul className="mt-2 space-y-0.5 font-sans text-[0.85rem] text-muted">
+        <ul className="mt-2 space-y-0.5 font-sans text-[0.89rem] text-muted">
           {issue.why.map((w) => (
             <li key={w} className="flex gap-2">
               <span aria-hidden="true" className="text-faint">·</span>
@@ -31,7 +31,7 @@ export function StarterIssueCard({ issue, compact = false }: { issue: StarterIss
           ))}
         </ul>
       )}
-      <p className="mt-3 flex gap-2 border-t border-dashed border-line pt-3 text-[0.8rem] text-green">
+      <p className="mt-3 flex gap-2 border-t border-dashed border-line pt-3 text-[0.87rem] text-green">
         <span aria-hidden="true">→</span>
         <span>
           <span className="sr-only">What to do next: </span>

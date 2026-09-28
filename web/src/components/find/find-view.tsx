@@ -23,7 +23,7 @@ type Shown = { key: string; result: Result<FindStart> };
  * and work type only reorder what's already here; languages, time, topics and
  * the Hacktoberfest switch start a new (cached) search once the taps settle.
  */
-export function FindView({ initialPicks, initial, source, hf }: { initialPicks: Picks; initial: Result<FindStart>; source: PicksSource; hf: { note: string; on: boolean } | null }) {
+export function FindView({ initialPicks, initial, source, hf, saved }: { initialPicks: Picks; initial: Result<FindStart>; source: PicksSource; hf: { note: string; on: boolean } | null; saved: string[] | null }) {
   const [picks, setPicks] = useState(initialPicks);
   const [shown, setShown] = useState<Shown>({ key: searchKey(initialPicks), result: initial });
   const [retry, setRetry] = useState(0);
@@ -90,10 +90,10 @@ export function FindView({ initialPicks, initial, source, hf }: { initialPicks: 
   return (
     <>
       <FindFilters picks={picks} onChange={setPicks} hf={hf} />
-      <Results shown={shown} pending={pending} fit={fit} days={picks.days} picks={picks} setPicks={setPicks} onRetry={retryNow}>
+      <Results shown={shown} pending={pending} fit={fit} days={picks.days} saved={saved} picks={picks} setPicks={setPicks} onRetry={retryNow}>
         {source === "profile" && untouched && (
           <span>
-            Started from your profile. <Link href="/settings#profile" className="text-link">edit it</Link>
+            Started from your profile. <Link href="/settings/profile" className="text-link">edit it</Link>
           </span>
         )}
         {source === "last" && untouched && <span>Your last search.</span>}
@@ -107,11 +107,12 @@ export function FindView({ initialPicks, initial, source, hf }: { initialPicks: 
   );
 }
 
-function Results({ shown, pending, fit, days, picks, setPicks, onRetry, children }: {
+function Results({ shown, pending, fit, days, saved, picks, setPicks, onRetry, children }: {
   shown: Shown;
   pending: boolean;
   fit: { level: Picks["level"]; contributions: Picks["types"] };
   days: number;
+  saved: string[] | null;
   picks: Picks;
   setPicks: (p: Picks) => void;
   onRetry: () => void;
@@ -144,13 +145,13 @@ function Results({ shown, pending, fit, days, picks, setPicks, onRetry, children
       body = <Empty picks={picks} setPicks={setPicks} />;
     } else {
       status = `${list.length} repo${list.length === 1 ? "" : "s"} that merge outside PRs, best starter issues first`;
-      body = <FindResults results={list} days={days} />;
+      body = <FindResults results={list} days={days} saved={saved} />;
     }
   }
 
   return (
     <section aria-label="Results" aria-busy={pending || (!raw && !error)} className="mt-5">
-      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-[0.8rem] text-faint">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-[0.87rem] text-faint">
         <p aria-live="polite" className="flex items-center gap-x-2">
           {pending ? (
             <>

@@ -26,9 +26,9 @@ const NOTICES: Record<string, { tone: string; text: string }> = {
 function Tile({ label, value, note }: { label: string; value: string; note?: string | null }) {
   return (
     <div className="bg-panel p-4 sm:p-5">
-      <p className="text-[0.72rem] uppercase tracking-[0.08em] text-faint">{label}</p>
+      <p className="text-[0.8rem] uppercase tracking-[0.08em] text-faint">{label}</p>
       <p className="mt-1 text-[1.5rem] font-semibold">{value}</p>
-      {note && <p className="mt-1 text-[0.75rem] text-faint">{note}</p>}
+      {note && <p className="mt-1 text-[0.82rem] text-faint">{note}</p>}
     </div>
   );
 }
@@ -83,7 +83,7 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
             {picks.ok && <ForYouCard data={picks.data} />}
 
             <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-[0.75rem] text-faint">
+              <p className="text-[0.82rem] text-faint">
                 Checked GitHub <time dateTime={d.fetched_at}>{timeAgo(d.fetched_at)}</time>. We check again every day.
               </p>
               <RefreshButton action={refresh} nextRefreshAt={d.next_refresh_at} />
@@ -103,10 +103,10 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
               )}
             </div>
 
-            <p className="mt-6 font-sans text-[0.8rem] text-faint">
+            <p className="mt-6 font-sans text-[0.87rem] text-faint">
               &ldquo;Found via Holt&rdquo; marks a pull request you opened within 30 days of checking that repo here while connected.
               The verdict is Holt&apos;s latest check of each repo; no verdict yet means nobody has checked it.
-              Pull requests to your own repos are left out. <Link href="/settings#github" className="text-link">GitHub settings</Link>
+              Pull requests to your own repos are left out. <Link href="/settings/accounts" className="text-link">GitHub settings</Link>
             </p>
           </>
         )}

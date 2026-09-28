@@ -6,7 +6,7 @@ import { FindResults } from "@/components/find/find-results";
 import { FindRunner } from "@/components/find/find-runner";
 import { ShareBar } from "@/components/report/share-bar";
 import { ProfileOnboarding } from "@/components/profile-onboarding";
-import { getProfile } from "@/lib/api";
+import { getProfile, savedNames } from "@/lib/api";
 import { cachedFind } from "@/lib/find-cached";
 import { days as daysOf, describe, personalise } from "@/lib/profile";
 import { caller, currentUser } from "@/lib/session";
@@ -55,7 +55,7 @@ const TIPS = [
 
 export default async function HacktoberfestPage({ searchParams }: PageProps<"/hacktoberfest">) {
   const [sp, user] = await Promise.all([searchParams, currentUser()]);
-  const profileR = user ? await getProfile(user.id) : null;
+  const [profileR, saved] = await Promise.all([user ? getProfile(user.id) : null, savedNames(user?.id)]);
   const profile = profileR?.ok ? profileR.data.profile : null;
   // With no tab picked, a profile picks the first tab that has one of its languages.
   const tab = LANGS.find((l) => l.id === sp.lang)
@@ -79,7 +79,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
             style={{ backgroundImage: "repeating-linear-gradient(135deg, var(--hf) 0 2px, transparent 2px 14px)" }}
           />
           <div className="wrap relative py-10 sm:py-14">
-            <div className="mb-6 flex flex-wrap items-center gap-2 text-[0.72rem] uppercase tracking-[0.08em]">
+            <div className="mb-6 flex flex-wrap items-center gap-2 text-[0.8rem] uppercase tracking-[0.08em]">
               <span className="rounded-full bg-hf px-3 py-1 font-semibold text-bg">limited-time event</span>
               <span className="rounded-full border border-hf-line px-3 py-1 text-hf">Hacktoberfest {YEAR} · 1–31 October</span>
               {hf && (
@@ -102,9 +102,9 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
               Hacktoberfest no longer counts pull requests, so aim for work that gets merged. Every project below is
               tagged for Hacktoberfest and merges outside contributors&apos; work, with open issues you could pick up today.
             </p>
-            <p className="mt-3 text-[0.78rem] text-faint">This page is for October. Outside Hacktoberfest, use <Link href="/find" className="text-link">find a project</Link>.</p>
+            <p className="mt-3 text-[0.85rem] text-faint">This page is for October. Outside Hacktoberfest, use <Link href="/find" className="text-link">find a project</Link>.</p>
             <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
-              <a href="#tips" className="bracket-link bracket-link--hf px-3 text-center text-[0.76rem] sm:px-4 sm:text-[0.82rem]">[ 5 tips so your PR gets reviewed ]</a>
+              <a href="#tips" className="bracket-link bracket-link--hf px-3 text-center text-[0.83rem] sm:px-4 sm:text-[0.88rem]">[ 5 tips so your PR gets reviewed ]</a>
               <ShareBar url={`${SITE_URL}/hacktoberfest`} text={`Contributing this October? These repos actually merge outsiders' pull requests:`} />
             </div>
           </div>
@@ -116,8 +116,8 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
             <p role="status" className="mb-6 border border-green/50 bg-green/10 px-4 py-3 font-sans text-[0.9rem] text-green">Profile saved. The projects below use it.</p>
           )}
           {profile && (
-            <p className="mb-6 font-sans text-[0.88rem] text-muted">
-              Using your profile: {describe(profile)}. <Link href="/settings#profile" className="text-link">edit</Link>
+            <p className="mb-6 font-sans text-[0.9rem] text-muted">
+              Using your profile: {describe(profile)}. <Link href="/settings/profile" className="text-link">edit</Link>
             </p>
           )}
           <nav aria-label="Language">
@@ -128,7 +128,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
                     href={l.id === "all" ? (profile ? "/hacktoberfest?lang=all" : "/hacktoberfest") : `/hacktoberfest?lang=${l.id}`}
                     scroll={false}
                     aria-current={l.id === tab.id ? "page" : undefined}
-                    className={`chip min-h-11 whitespace-nowrap px-4 text-[0.85rem] transition-colors ${l.id === tab.id ? "border-hf bg-hf text-bg" : "hover:border-hf hover:text-ink"}`}
+                    className={`chip min-h-11 whitespace-nowrap px-4 text-[0.89rem] transition-colors ${l.id === tab.id ? "border-hf bg-hf text-bg" : "hover:border-hf hover:text-ink"}`}
                   >
                     {l.label}
                     {l.id !== "all" && <span className="sr-only"> projects</span>}
@@ -142,9 +142,9 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
             {!result.ok ? (
               <ErrorPanel error={result.error} retryHref={here} />
             ) : result.data.status === "queued" ? (
-              <FindRunner key={tab.id} jobId={result.data.job_id} days={days} retryHref={here} fit={fit} />
+              <FindRunner key={tab.id} jobId={result.data.job_id} days={days} retryHref={here} fit={fit} saved={saved} />
             ) : (
-              <FindResults results={personalise(result.data.results, fit)} days={days} />
+              <FindResults results={personalise(result.data.results, fit)} days={days} saved={saved} />
             )}
           </section>
         </div>

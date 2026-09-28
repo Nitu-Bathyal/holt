@@ -253,7 +253,8 @@ export function PageTransition({ children }: { children: React.ReactNode }) {
 | hover, press, shimmer, stagger | CSS with tokens | — |
 | pending feedback | `useLinkStatus` (Next) | built in |
 | **Motion (motion.dev)** | **not needed** | 7.9–46.6 KB gzipped measured (LazyMotion to full) vs under 1 KB of CSS; nothing here needs springs or layout animation |
-| GSAP / Lenis | stay desktop-only on the landing cat, as now | — |
+| GSAP | stays desktop-only on the landing cat | — |
+| Lenis (smooth scroll) | **removed** | eased the wheel over 1.15s on the landing page only, and only once idle, so scrolling felt laggy and changed feel mid-visit |
 | cross-document `@view-transition` | **no** | Holt is a single app with client navigation; Firefox lacks it |
 
 **Performance:**

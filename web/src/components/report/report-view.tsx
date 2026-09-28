@@ -29,9 +29,9 @@ export function Section({ n, title, id, children, note, reveal }: { n: string; t
   return (
     <section aria-labelledby={id} className={`border-t border-line pt-8 ${r.className}`} style={r.style}>
       <div className="mb-5 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <span className="text-[0.72rem] text-blue">{n}</span>
+        <span className="text-[0.8rem] text-blue">{n}</span>
         <h2 id={id} className="text-[1.25rem] font-semibold tracking-tight sm:text-[1.4rem]">{title}</h2>
-        {note && <span className="font-sans text-[0.85rem] text-faint">{note}</span>}
+        {note && <span className="font-sans text-[0.89rem] text-faint">{note}</span>}
       </div>
       {children}
     </section>
@@ -47,7 +47,7 @@ export function VerdictHero({ report, reveal }: { report: Report; reveal?: boole
     <div className="relative overflow-hidden border border-line-strong bg-panel shadow-card" data-verdict-hero>
       <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${t.bg}`} />
       <div className="p-5 pl-6 sm:p-8 sm:pl-10">
-        <div className="flex items-center justify-between gap-4 text-[0.72rem] uppercase tracking-[0.08em] text-faint">
+        <div className="flex items-center justify-between gap-4 text-[0.8rem] uppercase tracking-[0.08em] text-faint">
           <span>verdict · {report.mode === "ai" ? "AI report" : "rules report"} · {report.days}-day budget</span>
           <span className={reveal ? "reveal" : ""}>
             <CatFace mood={TONE_MOOD[report.tone]} blink className="text-[1.1rem] normal-case tracking-normal sm:text-[1.5rem]" />
@@ -78,7 +78,7 @@ export function VerdictHero({ report, reveal }: { report: Report; reveal?: boole
 
         <HowCounted report={report} />
 
-        <p className="mt-5 text-[0.74rem] text-faint">
+        <p className="mt-5 text-[0.82rem] text-faint">
           {report.evidence_until && <>data until {shortDate(report.evidence_until)} · </>}checked{" "}
           <time dateTime={report.generated_at} suppressHydrationWarning>{timeAgo(report.generated_at)}</time>
         </p>
@@ -90,7 +90,7 @@ export function VerdictHero({ report, reveal }: { report: Report; reveal?: boole
 function TopLine({ label, name, children }: { label: string; name: string; children: React.ReactNode }) {
   return (
     <div className="grid gap-1 border-b border-dashed border-line-strong py-4 sm:grid-cols-[8.5rem_minmax(0,1fr)] sm:gap-5" data-line={name}>
-      <dt className="text-[0.78rem] text-faint sm:pt-[0.2rem]">{label}</dt>
+      <dt className="text-[0.85rem] text-faint sm:pt-[0.2rem]">{label}</dt>
       <dd className="font-sans text-[0.98rem] leading-relaxed text-ink">{children}</dd>
     </div>
   );
@@ -100,7 +100,7 @@ function TopLine({ label, name, children }: { label: string; name: string; child
 function HowCounted({ report }: { report: Report }) {
   return (
     <details className="group mt-4 max-w-2xl" data-how-counted>
-      <summary className="inline-flex min-h-[44px] cursor-pointer list-none items-center gap-[0.6ch] text-[0.82rem] text-muted hover:text-ink focus-visible:text-ink [&::-webkit-details-marker]:hidden">
+      <summary className="inline-flex min-h-[44px] cursor-pointer list-none items-center gap-[0.6ch] text-[0.88rem] text-muted hover:text-ink focus-visible:text-ink [&::-webkit-details-marker]:hidden">
         <span aria-hidden="true" className="text-green">
           [<span className="inline-block w-[1ch] text-center group-open:hidden">+</span>
           <span className="hidden w-[1ch] text-center group-open:inline-block">−</span>]
@@ -110,13 +110,13 @@ function HowCounted({ report }: { report: Report }) {
       <dl className="mt-2 space-y-4 border-l border-line-strong pl-4 sm:pl-5">
         {report.counted.map((c) => (
           <div key={c.topic}>
-            <dt className="text-[0.78rem] text-faint">{c.topic.toLowerCase()}</dt>
+            <dt className="text-[0.85rem] text-faint">{c.topic.toLowerCase()}</dt>
             <dd className="mt-1 font-sans text-[0.92rem] leading-relaxed text-muted">{c.text}</dd>
           </div>
         ))}
         {report.unknowns.length > 0 && (
           <div>
-            <dt className="text-[0.78rem] text-faint">what Holt couldn&apos;t check</dt>
+            <dt className="text-[0.85rem] text-faint">what Holt couldn&apos;t check</dt>
             {report.unknowns.map((u) => (
               <dd key={u} className="mt-1 font-sans text-[0.92rem] leading-relaxed text-muted">{u}</dd>
             ))}
@@ -124,7 +124,7 @@ function HowCounted({ report }: { report: Report }) {
         )}
         {report.asks.length > 0 && (
           <div>
-            <dt className="text-[0.78rem] text-faint">where the advice comes from</dt>
+            <dt className="text-[0.85rem] text-faint">where the advice comes from</dt>
             {report.asks.map((a) => (
               <dd key={a.code} className="mt-1 font-sans text-[0.92rem] leading-relaxed text-muted">
                 <a className="text-link" href={a.url} target="_blank" rel="noopener noreferrer">
@@ -174,14 +174,14 @@ export function ReportView({
 
         {(report.bottom_line || report.summary) && (
           <div className="border-l-2 border-blue pl-5" data-ai-explanation>
-            <p className="text-[0.72rem] uppercase tracking-[0.08em] text-blue">AI explanation</p>
+            <p className="text-[0.8rem] uppercase tracking-[0.08em] text-blue">AI explanation</p>
             {report.bottom_line && (
               <p className="mt-2 font-sans text-[1.12rem] font-medium leading-relaxed text-ink" data-bottom-line>
                 {report.bottom_line}
               </p>
             )}
             {report.summary && <p className="mt-2 font-sans text-[1.02rem] leading-relaxed text-ink">{report.summary}</p>}
-            <p className="mt-2 text-[0.72rem] text-faint">
+            <p className="mt-2 text-[0.8rem] text-faint">
               Written by {report.cost?.model ?? "a model"} from the evidence below. The rules picked the verdict.
             </p>
           </div>
@@ -230,13 +230,13 @@ export function ReportView({
       <aside className="hidden lg:block" aria-label="Share and more">
         <div className="sticky top-24 space-y-4">
           <div className="panel p-4">
-            <p className="mb-3 text-[0.72rem] uppercase tracking-[0.08em] text-faint">Share this report</p>
+            <p className="mb-3 text-[0.8rem] uppercase tracking-[0.08em] text-faint">Share this report</p>
             <ShareBar url={url} text={shareText} />
           </div>
           {report.mode === "rules" && <UpgradeCard repo={repo} signedIn={signedIn} />}
           {!example && <BadgeSnippet repo={repo} offered={badgeOffered(report)} />}
           {!example && (
-            <Link href={`/compare?repos=${repo}`} className="block text-[0.8rem] text-muted hover:text-ink">
+            <Link href={`/compare?repos=${repo}`} className="block text-[0.87rem] text-muted hover:text-ink">
               [ compare with another repo → ]
             </Link>
           )}

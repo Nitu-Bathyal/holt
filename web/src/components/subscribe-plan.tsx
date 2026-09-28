@@ -43,7 +43,7 @@ export function SubscribePlan({ plan, label, signedIn, prefill, autoStart }: Sub
       }
       // Anything else (Razorpay slow, a dropped connection) is finished by
       // Razorpay's webhook; Settings shows the plan once it is.
-      router.push("/settings?subscribed=1#plan");
+      router.push("/settings/ai-reports?subscribed=1#plan");
     },
     [router],
   );
@@ -99,7 +99,7 @@ export function SubscribePlan({ plan, label, signedIn, prefill, autoStart }: Sub
       <button type="button" className={cls} onClick={() => void start()} disabled={busy} aria-busy={busy}>
         {phase.t === "starting" ? "opening checkout…" : phase.t === "paying" ? "paying in Razorpay…" : phase.t === "confirming" ? "starting your plan…" : label}
       </button>
-      <p aria-live="polite" className="mt-3 min-h-[1.25rem] font-sans text-[0.85rem]">
+      <p aria-live="polite" className="mt-3 min-h-[1.25rem] font-sans text-[0.89rem]">
         {phase.t === "failed" && <span role="alert" className="text-orange">{phase.message}</span>}
         {phase.t === "dismissed" && <span className="text-muted">Checkout closed. You haven&apos;t been charged.</span>}
       </p>

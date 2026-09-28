@@ -17,7 +17,7 @@ export function ErrorPanel({ error, repo, onRetry, retryHref }: { error: ApiErro
         {account && (
           <>
             {repo && <Link href={`/${repo}`} className="btn-primary">back to the free report</Link>}
-            {error.code === "quota_exceeded" && <Link href="/settings" className="btn-ghost">claim a free AI report</Link>}
+            {error.code === "quota_exceeded" && <Link href="/settings/ai-reports" className="btn-ghost">claim a free AI report</Link>}
           </>
         )}
         {(error.code === "unauthorized" || error.code === "needs_key") && (
