@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { MergePlanView } from "@/components/merge-plan/merge-plan-view";
+import { ReportDoc } from "@/components/report/report-doc";
 import { PageTransition } from "@/components/motion/page-transition";
 import { EXAMPLE_PATH } from "@/lib/example-report";
 import type { MergePlan } from "@/lib/merge-plan";
@@ -23,23 +24,22 @@ export default async function ExampleAiReportPage({ searchParams }: PageProps<"/
   const locked = (await searchParams).view === "locked";
   return (
     <PageTransition>
-      <div className="wrap py-8 sm:py-12">
-        <aside className="mb-10 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 border border-dashed border-line-strong px-4 py-3" data-example-banner>
-          <p className="font-sans text-[0.92rem] text-muted">
-            <span className="font-mono text-[0.82rem] uppercase tracking-[0.08em] text-ink">Example</span> · recorded {recorded}, not live. Free
-            to read, no account needed.
+      <ReportDoc className="wrap py-8 sm:py-12">
+        <aside className="mb-10 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 rounded-2xl bg-panel-2/60 px-5 py-3.5" data-example-banner>
+          <p className="text-[0.95rem] text-muted">
+            <span className="font-semibold text-ink">Example.</span> Recorded {recorded}, not live. Free to read, no account needed.
           </p>
-          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[0.88rem]">
+          <div className="flex flex-wrap items-center gap-x-5 gap-y-1 text-[0.95rem]">
             <Link href={locked ? EXAMPLE_PATH : `${EXAMPLE_PATH}?view=locked`} className="text-link">
-              {locked ? "see the whole plan" : "what free users see"}
+              {locked ? "See the whole plan" : "What free users see"}
             </Link>
             <Link href="/" className="text-link">
-              get one for your repo
+              Get one for your repo
             </Link>
           </div>
         </aside>
         <MergePlanView plan={plan} locked={locked} />
-      </div>
+      </ReportDoc>
     </PageTransition>
   );
 }

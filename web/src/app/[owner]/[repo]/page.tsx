@@ -20,6 +20,7 @@ import { SITE_URL } from "@/lib/site";
 import type { Credits, Mode, Report } from "@/lib/types";
 import { PageTransition } from "@/components/motion/page-transition";
 import { SaveButton } from "@/components/save-button";
+import { ReportDoc } from "@/components/report/report-doc";
 
 type Props = PageProps<"/[owner]/[repo]">;
 
@@ -105,9 +106,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
 
   return (
     <PageTransition>
-      <div className="relative">
-      {/* The same backdrop as the landing hero, behind the repo header and verdict. */}
-      <div aria-hidden="true" className="hero-backdrop bottom-auto h-[560px] [mask-image:linear-gradient(#000_55%,transparent)]" />
+      <ReportDoc className="relative">
       <div className="wrap relative py-8 sm:py-12">
         {mode === "rules" && <JsonLd report={report.ok ? report.data : null} name={display} />}
         <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3">
@@ -120,10 +119,10 @@ export default async function RepoPage({ params, searchParams }: Props) {
             // Decorative and small: don't compete with the CSS and fonts the verdict needs.
             fetchPriority="low"
             decoding="async"
-            className="size-10 rounded-md border border-line-strong bg-panel-2"
+            className="size-11 rounded-xl border border-line bg-panel-2"
           />
           <div className="min-w-0 flex-1">
-            <p className="text-[1.05rem] font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-[1.25rem]">
+            <p className="text-[1.15rem] font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-[1.35rem]">
               <span className="text-muted">{dOwner}/</span>
               {dRepo}
             </p>
@@ -134,24 +133,24 @@ export default async function RepoPage({ params, searchParams }: Props) {
           {/* A failed lookup shows "save"; saving again is harmless. Keyed so
               moving to another repo's report starts from that repo's state. */}
           <SaveButton key={display} repo={display} saved={user ? Boolean(saved?.ok && saved.data.saved) : null} />
-          <nav aria-label="Report type" className="relative grid w-full grid-cols-2 border border-line-strong text-center text-[0.85rem] sm:w-auto">
+          <nav aria-label="Report type" className="relative grid w-full grid-cols-2 overflow-hidden rounded-full border border-line bg-panel p-1 text-center text-[0.9rem] shadow-soft sm:w-auto">
             {/* One pill under both tabs; it slides to the current one. */}
-            <span aria-hidden="true" className={`tab-pill absolute inset-y-0 left-0 w-1/2 ${mode === "ai" ? "translate-x-full bg-blue" : "bg-ink"}`} />
+            <span aria-hidden="true" className={`tab-pill absolute inset-y-1 left-1 w-[calc(50%-4px)] rounded-full ${mode === "ai" ? "translate-x-full bg-ink" : "bg-ink"}`} />
             {/* No prefetch: one tab is this page, the other is sign-in for most visitors. */}
             <Link
               href={reportHref(display, days)}
               prefetch={false}
               aria-current={mode === "rules" ? "page" : undefined}
-              className={`relative inline-flex min-h-11 items-center justify-center px-3 transition-colors ${mode === "rules" ? "text-bg" : "text-muted hover:text-ink"}`}
+              className={`relative inline-flex min-h-10 items-center justify-center rounded-full px-4 font-medium transition-colors ${mode === "rules" ? "text-bg" : "text-muted hover:text-ink"}`}
             >
-              free report
+              Free report
               <LinkHint />
             </Link>
             <Link
               href={signedIn ? `/${display}?mode=ai` : `/signin?callbackUrl=${encodeURIComponent(`/${display}?mode=ai`)}`}
               prefetch={false}
               aria-current={mode === "ai" ? "page" : undefined}
-              className={`relative inline-flex min-h-11 items-center justify-center px-3 transition-colors ${mode === "ai" ? "text-on-accent" : "text-muted hover:text-ink"}`}
+              className={`relative inline-flex min-h-10 items-center justify-center rounded-full px-4 font-medium transition-colors ${mode === "ai" ? "text-bg" : "text-muted hover:text-ink"}`}
             >
               AI report
               <LinkHint />
@@ -191,7 +190,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
           </div>
         </ViewTransition>
       </div>
-      </div>
+      </ReportDoc>
     </PageTransition>
   );
 }

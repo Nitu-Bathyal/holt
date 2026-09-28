@@ -26,10 +26,10 @@ const step = (reveal: boolean | undefined, ms: number) =>
 export function Section({ title, id, children, note, reveal }: { title: string; id: string; children: React.ReactNode; note?: React.ReactNode; reveal?: number }) {
   const r = step(reveal != null, reveal ?? 0);
   return (
-    <section aria-labelledby={id} className={`border-t border-line pt-8 ${r.className}`} style={r.style}>
+    <section aria-labelledby={id} className={r.className} style={r.style}>
       <div className="mb-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <h2 id={id} className="text-[1.2rem] font-semibold tracking-tight sm:text-[1.35rem]">{title}</h2>
-        {note && <span className="font-sans text-[0.89rem] text-faint">{note}</span>}
+        <h2 id={id} className="font-serif text-[1.5rem] font-semibold tracking-[-0.01em] sm:text-[1.7rem]">{title}</h2>
+        {note && <span className="text-[0.9rem] text-faint">{note}</span>}
       </div>
       {children}
     </section>
@@ -63,50 +63,48 @@ export function VerdictHero({ report, reveal }: { report: Report; reveal?: boole
   const figures = keyFigures(report.stats);
   const s = report.sample;
   return (
-    <div className="relative overflow-hidden border border-line-strong bg-panel shadow-card" data-verdict-hero>
-      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${t.bg}`} />
-      <div className="p-5 pl-6 sm:p-8 sm:pl-10">
-        <div className="flex items-start justify-between gap-4">
-          {/* The largest paint: on phones it never animates, on desktop it only moves. */}
-          <h1 className={`display text-[2.4rem] sm:text-[3.6rem] ${t.text} ${reveal ? "reveal-lcp" : ""}`}>
-            {report.headline}
-            <span className="text-ink">.</span>
-          </h1>
-          <span className={`mt-2 shrink-0 ${reveal ? "reveal" : ""}`}>
-            <CatFace mood={TONE_MOOD[report.tone]} blink className="text-[1.1rem] sm:text-[1.4rem]" />
-          </span>
-        </div>
-        <p className={`mt-3 max-w-2xl font-sans text-[1.08rem] leading-relaxed text-ink sm:text-[1.15rem] ${reveal ? "reveal-lcp" : ""}`} data-line="reason">
-          {report.verdict_line}
-        </p>
-
-        <dl className="mt-7 grid grid-cols-2 gap-px overflow-hidden border border-line bg-line sm:grid-cols-4" data-line="numbers">
-          {figures.map((f) => (
-            <div key={f.key} className="flex flex-col-reverse justify-end bg-panel px-4 py-3.5">
-              <dt className="mt-0.5 font-sans text-[0.86rem] text-muted">{f.label}</dt>
-              <dd className={`text-[1.3rem] font-semibold tabular-nums tracking-tight ${f.tone === "neutral" ? "text-ink" : TONE[f.tone].text}`}>{f.value}</dd>
-            </div>
-          ))}
-        </dl>
-
-        <p className="mt-6 max-w-2xl font-sans text-[1rem] leading-relaxed text-ink" data-line="next">
-          <span className="mr-2 font-mono text-[0.82rem] uppercase tracking-[0.08em] text-faint">Where to start</span>
-          {report.next_step}
-        </p>
-
-        <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-line pt-4 text-[0.84rem] text-faint">
-          {s?.first_opened && s.last_opened && (
-            <span>
-              {s.pull_requests} pull requests, opened {shortDate(s.first_opened)} – {shortDate(s.last_opened)}
-            </span>
-          )}
-          <span>replies counted within {report.days} days</span>
-          <span>
-            checked <time dateTime={report.generated_at} suppressHydrationWarning>{timeAgo(report.generated_at)}</time>
-          </span>
-        </div>
-        <HowCounted report={report} />
+    <div className="rounded-2xl border border-line bg-panel p-6 shadow-card sm:p-9" data-verdict-hero>
+      <div className="flex items-start justify-between gap-4">
+        {/* The largest paint: on phones it never animates, on desktop it only moves. */}
+        <h1 className={`font-serif text-[2.35rem] font-semibold leading-[1.08] tracking-[-0.02em] sm:text-[3.3rem] ${t.text} ${reveal ? "reveal-lcp" : ""}`}>
+          {report.headline}
+          <span className="text-ink">.</span>
+        </h1>
+        <span className={`mt-2 shrink-0 font-mono ${reveal ? "reveal" : ""}`}>
+          <CatFace mood={TONE_MOOD[report.tone]} blink className="text-[1.05rem] sm:text-[1.3rem]" />
+        </span>
       </div>
+      <p className={`mt-3 max-w-2xl text-[1.12rem] leading-relaxed text-ink sm:text-[1.22rem] ${reveal ? "reveal-lcp" : ""}`} data-line="reason">
+        {report.verdict_line}
+      </p>
+
+      <dl className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4" data-line="numbers">
+        {figures.map((f, i) => (
+          <div key={f.key} className={`flex min-w-0 flex-col-reverse justify-end ${i > 0 ? "sm:border-l sm:border-line sm:pl-6" : ""}`}>
+            <dt className="mt-1 text-[0.9rem] leading-snug text-muted">{f.label}</dt>
+            <dd className={`text-[1.6rem] font-semibold leading-none tabular-nums tracking-[-0.01em] ${f.tone === "neutral" ? "text-ink" : TONE[f.tone].text}`}>{f.value}</dd>
+          </div>
+        ))}
+      </dl>
+
+      <div className="mt-8 flex gap-3 rounded-xl bg-bg px-4 py-3.5 sm:px-5" data-line="next">
+        <span aria-hidden="true" className="mt-0.5 text-green">→</span>
+        <p className="text-[1.02rem] leading-relaxed text-ink">
+          <span className="font-semibold">Where to start: </span>
+          {report.next_step.replace(/^Best bet:\s*/i, "")}
+        </p>
+      </div>
+
+      <p className="mt-6 text-[0.85rem] leading-relaxed text-faint">
+        {s?.first_opened && s.last_opened && (
+          <>
+            Based on {s.pull_requests} pull requests, {shortDate(s.first_opened)} – {shortDate(s.last_opened)} ·{" "}
+          </>
+        )}
+        replies counted within {report.days} days · checked{" "}
+        <time dateTime={report.generated_at} suppressHydrationWarning>{timeAgo(report.generated_at)}</time>
+      </p>
+      <HowCounted report={report} />
     </div>
   );
 }
@@ -114,21 +112,21 @@ export function VerdictHero({ report, reveal }: { report: Report; reveal?: boole
 /** "How we counted": closed by default, for anyone who wants to check the working. */
 function HowCounted({ report }: { report: Report }) {
   return (
-    <details className="group mt-2 max-w-2xl" data-how-counted>
-      <summary className="inline-flex min-h-[44px] cursor-pointer list-none items-center gap-[0.6ch] text-[0.86rem] text-muted hover:text-ink focus-visible:text-ink [&::-webkit-details-marker]:hidden">
+    <details className="group mt-1 max-w-2xl" data-how-counted>
+      <summary className="inline-flex min-h-[44px] cursor-pointer list-none items-center gap-[0.6ch] text-[0.88rem] text-muted hover:text-ink focus-visible:text-ink [&::-webkit-details-marker]:hidden">
         <span aria-hidden="true" className="inline-block transition-transform group-open:rotate-90">›</span>
         How we counted
       </summary>
       <dl className="mt-2 space-y-4 border-l border-line-strong pl-4 sm:pl-5">
         {report.counted.map((c) => (
           <div key={c.topic}>
-            <dt className="text-[0.84rem] text-faint">{c.topic}</dt>
+            <dt className="text-[0.88rem] font-medium text-ink">{c.topic}</dt>
             <dd className="mt-1 font-sans text-[0.92rem] leading-relaxed text-muted">{c.text}</dd>
           </div>
         ))}
         {report.asks.length > 0 && (
           <div>
-            <dt className="text-[0.84rem] text-faint">Where the advice comes from</dt>
+            <dt className="text-[0.88rem] font-medium text-ink">Where the advice comes from</dt>
             {report.asks.map((a) => (
               <dd key={a.code} className="mt-1 font-sans text-[0.92rem] leading-relaxed text-muted">
                 <a className="text-link" href={a.url} target="_blank" rel="noopener noreferrer">
@@ -171,9 +169,9 @@ export function ReportView({
   const viable = report.verdict === "viable";
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-12">
+    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-14">
       {!example && <Track event="report-view" data={{ verdict: report.verdict, mode: report.mode, repo }} />}
-      <div className="min-w-0 space-y-10">
+      <div className="min-w-0 space-y-14">
         <div className="space-y-3">
           <VerdictHero report={report} reveal={reveal} />
           <HoltUsersLine stats={report.holt_users} />
@@ -195,8 +193,8 @@ export function ReportView({
         )}
 
         {!viable && (
-          <div className="flex flex-wrap items-center justify-between gap-3 border border-dashed border-line-strong p-4">
-            <p className="font-sans text-[0.95rem] text-muted">Looking for a project that answers newcomers?</p>
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-panel p-5">
+            <p className="text-[1rem] text-muted">Looking for a project that answers newcomers?</p>
             <Link href="/find" className="bracket-link">[ find one → ]</Link>
           </div>
         )}
@@ -230,12 +228,12 @@ export function ReportView({
         <div className="sticky top-24 space-y-6">
           {report.mode === "rules" && <UpgradeCard repo={repo} signedIn={signedIn} />}
           <div>
-            <p className="mb-2 text-[0.78rem] uppercase tracking-[0.08em] text-faint">Share</p>
+            <p className="mb-2 text-[0.9rem] font-medium text-ink">Share this report</p>
             <ShareBar url={url} text={shareText} />
           </div>
           {!example && <BadgeSnippet repo={repo} offered={badgeOffered(report)} />}
           {!example && (
-            <Link href={`/compare?repos=${repo}`} className="block text-[0.87rem] text-muted hover:text-ink">
+            <Link href={`/compare?repos=${repo}`} className="block text-[0.92rem] text-muted hover:text-ink">
               Compare with another repo →
             </Link>
           )}

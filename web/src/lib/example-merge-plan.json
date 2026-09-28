@@ -373,5 +373,70 @@
         ]
       }
     ]
+  },
+  "ai": {
+    "model": "gpt-5-mini",
+    "read_on": "2026-08-31T01:06:53.358758Z",
+    "threads": 11,
+    "signals": [
+      {
+        "kind": "outsider_posture",
+        "value": "welcoming",
+        "headline": "Welcoming",
+        "text": "Most contributions are accepted and merged, and maintainers give actionable review requests (tests, naming, or minor changes) and guidance on how to proceed.",
+        "tone": "good",
+        "url": "https://github.com/pallets/click/pull/3637"
+      },
+      {
+        "kind": "onboarding",
+        "value": "substantive",
+        "headline": "Clear enough to follow",
+        "text": "The README includes a clear \"Contributing\" section that directs newcomers to detailed contributing documentation and explicitly mentions ways to contribute.",
+        "tone": "good",
+        "url": "https://github.com/pallets/click/blob/36baa15ff831b939a22bc527cd76ce653ef6f66d/README.md"
+      },
+      {
+        "kind": "repo_kind",
+        "value": "real_software",
+        "headline": "A software project",
+        "text": "The repository is a Python package for building command-line interfaces (README and metadata describe it as a Python CLI toolkit) and merged pull requests modify runnable source files and tests.",
+        "tone": "neutral",
+        "url": "https://github.com/pallets/click"
+      }
+    ],
+    "outcomes": [
+      {
+        "value": "merged_after_review",
+        "count": 8
+      },
+      {
+        "value": "merged_without_engagement",
+        "count": 2
+      },
+      {
+        "value": "closed_with_guidance",
+        "count": 1
+      }
+    ],
+    "quotes": [
+      {
+        "text": "I'm fine with some manual testing on a Windows machine/VM, then merging this in and letting it develop from there.",
+        "url": "https://github.com/pallets/click/pull/3637",
+        "number": 3637,
+        "outcome": "merged_after_review"
+      },
+      {
+        "text": "Push a revert commit, then open a PR from a separate branch.",
+        "url": "https://github.com/pallets/click/pull/3701",
+        "number": 3701,
+        "outcome": "closed_with_guidance"
+      },
+      {
+        "text": "If we can leave the renaming of test files alone, I will merge this so we are all ready as splitting test files does not need a change log.",
+        "url": "https://github.com/pallets/click/pull/3697",
+        "number": 3697,
+        "outcome": "merged_after_review"
+      }
+    ]
   }
 }

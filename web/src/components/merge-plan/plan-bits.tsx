@@ -45,7 +45,7 @@ export function Sources({ sources, className = "", linksOnly = false }: { source
   const parts = sources.filter((s) => s.links.length > 0 || (!linksOnly && s.seen != null && s.of != null));
   if (parts.length === 0) return null;
   return (
-    <div className={`flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[0.82rem] text-faint ${className}`}>
+    <div className={`flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[0.88rem] text-faint ${className}`}>
       {parts.map((s, i) => (
         <p key={i} className="flex flex-wrap items-baseline gap-x-2.5" title={s.statement}>
           {!linksOnly && s.seen != null && s.of != null && (
@@ -63,8 +63,8 @@ export function Sources({ sources, className = "", linksOnly = false }: { source
 export function Meter({ seen, of, tone = "green", label }: { seen: number | null; of: number | null; tone?: "green" | "orange" | "blue"; label: string }) {
   const fill = { green: "bg-green", orange: "bg-orange", blue: "bg-blue" }[tone];
   return (
-    <div className="h-1.5 bg-panel-2" role="img" aria-label={label}>
-      <div className={`h-full ${fill}`} style={{ width: `${share(seen, of)}%` }} />
+    <div className="h-2 overflow-hidden rounded-full bg-panel-2" role="img" aria-label={label}>
+      <div className={`h-full rounded-full ${fill}`} style={{ width: `${share(seen, of)}%` }} />
     </div>
   );
 }

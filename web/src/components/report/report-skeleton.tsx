@@ -7,7 +7,7 @@ import { StarterIssuesSkeleton } from "./starter-issues";
 function SectionSkeleton({ children, title = "14rem" }: { children: React.ReactNode; title?: string }) {
   return (
     <div className="border-t border-line pt-8">
-      <div className="mb-5 flex h-[1.98rem] items-center gap-x-4 sm:h-[2.2275rem]">
+      <div className="mb-5 flex h-[2.475rem] items-center gap-x-4 sm:h-[2.805rem]">
         <Skeleton className="h-5 max-w-[70%]" style={{ width: title }} />
       </div>
       {children}
@@ -33,15 +33,14 @@ export function StatsGridSkeleton({ tiles = 6 }: { tiles?: number }) {
 /** The verdict card and the sections under it. */
 export function ReportBodySkeleton() {
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-12">
-      <div className="min-w-0 space-y-10">
-        <div className="relative overflow-hidden border border-line-strong bg-panel shadow-card">
-          <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-line-strong" />
-          <div className="p-5 pl-6 sm:p-8 sm:pl-10">
+    <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-14">
+      <div className="min-w-0 space-y-14">
+        <div className="rounded-2xl border border-line bg-panel shadow-card">
+          <div className="p-6 sm:p-9">
             {/* The headline (two lines on phones, one on wide screens) and the cat. */}
             <div className="flex items-start justify-between gap-4">
               <span className="block flex-1">
-                <span className="flex h-[2.5rem] items-center sm:h-[3.75rem]">
+                <span className="flex h-[2.54rem] items-center sm:h-[3.56rem]">
                   <Skeleton className="h-[1.8rem] w-[85%] sm:h-[2.8rem] sm:w-[60%]" />
                 </span>
                 <span className="flex h-[2.5rem] items-center sm:hidden">
@@ -51,22 +50,24 @@ export function ReportBodySkeleton() {
               <Skeleton className="mt-3 h-4 w-14" />
             </div>
             <SkeletonText lines={2} lineHeight="1.78rem" bar="0.95rem" last="70%" className="mt-3 max-w-2xl" />
-            <div className="mt-7 grid grid-cols-2 gap-px overflow-hidden border border-line bg-line sm:grid-cols-4">
+            <div className="mt-8 grid grid-cols-2 gap-x-6 gap-y-5 sm:grid-cols-4">
               {Array.from({ length: 4 }, (_, i) => (
-                <div key={i} className="bg-panel px-4 py-3.5">
-                  <span className="flex h-[1.95rem] items-center">
+                <div key={i} className={i > 0 ? "sm:border-l sm:border-line sm:pl-6" : ""}>
+                  <span className="flex h-[1.6rem] items-center">
                     <Skeleton className="h-5 w-16" />
                   </span>
-                  <span className="mt-0.5 flex h-[1.29rem] items-center">
+                  <span className="mt-1 flex h-[1.49rem] items-center">
                     <Skeleton className="h-2.5 w-24" />
                   </span>
                 </div>
               ))}
             </div>
-            <SkeletonText lines={1} lineHeight="1.65rem" bar="0.85rem" last="85%" className="mt-6 max-w-2xl" />
-            <div className="mt-6 flex h-[2.3rem] items-end border-t border-line">
-              <Skeleton className="h-2.5 w-80 max-w-[85%]" />
+            <div className="mt-8 rounded-xl bg-bg px-4 py-3.5 sm:px-5">
+              <SkeletonText lines={2} lineHeight="1.68rem" bar="0.85rem" last="60%" />
             </div>
+            <span className="mt-6 flex h-[1.4rem] items-center">
+              <Skeleton className="h-2.5 w-80 max-w-[85%]" />
+            </span>
             <span className="mt-2 flex h-[44px] items-center">
               <Skeleton className="h-2.5 w-28" />
             </span>

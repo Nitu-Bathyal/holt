@@ -30,6 +30,18 @@ export type PlanClosing = {
   examples: { number: number; url: string }[];
 };
 
+/** What the model found by reading the pull request threads (the AI part of the plan). */
+export type PlanAi = {
+  model: string;
+  read_on: string;
+  threads: number;
+  /** One per engine field: how outsiders are treated, the contributor guide, the kind of project. */
+  signals: { kind: string; value: string; headline: string; text: string; tone: Tone | "neutral"; url: string | null }[];
+  /** How the threads it read ended, by the engine's outcome values, most common first. */
+  outcomes: { value: string; count: number }[];
+  quotes: { text: string; url: string; number: number; outcome: string }[];
+};
+
 export type MergePlan = {
   repo: string;
   recorded_on: string;
@@ -44,6 +56,7 @@ export type MergePlan = {
   merged: PlanFact[];
   closed: PlanClosing[];
   reviewers: { people: { login: string; reviewed: number; of: number; areas: string[] }[]; sources: PlanSource[] };
+  ai: PlanAi | null;
 };
 
 /** Every GitHub link a plan cites, deduplicated: "checked against N pull requests". */

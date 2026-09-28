@@ -116,7 +116,7 @@ function Feedback({ storageKey: key, report }: { storageKey: string; report: Pic
         onClick={() => choose(vote)}
         aria-pressed={on}
         disabled={busy}
-        className={`inline-flex min-h-11 items-center gap-2 border px-4 text-[0.89rem] transition-colors disabled:opacity-60 ${
+        className={`inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-[0.92rem] transition-colors disabled:opacity-60 ${
           on ? (vote === "up" ? "border-green bg-green/10 text-green" : "border-orange bg-orange/10 text-orange") : "border-line-strong text-muted hover:border-ink hover:text-ink"
         }`}
       >
@@ -127,13 +127,13 @@ function Feedback({ storageKey: key, report }: { storageKey: string; report: Pic
   };
 
   return (
-    <section aria-labelledby={`${reasonId}-q`} className="border border-dashed border-line-strong p-4 sm:p-5">
+    <section aria-labelledby={`${reasonId}-q`} className="rounded-2xl border border-line bg-panel p-5 sm:p-6">
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
-          <h2 id={`${reasonId}-q`} className="text-[0.98rem] font-semibold tracking-tight">
+          <h2 id={`${reasonId}-q`} className="text-[1.05rem] font-semibold">
             Was this verdict right?
           </h2>
-          <p className="mt-1 font-sans text-[0.89rem] text-muted">Know this project? Tell us. It helps us get verdicts right.</p>
+          <p className="mt-1 text-[0.95rem] text-muted">If you know this project, tell us. It helps us get verdicts right.</p>
         </div>
         <div className="flex gap-2">
           {btn("up", "Yes")}

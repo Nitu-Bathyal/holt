@@ -87,6 +87,7 @@ export function SaveButton({ repo, saved: initial, onChange, compact = false, cl
       aria-label={`${saved ? "Saved" : "Save"} ${repo} for later`}
       onClick={() => (signedIn ? send(!saved) : setAsking((a) => !a))}
       data-umami-event={signedIn ? (saved ? "unsave-repo" : "save-repo") : "save-repo-signed-out"}
+      data-save
       className={`inline-flex min-h-11 items-center gap-2 border px-3 text-[0.87rem] transition-colors ${
         saved ? "border-blue bg-blue/10 text-blue" : "border-line-strong bg-panel text-muted hover:border-ink hover:text-ink"
       }`}
