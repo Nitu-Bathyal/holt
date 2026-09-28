@@ -650,3 +650,60 @@ class ContributionMetric(Model):
     users_with_pr_after_holt: int
     prs_after_holt: int
     prs_after_holt_merged: int
+
+
+# --- Recommendations ---------------------------------------------------------------
+
+
+class Recommendation(VerdictView):
+    """One pick: a repository Holt rates "Worth your time" that fits the user."""
+
+    repo: str
+    description: str | None = None
+    language: str | None = None
+    stars: int | None = None
+    topics: list[str] = Field(default_factory=list)
+    # The report's one-line reason (the same sentence Discover shows).
+    reason: str
+    # Why this pick, for this user: plain sentences, most important first.
+    why: list[str]
+    stats: Stats
+    # Open issues to start with, already filtered for the user's experience
+    # and ordered by their contribution types. Empty when none are known.
+    issues: list[StarterIssue] = Field(default_factory=list)
+    # When Holt last checked the repository (its latest rules report).
+    checked_at: str | None = None
+
+    @computed_field
+    @property
+    def odds(self) -> Odds | None:
+        return odds_for(self.verdict, self.stats)
+
+
+class RecommendationBasis(Model):
+    """What the picks were matched on, so the page can say so."""
+
+    # From the profile.
+    languages: list[str]
+    topics: list[str]
+    level: Level
+    contributions: list[ContributionType]
+    # Languages of the repositories where the user's pull requests were merged
+    # (connected users only), most merged first.
+    history_languages: list[str]
+    # Repositories left out because the user already sent them a pull request.
+    already_contributing: int
+    has_profile: bool
+    connected: bool
+
+
+class Recommendations(Model):
+    """GET /v1/me/recommendations."""
+
+    picks: list[Recommendation]
+    # More picks that a plan with recommendations would show; 0 when all are shown.
+    locked: int
+    # True when the user's plan covers recommendations (every pick is shown).
+    full: bool
+    basis: RecommendationBasis
+    computed_at: str

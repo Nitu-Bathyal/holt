@@ -26,6 +26,9 @@ export type DiscoverRepo = S.DiscoverRepo;
 export type DiscoverSort = S.DiscoverOut["sort"];
 export type ProfileOut = S.ProfileOut;
 export type ProfilePrefs = S.ProfilePrefs;
+export type Recommendations = S.Recommendations;
+export type Recommendation = S.Recommendation;
+export type RecommendationBasis = S.RecommendationBasis;
 export type ContributionType = ProfilePrefs["contributions"][number];
 export type Level = ProfilePrefs["level"];
 
