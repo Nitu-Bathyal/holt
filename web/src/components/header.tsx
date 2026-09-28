@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { signOut } from "@/auth";
 import { HOME } from "@/lib/home";
-import { EXAMPLE_HREF } from "@/lib/shell";
+import { EXAMPLES_PATH } from "@/lib/examples";
 import type { SessionUser } from "@/lib/session";
 import { CatFace } from "./cat-face";
 import { JumpNav } from "./shell/jump-nav";
@@ -87,7 +87,7 @@ export function MarketingHeader({ user, credits }: { user: SessionUser | null; c
             </>
           ) : (
             <>
-              <Link href={EXAMPLE_HREF} className="hidden min-h-11 items-center px-3 text-[0.86rem] text-ink transition-colors hover:text-blue sm:inline-flex">try an example</Link>
+              <Link href={EXAMPLES_PATH} className="hidden min-h-11 items-center px-3 text-[0.86rem] text-ink transition-colors hover:text-blue sm:inline-flex">try an example</Link>
               <Link href="/signin" className="btn-primary ml-1 min-h-10 px-4 text-[0.84rem]">sign in</Link>
             </>
           )}
@@ -97,7 +97,7 @@ export function MarketingHeader({ user, credits }: { user: SessionUser | null; c
             {user ? (
               <Link href={HOME} className="block px-4 py-3 text-blue transition-colors hover:bg-panel-2">your home →</Link>
             ) : (
-              <Link href={EXAMPLE_HREF} className="block px-4 py-3 transition-colors hover:bg-panel-2">try an example</Link>
+              <Link href={EXAMPLES_PATH} className="block px-4 py-3 transition-colors hover:bg-panel-2">try an example</Link>
             )}
           </nav>
         </div>

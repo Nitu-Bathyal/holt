@@ -66,7 +66,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <a href="#content" className="skip-link">
           Skip to content
         </a>
-        <ShellFrame marketingHeader={<MarketingHeader user={user} credits={credits} />} footer={<Footer />} topBar={app?.topBar ?? null} rail={app?.rail ?? null}>
+        <ShellFrame marketingHeader={<MarketingHeader user={user} credits={credits} />} footer={<Footer signedIn={Boolean(user)} />} topBar={app?.topBar ?? null} rail={app?.rail ?? null}>
           {children}
           <RouteFallback />
         </ShellFrame>
