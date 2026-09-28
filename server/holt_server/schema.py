@@ -246,6 +246,22 @@ class VerdictView(Model):
         return TONES[self.verdict]
 
 
+class HoltUsers(Model):
+    """Pull requests that connected Holt users sent to this repository in the
+    last `window_days`: counts only. Present only when at least 5 people who
+    didn't opt out of statistics make up the numbers (repo_stats.py)."""
+
+    people: int
+    pull_requests: int
+    merged: int
+    # Closed without being merged.
+    closed: int
+    # Still open.
+    waiting: int
+    window_days: int
+    computed_at: str
+
+
 class Report(VerdictView):
     repo: str
     mode: Mode
@@ -267,6 +283,9 @@ class Report(VerdictView):
     evidence_until: str | None = None
     generated_at: str
     cost: Cost | None = None
+    # Filled when the report is served (GET /v1/reports/{owner}/{repo}), never
+    # stored with it; null when too few Holt users sent pull requests here.
+    holt_users: HoltUsers | None = None
 
     @computed_field
     @property

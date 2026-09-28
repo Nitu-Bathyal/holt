@@ -363,8 +363,14 @@ function fromSeed(seed: Seed, mode: "rules" | "ai", days: number): Report {
     evidence_until: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10) + "T00:00:00Z",
     generated_at: hoursAgo(2),
     cost: mode === "ai" ? { model: "openai/gpt-5-mini", input_tokens: 9120, output_tokens: 1480, usd: 0.00524, seconds: 41.3 } : null,
+    holt_users: HOLT_USERS[seed.repo] ?? null,
   });
 }
+
+// "Holt users who sent pull requests here": only repos where 5+ people would make it up.
+const HOLT_USERS: Record<string, Report["holt_users"]> = {
+  "pallets/flask": { people: 9, pull_requests: 12, merged: 7, closed: 2, waiting: 3, window_days: 365, computed_at: hoursAgo(5) },
+};
 
 // Deterministic pseudo-random numbers from a repo name, so any repo "works" in mock mode.
 function rng(seedText: string) {

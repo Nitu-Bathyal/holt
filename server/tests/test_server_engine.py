@@ -38,7 +38,7 @@ def check_report_shape(report: dict, mode: str) -> None:
     keys = {"repo", "mode", "days", "verdict", "headline", "bottom_line", "summary", "stats",
             "decided_by", "unknowns", "landing", "never_landed", "evidence",
             "evidence_until", "generated_at", "cost", "rule_codes", "tone",
-            "verdict_line", "odds"}
+            "verdict_line", "odds", "holt_users"}
     assert set(report) == keys
     assert len(report["rule_codes"]) == len(report["decided_by"])
     assert report["repo"] == REPO and report["mode"] == mode

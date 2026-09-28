@@ -19,6 +19,7 @@ from holt_server import (
     badge,
     credits,
     entitlements,
+    repo_stats,
     repos,
     schema,
     starter,
@@ -263,7 +264,9 @@ async def get_report(owner: str, repo: str, request: Request,
     latest = await latest_report(svc, name, mode, days)
     if latest is None:
         raise ApiError("not_found", f"There's no report for {name} yet.")
-    return schema.Report.model_validate(latest.report)
+    report = schema.Report.model_validate(latest.report)
+    report.holt_users = await repo_stats.for_repo(svc, name)
+    return report
 
 
 # --- analyses -------------------------------------------------------------------
