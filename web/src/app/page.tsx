@@ -4,6 +4,8 @@ import { CatFace } from "@/components/cat-face";
 import { CopyButton } from "@/components/copy-button";
 import { HacktoberfestPill } from "@/components/hacktoberfest-pill";
 import { CatCompanion } from "@/components/motion/cat-companion";
+import { HeroDrift } from "@/components/motion/hero-drift";
+import { SwapHost } from "@/components/motion/swap-host";
 import { ScrollMarquee } from "@/components/motion/scroll-marquee";
 import { PasteBox } from "@/components/paste-box";
 import { UrlTrick } from "@/components/url-trick";
@@ -31,7 +33,8 @@ function Rail({ n, label, className = "" }: { n: string; label: string; classNam
 }
 
 function Grid({ children }: { children: React.ReactNode }) {
-  return <div className="wrap grid grid-cols-1 gap-6 md:grid-cols-[148px_minmax(0,1fr)] md:gap-10">{children}</div>;
+  // landing-wide: the measure and type grow with the screen (globals.css).
+  return <div className="wrap landing-wide grid grid-cols-1 gap-6 md:grid-cols-[148px_minmax(0,1fr)] md:gap-10">{children}</div>;
 }
 
 // Section 06's call to action. Signed-in people already have their free AI
@@ -59,22 +62,26 @@ export default function Home() {
         <section data-hero data-cat-section="ready" className="pane relative overflow-hidden border-b border-line low:pt-5 short:pt-3">
           <div aria-hidden="true" className="hero-backdrop" />
           <CatCompanion />
+          <HeroDrift />
           <Grid>
             <Rail n="01" label="start here" className="relative hidden pt-2 md:block" />
-            <div className="relative z-10 max-w-[860px]">
+            <div className="relative z-10 min-w-0">
               <div className="fade-up mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 low:mb-3 short:mb-2" style={{ ["--d" as string]: ".1s" }}>
                 {hf && <HacktoberfestPill year={hf.year} short={hf.short} />}
                 <p className="text-[0.85rem] text-muted">holt / free / for your first PR or your fiftieth</p>
               </div>
-              <h1 className="display mb-5 text-[clamp(2rem,8.9vw,3.15rem)] low:mb-4 low:text-[2.75rem] short:mb-3 short:text-[2rem]">
-                <span className="headline-line"><span>Will this repo</span></span>
-                <span className="headline-line"><span className="text-orange"><span className="marker">actually merge</span></span></span>
-                <span className="headline-line"><span className="text-orange">your PR?</span></span>
-              </h1>
-              <p className="prose-sans fade-up mb-6 max-w-[680px] text-[clamp(1rem,1.45vw,1.12rem)] low:mb-4 short:mb-4" style={{ ["--d" as string]: ".3s" }}>
-                Paste a repo. Holt checks what happened to the outsiders who tried before you: did anyone reply, and
-                did anything get merged?
-              </p>
+              {/* Sized by the screen; the sub-line moves beside the headline where both fit. */}
+              <div className="hero-lede">
+                <h1 className="display hero-h1">
+                  <span className="headline-line"><span>Will this repo</span></span>
+                  <span className="headline-line"><span className="text-orange"><span className="marker">actually merge</span></span></span>
+                  <span className="headline-line"><span className="text-orange">your PR?</span></span>
+                </h1>
+                <p className="prose-sans fade-up hero-sub" style={{ ["--d" as string]: ".3s" }}>
+                  Paste a repo. Holt checks what happened to the outsiders who tried before you: did anyone reply, and
+                  did anything get merged?
+                </p>
+              </div>
               <div className="fade-up max-w-[760px]" style={{ ["--d" as string]: ".38s" }}>
                 <PasteBox />
               </div>
@@ -86,7 +93,7 @@ export default function Home() {
               </div>
               <p className="fade-up mt-4 font-sans text-[0.89rem] text-faint" style={{ ["--d" as string]: ".45s" }}>
                 Already on GitHub? Swap <strong className="text-muted">hub</strong> for <strong className="text-muted">holt</strong>:{" "}
-                <code className="font-mono">github.com</code> → <code className="font-mono text-muted">{SITE_HOST}</code>
+                <SwapHost />
               </p>
               <div className="fade-up mt-8 flex flex-wrap items-center gap-x-3 gap-y-2 low:mt-5" style={{ ["--d" as string]: ".5s" }}>
                 <span className="award-badge">
@@ -255,25 +262,6 @@ export default function Home() {
               </div>
             </Grid>
           </div>
-        </section>
-        {/* 08 — your turn: no scrolling to a dead end */}
-        <section data-cat-section="ready" className="pane border-t border-line">
-          <Grid>
-            <Rail n="08" label="your turn" />
-            <div>
-              <h2 className="h2 mb-6 max-w-[770px]" data-reveal>Got a repo in mind?</h2>
-              <p className="prose-sans mb-8 max-w-[740px] text-[1.05rem]" data-reveal>
-                Paste it. You&apos;ll know before you write a line of code.
-              </p>
-              <div className="max-w-[760px]" data-reveal>
-                <PasteBox id="repo-input-end" label="Repo to check" examples={false} />
-              </div>
-              <p className="mt-5 font-sans text-[0.95rem] text-muted" data-reveal>
-                No repo yet?{" "}
-                <Link href="/find" className="text-link font-mono text-[0.9rem]">[ find a project ]</Link>
-              </p>
-            </div>
-          </Grid>
         </section>
       </>
     </PageTransition>

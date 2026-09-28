@@ -1203,6 +1203,138 @@
   }
 }
 
+/* Landing at full scale (docs/design/EXPRESSIVE.md, pattern 1). Each pane is
+   one screen tall (.pane), so its content is sized by the screen too: type by
+   the smaller of width and height (min(vw, svh)), so it fills 1440x900 and
+   still fits 1280x720; rem floors keep phones readable. Unlayered on purpose:
+   it overrides the sections' fixed text-[…] utilities, and only inside
+   .landing-wide (the landing's Grid). */
+.landing-wide {
+  width: min(calc(100% - 2 * clamp(16px, 4vw, 64px)), 1400px);
+}
+.landing-wide .h2 {
+  font-size: clamp(1.75rem, min(4.4vw, 7.4svh), 4.2rem);
+}
+.landing-wide .prose-sans {
+  font-size: clamp(1rem, min(1.25vw, 2.3svh), 1.3rem);
+}
+.hero-lede {
+  display: grid;
+  gap: clamp(0.8rem, 2.2svh, 1.8rem);
+  margin-bottom: clamp(1rem, 3svh, 2.2rem);
+}
+.hero-h1 {
+  font-size: clamp(2.2rem, min(10.5vw, 10.5svh), 7.2rem);
+}
+.hero-sub {
+  max-width: 40ch;
+  font-size: clamp(1rem, min(1.35vw, 2.5svh), 1.4rem);
+}
+[data-hero] .fade-up:has(#repo-input) {
+  max-width: min(100%, 1000px);
+}
+@media (min-width: 1024px) {
+  [data-hero] #repo-input {
+    height: clamp(4rem, 8svh, 5rem);
+    font-size: clamp(1.05rem, min(1.2vw, 2.3svh), 1.3rem);
+  }
+}
+@media (min-width: 1200px) {
+  .hero-lede {
+    grid-template-columns: minmax(0, 1fr) minmax(240px, 26%);
+    align-items: end;
+  }
+  .hero-h1 {
+    font-size: clamp(2.2rem, min(6.4vw, 10.5svh), 7.2rem);
+  }
+}
+/* Phones held sideways: compact, as before. */
+@media (orientation: landscape) and (max-height: 500px) {
+  .hero-h1 {
+    font-size: 2rem;
+  }
+  .hero-lede {
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+  }
+}
+/* The hero leans toward the pointer (motion/hero-drift.tsx sets --drift-x/y,
+   -1..1). `translate`, not `transform`, so it composes with the entrance
+   animations. Nearer things move more. */
+@media (pointer: fine) and (prefers-reduced-motion: no-preference) {
+  [data-hero] h1 {
+    translate: calc(var(--drift-x, 0) * 6px) calc(var(--drift-y, 0) * 4px);
+  }
+  [data-hero] form {
+    translate: calc(var(--drift-x, 0) * 3px) calc(var(--drift-y, 0) * 2px);
+  }
+  [data-hero] :is(.award-badge, .hf-pill) {
+    translate: calc(var(--drift-x, 0) * 9px) calc(var(--drift-y, 0) * 6px);
+  }
+}
+
+/* hub → holt split-flap (motion/swap-host.tsx). Both letters share one grid
+   cell; overflow: clip (not hidden) keeps the text baseline. */
+.swap {
+  color: inherit;
+  cursor: pointer;
+}
+.swap-flaps {
+  display: inline-flex;
+}
+.swap-flap {
+  display: inline-grid;
+  width: 1ch;
+  overflow: clip;
+}
+.swap-from,
+.swap-to {
+  grid-area: 1 / 1;
+  text-align: center;
+}
+.swap-from {
+  color: var(--orange);
+  transform: translateY(-100%);
+}
+.swap-to,
+.swap-on {
+  background: var(--green);
+  color: var(--on-accent);
+}
+.swap-on {
+  padding-inline: 0.1em;
+}
+.swap-sub,
+.swap-tail {
+  display: inline-block;
+}
+.swap[data-swapped="false"] .swap-from {
+  transform: none;
+}
+.swap[data-swapped="false"] .swap-to {
+  transform: translateY(100%);
+}
+/* "hub" is a letter shorter than "holt": the tail closes the gap. */
+.swap[data-swapped="false"] .swap-tail {
+  transform: translateX(-1ch);
+}
+.swap[data-swapped="false"] .swap-sub {
+  opacity: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  .swap-from,
+  .swap-to {
+    transition: transform 420ms var(--ease-expressive);
+    transition-delay: calc(var(--i) * 70ms);
+  }
+  .swap-tail,
+  .swap-sub {
+    transition:
+      transform 420ms var(--ease-expressive) 200ms,
+      opacity 200ms var(--ease-out);
+  }
+}
+
 /* Hacktoberfest pill: hidden once dismissed (the head script sets the
    attribute before paint). Deliberately outside @layer: unlayered rules beat
    layered ones, so the pill's own `inline-flex` utility can't override it. */
