@@ -13,7 +13,7 @@ import { PageTransition } from "@/components/motion/page-transition";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Find a project that merges outside work",
+  title: "Find a project",
   description: "Pick your languages and how much time you have. Holt finds projects that reply to and merge outside contributors, with specific issues to start on.",
   alternates: { canonical: "/find" },
 };

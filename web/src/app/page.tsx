@@ -214,7 +214,7 @@ export default function Home() {
               <div>
                 <h2 className="h2 mb-6 max-w-[770px]" data-reveal>Use it, inspect it, improve it.</h2>
                 <p className="prose-sans mb-8 max-w-[740px] text-[1.05rem]" data-reveal>
-                  Holt is open source (Apache-2.0) and built in the open, and it merges outside work too. Pick your level:
+                  Holt is open source and built in the open, and it merges outside work too. Pick your level:
                   docs, the web app, the rules behind the verdicts, or the terminal app.
                 </p>
                 <div className="grid max-w-[760px] grid-cols-[auto_1fr_auto] items-center border border-line-strong bg-bg" data-reveal>

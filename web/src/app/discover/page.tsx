@@ -3,7 +3,7 @@ import { DiscoverView } from "@/components/discover/discover-view";
 import { parseSort } from "@/lib/discover";
 
 export const metadata: Metadata = {
-  title: "Discover welcoming open-source repos",
+  title: "Discover repos",
   description: "Open-source repos ranked by how they treat outside contributors: replies, merges and how fast. Built from Holt's rules, never AI.",
   alternates: { canonical: "/discover" },
 };
