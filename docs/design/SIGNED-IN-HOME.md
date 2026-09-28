@@ -1,7 +1,7 @@
 # The signed-in home
 
-Status: **plan, waiting for answers** (the open questions at the end). Nothing
-here is built yet. The prototype lives on the throwaway branch
+Status: **first version built** (PR #123), with the user's answers to the
+open questions (end of this page). The prototype lives on the throwaway branch
 `prototype-signed-in-home` (`/me?variant=A|B|C|D&state=new|returning` with
 `MOCK_API=1`); it never merges.
 
@@ -48,6 +48,14 @@ sign-in page, the OAuth redirect and dev sign-in:
 2. Anything else (none, `/`, or unsafe) goes to **`/me`**.
 3. Signed-out visitors: unchanged. Signing out still goes to `/`.
 
+**First sign-in asks for the profile.** `/me` opens the profile form at the
+top (languages, time, what you'd like to work on, experience, topics) while
+nothing is saved. It's optional: "skip for now" is one tap, is remembered
+(the same `holt_profile_skip` cookie the other onboarding cards use) and never
+blocks anything. After a skip, "Finish your profile" stays in the setup steps
+and becomes the next-step card once a repo has been checked. When a
+`callbackUrl` wins, the form waits for the next `/me` visit.
+
 First-time and returning users land on the **same URL**. The page tells them
 apart from what the account already has (a check, a profile, GitHub), not
 from a "new user" flag we'd have to store. A day-one account sees the setup
@@ -63,19 +71,21 @@ live under it, and `me` is already excluded from repo routing in `proxy.ts`.
 
 Top to bottom (phone order; desktop puts 1 and 2 side by side):
 
-1. **Welcome, Priya** and one line. Then **your next step**: one card, one
-   button, chosen by fixed rules: no check yet → check your first repo; an
-   open PR with no decision → "your PR to X is still waiting", linking to that
-   repo's report (reply times); no profile → tell Holt what you're after;
-   else the top pick.
+1. **Welcome, Priya.** Then, while no profile is saved and it hasn't been
+   skipped, **the profile form**, open. Otherwise **your next step**: one
+   card, one button, chosen by fixed rules (`nextStep` in `lib/home.ts`): no
+   check yet → check your first repo (the paste box itself); an open PR with
+   no decision → "your pull request to X is still waiting", linking to that
+   repo's report (reply times); no profile → finish your profile; else the
+   top pick; else find a project.
 2. **Check a repo**: the same paste box as `/`, always on the first screen.
-3. **Get set up** (day one only): check a repo, tell Holt what you're after
-   (the existing profile form, 30 seconds), connect GitHub (optional).
-4. **Themed rows**, each scrolling sideways, using the new compact repo card
-   from the find-page redesign (odds bar, save button), not a card of its own.
-   A row with nothing in it is hidden, not shown empty.
-5. **AI reports**: "3 free AI reports left", and the weekly claim button when
-   one is due. Hidden when AI is switched off.
+3. **Get set up**, until every step is done: sign in (already ticked), check
+   a repo, finish your profile, connect GitHub (optional).
+4. **Themed rows**, each scrolling sideways. A row with nothing in it is
+   hidden, not shown empty. They'll use the find page's new compact card
+   once it's on main; until then a stand-in tile.
+5. **AI reports**: "3 free AI reports left", with a link to claim the weekly
+   one when it's due. Hidden when AI is switched off.
 
 ### Which rows, and what fills them
 
@@ -96,6 +106,15 @@ Rows are ranked by fixed rules and say why a repo is there, the same as
 
 ### Day one vs returning
 
+As built (`MOCK_API=1`; the mock gives every new account two checks, so it
+says "Welcome back"):
+
+| First sign-in (phone) | Returning, profile saved (desktop) |
+|---|---|
+| ![](signed-in-home/built-first-signin-phone.jpg) | ![](signed-in-home/built-returning-desktop.jpg) |
+
+The prototype:
+
 | First visit (A, phone) | Returning, rows (D) |
 |---|---|
 | ![](signed-in-home/proto-a-first-visit-phone.jpg) | ![](signed-in-home/proto-d-rows-returning-desktop.jpg) |
@@ -113,43 +132,39 @@ something to browse.
 
 ## `/` for a signed-in user, and the header
 
-Keep `/` as the public landing page, with **no redirect**. Signed-in people
-still reach it (logo on another tab, a shared link), and a redirect would
-hide the pitch and the "swap hub for holt" trick from the team. Instead,
-the home is where every signed-in path goes:
+- `/` **redirects signed-in users to `/me`** with a 307 from `proxy.ts`, before
+  any page renders (no flash of the landing page). It checks the session
+  cookie against the `session` table; no cookie means no database lookup, and
+  a stale cookie or a database error means "signed out". Signed-out visitors,
+  crawlers and the OG image are unchanged.
+- **`/?landing=1`** still shows the landing page to anyone. The avatar menu
+  links to it as "about Holt".
+- The header logo links to `/me` when signed in (to `/` when signed out); the
+  avatar menu gets **home** as its first item. No new top-nav link.
 
-- the header logo links to `/me` when signed in (to `/` when signed out);
-- the avatar menu gets **home** as its first item;
-- history's empty state and `/connect`'s "not now" point at `/me`.
+## Built in the first version vs later
 
-Header edits stay minimal (another worker owns `header.tsx` right now): an
-`href` and one menu item. No new top-nav link.
+**Built (PR #123):** `afterSignIn` and the `/` redirect with tests
+(`web/src/lib/home.test.ts`); `/me` with the first-visit profile form, the
+next-step card, paste box, setup steps, and the six rows that need no server
+work (picked for you, recent checks, your pull requests, welcoming repos in
+your first two profile languages, fastest replies, trending), plus the credits
+line; logo and menu edits. Rows use a stand-in tile
+(`components/home/shelf.tsx`) until the find page's compact card is on main.
 
-## Tonight vs later
+**Later:** Hacktoberfest row (a server worker is adding a fast read; the slot
+is marked in `app/me/page.tsx` and stays hidden until then), Saved (after
+save-a-repo merges), quick wins (server), the header "sign in" link returning
+you to the page you were on, `/connect` copy, sign-in page copy that names
+what you get, umami events for next-step clicks.
 
-**Tonight (this PR, phase 2):** the `afterSignIn` rule and its tests; `/me`
-with the next-step card, paste box, setup steps, and the rows that need no
-server work (picks, recent checks, your PRs, welcoming in your languages,
-fastest replies, trending), plus the credits line; logo and menu edits;
-dead-end links pointed at `/me`. Rows use today's `PickCard`-style card
-until the find-page card lands, then switch.
+## Decisions (the user's answers, 28 Sep 2026)
 
-**Later:** Saved row (after save-a-repo merges), Hacktoberfest and quick-win
-rows (server), a banner on `/` for signed-in users (page.tsx is owned by
-another worker), `/connect` copy, sign-in page copy that names the four
-things you get, a "hide setup" choice, umami events for next-step clicks.
-
-## Open questions (with my recommendation)
-
-1. **Should `/` redirect signed-in users to `/me`?** Recommend no: the logo
-   and menu go to `/me` instead, and `/` stays one page for everyone.
-2. **Is `/me` the right URL?** Recommend yes; `/for-you` stays the full pick list.
-3. **Layout:** recommend next-step card on top plus themed rows (C + D).
-4. **Which rows tonight?** Recommend the six that need no server work, with
-   empty rows hidden. Hacktoberfest and quick wins wait for server work,
-   and Hacktoberfest starts in 3 days, so that server row is worth a ticket now.
-5. **Connect GitHub asks for 18+**, and many students are younger. Recommend
-   keeping it as the optional last setup step, labelled optional.
-6. **Should the header's plain "sign in" link send people back to the page
-   they were on?** Recommend yes later, once the header work settles; for now
-   they land on `/me`.
+1. `/` for a signed-in user: **redirect to `/me`**, server-side, with
+   `/?landing=1` as the way back to the landing page.
+2. `/me` is the home; `/for-you` stays the full list of picks.
+3. Layout: next-step card on top, themed rows below.
+4. Rows: the six that need no server work now; a slot for Hacktoberfest.
+5. Connect GitHub stays the optional last setup step.
+6. The header's "sign in" link returning you to the page you were on: later.
+7. New: first sign-in asks for the profile, skippable in one tap.

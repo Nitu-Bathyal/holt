@@ -7,7 +7,7 @@ import { SKIP_COOKIE } from "@/lib/profile";
 import { currentUser } from "@/lib/session";
 import { ProfileForm } from "./profile-form";
 
-export async function ProfileOnboarding({ back, className = "" }: { back: "/" | "/find" | "/hacktoberfest"; className?: string }) {
+export async function ProfileOnboarding({ back, open = false, className = "" }: { back: "/" | "/me" | "/find" | "/hacktoberfest"; open?: boolean; className?: string }) {
   const user = await currentUser();
   if (!user || (await cookies()).get(SKIP_COOKIE)) return null;
   const r = await getProfile(user.id);
@@ -17,7 +17,7 @@ export async function ProfileOnboarding({ back, className = "" }: { back: "/" | 
   return (
     <div className={className}>
     <section aria-labelledby="onboard-h" className="border border-blue/50 bg-panel p-5 shadow-soft sm:p-8 [&:has(details[open])>form]:hidden">
-      <details className="group">
+      <details className="group" open={open}>
         <summary className="flex cursor-pointer list-none flex-wrap items-baseline justify-between gap-x-6 gap-y-2 [&::-webkit-details-marker]:hidden">
           <span>
             <span id="onboard-h" className="block text-[1.15rem] font-semibold tracking-tight">Tell Holt what you&apos;re after, once</span>
