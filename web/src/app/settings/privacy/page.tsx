@@ -9,7 +9,7 @@ import { StatsSwitch } from "@/components/connect-github-card";
 import { ContactEmail } from "@/components/legal-page";
 import { Notice, SectionHead } from "@/components/settings/section-head";
 
-export const metadata: Metadata = { title: "Privacy and data | Settings", robots: { index: false } };
+export const metadata: Metadata = { title: "Privacy and data · Settings", robots: { index: false } };
 
 const H3 = "text-[1.1rem] font-semibold tracking-tight";
 
