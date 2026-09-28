@@ -16,8 +16,12 @@
 # (never a restart); a rejected config is put back and the run fails. Then
 # prune only this stack's images.
 #
-# Only the orchestrator runs it, when the user approves a deploy. Nothing
-# runs it on a timer: production never auto-updates.
+# follow.sh (the holt-prod-follow timer, install-follow.sh) runs it for each
+# new main commit once CI and staging are green on it; by hand it works as
+# before (README.md, "Deploying").
+#
+# Exit status: 0 live (or already live), 75 didn't start (another deploy
+# holds the lock, or the box stayed busy; try again later), 1 failed.
 #
 # State: ~/.local/share/holt-prod/  .env (make-env.sh), src/ (clone at the
 # deployed commit), current + previous (image tags), build/build.json
@@ -30,6 +34,7 @@ export PATH="$HOME/.local/bin:/usr/local/bin:/usr/bin:/bin:${PATH:-}"
 here="$(cd "$(dirname "$0")" && pwd)"
 log() { printf '%s %s\n' "$(date -u +%FT%TZ)" "$*"; }
 die() { log "ERROR: $*"; exit 1; }
+busy() { log "ERROR: $*"; exit 75; }   # not a failure of the commit: nothing was changed
 # shellcheck source=env.sh
 . "$here/env.sh"   # STATE, PROJECT, SECRETS, load_prod_env
 # shellcheck source=../edge.sh
@@ -49,7 +54,7 @@ WANT="${1:-origin/main}"
 mkdir -p "$STATE/logs" "$STATE/build"
 
 exec 9>"$STATE/lock"
-flock -n 9 || die "another deploy is in progress"
+flock -n 9 || busy "another deploy is in progress"
 
 # --- env and secrets ---------------------------------------------------------
 [[ -f "$STATE/.env" ]] || "$here/make-env.sh"
@@ -116,6 +121,13 @@ try:
 except FileNotFoundError:
     live = None
 doc = {"site": "https://githolt.com", "live": live, "last_attempt": attempt}
+try:   # follow.sh's status (the auto-deploy) stays on /__build
+    with open(env["OUT"], encoding="utf-8") as f:
+        auto = json.load(f).get("autodeploy")
+    if auto:
+        doc["autodeploy"] = auto
+except (FileNotFoundError, ValueError):
+    pass
 tmp = env["OUT"] + ".tmp"
 with open(tmp, "w", encoding="utf-8") as f:
     json.dump(doc, f, indent=2); f.write("\n")
@@ -146,7 +158,7 @@ if [[ "$FORCE" != 1 ]]; then
         load="$(cut -d' ' -f1 /proc/loadavg)"
         avail="$(awk '/^MemAvailable:/{print int($2/1024)}' /proc/meminfo)"
         awk -v l="$load" -v m="$MAX_LOAD" 'BEGIN{exit !(l < m)}' && (( avail > MIN_AVAIL_MB )) && break
-        (( waited >= MAX_WAIT )) && die "still busy after ${MAX_WAIT}s (load $load, ${avail} MB free); try again later"
+        (( waited >= MAX_WAIT )) && busy "still busy after ${MAX_WAIT}s (load $load, ${avail} MB free); try again later"
         (( waited == 0 )) && log "waiting for room: load $load (< $MAX_LOAD), MemAvailable ${avail} MB (> $MIN_AVAIL_MB)"
         sleep 30; waited=$((waited + 30))
     done
