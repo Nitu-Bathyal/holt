@@ -42,13 +42,14 @@ export function FindView({ initialPicks, initial, source, hf }: { initialPicks: 
   // The URL and the remembered picks follow every change. A search opened
   // from a link counts as picked; a profile or the defaults don't, so a later
   // profile change still shows through.
-  const first = useRef(true);
+  const seen = useRef<string | null>(null);
   useEffect(() => {
-    const opened = first.current;
-    first.current = false;
-    if (opened && source !== "url") return;
+    const prev = seen.current;
+    seen.current = q;
+    if (prev === q) return; // the same picks again (a strict-mode re-run)
+    if (prev === null && source !== "url") return;
     try {
-      if (!opened) window.history.replaceState(null, "", `/find?${q}`);
+      if (prev !== null) window.history.replaceState(null, "", `/find?${q}`);
       document.cookie = `${PICKS_COOKIE}=${encodeURIComponent(q)}; path=/; max-age=${60 * 60 * 24 * 180}; samesite=lax`;
     } catch {
       // Remembering is a convenience; the search still runs.
@@ -134,7 +135,7 @@ function Results({ shown, pending, fit, days, picks, setPicks, onRetry, children
         <div className="mb-5 h-1 bg-panel-2" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Search progress">
           <div className="h-full bg-blue transition-[width] duration-500 ease-out" style={{ width: `${pct}%` }} />
         </div>
-        <FindResultsSkeleton count={2} />
+        <FindResultsSkeleton count={3} />
       </>
     );
   } else {
@@ -143,7 +144,7 @@ function Results({ shown, pending, fit, days, picks, setPicks, onRetry, children
       body = <Empty picks={picks} setPicks={setPicks} />;
     } else {
       status = `${list.length} project${list.length === 1 ? "" : "s"} that merge outside work, best starter issues first`;
-      body = <FindResults results={list} days={days} issues={2} />;
+      body = <FindResults results={list} days={days} />;
     }
   }
 

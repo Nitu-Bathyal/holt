@@ -16,7 +16,7 @@ export default function Loading() {
         <div className="wrap py-5 sm:py-6">
           <FindFiltersSkeleton />
           <Skeleton className="mb-4 mt-9 h-3 w-72" />
-          <FindResultsSkeleton count={2} />
+          <FindResultsSkeleton count={3} />
         </div>
       </SkeletonRegion>
     </LoadingTransition>
