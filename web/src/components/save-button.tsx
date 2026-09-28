@@ -173,7 +173,7 @@ function SignInPrompt({ repo, onClose }: { repo: string; onClose: () => void }) 
     >
       <p id={titleId} className="text-[0.92rem] font-semibold">Keep this one for later</p>
       <p className="mt-1.5 font-sans text-[0.89rem] leading-snug text-muted">
-        Sign in with GitHub or Google and {repo} goes on your saved list, ready when you have time. It&apos;s free.
+        Sign in to save {repo}.
       </p>
       <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
         <Link ref={first} href={signInToSave(pathname, search, repo)} prefetch={false} className="btn-primary bg-blue" data-umami-event="save-repo-sign-in">

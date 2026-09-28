@@ -82,7 +82,7 @@ export function PasteBox({
           enterKeyHint="go"
           placeholder="owner/name or a GitHub URL"
           aria-invalid={Boolean(error)}
-          aria-describedby={error ? `${id}-error` : signedIn ? undefined : `${id}-note`}
+          aria-describedby={error ? `${id}-error` : undefined}
           className={`min-w-0 bg-transparent px-4 text-ink outline-none placeholder:text-faint sm:px-3 ${size === "lg" ? "h-16 text-[1rem] sm:text-[1.05rem]" : "h-13 text-[0.95rem]"}`}
         />
         <button
@@ -93,11 +93,6 @@ export function PasteBox({
           {busy ? "opening…" : signedIn ? "check this repo" : "sign in to check, free"} <span aria-hidden="true">→</span>
         </button>
       </form>
-      {!signedIn && !error && (
-        <p id={`${id}-note`} className="mt-2 font-sans text-[0.85rem] text-faint">
-          One click with your GitHub or Google account, then you land on the results.
-        </p>
-      )}
       {error && (
         <p id={`${id}-error`} role="alert" className="mt-2 font-sans text-[0.89rem] text-orange">
           {error}

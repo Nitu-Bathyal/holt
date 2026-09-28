@@ -80,9 +80,6 @@ export function ReportTeaser({ repo, report, back }: { repo: string; report: Rep
             [ read an example first ]
           </Link>
         </div>
-        <p className="mt-3 font-sans text-[0.85rem] text-faint">
-          One click with GitHub or Google, and you come straight back here. Holt never posts anything on GitHub.
-        </p>
       </section>
     </div>
   );
