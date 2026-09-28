@@ -95,7 +95,26 @@ fi
 # --- compose --------------------------------------------------------------------
 export HOLT_SRC="$SRC" HOLT_TAG="$sha" HOLT_PROD_HOME="$STATE"
 export COMPOSE_PROJECT_NAME="$PROJECT" HOLT_PROD_PROJECT="$PROJECT" BUILDX_BUILDER="$BUILDER"
-compose() { docker compose -p "$PROJECT" -f "$here/compose.yml" --env-file "$STATE/.env" "$@"; }
+# The compose file: this checkout's for the deploy; the rollback uses the
+# file the previous release was started with (releases/<sha>/compose.yml,
+# kept below), so a commit that breaks compose.yml can still be rolled back.
+# The project directory (where ./initdb and ./migrate-web.sh resolve) is the
+# state clone, whichever checkout runs this: a bind mount whose source path
+# changes makes compose recreate the container, and the db must not be
+# recreated because follow.sh and a person deploy from different checkouts.
+COMPOSE_YML="$here/compose.yml"
+RELEASES="$STATE/releases"
+compose() { docker compose -p "$PROJECT" -f "$COMPOSE_YML" --project-directory "$SRC/deploy/prod" --env-file "$STATE/.env" "$@"; }
+# release_compose <sha>: the compose file <sha> went live with, else the
+# one in its commit (releases before this existed), else nothing.
+release_compose() {
+    if [[ -f "$RELEASES/$1/compose.yml" ]]; then echo "$RELEASES/$1/compose.yml"; return; fi
+    mkdir -p "$RELEASES/$1"
+    git -C "$SRC" show "$1:deploy/prod/compose.yml" > "$RELEASES/$1/compose.yml.tmp" 2>/dev/null \
+        && mv "$RELEASES/$1/compose.yml.tmp" "$RELEASES/$1/compose.yml" \
+        && echo "$RELEASES/$1/compose.yml" && return
+    rm -rf "$RELEASES/$1"
+}
 EDGE_CONF="$SRC/deploy/prod/edge.conf"   # the deployed commit's; the edge reads a copy in $STATE/edge
 dlog="$STATE/logs/deploy-$(date -u +%Y%m%dT%H%M%SZ)-$short.log"
 log "log: $dlog"
@@ -203,13 +222,16 @@ compose up -d --remove-orphans >>"$dlog" 2>&1 || die "compose up failed; see $dl
 if healthy; then
     [[ -n "$current" && "$current" != "$sha" ]] && echo "$current" > "$STATE/previous"
     echo "$sha" > "$STATE/current"
+    mkdir -p "$RELEASES/$sha" && cp "$COMPOSE_YML" "$RELEASES/$sha/compose.yml"
     write_build_json live "live"
     log "live: $short on 127.0.0.1:$port"
 else
     compose logs --tail 50 server web >>"$dlog" 2>&1 || true
     if [[ -n "$current" && "$current" != "$sha" ]]; then
-        log "rolling back to ${current:0:7}"
-        HOLT_TAG="$current" compose up -d --remove-orphans >>"$dlog" 2>&1 || true
+        prev_yml="$(release_compose "$current")"
+        if [[ -n "$prev_yml" ]]; then log "rolling back to ${current:0:7} with its own compose file ($prev_yml)"
+        else log "rolling back to ${current:0:7} with this commit's compose file (none kept for ${current:0:7})"; fi
+        COMPOSE_YML="${prev_yml:-$COMPOSE_YML}" HOLT_TAG="$current" compose up -d --remove-orphans >>"$dlog" 2>&1 || true
         if healthy; then
             write_build_json failed "$short failed its health check; rolled back to ${current:0:7}"
             die "$short failed its health check; rolled back to ${current:0:7} (see $dlog)"
@@ -243,6 +265,9 @@ fi
 # of this stack, then prune only images labelled holt.stack=prod and only this
 # builder's cache. Nothing else on the box is touched.
 keep=" $sha $(cat "$STATE/previous" 2>/dev/null || true) "
+for d in "$RELEASES"/*/; do
+    [[ -d "$d" && "$keep" != *" $(basename "$d") "* ]] && rm -rf "$d"
+done
 for img in $(docker images --filter "label=$LABEL" --format '{{.Repository}}:{{.Tag}}' | grep -E "^$PROJECT-(server|web):[0-9a-f]{40}\$"); do
     [[ "$keep" == *" ${img#*:} "* ]] || docker image rm "$img" >/dev/null 2>&1 || true
 done

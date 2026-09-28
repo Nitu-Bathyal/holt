@@ -30,7 +30,8 @@ pause it, and `deploy.sh` still works by hand.
 State lives in `~/.local/share/holt-prod/` (outside every checkout, so
 removing a worktree can't delete secrets): `.env`, `src/` (a clone at the
 deployed commit), `current` and `previous` (image tags), `build/build.json`
-(served at `/__build`), `autodeploy.json`, `AUTODEPLOY_PAUSED`,
+(served at `/__build`), `releases/<sha>/compose.yml` (the compose file
+each kept release went live with, for rollbacks), `autodeploy.json`, `AUTODEPLOY_PAUSED`,
 `follow/` (the follower's clone and its failed commits), `edge/default.conf` (the edge's live nginx config,
 plus `default.conf.prev`), `logs/`.
 
@@ -167,10 +168,19 @@ What one run does, in order:
    which is why migrations must keep working with the previous release.
 6. `compose up -d`: server is recreated and waited for healthy, then web.
    The edge keeps 127.0.0.1:8310 open throughout and re-resolves `web`, so
-   the gap is the few seconds web takes to start.
+   the gap is the few seconds web takes to start. Compose's project
+   directory is always the state clone (`src/deploy/prod`), whichever
+   checkout runs `deploy.sh`: the db's `./initdb` mount then never changes
+   path, so `follow.sh` and a person deploying by hand never make compose
+   recreate the db. (The first deploy with this recreates the db once,
+   a few seconds, because the mount moves from the checkout it was
+   started from.)
 7. Health check: `/` answers 200 and `POST /api/analyses` for
    `pallets/flask` is accepted (200/202), within 5 minutes.
-8. On failure: `compose up -d` with the previous tag, checks again, records
+8. On failure: `compose up -d` with the previous tag **and the previous
+   release's own `compose.yml`** (kept in `releases/<sha>/` for the live and
+   the previous release, or taken from that commit in git), so a commit that
+   breaks `compose.yml` itself still rolls back; checks again, records
    the failure on `/__build`, exits 1. On success: records `current`/`previous`.
 9. Edge config: when the deployed commit's `edge.conf` differs from the
    edge's, installs it, runs `nginx -t` in the running edge and reloads
@@ -222,7 +232,8 @@ docker exec holt-prod-edge-1 nginx -s reload
 ```sh
 P=~/projects/holt/deploy/prod; S=~/.local/share/holt-prod
 dc() { HOLT_SRC=$S/src HOLT_TAG=$(cat $S/current) HOLT_PROD_HOME=$S \
-       docker compose -p holt-prod -f $P/compose.yml --env-file $S/.env "$@"; }
+       docker compose -p holt-prod -f $P/compose.yml --project-directory $S/src/deploy/prod \
+       --env-file $S/.env "$@"; }
 
 curl -s http://127.0.0.1:8310/__build | jq '.live.main.short, .last_attempt'
 dc ps
