@@ -1,28 +1,14 @@
 import Link from "next/link";
 import type { ApiError } from "@/lib/types";
 import { CatFace } from "./cat-face";
-
-const HEAD: Record<string, string> = {
-  not_found: "We couldn't find that repository",
-  invalid_repo: "That doesn't look like a repository",
-  invalid_request: "That request didn't make sense to us",
-  not_implemented: "Coming soon",
-  rate_limited: "Too many checks at once",
-  quota_exceeded: "You've used your free AI reports",
-  needs_key: "Sign in for AI reports",
-  ai_unavailable: "AI reports aren't switched on yet",
-  claim_not_ready: "Not yet",
-  unauthorized: "Sign in first",
-  upstream: "GitHub or the AI model didn't answer",
-  internal: "Something broke on our side",
-};
+import { errorHeading } from "@/lib/error-heading";
 
 export function ErrorPanel({ error, repo, onRetry, retryHref }: { error: ApiError; repo?: string; onRetry?: () => void; retryHref?: string }) {
   const account = error.code === "quota_exceeded" || error.code === "ai_unavailable";
   return (
     <div role="alert" className="border border-line-strong bg-panel p-6 shadow-soft sm:p-8">
       <CatFace mood={account ? "determined" : "startled"} className="text-[1.6rem]" />
-      <h2 className="mt-4 text-[1.4rem] font-semibold tracking-tight">{HEAD[error.code] ?? "Something went wrong"}</h2>
+      <h2 className="mt-4 text-[1.4rem] font-semibold tracking-tight">{errorHeading(error)}</h2>
       <p className="mt-2 max-w-xl font-sans text-muted">
         {error.message}
         {error.code === "rate_limited" && error.retry_after ? ` Try again in about ${Math.ceil(error.retry_after / 60)} minute${error.retry_after > 60 ? "s" : ""}.` : ""}

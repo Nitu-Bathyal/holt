@@ -12,6 +12,7 @@ from fastapi import FastAPI
 from holt_server import (
     __version__,
     admin,
+    budget,
     connections,
     contributions,
     credits,
@@ -43,6 +44,8 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         if run_jobs:
             await svc.runner.start()
         warming = None
+        level, line = budget.startup_line(svc.settings)
+        logging.getLogger("holt_server.budget").log(level, line)
         # A readiness line in the log; it never holds up startup.
         pro_check = asyncio.create_task(_log_pro(svc), name="holt-pro-check")
         if run_jobs and svc.settings.warm_interval_hours > 0:

@@ -130,6 +130,10 @@ def make_settings(tmp_path: Path, **overrides: Any) -> Settings:
         "HOLT_SECRET_KEY": "a test passphrase",
         "GITHUB_TOKENS": "tok1,tok2",
         "OPENROUTER_API_KEY": "",
+        # AI is off without a budget; most tests are about something else.
+        # test_server_ai_budget.py sets its own.
+        "HOLT_AI_BUDGET_USD": 1000,
+        "HOLT_AI_BUDGET_OWNER_OK": True,
         "HOLT_ANON_RATE_PER_HOUR": 100,
         "HOLT_USER_RATE_PER_HOUR": 100,
     }

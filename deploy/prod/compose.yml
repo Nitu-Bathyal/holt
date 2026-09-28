@@ -91,6 +91,12 @@ services:
       HOLT_WEB_URL: https://githolt.com
       GITHUB_TOKENS: ${GITHUB_TOKENS}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      # AI is OFF in production: a budget of 0. Only prod-named variables in
+      # $HOLT_PROD_HOME/.env or secrets.env can change that (a
+      # HOLT_AI_BUDGET_USD meant for staging never reaches here), and the
+      # server ignores a budget without the owner's explicit OWNER_OK=1.
+      HOLT_AI_BUDGET_USD: ${HOLT_PROD_AI_BUDGET_USD:-0}
+      HOLT_AI_BUDGET_OWNER_OK: ${HOLT_PROD_AI_BUDGET_OWNER_OK:-0}
       # Six people's jobs at once, plus one background worker for badges
       # and warm passes (it takes a waiting person's job first). Each job is
       # a thread holding one crawl; mem_limit below is sized for seven.

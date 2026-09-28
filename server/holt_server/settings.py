@@ -46,6 +46,19 @@ class Settings(BaseSettings):
     # "minimal" | "low" | "medium" | "high" for reasoning models; empty sends
     # nothing and the provider's default applies.
     model_reasoning_effort: str = Field("", alias="HOLT_MODEL_REASONING_EFFORT")
+    # The most this environment may spend on AI models, in USD, over its whole
+    # life: AI reports and the paid-features service's playbooks and summaries
+    # together (budget.py). 0 = AI off. With HOLT_ENV=production a budget
+    # counts only with HOLT_AI_BUDGET_OWNER_OK=1 as well, the owner's explicit
+    # say-so; without it AI stays off and the server logs an error.
+    ai_budget_usd: float = Field(0.0, ge=0, alias="HOLT_AI_BUDGET_USD")
+    ai_budget_owner_ok: bool = Field(False, alias="HOLT_AI_BUDGET_OWNER_OK")
+    # What one run may cost at most: held from the budget when it is queued
+    # and given back, less what it really cost, when it ends. An AI report's
+    # model calls are refused once the next one could take it past this.
+    ai_run_max_usd: float = Field(0.10, gt=0, alias="HOLT_AI_RUN_MAX_USD")
+    # The same for a playbook or pre-flight summary written by the service.
+    ai_pro_run_max_usd: float = Field(0.05, gt=0, alias="HOLT_AI_PRO_RUN_MAX_USD")
 
     # Analyses and finds running at once for people (the user lane). Each is a
     # worker thread holding one crawl in memory; see deploy/prod/compose.yml.

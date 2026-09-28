@@ -18,6 +18,7 @@ from holt_server import report as report_mod
 from holt_server import (
     __version__,
     badge,
+    budget,
     credits,
     entitlements,
     repo_stats,
@@ -350,6 +351,8 @@ async def create_analysis(body: AnalysisIn, request: Request,
         user_id = who.user_id
 
         async def charge(s, job: Job) -> None:
+            # The budget first: a run that doesn't fit is refused before any credit moves.
+            await budget.reserve(s, svc.settings, job.id, budget.ANALYSIS)
             paid = await entitlements.charge(s, svc, user_id, "ai_report", job_id=job.id)
             params = {k: v for k, v in (job.params or {}).items()
                       if k not in ("charge", "paid_with")}  # a retry charges again

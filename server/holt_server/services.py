@@ -9,7 +9,7 @@ from typing import Any
 
 import httpx
 
-from holt_server import engine, llm, payments, pro
+from holt_server import budget, engine, llm, payments, pro
 from holt_server.db import Database, Job
 from holt_server.errors import ApiError
 from holt_server.github import GitHubLookup, TokenPool
@@ -46,6 +46,9 @@ class Services:
         self.provider_factory: Callable[[str, datetime], Any] = self._live_provider
         self.model_factory: Callable[[llm.ModelSpec], Any] = llm.build
         self.analysis_fn: Callable[..., dict[str, Any]] = engine.analyze
+        # What each running AI job's model work cost, when the job learns it
+        # (budget.py): playbook and pre-flight jobs put it here for `_finish`.
+        self.ai_costs: dict[str, float | None] = {}
 
     def _live_provider(self, repo: str, as_of: datetime):
         # The pool's transport: it skips dead or used-up tokens and hears back
@@ -71,12 +74,18 @@ class Services:
             raise pro.not_available()
         return self.pro
 
+    def ai_on(self) -> bool:
+        """AI work may be queued at all: there is a budget (budget.py)."""
+        return budget.limit_usd(self.settings) > 0
+
     def server_model_available(self) -> bool:
-        return bool(self.settings.openrouter_api_key)
+        s = self.settings
+        return (bool(s.openrouter_api_key) and self.ai_on()
+                and budget.resolve_price(s.openrouter_model)[0] is not None)
 
     async def model_spec_for(self, job: Job) -> llm.ModelSpec:
         s = self.settings
-        if not s.openrouter_api_key:
+        if not self.server_model_available():
             # Refused before queueing too; this covers a key removed since.
             raise ApiError("ai_unavailable", "AI reports aren't switched on yet. "
                            "Your free AI report was not used up.")
