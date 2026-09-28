@@ -39,6 +39,13 @@ class Settings(BaseSettings):
     openrouter_api_key: str = Field("", alias="OPENROUTER_API_KEY")
     openrouter_model: str = Field("openai/gpt-5-mini", alias="OPENROUTER_MODEL")
     openrouter_base_url: str = Field("https://openrouter.ai/api/v1", alias="OPENROUTER_BASE_URL")
+    # Which dialect that endpoint speaks: "openrouter", "openai" or "gemini".
+    # Empty: read from OPENROUTER_BASE_URL (api.openai.com means OpenAI's own
+    # API, which wants `max_completion_tokens` and a model id without "openai/").
+    model_provider: str = Field("", alias="HOLT_MODEL_PROVIDER")
+    # "minimal" | "low" | "medium" | "high" for reasoning models; empty sends
+    # nothing and the provider's default applies.
+    model_reasoning_effort: str = Field("", alias="HOLT_MODEL_REASONING_EFFORT")
 
     # Analyses and finds running at once for people (the user lane). Each is a
     # worker thread holding one crawl in memory; see deploy/prod/compose.yml.

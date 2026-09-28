@@ -9,6 +9,8 @@ run one after another with no output cap, and no record of cost or time.
 
 from __future__ import annotations
 
+import dataclasses
+import re
 import threading
 from datetime import UTC, datetime, timedelta
 from types import SimpleNamespace
@@ -17,6 +19,7 @@ import pytest
 
 from holt import model as model_mod
 from holt.agent import narration, pipeline, stages
+from holt.agent import verdict as verdict_mod
 from holt.agent.findings import Findings
 from holt.agent.signals import build_threads
 from holt.agent.verify import automated_body, check_quotes, spoken_words
@@ -99,7 +102,10 @@ def test_outcomes_reads_only_outsider_threads_without_self_replies_or_automation
     assert "I fixed everything" not in prompt  # the author's own reply
     assert "Approved automatically" not in prompt
     assert "[maint, maintainer] Please add a test" in prompt
-    assert "[passerby] +1 would love this" in prompt  # not labelled a maintainer
+    # Another contributor is not the project: their comment is not shown, and
+    # the thread reads as unanswered by the team.
+    assert "passerby" not in prompt and "would love this" not in prompt
+    assert "pr:a/b#6:opened  (open)" in prompt
     assert client.calls[0]["system"].startswith(stages.OUTCOMES_SYSTEM + stages.OUTSIDER_NOTE)
 
 
@@ -114,6 +120,36 @@ def test_staff_with_private_membership_are_not_outsiders():
     threads = build_threads(records)
     conversations = stages.outsider_conversations(records, threads)
     assert set(conversations) == {"pr:a/b#2"}
+
+
+def test_outcomes_is_told_each_threads_age_and_skips_unanswered_new_ones():
+    """A pull request opened last week with no reply yet isn't ignored: the
+    rules don't count it, so the model mustn't call it that."""
+    records = [*pr(1, "old", "NONE"), *pr(2, "fresh", "NONE"),
+               *pr(3, "fresh-answered", "NONE", replies=[("maint", "OWNER", "Looking now")])]
+    as_of = T0 + timedelta(days=20)
+    young = {"pr:a/b#2:opened", "pr:a/b#3:opened", "pr:a/b#3:comment:0"}
+    records = [dataclasses.replace(r, timestamp=r.timestamp + timedelta(days=15))
+               if r.evidence_id in young else r for r in records]
+    client = Capture({"threads": [], "posture": "mixed", "posture_rationale": "r"})
+    stages.read_outcomes("a/b", build_threads(records), client, Findings(),
+                         records=records, as_of=as_of, settle_hours=14 * 24.0)
+    prompt = model_mod.canonical(client.calls[0]["prompt"])
+    assert "pr:a/b#1:opened  (open, opened 20 days before this reading)" in prompt
+    assert "pr:a/b#2:opened" not in prompt
+    assert "pr:a/b#3:opened  (open, opened 5 days before this reading)" in prompt
+
+
+def test_a_bystander_is_not_quotable_as_the_project():
+    """react-native #58527: another user's question read as maintainers asking
+    for changes. With who-is-who recorded, only the team can be quoted."""
+    kept, invented = check_quotes(outcome(6, "+1 would love this"), mixed_repo())
+    assert not kept and invented
+    # A capture from before association was recorded can't tell who is who,
+    # and keeps the older rule: anyone but the author.
+    old = pr(6, "helper", None, replies=[("passerby", "NONE", "+1 would love this")])
+    kept, _ = check_quotes(outcome(6, "+1 would love this"), old)
+    assert kept
 
 
 def test_outcomes_samples_across_outcomes_not_the_chattiest():
@@ -210,7 +246,12 @@ def test_a_bot_account_is_not_a_speaker():
     ("<!-- This is an auto-generated comment: summarize by coderabbit.ai -->", True),
     ("@robodoo r+", True),
     ("@NixOS/nixpkgs-merge-bot merge", True),
+    ("@claude review these changes", True),
+    ("@copilot please fix the failing test", True),
+    ("## Review summary 🔴 1 blocker · 🟠 1 major · ⚪ 1 nit\n\nDetails below", True),
+    ("**Claude finished @kim's task** —— View job", True),
     ("@alice can you rebase this?", False),
+    ("One blocker: the major version bump breaks users.", False),
     ("Thanks! Please add a test.", False),
 ])
 def test_automated_bodies_are_recognised(body, automated):
@@ -332,8 +373,9 @@ def test_stages_a_b_c_run_at_once_in_a_fixed_order_and_the_report_is_timed(caplo
     # Joined in the order A, B, C whatever order they finished in, so the
     # narration prompt (and its replay key) does not depend on timing.
     narrate = model_mod.canonical(client.calls[-1]["prompt"]) if client.calls else ""
-    order = [narrate.index(f"  {name} =") for name in
-             ("repo_kind", "onboarding", "outsider_posture", "thread_outcome")]
+    order = [narrate.index(f"  {name}") for name in
+             ("Kind of project:", "Contributor guide:",
+              "How outside contributors are treated:", "Pull request #2:")]
     assert order == sorted(order)
     assert set(trace.timings) >= {"fetch", "classify", "opportunity", "outcomes",
                                   "narrate", "total"}
@@ -343,6 +385,76 @@ def test_stages_a_b_c_run_at_once_in_a_fixed_order_and_the_report_is_timed(caplo
     assert "999" not in assessment.summary and "not an AI's judgement" in assessment.summary
     assert len(trace.unsupported_sentences) == 2
     assert "ai report a/b" in caplog.text and "sentences removed" in caplog.text
+    # The bottom line was lost, so the narrator got one more try, told why.
+    narrations = [c for c in client.calls if c["label"] == "narrate"]
+    assert len(narrations) == 2
+    assert "distinct_merged_authors is tiny" in narrations[1]["prompt"]
+    assert "previous draft" in narrations[1]["prompt"]
+
+
+def test_live_narration_is_handed_what_the_reader_sees():
+    """The rule sentences on the page, counts in words, waits as durations."""
+    client = Parallel({"bottom_line": "You will get a reply.",
+                       "what_the_evidence_shows": "It is fine.",
+                       "what_could_not_be_determined": ""})
+    assessment, trace = pipeline.analyze("a/b", Provider(mixed_repo()), client,
+                                         as_of=T0 + timedelta(days=30))
+    narrate = model_mod.canonical(client.calls[-1]["prompt"])
+    system = model_mod.canonical(client.calls[-1]["system"])
+    assert stages.NARRATE_PLAIN_NOTE in system
+    for rule in trace.rules[:1]:
+        assert str(rule) in narrate
+    assert "first-time" not in narrate and "outsider_threads" not in narrate
+    assert "Verdict (already decided, do not change): " + verdict_mod.headline(
+        assessment.verdict) in narrate
+    # Only the plain field names and the evidence ids are left: nothing snake_case.
+    body = "\n".join(line for line in narrate.splitlines() if "pr:a/b#" not in line)
+    assert not re.search(r"\b[a-z]+_[a-z_]+\b", body), body
+    assert "minutes" in narrate or "hours" in narrate or "days" in narrate
+    # One try was enough.
+    assert sum(c["label"] == "narrate" for c in client.calls) == 1
+
+
+def test_the_narrator_never_reads_a_bystanders_quote():
+    class Bystander(Parallel):
+        def complete(self, *, label, system, prompt, schema):
+            if label == "outcomes":
+                self.barrier.wait()
+                return {"threads": [{
+                    "pr_id": "6", "outcome": "changes_requested", "signal": "neutral",
+                    "quote": "+1 would love this"}], "posture": "mixed",
+                    "posture_rationale": "r"}
+            return super().complete(label=label, system=system, prompt=prompt, schema=schema)
+
+    client = Bystander({"bottom_line": "You will get a reply.",
+                        "what_the_evidence_shows": "It is fine.",
+                        "what_could_not_be_determined": ""})
+    assessment, _ = pipeline.analyze("a/b", Provider(mixed_repo()), client,
+                                     as_of=T0 + timedelta(days=30))
+    narrate = next(c for c in client.calls if c["label"] == "narrate")["prompt"]
+    assert "would love this" not in narrate
+    assert not any("would love this" in c.text for c in assessment.claims)
+
+
+def test_the_retry_is_used_when_it_keeps_the_opening():
+    answers = iter([
+        {"bottom_line": "Replies are fast; outsider_ignored is low.",
+         "what_the_evidence_shows": "It is fine.", "what_could_not_be_determined": ""},
+        {"bottom_line": "Replies are fast here.",
+         "what_the_evidence_shows": "It is fine.", "what_could_not_be_determined": ""},
+    ])
+
+    class Retry(Parallel):
+        def complete(self, *, label, system, prompt, schema):
+            if label == "narrate":
+                self.calls.append({"label": label, "system": system, "prompt": prompt})
+                return next(answers)
+            return super().complete(label=label, system=system, prompt=prompt, schema=schema)
+
+    assessment, trace = pipeline.analyze("a/b", Provider(mixed_repo()), Retry(None),
+                                         as_of=T0 + timedelta(days=30))
+    assert assessment.bottom_line == "Replies are fast here."
+    assert trace.unsupported_sentences == []
 
 
 # ─── every provider call is capped ─────────────────────────────────────────

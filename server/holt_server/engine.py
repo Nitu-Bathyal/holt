@@ -123,9 +123,13 @@ def ai_cost(repo: str, model, timings: dict[str, float]) -> dict[str, Any]:
     usd = float(getattr(usage, "cost_usd", 0.0) or 0.0)
     seconds = float(timings.get("total", 0.0) or 0.0)
     stages = " ".join(f"{k}={float(v):.1f}s" for k, v in timings.items() if k != "total")
+    # How long the provider took per stage, apart from the time around it.
+    stage_ms = getattr(usage, "stage_ms", dict)()
+    model_time = " ".join(f"{k}={v}ms" for k, v in stage_ms.items())
     log.info("ai report %s: model=%s input_tokens=%d output_tokens=%d usd=%.5f "
-             "total=%.1fs %s", repo, name, usage.input_tokens, usage.output_tokens,
-             usd, seconds, stages or "stages=unknown")
+             "total=%.1fs %s model_time: %s", repo, name, usage.input_tokens,
+             usage.output_tokens, usd, seconds, stages or "stages=unknown",
+             model_time or "unknown")
     return {
         "model": name,
         "input_tokens": usage.input_tokens,

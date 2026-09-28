@@ -106,14 +106,48 @@ _BOT_COMMAND = re.compile(
 )
 
 
+# A request to an AI assistant (`@claude review these changes`, `@copilot ...`,
+# `/gemini review`) is said to a machine too. So is what the assistant posts
+# back, often from the maintainer's own account: a review template that
+# counts findings by severity ("## Review summary 🔴 1 blocker · 🟠 1 major")
+# or the assistant's status line. pytorch's evidence list quoted both as
+# maintainer review.
+_AI_REQUEST = re.compile(
+    r"^@(?:claude|copilot|codex|coderabbitai|gemini-code-assist|cursor|sourcery-ai"
+    r"|devin-ai-integration|greptileai|qodo-merge-pro)\b"
+    r"|^/(?:gemini|coderabbit|review|improve|describe)\b",
+    re.IGNORECASE,
+)
+_AI_REVIEW = re.compile(
+    r"^#{1,4}\W*(?:ai |automated |code )?review summary\b"
+    r"|\d+\s+(?:blockers?|critical)\b[^\n]{0,40}\d+\s+(?:majors?|minors?|nits?)\b"
+    r"|\bclaude (?:finished|is working on)\b|\bcopilot (?:reviewed|wasn't able)\b",
+    re.IGNORECASE | re.MULTILINE,
+)
+
+
 def automated_body(body: str) -> bool:
-    """Whether a comment or review body was written by a program."""
+    """Whether a comment or review body was written by, or for, a program."""
     text = (body or "").strip()
     if not text:
         return False
     if text.startswith("<!--"):
         return True
-    return bool(_AUTOMATED.search(text[:400]) or _BOT_COMMAND.match(text))
+    head = text[:400]
+    return bool(_AUTOMATED.search(head) or _BOT_COMMAND.match(text)
+                or _AI_REQUEST.match(text) or _AI_REVIEW.search(head))
+
+
+def knows_association(records: Iterable[EvidenceRecord]) -> bool:
+    """Whether this capture says who has write access.
+
+    Captures before the v2 evidence (every committed benchmark fixture) do not;
+    live reads always do.
+    """
+    return any(
+        "author_association" in r.payload
+        for r in records if r.evidence_id.endswith(":opened")
+    )
 
 
 def pr_authors(records: Iterable[EvidenceRecord]) -> dict[str, str]:
@@ -127,7 +161,14 @@ def pr_authors(records: Iterable[EvidenceRecord]) -> dict[str, str]:
 
 
 def spoken_words(records: Iterable[EvidenceRecord]) -> dict[str, str]:
-    """What people other than each pull request's author said on it.
+    """What the project's team said on each pull request.
+
+    On evidence that records who has write access (every live read), only
+    people `people.maintainers` counts as the team are heard: a bystander's
+    question ("have you used this fix in production?") presented as the
+    project asking for changes, or an unrelated account's "Retracted.", is a
+    quote from the wrong person. Older captures can't tell who is who, and
+    keep the rule below: anyone but the author.
 
     Quotes come from reviews and comments, which live in their own records
     (`#12:review:0`, `#12:comment:1`) rather than in the `:opened` record a
@@ -142,10 +183,12 @@ def spoken_words(records: Iterable[EvidenceRecord]) -> dict[str, str]:
     member's automated QA post on their own pull request passed as outsider
     feedback (PostHog/posthog #60677).
     """
+    from holt.agent.people import maintainers
     from holt.agent.signals import looks_like_bot
 
     records = list(records)
     authors = pr_authors(records)
+    team = maintainers(records) if knows_association(records) else None
     said: dict[str, list[str]] = {}
     for record in records:
         number = _pr_number(record.evidence_id)
@@ -156,6 +199,8 @@ def spoken_words(records: Iterable[EvidenceRecord]) -> dict[str, str]:
         if who and who == authors.get(number):
             continue
         if looks_like_bot(who, bool(payload.get("author_is_bot"))):
+            continue
+        if team is not None and who not in team:
             continue
         body = payload.get("body") or ""
         if not body.strip() or automated_body(body):

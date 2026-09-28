@@ -21,7 +21,7 @@ function creditsNote(c: Credits): string {
 /** What the AI report adds, in the order it appears. Only what it actually delivers. */
 const WHAT_YOU_GET = [
   "A short written explanation of the verdict: the bottom line, what the evidence shows, and what couldn't be worked out.",
-  "Up to about a dozen pull requests from outside contributors, each with a quote from the thread and a link to it. Every quote is checked against the thread and comes from someone other than the person who opened the pull request.",
+  "Up to about a dozen pull requests from outside contributors, each with a quote from the thread and a link to it. Every quote is checked against the thread and comes from the project's team.",
   "What kind of project this is, and whether its contributing guide is a real way in for a newcomer.",
 ];
 

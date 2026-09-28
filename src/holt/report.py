@@ -80,6 +80,14 @@ class Claim:
 
     text: str
     evidence_id: str | None = None
+    # What the claim is about, for code rather than readers: "outcome" (with
+    # `value` like "closed_dismissive") or the finding's field ("repo_kind").
+    # The server's evidence cards are built from these, not parsed from text.
+    kind: str = ""
+    value: str = ""
+    quote: str = ""
+    # The model's rationale, when one is shown (in `text` too, labelled).
+    note: str = ""
 
 
 @dataclass(frozen=True, slots=True)

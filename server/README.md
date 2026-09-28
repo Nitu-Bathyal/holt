@@ -54,7 +54,9 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `HOLT_PLAYBOOK_CACHE_HOURS` | `168` | How long a written playbook ("How to get merged here") is served before the next unlock asks the service for a new one. Playbook jobs are stopped after `HOLT_JOB_TIMEOUT_AI`. |
 | `OPENROUTER_API_KEY` | *(empty)* | The server's model key; every AI report runs on it. Empty means AI reports are off: requests get `ai_unavailable` and spend nothing. |
 | `OPENROUTER_MODEL` | `openai/gpt-5-mini` | Model id on OpenRouter for server-paid AI reports. |
-| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | OpenAI-compatible endpoint. |
+| `OPENROUTER_BASE_URL` | `https://openrouter.ai/api/v1` | OpenAI-compatible endpoint. Point it at `https://api.openai.com/v1` (with `OPENROUTER_MODEL=gpt-5-mini` and an OpenAI key) to use OpenAI directly. |
+| `HOLT_MODEL_PROVIDER` | *(read from the endpoint)* | `openrouter`, `openai` or `gemini`: which parameter names the endpoint takes (`max_tokens` and `reasoning` for OpenRouter; `max_completion_tokens` and `reasoning_effort` for OpenAI). Set it only for a proxy whose URL doesn't say. |
+| `HOLT_MODEL_REASONING_EFFORT` | *(empty)* | `minimal`, `low`, `medium` or `high` for reasoning models (gpt-5, o-series). Empty sends nothing and the provider's default applies. |
 | `HOLT_JOB_CONCURRENCY` | `2` | User lane: people's analyses and finds running at once in this process. Each holds a thread and some memory. |
 | `HOLT_JOB_TIMEOUT_RULES` | `180` | Seconds a rules report may run before it is stopped and fails with a plain "took too long" error. |
 | `HOLT_JOB_TIMEOUT_AI` | `480` | The same, for AI reports and PR pre-flight checks (refunded when stopped). |
