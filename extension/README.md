@@ -2,7 +2,7 @@
 
 Puts a small Holt chip next to the repository name on github.com:
 
-- **Holt: Worth your time · 15 of 100 newcomer PRs merged**
+- **Holt: Worth your time · 15 of 100 outside PRs merged**
 - **Holt: Not worth your time** / **Holt: Not enough evidence**
 - **Check with Holt** when Holt has no report for the repo yet
 

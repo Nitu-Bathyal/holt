@@ -30,13 +30,50 @@ function odds(verdict: Verdict, s: Stats): Odds | null {
 
 function line(verdict: Verdict, s: Stats, decidedBy: string[]): string {
   const merged = `${s.outsider_merged} of ${s.outsider_attempts}`;
-  if (verdict === "viable") return `Outside contributors get merged here: ${merged} of their recent pull requests landed.`;
+  if (verdict === "viable") return "Outside contributors get real replies here, and their work gets merged.";
   if (verdict === "not_viable") return decidedBy.at(-1) ?? `Only ${merged} pull requests from outside contributors were merged.`;
   return "Too few outside contributors have tried recently for Holt to say either way.";
 }
 
-type Stored = Omit<Report, "headline" | "tone" | "verdict_line" | "odds" | "rule_codes">;
+function numbers(s: Stats): string {
+  const n = s.outsider_attempts;
+  if (!n) return "Nobody outside the project's team opened a pull request.";
+  const out = [`Of ${n} pull requests from outside contributors, ${s.outsider_merged} were merged (${Math.round((100 * s.outsider_merged) / n)}%).`];
+  if (s.median_first_response_hours != null) out.push(`When a maintainer replied, it was typically within ${Math.max(1, Math.round(s.median_first_response_hours))} hours.`);
+  if (s.no_reply) out.push(`${Math.round((100 * s.no_reply) / n)}% got no reply at all.`);
+  return out.join(" ");
+}
+
+function nextStep(r: Stored): string {
+  if (r.verdict === "not_viable") return "Put your time into a project that answers outside contributors; Holt's Find page lists some.";
+  if (r.verdict !== "viable") return "There's too little to go on. Before writing code, open an issue and ask whether a pull request would be welcome.";
+  const best = r.landing.find((a) => a.path !== "(root)" && a.merged >= 3);
+  return best
+    ? `Best bet: a small change in ${best.path}, where ${best.merged} of ${best.attempted} outside pull requests were merged.`
+    : "Best bet: a small, focused change; a starter issue is a good place to find one.";
+}
+
+type Derived = "headline" | "tone" | "verdict_line" | "odds" | "rule_codes" | "numbers_line" | "first_timer_line" | "next_step" | "stat_line" | "counted" | "sample" | "asks";
+type Stored = Omit<Report, Derived>;
 
 export function withDerived(r: Stored): Report {
-  return { ...r, ...verdictView(r.verdict), rule_codes: [], verdict_line: line(r.verdict, r.stats, r.decided_by), odds: odds(r.verdict, r.stats) };
+  const s = r.stats;
+  const k = s.first_time_merged_authors;
+  return {
+    ...r,
+    ...verdictView(r.verdict),
+    rule_codes: [],
+    sample: null,
+    asks: [],
+    verdict_line: line(r.verdict, s, r.decided_by),
+    numbers_line: numbers(s),
+    first_timer_line: !s.outsider_attempts ? null : k ? `${k} ${k === 1 ? "person" : "people"} got their first pull request merged here.` : "Nobody got their first pull request merged here in this period.",
+    next_step: nextStep(r),
+    stat_line: s.outsider_attempts ? `${s.outsider_merged} of ${s.outsider_attempts} outside PRs merged` : null,
+    counted: [
+      ...(r.decided_by.length ? [{ topic: "What decided it", text: r.decided_by.join(" ") }] : []),
+      { topic: "The rule", text: "These rules are fixed; no AI chooses the verdict." },
+    ],
+    odds: odds(r.verdict, s),
+  };
 }

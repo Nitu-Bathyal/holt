@@ -13,8 +13,8 @@ import { PageTransition } from "@/components/motion/page-transition";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "Find your first contribution",
-  description: "Pick your languages and how much time you have. Holt finds welcoming projects and specific issues to start with.",
+  title: "Find a project that merges outside work",
+  description: "Pick your languages and how much time you have. Holt finds projects that reply to and merge outside contributors, with specific issues to start on.",
   alternates: { canonical: "/find" },
 };
 
@@ -48,12 +48,12 @@ export default async function FindPage({ searchParams }: PageProps<"/find">) {
     <PageTransition>
       <>
       <PageHead>
-        <p className="rail mb-4 flex gap-2"><strong className="m-0">find</strong><span>your first contribution</span></p>
+        <p className="rail mb-4 flex gap-2"><strong className="m-0">find</strong><span>a project to contribute to</span></p>
         <h1 className="display max-w-3xl text-[clamp(2rem,6vw,3.4rem)]">
           Tell us what you know. <span className="text-orange">We&apos;ll find where you&apos;re welcome.</span>
         </h1>
         <p className="prose-sans mt-5 max-w-2xl text-[1.05rem]">
-          Every project below replies to newcomers and merges their work. Each comes with open issues you could take today.
+          Every project below replies to outside contributors and merges their work. Each comes with open issues you could take today, for a first pull request or your fiftieth.
         </p>
 
         {sp.profile === "saved" && (
@@ -138,12 +138,12 @@ export default async function FindPage({ searchParams }: PageProps<"/find">) {
             <span>
               Only Hacktoberfest projects{" "}
               <span className="ml-1 rounded-full border border-hf-line bg-hf-bg px-2 py-0.5 align-middle text-[0.66rem] uppercase tracking-[0.06em] text-hf">October</span>
-              <span className="block font-sans text-[0.8rem] text-faint">Repos taking part, so your pull requests count.</span>
+              <span className="block font-sans text-[0.8rem] text-faint">Projects that tagged themselves for Hacktoberfest this October.</span>
             </span>
           </label>
 
           <button type="submit" data-umami-event="find-run" className="btn-primary w-full sm:w-auto">
-            find my first contribution <span aria-hidden="true">→</span>
+            find projects <span aria-hidden="true">→</span>
           </button>
         </form>
       </PageHead>

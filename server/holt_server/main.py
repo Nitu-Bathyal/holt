@@ -19,6 +19,7 @@ from holt_server import (
     entitlements,
     errors,
     feedback,
+    payments,
     pro,
     profiles,
     recommendations,
@@ -64,6 +65,8 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
             svc.http.close()
             if svc.pro is not None:
                 await svc.pro.aclose()
+            if svc.razorpay is not None:
+                svc.razorpay.close()
 
     dev = svc.settings.env == "dev"
     app = FastAPI(title="Holt API", version=__version__, lifespan=lifespan,
@@ -80,6 +83,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(contributions.router)
     app.include_router(discover.router)
     app.include_router(profiles.router)
+    app.include_router(payments.router)
     app.include_router(recommendations.router)
     return app
 

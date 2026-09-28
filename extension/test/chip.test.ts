@@ -11,7 +11,7 @@ describe("chipView", () => {
   it("shows the verdict headline and one stat", () => {
     const v = chipView({ state: "found", data: report() }, flask);
     expect(v.label).toBe("Holt: Worth your time");
-    expect(v.stat).toBe("15 of 100 newcomer PRs merged");
+    expect(v.stat).toBe("15 of 100 outside PRs merged");
     expect(v.tone).toBe("good");
   });
 
@@ -41,10 +41,17 @@ describe("chipView", () => {
 
 describe("statLine", () => {
   it("handles singular, zero and missing counts", () => {
-    expect(statLine(report({ stats: { outsider_attempts: 1, outsider_merged: 0 } }))).toBe("0 of 1 newcomer PR merged");
+    expect(statLine(report({ stats: { outsider_attempts: 1, outsider_merged: 0 } }))).toBe("0 of 1 outside PR merged");
     expect(statLine(report({ stats: { outsider_attempts: 0, outsider_merged: 0 } }))).toBeNull();
     expect(statLine(report({ stats: null }))).toBeNull();
     expect(statLine(report({ stats: { outsider_attempts: 3 } }))).toBeNull();
+  });
+
+  it("shows the server's stat_line when it sends one", () => {
+    expect(statLine(report({ stat_line: "22 of 120 outside PRs merged" }))).toBe("22 of 120 outside PRs merged");
+    expect(statLine(report({ stat_line: null }))).toBeNull();
+    // Anything that isn't a short sentence falls back to the counts.
+    expect(statLine(report({ stat_line: "x".repeat(61) }))).toBe("15 of 100 outside PRs merged");
   });
 });
 
@@ -56,8 +63,8 @@ describe("ensureChip", () => {
     expect(chip.href).toBe("https://githolt.com/pallets/flask");
     expect(chip.target).toBe("_blank");
     expect(chip.rel).toContain("noopener");
-    expect(chip.textContent).toBe("Holt: Worth your time15 of 100 newcomer PRs merged");
-    expect(chip.getAttribute("aria-label")).toBe("Holt: Worth your time. 15 of 100 newcomer PRs merged.");
+    expect(chip.textContent).toBe("Holt: Worth your time15 of 100 outside PRs merged");
+    expect(chip.getAttribute("aria-label")).toBe("Holt: Worth your time. 15 of 100 outside PRs merged.");
   });
 
   it("goes right after the repo name in the legacy layout", () => {

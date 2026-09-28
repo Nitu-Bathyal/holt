@@ -23,14 +23,23 @@ const dev = process.env.NODE_ENV !== "production";
 // self-hosted by next/font. Images: GitHub avatars (github.com/o.png redirects
 // to avatars.githubusercontent.com) and Google profile pictures.
 // form-action: signing in without JS posts, then redirects to the provider.
+// Razorpay Checkout (credit packs): its script from checkout.razorpay.com,
+// which loads Razorpay's fraud check from cdn.razorpay.com, opens the payment
+// window in a frame from api.razorpay.com, and calls that API and its error
+// reporting (lumberjack) from our page.
+const razorpay = {
+  script: "https://checkout.razorpay.com https://cdn.razorpay.com",
+  connect: "https://api.razorpay.com https://lumberjack.razorpay.com",
+  frame: "https://api.razorpay.com",
+};
 const csp = [
   "default-src 'self'",
-  `script-src 'self' 'unsafe-inline'${dev ? " 'unsafe-eval'" : ""}`,
+  `script-src 'self' 'unsafe-inline' ${razorpay.script}${dev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob: https://github.com https://avatars.githubusercontent.com https://*.googleusercontent.com",
   "font-src 'self' data:",
-  `connect-src 'self'${dev ? " ws:" : ""}`,
-  "frame-src 'none'",
+  `connect-src 'self' ${razorpay.connect}${dev ? " ws:" : ""}`,
+  `frame-src ${razorpay.frame}`,
   "frame-ancestors 'none'",
   "object-src 'none'",
   "base-uri 'self'",
