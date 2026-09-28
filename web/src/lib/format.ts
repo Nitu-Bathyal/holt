@@ -174,10 +174,16 @@ export function evidenceLabel(e: { kind: string; value: string | null }): { labe
   const value = e.value ?? "";
   const bad = NEGATIVE.test(value);
   if (e.kind === "outsider_pr") {
-    return { label: e.value === "merged" ? "Newcomer PR merged" : e.value === "no_reply" ? "Newcomer PR, no reply" : `Newcomer PR: ${humanize(value).toLowerCase()}`, bad };
+    return { label: e.value === "merged" ? "Merged" : e.value === "no_reply" ? "No reply" : humanize(value), bad };
   }
   if (e.kind === "outcome") return { label: OUTCOME_LABELS[value] ?? humanize(value), bad };
   return { label: FIELD_LABELS[e.kind] ?? humanize(e.kind), bad };
+}
+
+/** The PR's own title when the line is "…pull request #123 was merged: “Title”", else the whole line. */
+export function evidenceTitle(text: string): { title: string; quoted: boolean } {
+  const m = /#\d+[^:“]*:\s*“(.+)”\s*$/.exec(text);
+  return m ? { title: m[1], quoted: true } : { title: text, quoted: false };
 }
 
 /** "#526518" or a short id for an evidence link. */

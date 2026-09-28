@@ -153,7 +153,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
               aria-current={mode === "ai" ? "page" : undefined}
               className={`relative inline-flex min-h-11 items-center justify-center px-3 transition-colors ${mode === "ai" ? "text-on-accent" : "text-muted hover:text-ink"}`}
             >
-              AI report ✦
+              AI report
               <LinkHint />
             </Link>
           </nav>
