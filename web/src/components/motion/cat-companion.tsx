@@ -132,15 +132,19 @@ async function start(gsap: Gsap, ScrollTrigger: ST, cat: HTMLButtonElement) {
 
   const restore = () => {
     window.clearTimeout(reaction);
+    face.classList.remove("is-happy");
     glyphs(current);
     gsap.to(character, { scale: 1, x: 0, y: 0, rotation: 0, duration: 0.28 });
   };
   const onEnter = () => {
     hovered = true;
+    // Caret eyes are wider than the dots they replace: give them room so they
+    // don't run into the ears (see .cat-face.is-happy).
+    face.classList.add("is-happy");
     eyes.forEach((e) => (e.textContent = "^"));
     mouth.textContent = "ᴗ";
     gsap.to(character, { scale: 1.04, duration: 0.2 });
-    gsap.to(ears, { y: -3, rotation: (i: number) => (i ? 6 : -6), duration: 0.2 });
+    gsap.to(ears, { y: -3, rotation: (i: number) => (i ? 3 : -3), duration: 0.2 });
   };
   const onLeave = () => {
     hovered = false;
