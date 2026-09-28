@@ -318,11 +318,13 @@ def test_the_rest_of_v2_only_adds_to_what_a_capture_shows(slug):
     # reveal more landings; where nothing landed off the button (flask) the
     # two read identically. Older captures, without the association either,
     # are test_signals' test_every_committed_fixture_counts_outsiders_exactly_as_before.
+    # Draft state is kept on both sides: it takes attempts out of the counts
+    # (rates.py, test_rates).
     as_of = RECORDED_AT
     meta = RECORDED[slug]["meta"]
     v2 = [gql.project_repo_meta(slug, meta), *gql.project_releases(slug, meta),
           *gql.project(slug, RECORDED[slug]["pull_requests"])]
-    some = _without(v2, V2_KEYS - READ_BY_THE_TEAM)
+    some = _without(v2, V2_KEYS - READ_BY_THE_TEAM - {"is_draft"})
     t2, t1 = build_threads(v2), build_threads(some)
     assert t2.keys() == t1.keys()
     assert {k for k, t in t1.items() if t.merged} <= {k for k, t in t2.items() if t.merged}
@@ -527,7 +529,11 @@ def test_the_report_and_cli_say_how_many_attempts_came_from_people_new_to_the_re
     from holt.cli import stats_from
 
     slug = "pallets/flask"
-    recs = list(gql.project(slug, RECORDED[slug]["pull_requests"]))
+    # Without draft state and labels: this sample's outside pull requests are
+    # a draft and "rejected AI" ones, which leave the counts (rates.py).
+    recs = [EvidenceRecord(r.evidence_id, r.source, r.url, r.timestamp,
+                           {k: v for k, v in r.payload.items() if k not in ("is_draft", "labels")})
+            for r in gql.project(slug, RECORDED[slug]["pull_requests"])]
     assessment, trace = analyze_without_model(slug, _Serve(recs, RECORDED_AT),
                                               as_of=RECORDED_AT)
     s = trace.signals

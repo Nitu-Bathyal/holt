@@ -45,7 +45,8 @@ def check_report_shape(report: dict, mode: str) -> None:
     assert report["verdict"] in ("viable", "not_viable", "insufficient_evidence")
     assert set(report["stats"]) == {
         "outsider_attempts", "outsider_merged", "distinct_outsiders",
-        "first_time_merged_authors", "no_reply", "median_first_response_hours", "bot_share"}
+        "first_time_merged_authors", "no_reply", "median_first_response_hours", "bot_share",
+        "still_open", "closed_silently"}
     for item in report["evidence"]:
         assert item["url"].startswith("https://github.com/"), item
         assert set(item) == {"id", "url", "kind", "value", "text", "quote"}
@@ -74,7 +75,7 @@ def test_rules_report_end_to_end(make_harness):
     expected, trace = pipeline.analyze_without_model(
         REPO, fixture_provider(), 7, as_of=T_CUTOFF)
     assert report["verdict"] == expected.verdict.value
-    assert report["stats"]["outsider_attempts"] == trace.signals.outsider_threads
+    assert report["stats"]["outsider_attempts"] == trace.signals.outsider_judgeable
     assert report["summary"] is None and report["cost"] is None
     assert report["bottom_line"] is None  # the verdict block already says it
     assert report["landing"], "nixpkgs has well-known landing areas"
