@@ -5,18 +5,9 @@
 import Link from "next/link";
 import { useState } from "react";
 import { EXAMPLE_PATH } from "@/lib/example-report";
-import { shortDate } from "@/lib/format";
+import { creditsNote } from "@/lib/format";
 import type { Credits, Mode } from "@/lib/types";
 import { AnalysisRunner } from "./analysis-runner";
-
-/** "N free AI reports left", and what to do when there are none. */
-function creditsNote(c: Credits): string {
-  if (!c.ai_available) return "AI reports aren't switched on yet. Your free ones will be waiting when they are.";
-  const left = `${c.balance} free AI report${c.balance === 1 ? "" : "s"} left.`;
-  if (c.balance > 0) return `${left} Writing this one uses 1; a report that fails doesn't count.`;
-  if (c.can_claim) return `${left} You can claim 1 more in your settings now.`;
-  return `${left} You can claim 1 more${c.next_claim_at ? ` on ${shortDate(c.next_claim_at)}` : " each week"}.`;
-}
 
 /** What the AI report adds, in the order it appears. Only what it actually delivers. */
 const WHAT_YOU_GET = [

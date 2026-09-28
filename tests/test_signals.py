@@ -302,3 +302,85 @@ def test_automation_is_never_on_the_team():
                rec("pr:a/b#1:merged", 2, "sam",
                    {"merged_by": "pytorchmergebot", "merged_by_is_bot": False})]
     assert people.maintainers(records) == frozenset()
+
+
+# Where a bot lands every pull request (pytorch, react-native), nobody merges
+# one on GitHub; the people who told the bot to, or approved what it landed, are
+# the team.
+
+
+def bot_landed(n, offset_h, author, bot="pytorchmergebot"):
+    return rec(f"pr:a/b#{n}:closed", offset_h, author,
+               {"closed_by": bot, "closed_by_is_bot": True, "merged": False,
+                "closer": {"kind": "commit", "oid": "0123456789abcdef"}})
+
+
+def closed_unlanded(n, offset_h, author):
+    return rec(f"pr:a/b#{n}:closed", offset_h, author,
+               {"closed_by": author, "closed_by_is_bot": False, "merged": False})
+
+
+def comment(n, i, offset_h, author, body, association="CONTRIBUTOR", bot=False):
+    return rec(f"pr:a/b#{n}:comment:{i}", offset_h, author,
+               {"author_association": association, "author_is_bot": bot, "body": body})
+
+
+def test_telling_the_merge_bot_to_land_someone_elses_pull_request_is_team_work():
+    records = [opened(1, 0, "newcomer", "CONTRIBUTOR"),
+               comment(1, 0, 2, "staffer", "Looks good.\n@pytorchbot merge -i"),
+               bot_landed(1, 3, "newcomer"),
+               opened(2, 0, "staffer", "CONTRIBUTOR")]
+    assert people.maintainers(records) == {"staffer"}
+    assert "pr:a/b#2" not in keys(outsider_threads(build_threads(records)))
+
+
+def test_merge_commands_that_prove_nothing_do_not_make_anyone_team():
+    records = [
+        # pytorch's bot takes "merge" from the author once a maintainer approved.
+        opened(1, 0, "author", "CONTRIBUTOR"),
+        comment(1, 0, 1, "author", "@pytorchbot merge"),
+        bot_landed(1, 2, "author"),
+        # A command on a pull request that never landed.
+        opened(2, 0, "p2", "CONTRIBUTOR"),
+        comment(2, 0, 1, "hopeful", "@pytorchbot merge"),
+        closed_unlanded(2, 2, "p2"),
+        # A bystander with no history here, and a request made to a person.
+        opened(3, 0, "p3", "CONTRIBUTOR"),
+        comment(3, 0, 1, "passerby", "@pytorchbot merge", association="NONE"),
+        comment(3, 1, 1, "asker", "@alice merge this please?"),
+        comment(3, 2, 1, "quoter", "I think someone should write @pytorchbot merge"),
+        bot_landed(3, 2, "p3"),
+    ]
+    assert people.maintainers(records) == frozenset()
+
+
+def test_approving_a_pull_request_the_bot_then_landed_is_team_work():
+    records = [
+        opened(1, 0, "p1", "CONTRIBUTOR"),
+        review(1, 0, 1, "approver", "APPROVED"),
+        review(1, 1, 1, "commenter", "COMMENTED"),
+        review(1, 2, 1, "stranger", "APPROVED", association="NONE"),
+        bot_landed(1, 2, "p1", bot="meta-codesync"),
+        opened(2, 0, "p2", "CONTRIBUTOR"),
+        review(2, 0, 1, "hopeful", "APPROVED"),
+        closed_unlanded(2, 2, "p2"),
+    ]
+    assert people.maintainers(records) == {"approver"}
+
+
+def test_the_person_a_sync_bot_names_is_team():
+    records = [
+        opened(1, 0, "exporter", "CONTRIBUTOR"),
+        comment(1, 0, 0, "meta-codesync",
+                "@exporter has **exported** this pull request. If you are a Meta "
+                "employee, you can view the originating Diff in D1.", "NONE", bot=True),
+        opened(2, 0, "outsider", "CONTRIBUTOR"),
+        comment(2, 0, 1, "meta-codesync",
+                "@importer has **imported** this pull request.", "NONE", bot=True),
+        comment(2, 1, 2, "meta-codesync",
+                "@lander merged this pull request in a/b@0123456789abcdef.", "NONE", bot=True),
+        # Anyone can type the sentence; only a bot's counts.
+        opened(3, 0, "faker", "CONTRIBUTOR"),
+        comment(3, 0, 1, "faker", "@faker has **exported** this pull request."),
+    ]
+    assert people.maintainers(records) == {"exporter", "importer", "lander"}
