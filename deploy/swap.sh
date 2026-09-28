@@ -29,7 +29,15 @@ SWAP_STOP_WAIT="${SWAP_STOP_WAIT:-30}"   # seconds an old container gets to fini
 SWAP_SETTLE="${SWAP_SETTLE:-3}"         # seconds both run once the new one is healthy: longer than
                                         # the edge's DNS cache (resolver valid=2s), so it knows both
 
-_swap_ids() { compose ps -a -q "$1" 2>/dev/null | sort; }
+# The service's own containers. Not one-off ones (`compose run`, such as
+# prod's warm pass, which runs the server image as a `server` container):
+# counted, they made the scale-up start two new containers and the swap fail.
+_swap_ids() {
+    local id
+    for id in $(compose ps -a -q "$1" 2>/dev/null); do
+        [[ "$(docker inspect -f '{{index .Config.Labels "com.docker.compose.oneoff"}}' "$id" 2>/dev/null)" == True ]] || echo "$id"
+    done | sort
+}
 
 _swap_state() {   # healthy | starting | unhealthy | running (no healthcheck) | exited | crashing | ...
     local out

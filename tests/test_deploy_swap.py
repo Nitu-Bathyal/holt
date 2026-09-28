@@ -105,13 +105,17 @@ case "$1" in
             *" config --hash "*) echo "web hash1" ;;
             *" up "*)
                 all="$*"; want="${all##*--scale }"; want="${want%% *}"; want="${want#*=}"
-                have=$(grep -c . "$db")
+                have=$(grep -vc " oneoff$" "$db")   # compose scales its own, not `compose run` ones
                 while (( have < want )); do
                     have=$((have + 1)); echo "new$have ${STUB_NEW_STATE:-healthy}" >> "$db"
                 done ;;
         esac ;;
     image) echo "sha256:img" ;;   # image inspect: the tag's current image
     inspect) id="${@: -1}"; state=$(grep "^$id " "$db" | cut -d' ' -f2)
+        if [[ "$*" == *oneoff* ]]; then   # a `compose run` container has state "oneoff" here
+            [[ "$state" == oneoff ]] && echo True || echo False
+            exit 0
+        fi
         if [[ "$*" == *config-hash* ]]; then   # swap.sh's "already current?" check
             [[ -n "$STUB_CURRENT" ]] && echo "hash1 sha256:img $state web:tag" || echo "hash0 sha256:old $state web:tag"
             exit 0
@@ -204,3 +208,12 @@ def test_an_unchanged_service_is_left_running(stub: Path) -> None:
     assert "unchanged, left running" in done.stdout
     calls = (stub / "calls").read_text(encoding="utf-8")
     assert "--scale" not in calls and "stop" not in calls
+
+
+def test_a_one_off_container_of_the_service_is_not_counted(stub: Path) -> None:
+    # prod's warm pass is `compose run server ...`: a container of the same
+    # service. Counted, the scale-up made two new containers and the swap failed.
+    done, left = swap(stub, "old1 healthy\nwarm oneoff\n")
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "--no-recreate --scale web=2 web" in (stub / "calls").read_text(encoding="utf-8")
+    assert sorted(left.splitlines()) == ["new2 healthy", "warm oneoff"]
