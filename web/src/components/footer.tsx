@@ -8,7 +8,7 @@ export function Footer() {
       <div className="wrap grid grid-cols-1 gap-8 sm:grid-cols-[1fr_auto]">
         <div className="space-y-2">
           <p className="flex items-center gap-2 text-muted">
-            <CatFace /> procedure over persuasion.
+            <CatFace /> check before you contribute.
           </p>
           <p className="max-w-md font-sans text-[0.8rem]">
             Holt only reads public GitHub data. It never posts, comments, or opens pull requests for you.

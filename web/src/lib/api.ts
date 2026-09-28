@@ -3,8 +3,8 @@
 import "server-only";
 import { cache } from "react";
 import type {
-  AnalysisStart, ApiError, Contributions, Credits, DiscoverOut, DiscoverSort, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection, HistoryItem, JobStatus, Me, Mode, ProfileOut, ProfilePrefs,
-  Report, Result, StarterIssue,
+  AnalysisStart, ApiError, Checkout, Contributions, Credits, DiscoverOut, DiscoverSort, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection,
+  HistoryItem, JobStatus, Me, Mode, Order, OrderConfirmed, Packs, ProfileOut, ProfilePrefs, RazorpaySuccess, Report, Result, StarterIssue,
 } from "./types";
 import type { FeedbackInput } from "./feedback";
 import { isJobId } from "./ids";
@@ -257,5 +257,52 @@ export async function badge(owner: string, repo: string): Promise<Response> {
     });
   } catch {
     return mock.badge("");
+  }
+}
+
+// Credit packs (API.md, "Credit packs"). Off unless the server says
+// `on_sale`; the server takes the price from its own catalogue, never from here.
+export function packs(): Promise<Result<Packs>> {
+  if (MOCK) return mock.packs();
+  return call("/v1/packs");
+}
+
+export function createOrder(userId: string, pack: string): Promise<Result<Checkout>> {
+  if (MOCK) return mock.createOrder();
+  return call("/v1/me/orders", { method: "POST", body: JSON.stringify({ pack }), caller: { userId } });
+}
+
+export function confirmOrder(userId: string, paid: RazorpaySuccess): Promise<Result<OrderConfirmed>> {
+  if (MOCK) return mock.createOrder();
+  const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = paid;
+  return call("/v1/me/orders/confirm", {
+    method: "POST",
+    body: JSON.stringify({ razorpay_order_id, razorpay_payment_id, razorpay_signature }),
+    caller: { userId },
+  });
+}
+
+export function orders(userId: string, limit = 50): Promise<Result<{ orders: Order[] }>> {
+  if (MOCK) return Promise.resolve({ ok: true, data: { orders: [] } });
+  return call(`/v1/me/orders?limit=${limit}`, { caller: { userId } });
+}
+
+/**
+ * Razorpay's webhook, passed to the server byte for byte: the server checks
+ * the signature over the exact body. Returns the upstream status and body.
+ */
+export async function forwardRazorpayWebhook(body: ArrayBuffer, signature: string): Promise<{ status: number; body: unknown }> {
+  if (MOCK) return { status: 404, body: { error: { code: "payments_off", message: "Payments are off." } } };
+  try {
+    const res = await fetch(`${BASE}/v1/payments/razorpay/webhook`, {
+      method: "POST",
+      body,
+      headers: { ...headers(), "Content-Type": "application/json", "X-Razorpay-Signature": signature },
+      cache: "no-store",
+      signal: AbortSignal.timeout(20_000),
+    });
+    return { status: res.status, body: await res.json().catch(() => null) };
+  } catch {
+    return { status: 502, body: { error: UNREACHABLE } };
   }
 }

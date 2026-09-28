@@ -62,6 +62,9 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `HOLT_SIGNUP_AI_CREDITS` | `3` | Free AI reports every signed-in user gets once, on their first visit. |
 | `HOLT_CLAIM_EVERY_DAYS` | `7` | After that, one more can be claimed each time this many days have passed since the last claim (or the welcome grant). |
 | `HOLT_PRICING_FILE` | the catalogue shipped in the package (`holt_server/pricing.json`) | Features, plans and credit packs, with prices (TBD) in INR and USD. See [Credits and plans](#credits-and-plans). A file that doesn't parse stops startup. |
+| `HOLT_PAYMENTS_ENABLED` | `0` | `1` switches the credit-pack checkout on (it also needs the Razorpay keys and a pack on sale). See [Credit-pack checkout](#credit-pack-checkout). |
+| `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | *(empty)* | Razorpay API keys (`rzp_test_…` for test mode). Empty: no checkout. |
+| `RAZORPAY_WEBHOOK_SECRET` | *(empty)* | The secret set on the webhook in the Razorpay dashboard. Empty: webhooks are refused. |
 | `HOLT_ADMIN_USERS` | *(empty)* | Comma-separated user ids that may read `/v1/admin/*`. Empty means nobody. |
 | `HOLT_ANON_RATE_PER_HOUR` | `10` | Work bucket: new analyses and find per hour per IP for anonymous callers (`X-Holt-Client-Ip`). Cached answers are free. |
 | `HOLT_USER_RATE_PER_HOUR` | `60` | The same, per signed-in user. |
@@ -110,8 +113,8 @@ up. The website doesn't take users' own API keys (the CLI does).
 
 ## Credits and plans
 
-Payments are off; nothing here takes money. This is the model the payment
-code (Razorpay, later) plugs into.
+Payments are off; nothing is on sale. This is the model the payment code
+([Credit-pack checkout](#credit-pack-checkout)) plugs into.
 
 **Catalogue.** `holt_server/pricing.json` (or `HOLT_PRICING_FILE`) lists the
 paid features and what one use costs in credits (`free_credits`: whether free
@@ -157,6 +160,36 @@ python -m holt_server.credits plan set --user <id> --plan free --reason "ended"
 `--pool free` (the default) gifts free credits; `--pool purchased` adds a lot
 that pays for purchased-only features too. `take` never goes below zero.
 Reading is `/v1/admin/*` (API.md), for users in `HOLT_ADMIN_USERS`.
+
+## Credit-pack checkout
+
+`holt_server/payments.py`: Razorpay, INR, one-time payments for the packs in
+the catalogue. **Off by default**: it needs `HOLT_PAYMENTS_ENABLED=1`, the
+Razorpay keys, and a pack with `on_sale: true` and an `inr_paise` price. The
+flow and the endpoints are in API.md ("Credit packs"); the short version:
+
+- An order (`orders` table) copies the pack, credits and price from the
+  catalogue when it is created; the browser only names the pack.
+- Credits are added only for a payment Razorpay vouches for: the Checkout
+  callback's signature (then the payment is fetched from Razorpay), or a
+  webhook's signature. The payment must be captured and match the order's
+  amount and currency; a mismatch puts the order on `held`, credits nothing
+  and logs an error.
+- `orders.status` goes `created` → `paid` once, in the same transaction that
+  adds the `credit_lots` row (its `reference` is the payment id, unique), so
+  the callback, the webhooks and their retries credit a pack exactly once.
+
+Webhook: in the Razorpay dashboard, point a webhook at
+`https://<site>/api/payments/razorpay/webhook` (served by `web/`, which
+forwards it here) for `payment.authorized`, `payment.captured`,
+`payment.failed` and `order.paid`, and put its secret in
+`RAZORPAY_WEBHOOK_SECRET`.
+
+Trying it locally in test mode: use `rzp_test_` keys, a pricing file with a
+pack on sale (copy `pricing.json`, set `on_sale: true` and a price, point
+`HOLT_PRICING_FILE` at it) and `HOLT_PAYMENTS_ENABLED=1`. Razorpay can't reach
+a local webhook, so the callback does the crediting; test the webhook on
+staging.
 
 Per process (fine for one server; revisit with more): rate-limit counters,
 the badge lane's concurrency count and the repo-name cache are in memory. SSE

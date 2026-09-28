@@ -13,6 +13,9 @@ export interface Report {
   headline: string;
   /** Missing from responses cached before the server sent it. */
   tone?: Tone;
+  /** A short count for the chip ("15 of 100 outside PRs merged"); null when
+   * nobody outside tried. Missing from responses cached before it existed. */
+  stat_line?: string | null;
   stats?: {
     outsider_attempts?: number;
     outsider_merged?: number;

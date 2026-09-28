@@ -14,11 +14,12 @@ from collections.abc import Iterable
 from datetime import UTC, datetime
 from typing import Any
 
+from holt.agent import asks as asks_mod
 from holt.agent import landing as landing_mod
 from holt.agent import rates
 from holt.agent.landing_detection import VIA
 from holt.agent.pipeline import MODEL_NOTE_LABEL
-from holt.agent.signals import Signals, Thread, build_threads, outsider_threads
+from holt.agent.signals import Signals, Thread, Threads, build_threads, outsider_threads
 from holt.agent.verdict import rule_codes
 from holt.report import Assessment
 from holt.types import EvidenceRecord
@@ -161,6 +162,35 @@ def stats(signals: Signals) -> dict[str, Any]:
     }
 
 
+def decided_only(threads: Threads, as_of: datetime | None,
+                 settle_hours: float) -> Threads:
+    """The threads without the outside pull requests the counts leave out
+    (still open, drafts, spam), so where work landed is counted over the same
+    pull requests as the stats and the numbers line above it."""
+    outsiders = outsider_threads(threads)
+    keep = {t.key for t in rates.split(outsiders, as_of, settle_hours).decided}
+    drop = {t.key for t in outsiders} - keep
+    out = Threads({k: t for k, t in threads.items() if k not in drop})
+    out.team = threads.team
+    return out
+
+
+def sample(threads: dict[str, Thread]) -> dict[str, Any]:
+    """What the counts were read from, and who was left out before counting."""
+    opened = [t.opened_at for t in threads.values()]
+    outsiders = {t.key for t in outsider_threads(threads)}
+    bots = [t for t in threads.values() if t.author_is_bot]
+    team = [t for t in threads.values() if not t.author_is_bot and t.key not in outsiders]
+    return {
+        "pull_requests": len(threads),
+        "first_opened": iso(min(opened)) if opened else None,
+        "last_opened": iso(max(opened)) if opened else None,
+        "team_pull_requests": len(team),
+        "team_people": len({t.author for t in team}),
+        "bot_pull_requests": len(bots),
+    }
+
+
 def build(
     *,
     repo: str,
@@ -173,7 +203,8 @@ def build(
 ) -> dict[str, Any]:
     by_id = {r.evidence_id: r for r in records}
     threads = build_threads(by_id.values())
-    where = landing_mod.compute(threads)
+    as_of = assessment.as_of or generated_at or datetime.now(UTC)
+    where = landing_mod.compute(decided_only(threads, as_of, signals.settle_hours))
 
     evidence = []
     for claim in assessment.claims:
@@ -181,9 +212,7 @@ def build(
         if item is not None:
             evidence.append(item)
     if mode == "rules":
-        evidence += counted_examples(threads, by_id,
-                                     assessment.as_of or generated_at or datetime.now(UTC),
-                                     signals.settle_hours)
+        evidence += counted_examples(threads, by_id, as_of, signals.settle_hours)
 
     unknowns: list[str] = []
     if mode == "ai":
@@ -220,4 +249,7 @@ def build(
         "evidence_until": iso(assessment.as_of),
         "generated_at": iso(generated_at or datetime.now(UTC)),
         "cost": cost if mode == "ai" else None,
+        "sample": sample(threads),
+        "asks": [{"code": a.code, "url": a.url} for a in asks_mod.read(
+            by_id.values(), {t.key for t in outsider_threads(threads)})],
     }).model_dump(mode="json")
