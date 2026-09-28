@@ -21,7 +21,7 @@ npm run dev -- -p $PORT
 
 - **Mock API** (`MOCK_API=1`): realistic fixtures that follow API.md, including
   queued jobs that stream stages over SSE. `home-assistant/core`, `pallets/flask`,
-  `NixOS/nixpkgs`, `psf/requests` and `pytorch/pytorch` are "cached" and load
+  `NixOS/nixpkgs`, `psf/requests`, `pytorch/pytorch` and `vercel/next.js` are "cached" and load
   instantly, with the verdicts the real engine gave them (docs/DEV-WORKFLOW.md); any
   other repo runs a fake analysis (about 6 s, `MOCK_JOB_MS`). Repos named
   `*/private*` or `doesnotexist/*` return `not_found`. Keep it for demos.
@@ -36,7 +36,8 @@ npm run dev -- -p $PORT
 | Path | What |
 |---|---|
 | `/` | Landing: paste box, find CTA, Hacktoberfest banner, URL trick |
-| `/{owner}/{repo}` | Report. Starts a rules analysis if nothing is cached and streams progress. `?mode=ai` for the AI report, `?days=` for the time budget |
+| `/{owner}/{repo}` | Report. Signed in: starts a rules analysis if nothing is cached and streams progress. `?mode=ai` for the AI report, `?days=` for the time budget. Signed out: the curated examples in full, any other repo as a teaser (verdict and reason, then sign-in), and never a new analysis (`src/lib/gate.ts`) |
+| `/examples` | The curated example reports anyone can read without signing in (`src/lib/examples.ts`), plus the example AI report |
 | `/github.com/o/r`, `/https://github.com/o/r`, `/o/r/pulls`… | Redirect to `/o/r` (`src/proxy.ts`) |
 | `/{owner}/{repo}/opengraph-image` | Per-repo share image |
 | `/find` | Beginner flow: languages, time, Hacktoberfest → welcoming repos + starter issues |
@@ -47,7 +48,7 @@ npm run dev -- -p $PORT
 | `/me/contributions` | My Contributions: a connected user's public pull requests with Holt's verdict per repo, "found via Holt", refresh with a 15-minute cooldown |
 | `/terms`, `/privacy`, `/refunds`, `/contact` | Policy pages the payment processors require. Static; contact details come from `NEXT_PUBLIC_CONTACT_EMAIL` / `NEXT_PUBLIC_CONTACT_CITY` (`src/lib/site.ts`), and `LEGAL_UPDATED` there is the "Last updated" date |
 | `/badge/{owner}/{repo}.svg` | README badge (proxied from the API) |
-| `/api/*` | BFF route handlers: start analysis, SSE proxy, starter issues, find events |
+| `/api/*` | BFF route handlers: start analysis, SSE proxy, starter issues, find events. Starting an analysis or a find needs a signed-in user (401 `unauthorized` otherwise); `/api/public/*` (the extension's) stays open |
 
 ## Production
 

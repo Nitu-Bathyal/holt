@@ -7,7 +7,7 @@ import { PageHead } from "@/components/page-head";
 import { ProfileOnboarding } from "@/components/profile-onboarding";
 import { getProfile, savedNames } from "@/lib/api";
 import { cachedFind } from "@/lib/find-cached";
-import { findQuery, PICKS_COOKIE, resolvePicks } from "@/lib/find-picks";
+import { defaultPicks, findQuery, PICKS_COOKIE, resolvePicks } from "@/lib/find-picks";
 import { caller, currentUser } from "@/lib/session";
 import { hacktoberfestSwitch } from "@/lib/site";
 
@@ -27,7 +27,10 @@ export default async function FindPage({ searchParams }: PageProps<"/find">) {
   // An explicit choice (URL, last picks) wins; otherwise the switch starts on only in October.
   const hf = hacktoberfestSwitch();
   const { picks, source } = resolvePicks({ params: sp, cookie: jar.get(PICKS_COOKIE)?.value, profile, hfWindow: Boolean(hf), hfOn: hf?.on ?? false });
-  const result = await cachedFind(findQuery(picks), await caller(user));
+  // Signed out, the page shows the default search, which every visitor shares
+  // (so it's almost always cached); other picks ask for sign-in (FindView).
+  const searched = user ? picks : { ...defaultPicks(hf?.on ?? false), level: picks.level, types: picks.types };
+  const result = await cachedFind(findQuery(searched), await caller(user));
 
   return (
     <PageTransition>
@@ -44,7 +47,7 @@ export default async function FindPage({ searchParams }: PageProps<"/find">) {
           )}
         </PageHead>
         <div className="wrap py-5 sm:py-6">
-          <FindView initialPicks={picks} initial={result} source={source} hf={hf} saved={saved} />
+          <FindView initialPicks={picks} searched={searched} initial={result} source={source} hf={hf} saved={saved} signedIn={Boolean(user)} />
           <ProfileOnboarding back="/find" className="mt-10" />
         </div>
       </>

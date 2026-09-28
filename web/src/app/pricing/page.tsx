@@ -22,7 +22,7 @@ const PLANS = [
     price: "$0",
     tag: "forever",
     body: "Everything you need to pick a project.",
-    items: ["Unlimited rules reports", "Starter issues and evidence", "Find, compare, badges and share images"],
+    items: ["Unlimited rules reports with a free account", "Starter issues and evidence", "Find, compare, badges and share images"],
     cta: { href: "/", label: "check a repo" },
     accent: "border-line-strong",
   },

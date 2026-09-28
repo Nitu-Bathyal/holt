@@ -50,8 +50,10 @@ async function AiReportsCta() {
   );
 }
 
-export default function Home() {
+export default async function Home() {
   const hf = hacktoberfest();
+  // Signed out, the paste boxes go through sign-in (see lib/gate.ts).
+  const signedIn = Boolean(await currentUser());
   return (
     <PageTransition>
       <>
@@ -76,7 +78,7 @@ export default function Home() {
                 did anything get merged?
               </p>
               <div className="fade-up max-w-[760px]" style={{ ["--d" as string]: ".38s" }}>
-                <PasteBox />
+                <PasteBox signedIn={signedIn} />
               </div>
               <div className="fade-up mt-2 flex flex-wrap items-center gap-x-4 gap-y-2 sm:mt-4 sm:gap-x-5" style={{ ["--d" as string]: ".42s" }}>
                 <span className="font-sans text-[0.95rem] text-muted">No repo in mind?</span>
@@ -266,7 +268,7 @@ export default function Home() {
                 Paste it. You&apos;ll know before you write a line of code.
               </p>
               <div className="max-w-[760px]" data-reveal>
-                <PasteBox id="repo-input-end" label="Repo to check" examples={false} />
+                <PasteBox id="repo-input-end" label="Repo to check" examples={false} signedIn={signedIn} />
               </div>
               <p className="mt-5 font-sans text-[0.95rem] text-muted" data-reveal>
                 No repo yet?{" "}

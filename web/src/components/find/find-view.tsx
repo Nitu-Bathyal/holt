@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/analytics";
 import { defaultPicks, PICKS_COOKIE, picksQuery, searchKey, widen, type Picks, type PicksSource } from "@/lib/find-picks";
+import { signInHref } from "@/lib/gate";
 import { personalise } from "@/lib/profile";
 import type { FindResult, FindStart, Result } from "@/lib/types";
 import { CatFace } from "../cat-face";
@@ -22,17 +23,28 @@ type Shown = { key: string; result: Result<FindStart> };
  * /find after the first paint: the filters apply as they're tapped. Experience
  * and work type only reorder what's already here; languages, time, topics and
  * the Hacktoberfest switch start a new (cached) search once the taps settle.
+ * Signed out, `initial` is the shared default search (`searched`), and any
+ * other search asks for sign-in instead of running.
  */
-export function FindView({ initialPicks, initial, source, hf, saved }: { initialPicks: Picks; initial: Result<FindStart>; source: PicksSource; hf: { note: string; on: boolean } | null; saved: string[] | null }) {
+export function FindView({ initialPicks, searched = initialPicks, initial, source, hf, saved, signedIn = true }: {
+  initialPicks: Picks;
+  /** The picks `initial` was searched with, when not `initialPicks`. */
+  searched?: Picks;
+  initial: Result<FindStart>;
+  source: PicksSource;
+  hf: { note: string; on: boolean } | null;
+  saved: string[] | null;
+  signedIn?: boolean;
+}) {
   const [picks, setPicks] = useState(initialPicks);
-  const [shown, setShown] = useState<Shown>({ key: searchKey(initialPicks), result: initial });
+  const [shown, setShown] = useState<Shown>({ key: searchKey(searched), result: initial });
   const [retry, setRetry] = useState(0);
   // A new server render (a link to /find with other picks) starts over from it.
   const [from, setFrom] = useState({ initialPicks, initial });
   if (from.initialPicks !== initialPicks || from.initial !== initial) {
     setFrom({ initialPicks, initial });
     setPicks(initialPicks);
-    setShown({ key: searchKey(initialPicks), result: initial });
+    setShown({ key: searchKey(searched), result: initial });
   }
 
   const key = searchKey(picks);
@@ -57,7 +69,7 @@ export function FindView({ initialPicks, initial, source, hf, saved }: { initial
   }, [q, source]);
 
   useEffect(() => {
-    if (!pending) return;
+    if (!pending || !signedIn) return;
     const ctl = new AbortController();
     const t = setTimeout(async () => {
       track("find-run");
@@ -77,7 +89,7 @@ export function FindView({ initialPicks, initial, source, hf, saved }: { initial
       ctl.abort();
     };
     // `retry` re-runs a failed search with the same picks.
-  }, [pending, key, q, retry]);
+  }, [pending, key, q, retry, signedIn]);
 
   const retryNow = () => {
     setShown((s) => ({ ...s, key: "" }));
@@ -90,7 +102,7 @@ export function FindView({ initialPicks, initial, source, hf, saved }: { initial
   return (
     <>
       <FindFilters picks={picks} onChange={setPicks} hf={hf} />
-      <Results shown={shown} pending={pending} fit={fit} days={picks.days} saved={saved} picks={picks} setPicks={setPicks} onRetry={retryNow}>
+      <Results shown={shown} pending={pending} locked={pending && !signedIn ? `/find?${q}` : null} fit={fit} days={picks.days} saved={saved} picks={picks} setPicks={setPicks} onRetry={retryNow}>
         {source === "profile" && untouched && (
           <span>
             Started from your profile. <Link href="/settings/profile" className="text-link">edit it</Link>
@@ -107,9 +119,11 @@ export function FindView({ initialPicks, initial, source, hf, saved }: { initial
   );
 }
 
-function Results({ shown, pending, fit, days, saved, picks, setPicks, onRetry, children }: {
+function Results({ shown, pending, locked, fit, days, saved, picks, setPicks, onRetry, children }: {
   shown: Shown;
   pending: boolean;
+  /** Signed out and the picks changed: where to come back to after signing in. */
+  locked: string | null;
   fit: { level: Picks["level"]; contributions: Picks["types"] };
   days: number;
   saved: string[] | null;
@@ -126,7 +140,9 @@ function Results({ shown, pending, fit, days, saved, picks, setPicks, onRetry, c
 
   let body: React.ReactNode;
   let status = "";
-  if (error) {
+  if (locked) {
+    body = <SignInToSearch back={locked} />;
+  } else if (error) {
     body = <ErrorPanel error={error} onRetry={onRetry} />;
   } else if (!raw) {
     const pct = Math.round(Math.min(1, Math.max(0.05, job.stage.progress)) * 100);
@@ -150,10 +166,10 @@ function Results({ shown, pending, fit, days, saved, picks, setPicks, onRetry, c
   }
 
   return (
-    <section aria-label="Results" aria-busy={pending || (!raw && !error)} className="mt-5">
+    <section aria-label="Results" aria-busy={!locked && (pending || (!raw && !error))} className="mt-5">
       <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-[0.87rem] text-faint">
         <p aria-live="polite" className="flex items-center gap-x-2">
-          {pending ? (
+          {pending && !locked ? (
             <>
               <span aria-hidden="true" className="inline-block size-2 animate-pulse rounded-full bg-blue" />
               Updating…
@@ -164,8 +180,23 @@ function Results({ shown, pending, fit, days, saved, picks, setPicks, onRetry, c
         </p>
         <p className="flex flex-wrap items-baseline gap-x-4">{children}</p>
       </div>
-      <div className={`transition-opacity duration-200 ${pending ? "pointer-events-none opacity-40" : ""}`}>{body}</div>
+      <div className={`transition-opacity duration-200 ${pending && !locked ? "pointer-events-none opacity-40" : ""}`}>{body}</div>
     </section>
+  );
+}
+
+function SignInToSearch({ back }: { back: string }) {
+  return (
+    <div className="border border-dashed border-line-strong p-6 text-center sm:p-8" data-signin-card>
+      <CatFace mood="ready" className="text-[1.6rem]" />
+      <p className="mt-4 text-[1.1rem] font-semibold">Sign in to search with these filters.</p>
+      <p className="mx-auto mt-2 max-w-md font-sans text-muted">
+        It&apos;s free: one click with GitHub or Google, and you come straight back to this search.
+      </p>
+      <Link href={signInHref(back)} prefetch={false} className="btn-primary mt-5">
+        sign in to search <span aria-hidden="true">→</span>
+      </Link>
+    </div>
   );
 }
 

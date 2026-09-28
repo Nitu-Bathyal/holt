@@ -947,7 +947,10 @@ Proxies `GET /v1/reports/{owner}/{repo}?mode=rules&days=7`.
   links to the report page, which re-runs it.
 - `404` → `{"error": {"code": "not_found", ...}}` when nothing is cached yet
   (or the repo is missing/private). The extension then shows "Check with Holt"
-  and links to `/{owner}/{repo}`, whose page starts the analysis.
+  and links to `/{owner}/{repo}`, whose page starts the analysis for a
+  signed-in visitor and asks anyone else to sign in first (then starts it).
+  Signed out, that page shows a cached report as a teaser (verdict and reason)
+  unless it is one of the curated examples; these proxies are unaffected.
 - `429` `rate_limited` / `5xx` → shown as "Check with Holt" too.
 
 ### `GET /api/public/starter-issues/{owner}/{repo}`

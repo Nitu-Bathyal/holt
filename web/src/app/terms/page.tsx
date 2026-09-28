@@ -40,8 +40,8 @@ export default function TermsPage() {
 
       <h2>3. Your account</h2>
       <p>
-        You can use most of Holt without an account. Signing in with GitHub or Google gives you free AI reports
-        and a report history.
+        You can browse Holt and read its example reports without an account. Checking a repo needs a free
+        account. Signing in with GitHub or Google also gives you free AI reports and a report history.
       </p>
       <ul>
         <li>You must be at least 13 years old to use Holt, and at least 18 (or have a parent or guardian&rsquo;s permission) to buy anything.</li>
