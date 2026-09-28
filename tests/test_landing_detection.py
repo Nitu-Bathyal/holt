@@ -249,7 +249,8 @@ def test_a_flagged_mirror_is_decisive_in_rules_mode():
     assessment, _ = analyze_without_model(
         "v8/v8", golden.RecordingProvider("v8/v8"), as_of=cutoff)
     assert assessment.verdict == Verdict.NOT_VIABLE
-    assert rule_codes(assessment.rules) == ["elsewhere"]
+    # The dates the sample covers come first, as on every live report.
+    assert rule_codes(assessment.rules) == ["sample_period", "elsewhere"]
     assert assessment.bottom_line.startswith("Not worth your time. GitHub marks")
     assert any(c.evidence_id == "repo:v8/v8:meta" for c in assessment.claims)
 

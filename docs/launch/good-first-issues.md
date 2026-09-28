@@ -186,13 +186,15 @@ still shows it in a clone. Add a test that monkeypatches
 **Labels:** good first issue, area:docs
 **Files:** `docs/USAGE.md` ("Reading the answer")
 
-Since 0.2.0, a pull request opened in the last 48 hours with no reply is not
-counted as ignored, so a repository is not punished for a PR opened this
-morning. Reports say "N are too new to have had a reply", but docs/USAGE.md never
-explains it, so a reader has to guess what that means for the answer. Add two
-or three plain sentences under "Reading the answer". The rule is
-`awaiting_reply` in `src/holt/agent/signals.py`; the report sentence is in
-`src/holt/agent/pipeline.py`.
+A pull request that is still open and less than 14 days old is not counted in
+any rate, so a busy repository is not judged on PRs opened this morning. A PR
+closed without a reply is not counted as ignored either (it is usually a
+maintainer clearing out spam), and drafts and PRs labelled as spam or invalid
+are not counted at all. Reports say so in a line each, but docs/USAGE.md never
+explains them, so a reader has to guess what that means for the answer. Add a
+few plain sentences under "Reading the answer". The rules are in
+`src/holt/agent/rates.py`.
 
-**Done when:** docs/USAGE.md explains the 48-hour rule in plain English, with no
-internal names, and says it applies to live runs.
+**Done when:** docs/USAGE.md explains the 14-day window, silent closes and
+what is left out, in plain English with no internal names, and says the window
+applies to live runs.

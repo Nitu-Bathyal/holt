@@ -3,6 +3,7 @@ import Link from "next/link";
 import { packs } from "@/lib/api";
 import { creditsLabel, expiryLine, formatPrice, packToBuy } from "@/lib/payments";
 import { currentUser } from "@/lib/session";
+import { EXAMPLE_PATH } from "@/lib/example-report";
 import { CLAIM_EVERY_DAYS, WELCOME_AI_CREDITS } from "@/lib/site";
 import { BuyPack } from "@/components/buy-pack";
 import { PageHead } from "@/components/page-head";
@@ -36,6 +37,7 @@ const PLANS = [
       "Your report history",
     ],
     cta: { href: "/signin", label: "sign in" },
+    example: true,
     accent: "border-blue",
     featured: true,
   },
@@ -80,6 +82,11 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
                 ))}
               </ul>
               <Link href={p.cta.href} className="btn-ghost mt-6 w-full">{p.cta.label} →</Link>
+              {p.example && (
+                <Link href={EXAMPLE_PATH} className="text-link mt-3 text-center font-sans text-[0.88rem]" data-example-link>
+                  or read an example AI report first
+                </Link>
+              )}
             </li>
           ))}
         </ul>
