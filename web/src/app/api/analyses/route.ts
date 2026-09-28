@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { startAnalysis } from "@/lib/api";
+import { startGate } from "@/lib/gate";
 import { parseRepoInput } from "@/lib/repo";
 import { caller } from "@/lib/session";
 
@@ -18,6 +19,9 @@ export async function POST(req: NextRequest) {
   if (mode === "ai" && !who.userId) {
     return NextResponse.json({ error: { code: "unauthorized", message: "Sign in to get an AI report." } }, { status: 401 });
   }
+  // Checks are for signed-in people; the report page shows everyone else a teaser.
+  const refused = startGate(who.userId);
+  if (refused) return NextResponse.json({ error: refused.error }, { status: refused.status });
   // The model is server configuration: nothing from the browser picks it.
   const r = await startAnalysis(`${ref.owner}/${ref.repo}`, mode, days, Boolean(body?.refresh), who);
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });

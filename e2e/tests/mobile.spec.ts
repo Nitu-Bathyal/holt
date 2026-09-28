@@ -5,6 +5,8 @@ const PAGES = [
   "/",
   "/pallets/flask",
   "/pallets/flask?mode=ai",
+  "/psf/requests", // signed out: the teaser (not one of the examples)
+  "/examples",
   "/find?go=1&lang=python",
   "/hacktoberfest",
   "/compare?repos=pallets/flask,psf/requests",

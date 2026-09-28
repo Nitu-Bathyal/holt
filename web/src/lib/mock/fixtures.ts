@@ -244,6 +244,31 @@ const SEEDS: Seed[] = [
       "Only 2 of 183 outside pull requests were merged in the period Holt read, and most were closed without a word. Spend your time somewhere else for now.",
   },
   {
+    repo: "vercel/next.js",
+    verdict: "insufficient_evidence",
+    description: "The React Framework",
+    language: "JavaScript",
+    stars: 133000,
+    hacktoberfest: false,
+    stats: {
+      outsider_attempts: 30, outsider_merged: 1, distinct_outsiders: 26,
+      first_time_merged_authors: 1, no_reply: 23, median_first_response_hours: 24.3, bot_share: 0.04, still_open: 34, closed_silently: 2
+    },
+    decided_by: [
+      "34 pull requests from outside contributors were opened in the last 14 days, too recently to know how they will end, so they aren't counted yet.",
+      "Only 1 pull request from an outside contributor got merged in the period we looked at, too few to show a pattern.",
+    ],
+    unknowns: [],
+    landing: [{ path: "packages/next", merged: 1, attempted: 17, is_file: false }],
+    never_landed: [{ path: "test/e2e", attempted: 10, is_file: false }],
+    evidence: [
+      ["no_reply", 84210, "An outside bug fix in packages/next got no reply.", null],
+      ["merged", 84102, "One outside change was merged.", null],
+    ],
+    issues: [],
+    summary: "Lots of outside pull requests, but too few finished recently to say how yours would go.",
+  },
+  {
     repo: "canonical/ubuntu-cloud-docs",
     verdict: "viable",
     description: "Documentation for Ubuntu on public clouds.",
@@ -499,7 +524,7 @@ export function mockIssues(repo: string): StarterIssue[] {
 }
 
 /** Repos preloaded in the mock cache, so their pages render instantly. */
-export const PRECACHED = ["home-assistant/core", "pallets/flask", "NixOS/nixpkgs", "psf/requests", "pytorch/pytorch"];
+export const PRECACHED = ["home-assistant/core", "pallets/flask", "NixOS/nixpkgs", "psf/requests", "pytorch/pytorch", "vercel/next.js"];
 
 export function mockFindPool() {
   return ALL.filter((s) => s.verdict === "viable").map((s) => ({
