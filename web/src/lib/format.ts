@@ -51,9 +51,9 @@ export function daysLabel(days: number): string {
   return "a month";
 }
 
-// Tile colours. The server's "Your odds" (server/holt_server/schema.py,
-// MERGE_* and NO_REPLY_*) uses the same thresholds, so a tile and the odds
-// never pull different ways.
+// Tile colours. The server's `odds` (server/holt_server/schema.py, MERGE_*
+// and NO_REPLY_*) uses the same thresholds, so a tile and the odds never pull
+// different ways.
 export function mergeTone(mergedPct: number): Tone {
   return mergedPct >= 12 ? "good" : mergedPct >= 5 ? "warn" : "bad";
 }

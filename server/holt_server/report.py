@@ -14,6 +14,7 @@ from collections.abc import Iterable
 from datetime import UTC, datetime
 from typing import Any
 
+from holt.agent import asks as asks_mod
 from holt.agent import landing as landing_mod
 from holt.agent.landing_detection import VIA
 from holt.agent.pipeline import MODEL_NOTE_LABEL
@@ -151,6 +152,22 @@ def stats(signals: Signals) -> dict[str, Any]:
     }
 
 
+def sample(threads: dict[str, Thread]) -> dict[str, Any]:
+    """What the counts were read from, and who was left out before counting."""
+    opened = [t.opened_at for t in threads.values()]
+    outsiders = {t.key for t in outsider_threads(threads)}
+    bots = [t for t in threads.values() if t.author_is_bot]
+    team = [t for t in threads.values() if not t.author_is_bot and t.key not in outsiders]
+    return {
+        "pull_requests": len(threads),
+        "first_opened": iso(min(opened)) if opened else None,
+        "last_opened": iso(max(opened)) if opened else None,
+        "team_pull_requests": len(team),
+        "team_people": len({t.author for t in team}),
+        "bot_pull_requests": len(bots),
+    }
+
+
 def build(
     *,
     repo: str,
@@ -207,4 +224,7 @@ def build(
         "evidence_until": iso(assessment.as_of),
         "generated_at": iso(generated_at or datetime.now(UTC)),
         "cost": cost if mode == "ai" else None,
+        "sample": sample(threads),
+        "asks": [{"code": a.code, "url": a.url} for a in asks_mod.read(
+            by_id.values(), {t.key for t in outsider_threads(threads)})],
     }).model_dump(mode="json")
