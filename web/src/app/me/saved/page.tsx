@@ -2,13 +2,14 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { CatFace } from "@/components/cat-face";
-import { Board } from "@/components/discover/board";
 import { ErrorPanel } from "@/components/error-panel";
 import { PageHead } from "@/components/page-head";
 import { PageTransition } from "@/components/motion/page-transition";
+import { RepoGrid } from "@/components/repo-card/repo-grid";
 import { SaveButton } from "@/components/save-button";
 import { savedRepos } from "@/lib/api";
 import { timeAgo } from "@/lib/format";
+import { fromDiscover } from "@/lib/repo-card";
 import { currentUser } from "@/lib/session";
 import type { DiscoverRepo } from "@/lib/types";
 
@@ -45,7 +46,7 @@ export default async function SavedPage() {
           </div>
         ) : (
           <div className="space-y-10">
-            {cards.length > 0 && <Board repos={cards} sort="stars" />}
+            {cards.length > 0 && <RepoGrid repos={cards.map(fromDiscover)} topicBase="/discover" />}
             {unchecked.length > 0 && (
               <section aria-labelledby="unchecked">
                 <h2 id="unchecked" className="text-[1.05rem] font-semibold tracking-tight">Not checked recently</h2>
