@@ -4,11 +4,12 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { deleteProfile, saveProfile } from "@/lib/api";
+import { PICKS_COOKIE } from "@/lib/find-picks";
 import { findHref, fromForm, SKIP_COOKIE } from "@/lib/profile";
 import { currentUser } from "@/lib/session";
 
 // Only our own pages, so a crafted form can't send people elsewhere.
-const PAGES = ["/", "/find", "/hacktoberfest", "/settings"];
+const PAGES = ["/", "/me", "/find", "/hacktoberfest", "/settings"];
 function back(form: FormData): string {
   const v = String(form.get("back") ?? "");
   return PAGES.includes(v) ? v : "/settings";
@@ -26,6 +27,8 @@ export async function save(form: FormData) {
   const r = await saveProfile(user.id, prefs);
   if (!r.ok) redirect(withNotice(to, r.status === 400 && r.error.message.includes("18") ? "adult" : "error"));
   revalidatePath("/", "layout");
+  // A saved profile is the new starting point for /find, over the last picks there.
+  (await cookies()).delete(PICKS_COOKIE);
   // From an onboarding card, straight to results that use it.
   if (to === "/" || to === "/find") redirect(findHref(r.data.profile ?? prefs, { profile: "saved" }));
   redirect(withNotice(to, "saved"));

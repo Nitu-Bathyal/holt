@@ -56,7 +56,8 @@ signed in:
   120/h). Viewing, reloading and sharing report pages can never use up work.
 
 `GET /v1/reports/…` reads only the cache and is not rate limited.
-`POST /v1/feedback` has a small bucket of its own (see Feedback).
+`POST /v1/feedback` has a small bucket of its own (see Feedback), and so do
+saving and unsaving repos (see Saved repos).
 
 ## Repo identifiers
 
@@ -340,7 +341,7 @@ StarterIssue:
 issue is sent, so cached issues have them too. The web uses them with a
 profile (see Profile); they never change a verdict or which repos are listed.
 
-### `GET /v1/discover?sort=welcoming|stars|trending&language=python&topic=cli&limit=24`
+### `GET /v1/discover?sort=welcoming|stars|trending&language=python&topic=cli&hacktoberfest=true&limit=24`
 Browse the repositories Holt has checked, built only from each repo's latest
 7-day **rules** report (never the model) and ranking repositories, never
 people. Reads only the database: no GitHub call and no rate limit.
@@ -356,9 +357,17 @@ people. Reads only the database: no GitHub call and no rate limit.
   `trending_min` (5).
 - `language` and `topic` filter case-insensitively (`c++`, `Python`). `limit`
   1–100, default 24.
+- `hacktoberfest=true` keeps only repos tagged with the `hacktoberfest` GitHub
+  topic (how a project takes part; a Hacktoberfest find searches the same
+  topic) that aren't archived, under any sort and alongside the other filters.
+  `languages` then counts those repos only. For a "Hacktoberfest" row use
+  `?hacktoberfest=true&limit=20`: "Worth your time" repos, best first; add
+  `sort=stars` to include every verdict. Reads only the database, like the rest
+  of Discover, so it is as fast as the boards.
 
 ```jsonc
-{ "sort": "welcoming", "language": "Python", "topic": null, "trending_min": 5,
+{ "sort": "welcoming", "language": "Python", "topic": null, "hacktoberfest": false,
+  "trending_min": 5,
   "repos": [ { "repo": "owner/repo", "verdict": "viable", "headline": "Worth your time",
     "tone": "good", "reason": "…the report's verdict_line…", "stats": Stats,
     "description": "…"|null, "language": "Python"|null, "stars": 123|null,
@@ -368,13 +377,14 @@ people. Reads only the database: no GitHub call and no rate limit.
   "languages": [ { "name": "Python", "repos": 40 } ] }  // filter chips, most repos first
 ```
 
-`description`, `language`, `stars`, `topics` and `pushed_at` come from
-`repo_meta`, read from GitHub right after a repository's report is stored
-(when it has none, or they are more than a day old) and again once a day for
-every reported repository. The read after a report is best effort and happens
-a few seconds after the report is done, so they can be null or empty for a
-moment, or longer if GitHub didn't answer (the next report or the daily read
-tries again).
+`description`, `language`, `stars`, `topics` (all of them, up to GitHub's 20)
+and `pushed_at` come from `repo_meta`, read from GitHub right after a
+repository's report is stored (when it has none, or they are more than a day
+old) and again once a day for every reported repository. The read after a
+report is best effort and happens a few seconds after the report is done, so
+they can be null or empty for a moment (a repo checked for the first time
+joins the Hacktoberfest filter a few seconds after its report), or until the
+next report or daily read if GitHub didn't answer.
 
 ### `GET /badge/{owner}/{repo}.svg` (no internal key; public; `Cache-Control: public, max-age=3600, stale-while-revalidate=86400`)
 Shields-style SVG badge. Maintainers embed it in READMEs; it links back to the
@@ -687,6 +697,34 @@ also shows issues asking for help and small unlabelled fixes. Issues whose
 `areas` match `contributions` come first. The web applies `level` and
 `contributions` to find results itself, so they don't change the find search
 or its cache.
+
+### Saved repos
+
+Repositories a signed-in user saved to come back to later. Stored in
+`saved_repos`: the user, the repository and when it was saved, nothing else.
+Every route needs a signed-in user (401 `unauthorized` otherwise). Nothing
+here calls GitHub.
+
+`SavedState` = `{"repo": "owner/repo", "saved": true, "saved_at": "…"|null}`.
+`SavedList` = `{"saved": [SavedItem], "max_saved": 500}`, newest first, where
+`SavedItem` = `{"repo": "owner/repo", "saved_at": "…", "card": DiscoverRepo | null}`.
+`card` is what `/v1/discover` shows for the repo (verdict, reason, stats,
+description, language, stars, topics), read fresh from its latest 7-day rules
+report and `repo_meta`; null while Holt has no current report for it.
+
+- `GET /v1/me/saved` → `SavedList`. Not rate limited.
+- `GET /v1/me/saved/{owner}/{repo}` → `SavedState` (is this one saved?).
+- `PUT /v1/me/saved/{owner}/{repo}` (no body) → `SavedState`. Idempotent:
+  saving again keeps the first `saved_at`. The name is stored with GitHub's
+  casing when Holt already knows the repo. Bad name → 400 `invalid_repo`; a
+  new save past `max_saved` → 400 `invalid_request`.
+- `DELETE /v1/me/saved/{owner}/{repo}` → `SavedState` with `saved: false`,
+  also when it wasn't saved.
+- `DELETE /v1/me/saved` → `SavedList` with `saved: []`: removes every saved
+  repo (part of deleting a user's data).
+
+Writes (`PUT` and both `DELETE`s) have a bucket of their own, 300 an hour per
+user, apart from work and read; over it → 429 `rate_limited`.
 
 ### Playbook: "How to get merged here" (paid)
 

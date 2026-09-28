@@ -14,7 +14,7 @@ export default function NotFound() {
         <CatFace mood="startled" className="text-[2rem]" />
         <h1 className="display mt-6 text-[2.4rem]">Nothing here.</h1>
         <p className="prose-sans mt-3">
-          That page doesn&apos;t exist. If you were looking for a repository, it may be private, renamed or misspelled. Paste it below to try again.
+          Looking for a repo? It might be private, renamed or misspelled. Try it again.
         </p>
         <div className="mt-8">
           <PasteBox size="md" />

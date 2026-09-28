@@ -45,4 +45,5 @@ Start with the [README](../README.md). Everything else is here.
 | [launch/good-first-issues.md](launch/good-first-issues.md) | Issues to open for Hacktoberfest |
 | [design/MOTION.md](design/MOTION.md) | The web app's motion and loading plan |
 | [design/VOICE.md](design/VOICE.md) | How the site sounds: voice, do/don't lines, words we use and avoid |
+| [design/SIGNED-IN-HOME.md](design/SIGNED-IN-HOME.md) | Where sign-in lands and what the signed-in home (`/me`) shows |
 | [strategy/BUSINESS.md](strategy/BUSINESS.md) | Costs, pricing and the break-even plan |

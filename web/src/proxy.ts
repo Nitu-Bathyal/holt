@@ -2,6 +2,8 @@
 // paths like /o/r/pulls all land on the report page /o/r.
 // A repo that doesn't exist on GitHub gets the 404 page with a 404 status.
 import { NextResponse, type NextRequest } from "next/server";
+import { HOME_REDIRECT_CACHE, landingRedirect } from "@/lib/home";
+import { hasLiveSession } from "@/lib/live-session";
 import { isMockNotFound } from "@/lib/mock/fixtures";
 import { isValidRepo, redirectTargetForPath } from "@/lib/repo";
 import { probeGitHub, repoExistsChecker } from "@/lib/repo-exists";
@@ -16,6 +18,13 @@ const APP_ROUTES = new Set(["me", "discover", "pricing"]);
 export async function proxy(req: NextRequest) {
   const target = redirectTargetForPath(req.nextUrl.pathname, req.nextUrl.search);
   if (target) return NextResponse.redirect(new URL(target, req.url), 308);
+
+  // Signed in, "/" is your home (/me); /?landing=1 still shows the landing page.
+  // Only a request carrying a session cookie costs a database lookup.
+  if (req.nextUrl.pathname === "/") {
+    const home = landingRedirect(await hasLiveSession(req), req.nextUrl.searchParams.get("landing") ?? undefined);
+    if (home) return NextResponse.redirect(new URL(home, req.url), { status: 307, headers: { "Cache-Control": HOME_REDIRECT_CACHE } });
+  }
 
   const parts = req.nextUrl.pathname.split("/").filter(Boolean);
   if (parts.length === 2 && !APP_ROUTES.has(parts[0].toLowerCase()) && isValidRepo(parts[0], parts[1])) {

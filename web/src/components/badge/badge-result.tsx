@@ -57,16 +57,15 @@ export function BadgeResult({ report, site }: { report: Report; site: string }) 
           <Snippet label="Markdown (README.md)" code={snippets.markdown} />
           <Snippet label="HTML" code={snippets.html} />
           <p className="font-sans text-[0.85rem] text-muted">
-            The badge states facts from your recent pull requests and links newcomers to the full report. Holt checks again
-            every day while the badge is in use. If your repo stops passing, the badge turns grey and says &ldquo;see
-            report&rdquo;. It never shows a red verdict in your README.
+            The badge states facts from your recent PRs and links to the full report. Holt rechecks daily while it&apos;s in
+            use. If your repo stops passing, it turns grey and says &ldquo;see report&rdquo;. Never red.
           </p>
         </section>
       ) : (
         <section aria-labelledby="no-badge" className="panel space-y-4 p-5 sm:p-6">
           <h2 id="no-badge" className="text-[1rem] font-semibold text-ink">No badge yet</h2>
           <p className="font-sans text-[0.92rem] text-muted">
-            Holt offers the badge to repositories that are worth a newcomer&apos;s time. Here is what decided this one:
+            Badges go to repos that are worth a newcomer&apos;s time. This is what decided yours.
           </p>
           {report.decided_by.length > 0 && (
             <ul className="space-y-2 border-l-2 border-line-strong pl-4 font-sans text-[0.92rem] text-ink">
@@ -80,8 +79,7 @@ export function BadgeResult({ report, site }: { report: Report; site: string }) 
             </ul>
           </div>
           <p className="font-sans text-[0.85rem] text-faint">
-            The verdict comes from a fixed set of rules over your last few months of pull requests. Check again here once
-            things change.
+            The same written rules judge every repo, from your last few months of PRs. Check again once things change.
           </p>
         </section>
       )}

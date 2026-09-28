@@ -140,7 +140,7 @@ function HowCounted({ report }: { report: Report }) {
 }
 
 const ASK_SOURCE: Record<Report["asks"][number]["code"], string> = {
-  cla: "A CLA bot asking an outside contributor to sign",
+  cla: "A CLA bot asking an outsider to sign",
   dco: "CONTRIBUTING, on signing off commits",
   issue_first: "CONTRIBUTING, on opening an issue first",
 };
@@ -182,7 +182,7 @@ export function ReportView({
             )}
             {report.summary && <p className="mt-2 font-sans text-[1.02rem] leading-relaxed text-ink">{report.summary}</p>}
             <p className="mt-2 text-[0.72rem] text-faint">
-              Written by {report.cost?.model ?? "a model"} from the evidence below. The verdict itself comes from fixed rules.
+              Written by {report.cost?.model ?? "a model"} from the evidence below. The rules picked the verdict.
             </p>
           </div>
         )}
@@ -206,7 +206,7 @@ export function ReportView({
 
         {!example && <PreflightLink repo={repo} />}
 
-        <Section n="02" id="numbers" title="What happened to outside contributors">
+        <Section n="02" id="numbers" title="What happened to outsiders">
           <StatsGrid stats={report.stats} reveal={reveal} />
           <HoltUsersLine stats={report.holt_users} />
         </Section>

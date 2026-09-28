@@ -5,7 +5,7 @@ import { cache } from "react";
 import type {
   AnalysisStart, ApiError, Checkout, Contributions, Credits, DiscoverOut, DiscoverSort, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection,
   HistoryItem, JobStatus, Me, Mode, MySubscription, Order, OrderConfirmed, Packs, Plans, PlaybookStart, PlaybookState, PreflightStart, PreflightState,
-  ProfileOut, ProfilePrefs, RazorpaySubscriptionSuccess, RazorpaySuccess, Recommendations, Report, Result, StarterIssue, SubscriptionCheckout, SubscriptionConfirmed,
+  ProfileOut, ProfilePrefs, RazorpaySubscriptionSuccess, RazorpaySuccess, Recommendations, Report, Result, SavedList, SavedState, StarterIssue, SubscriptionCheckout, SubscriptionConfirmed,
 } from "./types";
 import type { FeedbackInput } from "./feedback";
 import { isJobId } from "./ids";
@@ -158,11 +158,12 @@ export async function find(q: FindQuery, caller: Caller): Promise<Result<FindSta
 }
 
 /** Checked repos, filtered and ranked from rules verdicts (API.md, GET /v1/discover). Reads only the database. */
-export const discover = cache(async (sort: DiscoverSort, language: string | null, topic: string | null, limit = 30): Promise<Result<DiscoverOut>> => {
-  if (MOCK) return mock.discover(sort, language, topic, limit);
+export const discover = cache(async (sort: DiscoverSort, language: string | null, topic: string | null, limit = 30, hacktoberfest = false): Promise<Result<DiscoverOut>> => {
+  if (MOCK) return mock.discover(sort, language, topic, limit, hacktoberfest);
   const q = new URLSearchParams({ sort, limit: String(limit) });
   if (language) q.set("language", language);
   if (topic) q.set("topic", topic);
+  if (hacktoberfest) q.set("hacktoberfest", "true");
   return call(`/v1/discover?${q}`);
 });
 
@@ -287,6 +288,24 @@ export function refreshContributions(userId: string): Promise<Result<Contributio
 export function recommendations(userId: string, limit = 10): Promise<Result<Recommendations>> {
   if (MOCK) return mock.recommendations(userId, limit);
   return call(`/v1/me/recommendations?limit=${Math.min(10, Math.max(1, Math.floor(limit)))}`, { caller: { userId } });
+}
+
+// Saved repos (API.md, "Saved repos"). Saving and unsaving are idempotent.
+export function savedRepos(userId: string): Promise<Result<SavedList>> {
+  if (MOCK) return mock.savedRepos(userId);
+  return call("/v1/me/saved", { caller: { userId } });
+}
+
+export async function savedState(userId: string, repo: string): Promise<Result<SavedState>> {
+  if (!repoOk(repo)) return BAD_REPO;
+  if (MOCK) return mock.savedState(userId, repo);
+  return call(`/v1/me/saved/${repoPath(repo)}`, { caller: { userId } });
+}
+
+export async function setSaved(userId: string, repo: string, saved: boolean): Promise<Result<SavedState>> {
+  if (!repoOk(repo)) return BAD_REPO;
+  if (MOCK) return mock.setSaved(userId, repo, saved);
+  return call(`/v1/me/saved/${repoPath(repo)}`, { method: saved ? "PUT" : "DELETE", caller: { userId } });
 }
 
 /** A signed-in user opened a report page. The server keeps it only while GitHub is connected. */

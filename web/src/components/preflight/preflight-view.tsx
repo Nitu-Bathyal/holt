@@ -20,8 +20,8 @@ type Run =
   | { phase: "running"; stage: string; progress: number }
   | { phase: "error"; error: ApiError };
 
-const LOST: ApiError = { code: "upstream", message: "We lost the connection while your pull request was being checked. It may still finish: reload the page in a minute." };
-const FAILED: ApiError = { code: "upstream", message: "Something went wrong on our side. Please try again in a minute." };
+const LOST: ApiError = { code: "upstream", message: "We lost the connection mid-check. It may still finish, so reload in a minute." };
+const FAILED: ApiError = { code: "upstream", message: "Something broke on our side. Try again in a minute." };
 
 export function PreflightView({ initial, query, signedIn, badQuery }: { initial: PreflightState; query: Query; signedIn: boolean; badQuery: ApiError | null }) {
   const [s, setS] = useState(initial);
@@ -89,11 +89,11 @@ export function PreflightView({ initial, query, signedIn, badQuery }: { initial:
 
   const check = useCallback(async () => {
     if (mode === "pr" && !parsePrLink(pr)) {
-      setInputError("That doesn't look like a pull request link. Paste one like https://github.com/owner/repo/pull/123.");
+      setInputError("That doesn't look like a PR link. Try one like https://github.com/owner/repo/pull/123.");
       return;
     }
     if (mode === "branch" && !(repo.trim() && branch.trim())) {
-      setInputError("Fill in the repository and your branch.");
+      setInputError("Fill in the repo and your branch.");
       return;
     }
     setInputError("");
@@ -191,7 +191,7 @@ export function PreflightView({ initial, query, signedIn, badQuery }: { initial:
 
         <label className="mt-4 flex items-start gap-2 font-sans text-[0.9rem] text-muted">
           <input type="checkbox" checked={summary} onChange={(e) => setSummary(e.target.checked)} className="mt-1 accent-[var(--color-blue)]" />
-          <span>Add a short written summary (AI-written, then checked against the results; same price)</span>
+          <span>Add a short AI-written summary, checked against the results (same price)</span>
         </label>
 
         <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-2" data-preflight-offer={offer.kind}>
@@ -336,7 +336,7 @@ export function ResultView({ p, example = false }: { p: Preflight; example?: boo
           {p.checks.length ? countsLine(p.counts) : "No checks apply"}
         </p>
         {p.note && <p className="mt-3 border border-dashed border-line-strong px-3 py-2 font-sans text-[0.88rem] text-muted">{p.note}</p>}
-        {p.archived && <p className="mt-3 font-sans text-[0.9rem] text-orange">This repository is archived: it no longer takes pull requests.</p>}
+        {p.archived && <p className="mt-3 font-sans text-[0.9rem] text-orange">This repo is archived. It doesn&apos;t take PRs any more.</p>}
         {p.free_recheck && <p className="mt-3 font-sans text-[0.85rem] text-green">Same commit as your last check, so this one was free.</p>}
       </div>
 
@@ -366,7 +366,7 @@ export function ResultView({ p, example = false }: { p: Preflight; example?: boo
 
       {p.similar && (
         <div className="border border-line-strong bg-panel p-5 sm:p-6" data-preflight-similar>
-          <p className="text-[0.72rem] uppercase tracking-[0.08em] text-faint">The most similar merged pull request</p>
+          <p className="text-[0.72rem] uppercase tracking-[0.08em] text-faint">The closest merged PR</p>
           <p className="mt-2 font-sans text-[1rem] font-medium text-ink [overflow-wrap:anywhere]">
             <GH url={p.similar.url} example={example}>
               {p.similar.number != null && <>#{p.similar.number} </>}
@@ -434,9 +434,9 @@ function CheckRow({ c, example }: { c: PreflightCheck; example: boolean }) {
 
 const WHAT: [string, string][] = [
   ["Automated checks", "Did CI pass, and did the checks that run on every merge run on yours?"],
-  ["Tests", "Does it change tests when merged pull requests here usually do?"],
+  ["Tests", "Does it change tests when merged PRs here usually do?"],
   ["Size", "Is it bigger than most of what gets merged?"],
-  ["Template and linked issue", "Did you keep the pull request template, and link an issue if that's expected?"],
+  ["Template and linked issue", "Did you keep the PR template, and link an issue if that's expected?"],
   ["CLA, sign-off, changelog", "Only when the project asks for them."],
 ];
 
@@ -460,7 +460,7 @@ function Explainer() {
         </p>
       </div>
       <div className="border border-dashed border-line-strong p-4 sm:p-6">
-        <p className="mb-4 text-[0.72rem] uppercase tracking-[0.08em] text-blue">Example · a made-up pull request</p>
+        <p className="mb-4 text-[0.72rem] uppercase tracking-[0.08em] text-blue">Example · a made-up PR</p>
         <ResultView p={EXAMPLE_PREFLIGHT} example />
       </div>
     </div>

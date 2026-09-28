@@ -79,14 +79,14 @@ function Feedback({ storageKey: key, report }: { storageKey: string; report: Pic
         body: JSON.stringify({ repo, mode, days, generated_at, vote, reason }),
       });
       const body = await res.json().catch(() => null);
-      if (!res.ok) throw new Error(body?.error?.message || "That didn't go through. Please try again.");
+      if (!res.ok) throw new Error(body?.error?.message || "That didn't go through. Try again.");
       const next: Saved = { vote, reason: body?.reason ?? null };
       setSaved(next);
       store(key, next);
       setStatus("idle");
       return true;
     } catch (e) {
-      setError(e instanceof Error && e.message !== "Failed to fetch" ? e.message : "That didn't go through. Please try again.");
+      setError(e instanceof Error && e.message !== "Failed to fetch" ? e.message : "That didn't go through. Try again.");
       setStatus("error");
       return false;
     }
@@ -133,7 +133,7 @@ function Feedback({ storageKey: key, report }: { storageKey: string; report: Pic
           <h2 id={`${reasonId}-q`} className="text-[0.98rem] font-semibold tracking-tight">
             Was this verdict right?
           </h2>
-          <p className="mt-1 font-sans text-[0.85rem] text-muted">If you know this project, tell us. Your answer helps us make verdicts more accurate.</p>
+          <p className="mt-1 font-sans text-[0.85rem] text-muted">Know this project? Tell us. It helps us get verdicts right.</p>
         </div>
         <div className="flex gap-2">
           {btn("up", "Yes")}
