@@ -49,7 +49,7 @@ export async function Header() {
             </Link>
           ))}
           {/* Ink with the GitHub mark, like the other links: dark green on paper read as dim. */}
-          <a href={GITHUB_REPO_URL} className="inline-flex items-center gap-1.5 py-2 text-ink transition-colors hover:text-blue">
+          <a href={GITHUB_REPO_URL} className="inline-flex items-center gap-2 py-2 text-ink transition-colors hover:text-blue">
             <GitHubMark className="size-4" />
             github
           </a>
