@@ -119,6 +119,10 @@ class Cost(Model):
     model: str
     input_tokens: int
     output_tokens: int
+    # What the model calls cost in US dollars, and how long the whole run took.
+    # Null on reports cached before these were recorded.
+    usd: float | None = None
+    seconds: float | None = None
 
 
 class Odds(Model):
@@ -241,6 +245,9 @@ class Report(VerdictView):
     repo: str
     mode: Mode
     days: int
+    # AI mode only: at most two model-written sentences, the lead of the AI
+    # explanation. Null in rules mode and on reports cached before it existed.
+    bottom_line: str | None = None
     summary: str | None = None
     stats: Stats
     decided_by: list[str] = Field(default_factory=list)
