@@ -74,7 +74,7 @@ export async function Header() {
                   <path d="M4 6l4 4 4-4" />
                 </svg>
               </button>
-              <div id="account-menu" popover="auto" className="menu w-56 text-[0.88rem]">
+              <div id="account-menu" popover="auto" data-lenis-prevent className="menu w-56 text-[0.88rem]">
                 <p className="truncate px-3 py-2 text-faint">{user.name || user.email}</p>
                 <Link href={HOME} className="block px-3 py-2.5 transition-colors hover:bg-panel-2">home</Link>
                 <Link href="/for-you" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">picked for you</Link>
@@ -102,7 +102,7 @@ export async function Header() {
               <path d="M6 6l12 12M18 6L6 18" />
             </svg>
           </button>
-          <nav id="mobile-nav" popover="auto" aria-label="Mobile" className="sheet text-[0.95rem] lg:hidden">
+          <nav id="mobile-nav" popover="auto" data-lenis-prevent aria-label="Mobile" className="sheet text-[0.95rem] lg:hidden">
             {NAV.map((n) => (
               <Link key={n.href} href={n.href} prefetch={n.full ? true : null} className="block px-4 py-3 transition-colors hover:bg-panel-2">{n.label}</Link>
             ))}
