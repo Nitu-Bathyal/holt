@@ -58,8 +58,8 @@ Server: see `server/README.md`. Extension: `cd extension && npm ci && npm test`.
 - Bump `ENGINE_VERSION` in `src/holt/engine_version.py` in any PR that changes
   what a report says for the same evidence (verdict rules, the signals and
   thresholds they read, or the report's fields and wording). The server then
-  stops serving reports from the old engine; run `warm.sh --stale-only` after
-  deploying it (`deploy/prod/README.md`).
+  stops serving reports from the old engine; the auto-deploy then starts
+  `warm.sh --stale-only` by itself (`deploy/prod/README.md`).
 - Holt is read-only toward GitHub. It never posts, opens PRs, or contacts anyone.
 - User-facing text is plain English for beginners. No internal enum names
   (`not_viable`), no statistics jargon (MCC, p-values) in product output.
@@ -80,11 +80,15 @@ Server: see `server/README.md`. Extension: `cd extension && npm ci && npm test`.
 
 Production: **https://githolt.com** (domain on Cloudflare). The hook is
 "swap hub for holt": github.com/o/r → githolt.com/o/r. It runs on the home
-server for now (stack `holt-prod`, `deploy/prod/`, deployed only from `main`
-with `deploy/prod/deploy.sh` after the user approves); Hetzner later. Staging
+server for now (stack `holt-prod`, `deploy/prod/`); Hetzner later. Staging
 is https://staging.githolt.com (auto-updates from main plus PRs labelled
-`staging`). PyPI releases go through `.github/workflows/publish.yml` on a
-GitHub release (see `docs/RELEASING.md`).
+`staging`). **Production deploys itself from main**: `deploy/prod/follow.sh`
+(a 2-minute timer) runs `deploy.sh` for each new main commit once its CI is
+all green and staging is live on it, and warms stale reports after an
+`ENGINE_VERSION` bump. **Merging to main is shipping.** The owner can pause
+it (`follow.sh --pause`) and still deploy by hand; a failed deploy rolls back
+and is not retried. See `deploy/prod/README.md`, "Auto-deploy". PyPI releases go through
+`.github/workflows/publish.yml` on a GitHub release (see `docs/RELEASING.md`).
 
 Orchestrator may deploy after a merge: no
 

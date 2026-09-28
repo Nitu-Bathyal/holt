@@ -119,6 +119,7 @@ exec 8>"$STATE/follow.lock"
 if ! flock -n 8; then log "another tick is running; skipping"; exit 0; fi
 
 current="$(cat "$STATE/current" 2>/dev/null || true)"
+live="${current:0:7}"; live="${live:-nothing yet}"
 
 if [[ -f "$PAUSE" ]]; then
     status paused "$current" "$(pause_reason); follow.sh --resume to start again"; exit 0
@@ -152,7 +153,7 @@ if [[ "$sha" == "$current" ]]; then
 fi
 
 if [[ -f "$FAILED" ]] && grep -q "^$sha " "$FAILED"; then
-    status held "$sha" "$short failed to deploy ($(grep "^$sha " "$FAILED" | tail -1 | cut -d' ' -f3-)); not trying it again. Production stays on ${current:0:7} until main moves on (follow.sh --retry to try it again)"
+    status held "$sha" "$short failed to deploy ($(grep "^$sha " "$FAILED" | tail -1 | cut -d' ' -f3-)); not trying it again. Production stays on $live until main moves on (follow.sh --retry to try it again)"
     exit 0
 fi
 
@@ -223,7 +224,8 @@ if (( rc != 0 )) || [[ "$(cat "$STATE/current" 2>/dev/null)" != "$sha" ]]; then
     # deploy.sh can fail after the swap (a rejected edge.conf leaves the new
     # release live); then the live commit moved and the follower is on it.
     [[ -n "$now_live" ]] && echo "$now_live" > "$LAST_LIVE"
-    status failed "$sha" "$short failed to deploy: $why. Live: ${now_live:0:7}. Not retrying $short (log: $alog)"
+    live="${now_live:0:7}"; live="${live:-nothing yet}"
+    status failed "$sha" "$short failed to deploy: $why. Live: $live. Not retrying $short (log: $alog)"
     exit 1
 fi
 echo "$sha" > "$LAST_LIVE"
@@ -242,4 +244,4 @@ if [[ -n "$current" ]] && ! git -C "$FSRC" diff --quiet "$current" "$sha" -- "$E
         warm="; the engine changed, but the stale-only warm pass didn't start (see $alog)"
     fi
 fi
-status deployed "$sha" "$short is live (was ${current:0:7})$warm"
+status deployed "$sha" "$short is live (was $live)$warm"
