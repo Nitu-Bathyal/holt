@@ -39,7 +39,7 @@ def check_report_shape(report: dict, mode: str) -> None:
             "decided_by", "unknowns", "landing", "never_landed", "evidence",
             "evidence_until", "generated_at", "cost", "rule_codes", "tone",
             "verdict_line", "odds", "sample", "asks", "numbers_line", "first_timer_line",
-            "next_step", "stat_line", "counted"}
+            "next_step", "stat_line", "counted", "holt_users"}
     assert set(report) == keys
     assert report["sample"]["pull_requests"] >= report["stats"]["outsider_attempts"]
     for entry in report["counted"]:
