@@ -40,15 +40,22 @@ pytestmark = pytest.mark.skipif(
 )
 
 STUBS = {
-    # What compose was given when the stack was started.
+    # What compose was given when the stack was started. deploy/swap.sh
+    # starts each new container with `up --scale` and waits for it to be
+    # healthy: every scale-up adds one container id to what `ps` lists.
     # `compose config` answers with each service's build section (the web
     # image's build args follow the contact city); `compose build` gives the
     # image a new id and writes the service down in $STUB_DIR/built.
     "docker": """#!/bin/sh
 echo "docker $*" >> "$STUB_DIR/calls"
 for last; do :; done
+n=$(cat "$STUB_DIR/containers" 2>/dev/null || echo 0)
 case " $* " in
-    *" up "*) cp "$HOLT_STAGE_HOME/now.json" "$STUB_DIR/now-while-starting"; env | grep -E '^(STAGING_HOST|HOLT_WEB_URL|AUTH_|NEXT_PUBLIC_|GITHUB_TOKENS=)' | sort > "$STUB_DIR/compose.env" ;;
+    *" up "*)
+        case " $* " in *" --scale "*) echo $((n + 1)) > "$STUB_DIR/containers" ;; esac
+        cp "$HOLT_STAGE_HOME/now.json" "$STUB_DIR/now-while-starting"; env | grep -E '^(STAGING_HOST|HOLT_WEB_URL|AUTH_|NEXT_PUBLIC_|GITHUB_TOKENS=)' | sort > "$STUB_DIR/compose.env" ;;
+    *" ps "*) i=1; while [ "$i" -le "$n" ]; do echo "c$i"; i=$((i + 1)); done ;;
+    *" config --hash "*) echo "$last stub-hash" ;;
     *" config "*)
         printf '{"services": {"server": {"image": "stage-holt-new-server:latest", "build": {"context": "/s"}},'
         printf ' "web": {"image": "stage-holt-new-web:latest", "build": {"context": "/w", "args": {"NEXT_PUBLIC_CONTACT_CITY": "%s"}}}}}\\n' "$NEXT_PUBLIC_CONTACT_CITY" ;;
@@ -60,6 +67,8 @@ case " $* " in
     *" image inspect "*)
         [ -f "$STUB_DIR/image-$last" ] || exit 1
         echo "sha256:$(cat "$STUB_DIR/image-$last")" ;;
+    # A container (deploy/swap.sh): never the current one, always healthy.
+    *" inspect "*) echo "0 healthy" ;;
 esac
 exit 0
 """,
@@ -173,6 +182,7 @@ class Sandbox:
                 "HOLT_LOCAL_REPO": str(self.root / "no-local-repo"),
                 "STUB_DIR": str(self.stub_dir),
                 "FORCE": "1",   # don't wait for the machine running the tests to be quiet
+                "SWAP_SETTLE": "0",
                 **env,
             },
             capture_output=True, text=True, timeout=120,
