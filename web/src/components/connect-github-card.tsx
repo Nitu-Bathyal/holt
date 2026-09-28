@@ -28,7 +28,7 @@ export function GitHubConnectionCard({ acct }: { acct: Account }) {
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-3 border border-green/50 bg-green/10 p-4">
-        <div className="min-w-0 text-[0.85rem]">
+        <div className="min-w-0 text-[0.89rem]">
           <p className="text-green">
             ● connected as{" "}
             <a href={`https://github.com/${acct.login}`} target="_blank" rel="noopener noreferrer" className="font-semibold [overflow-wrap:anywhere] hover:underline">
@@ -42,7 +42,7 @@ export function GitHubConnectionCard({ acct }: { acct: Account }) {
           <button type="submit" className="btn-ghost text-orange">disconnect</button>
         </form>
       </div>
-      <p className="mt-3 font-sans text-[0.8rem] text-faint">
+      <p className="mt-3 font-sans text-[0.87rem] text-faint">
         Disconnecting deletes the connection, the list of repos you viewed on Holt and your saved pull requests.
       </p>
     </>
@@ -55,7 +55,7 @@ export function StatsSwitch({ acct }: { acct: NonNullable<Account> }) {
     <form action={setStats} className="flex flex-wrap items-start justify-between gap-4">
       <div className="min-w-0 flex-1 basis-64">
         <p className="text-[0.95rem] font-semibold" id="stats-label">Don&apos;t include me in statistics</p>
-        <p className="prose-sans mt-1 text-[0.85rem] text-muted">{STATS_NOTICE}</p>
+        <p className="prose-sans mt-1 text-[0.89rem] text-muted">{STATS_NOTICE}</p>
       </div>
       {/* One click flips it: the button sends the opposite of what's saved. */}
       {!acct.stats_opt_out && <input type="hidden" name="stats_opt_out" value="on" />}
@@ -64,7 +64,7 @@ export function StatsSwitch({ acct }: { acct: NonNullable<Account> }) {
         role="switch"
         aria-checked={acct.stats_opt_out}
         aria-labelledby="stats-label"
-        className={`inline-flex min-h-11 items-center gap-2 border px-3 text-[0.8rem] transition-colors ${acct.stats_opt_out ? "border-blue bg-blue/10 text-blue" : "border-line-strong text-muted hover:text-ink"}`}
+        className={`inline-flex min-h-11 items-center gap-2 border px-3 text-[0.87rem] transition-colors ${acct.stats_opt_out ? "border-blue bg-blue/10 text-blue" : "border-line-strong text-muted hover:text-ink"}`}
       >
         <span aria-hidden="true" className={`relative h-4 w-7 rounded-full transition-colors ${acct.stats_opt_out ? "bg-blue" : "bg-line-strong"}`}>
           <span className={`absolute top-0.5 size-3 rounded-full bg-bg transition-[left] ${acct.stats_opt_out ? "left-3.5" : "left-0.5"}`} />

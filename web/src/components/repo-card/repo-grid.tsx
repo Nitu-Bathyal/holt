@@ -4,6 +4,7 @@ import { useSearchParams } from "next/navigation";
 import { createContext, Suspense, use, useEffect, useRef, useState } from "react";
 import { neighbours, type CardRepo } from "@/lib/repo-card";
 import { savedSet, withSaved } from "@/lib/saved";
+import { pauseSmoothScroll } from "../motion/smooth-scroll";
 import { SaveButton } from "../save-button";
 import { RepoCard } from "./repo-card";
 import { RepoFocus } from "./repo-focus";
@@ -136,8 +137,10 @@ function Focusable({ repos, layout, days, topicBase, card, actionsFor }: ListPro
     if (current && !d.open) d.showModal();
     if (!current && d.open) d.close();
     document.documentElement.style.overflow = current ? "hidden" : "";
+    pauseSmoothScroll(Boolean(current));
     return () => {
       document.documentElement.style.overflow = "";
+      pauseSmoothScroll(false);
     };
   }, [current]);
   // Moving to another repo starts at its top.
@@ -150,6 +153,8 @@ function Focusable({ repos, layout, days, topicBase, card, actionsFor }: ListPro
       <OpenFocus value={open}>{layout(card)}</OpenFocus>
       <dialog
         ref={dialog}
+        // Its own scroll area: the wheel scrolls it natively, never the page behind.
+        data-lenis-prevent
         aria-labelledby="focus-title"
         onClose={() => {
           if (new URLSearchParams(window.location.search).has(PARAM)) close();
@@ -175,7 +180,7 @@ function Focusable({ repos, layout, days, topicBase, card, actionsFor }: ListPro
       >
         {current && nb && (
           <div className="flex h-full flex-col sm:h-auto sm:max-h-[90vh]">
-            <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 text-[0.78rem] text-muted sm:px-6">
+            <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 text-[0.85rem] text-muted sm:px-6">
               <span className="tabular-nums">{nb.index + 1} of {repos.length}</span>
               <div className="flex items-center gap-1">
                 <button type="button" onClick={() => go(nb.prev)} disabled={!nb.prev} aria-label="Previous repo" className="grid size-10 place-items-center hover:text-ink disabled:opacity-30">←</button>
@@ -186,7 +191,7 @@ function Focusable({ repos, layout, days, topicBase, card, actionsFor }: ListPro
             <div data-scroll className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:flex-initial sm:p-6">
               <RepoFocus key={current.repo} r={current} report={reportHref(current.repo, days)} actions={actionsFor(current.repo, false)} topicBase={topicBase} />
             </div>
-            <p className="hidden border-t border-line px-6 py-2 text-[0.72rem] text-faint sm:block">← → to move between repos · Esc to close</p>
+            <p className="hidden border-t border-line px-6 py-2 text-[0.8rem] text-faint sm:block">← → to move between repos · Esc to close</p>
           </div>
         )}
       </dialog>

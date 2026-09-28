@@ -4,13 +4,13 @@ import { CatFace } from "./cat-face";
 
 export function Footer() {
   return (
-    <footer className="mt-auto border-t border-line py-10 text-[0.74rem] text-faint">
+    <footer className="mt-auto border-t border-line py-10 text-[0.82rem] text-faint">
       <div className="wrap grid grid-cols-1 gap-8 sm:grid-cols-[1fr_auto]">
         <div className="space-y-2">
           <p className="flex items-center gap-2 text-muted">
             <CatFace /> check before you contribute.
           </p>
-          <p className="max-w-md font-sans text-[0.8rem]">
+          <p className="max-w-md font-sans text-[0.87rem]">
             Holt only reads public GitHub data. It never posts, comments or opens a PR. Not even a typo fix.
           </p>
         </div>

@@ -623,8 +623,10 @@ A connected user's public pull requests, each with Holt's verdict for its
 repository. Read with the server's token pool from GitHub's public search
 (`is:pr is:public author:<login> -user:<login>`, the last 365 days, at most
 200, newest first; the user's own repositories and anything private are left
-out). Fetched when GitHub is connected, again once a day in the background
-(`HOLT_CONTRIBUTIONS_REFRESH_HOURS`, 24; 0 = off), and on refresh. Stored in
+out, and so is every repository they help run: GitHub calls them its owner,
+a member or a collaborator on any of their pull requests there, or they merged
+one of their own). Fetched when GitHub is connected, again once a day in the
+background (`HOLT_CONTRIBUTIONS_REFRESH_HOURS`, 24; 0 = off), and on refresh. Stored in
 `contributions` and `contribution_syncs`; each fetch replaces the user's rows.
 Nothing here starts an analysis.
 

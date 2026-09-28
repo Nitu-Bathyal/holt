@@ -25,11 +25,11 @@ export async function ProfileOnboarding({ back, open = false, className = "" }: 
               Pick your languages and how much time you have. Searches start there. Change it any time in settings.
             </span>
           </span>
-          <span className="text-[0.85rem] text-blue group-open:hidden">[ set it up · 30 seconds → ]</span>
+          <span className="text-[0.89rem] text-blue group-open:hidden">[ set it up · 30 seconds → ]</span>
         </summary>
         <div className="mt-6 border-t border-line pt-6">
           <ProfileForm prefs={null} adultConfirmed={r.data.adult_confirmed} back={back}>
-            <button type="submit" formAction={skip} formNoValidate className="text-[0.85rem] text-muted hover:text-ink">
+            <button type="submit" formAction={skip} formNoValidate className="text-[0.89rem] text-muted hover:text-ink">
               skip for now
             </button>
           </ProfileForm>
@@ -37,7 +37,7 @@ export async function ProfileOnboarding({ back, open = false, className = "" }: 
       </details>
       <form action={skip} className="mt-3">
         <input type="hidden" name="back" value={back} />
-        <button type="submit" className="text-[0.8rem] text-faint hover:text-ink">not now</button>
+        <button type="submit" className="text-[0.87rem] text-faint hover:text-ink">not now</button>
       </form>
     </section>
     </div>

@@ -17,9 +17,11 @@ from conftest import canned_report
 
 
 def pr(repo, number, state="OPEN", created=None, merged=None, closed=None, private=False,
-       title=None):
+       title=None, association="CONTRIBUTOR", merged_by=None):
     created = created or now() - timedelta(days=3)
     return {"number": number, "title": title or f"Fix {number}",
+            "authorAssociation": association,
+            "mergedBy": {"login": merged_by} if merged_by else None,
             "url": f"https://github.com/{repo}/pull/{number}", "state": state,
             "isDraft": False, "createdAt": created.isoformat(),
             "closedAt": closed.isoformat() if closed else None,
@@ -171,6 +173,43 @@ def test_connect_fetches_public_prs_with_a_pool_token(gh):
     first = body["pull_requests"][1]
     assert first["url"] == "https://github.com/pallets/flask/pull/1"
     assert first["merged_at"].endswith("Z") and first["verdict"] is None
+
+
+@pytest.mark.parametrize("association", ["OWNER", "MEMBER", "COLLABORATOR"])
+def test_projects_you_help_run_are_left_out(association):
+    d = now() - timedelta(days=5)
+    nodes = [
+        pr("holt-oss/holt", 1, association=association),
+        pr("holt-oss/holt", 2, "MERGED", merged=d, closed=d),  # the same repo goes too
+        pr("pallets/flask", 3),
+    ]
+    assert [r["repo"] for r in contributions.parse(nodes, "octocat")] == ["pallets/flask"]
+
+
+def test_merging_your_own_pr_marks_the_repo_as_yours():
+    # A private org member reads as CONTRIBUTOR; merging their own PR gives them away.
+    d = now() - timedelta(days=5)
+    nodes = [
+        pr("holt-oss/holt", 1, "MERGED", merged=d, closed=d, merged_by="OctoCat"),
+        pr("holt-oss/holt", 2),
+        pr("pallets/flask", 3, "MERGED", merged=d, closed=d, merged_by="davidism"),
+        None,
+    ]
+    assert contributions.own_projects(nodes, "octocat") == {"holt-oss/holt"}
+    assert [(r["repo"], r["number"]) for r in contributions.parse(nodes, "octocat")] == [
+        ("pallets/flask", 3)]
+
+
+def test_outside_contributors_are_kept():
+    nodes = [pr("pallets/flask", 1, association="CONTRIBUTOR"),
+             pr("psf/requests", 2, association="FIRST_TIME_CONTRIBUTOR"),
+             pr("numpy/numpy", 3, association="NONE")]
+    assert len(contributions.parse(nodes, "octocat")) == 3
+
+
+def test_the_search_asks_for_who_the_author_is_and_who_merged():
+    assert "authorAssociation" in contributions.SEARCH
+    assert "mergedBy { login }" in contributions.SEARCH
 
 
 def test_first_page_view_fetches_when_connect_did_not(gh):

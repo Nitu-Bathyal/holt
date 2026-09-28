@@ -9,7 +9,7 @@ import { PRIVACY_SETTINGS, PROFILE_SETTINGS } from "@/lib/settings";
 import { ProfileForm } from "@/components/profile-form";
 import { Notice, SectionHead } from "@/components/settings/section-head";
 
-export const metadata: Metadata = { title: "Your profile · Settings", robots: { index: false } };
+export const metadata: Metadata = { title: "Your profile | Settings", robots: { index: false } };
 
 export default async function ProfileSettings({ searchParams }: PageProps<"/settings/profile">) {
   const user = await currentUser();
@@ -42,7 +42,7 @@ export default async function ProfileSettings({ searchParams }: PageProps<"/sett
       )}
 
       {p && (
-        <p className="mt-8 border-t border-line pt-5 font-sans text-[0.8rem] text-faint">
+        <p className="mt-8 border-t border-line pt-5 font-sans text-[0.87rem] text-faint">
           {p.updated_at && <>Last saved {shortDate(p.updated_at)}. </>}
           To delete it, go to <Link href={PRIVACY_SETTINGS} className="text-link">Privacy and data</Link>.
         </p>

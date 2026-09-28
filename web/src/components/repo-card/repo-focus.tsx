@@ -22,7 +22,7 @@ export function RepoFocus({ r, report, actions, topicBase }: { r: CardRepo; repo
             </Link>
           </h2>
           {r.description && <p className="mt-1.5 font-sans text-[0.95rem] text-muted">{r.description}</p>}
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.75rem] text-faint">
+          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.82rem] text-faint">
             <VerdictPill headline={r.headline} tone={r.tone} />
             {r.language && (
               <span className="flex items-center gap-1.5">
@@ -48,7 +48,7 @@ export function RepoFocus({ r, report, actions, topicBase }: { r: CardRepo; repo
       <section aria-label="What happens to outside pull requests" className="mt-6">
         <OddsBar stats={r.stats} className="h-3" />
         <OddsLegend stats={r.stats} />
-        <ul className="mt-4 flex flex-wrap gap-2 text-[0.76rem]">
+        <ul className="mt-4 flex flex-wrap gap-2 text-[0.83rem]">
           {statPills(r.stats).map((p, i) => (
             <li key={p} className={`border px-2 py-1 ${i === 0 ? "border-green/40 text-green" : "border-line-strong text-muted"}`}>{p}</li>
           ))}
@@ -63,7 +63,7 @@ export function RepoFocus({ r, report, actions, topicBase }: { r: CardRepo; repo
 
       {r.why.length > 0 && (
         <section className="mt-6">
-          <h3 className="text-[0.8rem] text-faint">Why this one</h3>
+          <h3 className="text-[0.87rem] text-faint">Why this one</h3>
           <ul className="mt-2 space-y-1 font-sans text-[0.9rem]">
             {r.why.map((w) => (
               <li key={w} className="flex gap-2">
@@ -77,7 +77,7 @@ export function RepoFocus({ r, report, actions, topicBase }: { r: CardRepo; repo
 
       {r.issues.length > 0 && (
         <section className="mt-6">
-          <h3 className="text-[0.8rem] text-faint">Start with one of these</h3>
+          <h3 className="text-[0.87rem] text-faint">Start with one of these</h3>
           <ul className="mt-2 grid gap-3">
             {r.issues.slice(0, 4).map((i) => (
               <StarterIssueCard key={i.number} issue={i} />

@@ -26,7 +26,7 @@ export function RefreshButton({ action, nextRefreshAt }: { action: () => Promise
   return (
     <form action={action} className="flex flex-wrap items-center gap-3">
       <Submit wait={wait} />
-      <span id="refresh-note" suppressHydrationWarning className="text-[0.75rem] text-faint">{cooldownLabel(wait)}</span>
+      <span id="refresh-note" suppressHydrationWarning className="text-[0.82rem] text-faint">{cooldownLabel(wait)}</span>
     </form>
   );
 }

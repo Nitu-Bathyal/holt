@@ -101,7 +101,7 @@ export function PlaybookSection({ repo, signedIn }: { repo: string; signedIn: bo
 
   return (
     <section aria-labelledby="playbook" className="border border-line-strong bg-panel p-5 shadow-card sm:p-8" data-playbook>
-      <p className="text-[0.72rem] uppercase tracking-[0.08em] text-blue">Playbook ✦</p>
+      <p className="text-[0.8rem] uppercase tracking-[0.08em] text-blue">Playbook ✦</p>
       <h2 id="playbook" className="mt-1 text-[1.25rem] font-semibold tracking-tight sm:text-[1.5rem]">How to get merged here</h2>
       {playbook ? (
         <FullPlaybook p={playbook} />
@@ -130,12 +130,12 @@ function Teaser({ s, repo, signedIn, onUnlock, error }: { s: PlaybookState; repo
 
       {t?.first && (
         <div className="mt-5 border-l-2 border-blue pl-4" data-playbook-first>
-          <p className="text-[0.72rem] uppercase tracking-[0.08em] text-faint">{SECTION_TITLES.must_do} · free preview</p>
+          <p className="text-[0.8rem] uppercase tracking-[0.08em] text-faint">{SECTION_TITLES.must_do} · free preview</p>
           <ItemView item={t.first} />
         </div>
       )}
 
-      <p className="mt-6 text-[0.72rem] uppercase tracking-[0.08em] text-faint">
+      <p className="mt-6 text-[0.8rem] uppercase tracking-[0.08em] text-faint">
         {t ? "In this repo's playbook" : "What a playbook covers"}
       </p>
       <ul className="mt-2 space-y-1.5 font-sans text-[0.95rem]" data-playbook-sections>
@@ -147,7 +147,7 @@ function Teaser({ s, repo, signedIn, onUnlock, error }: { s: PlaybookState; repo
                 <li key={x.key} className="flex flex-wrap items-baseline gap-x-2">
                   <span aria-hidden="true" className="text-faint">▪</span>
                   <span className="text-ink">{SECTION_TITLES[x.key]}</span>
-                  <span className="text-[0.8rem] text-faint">
+                  <span className="text-[0.87rem] text-faint">
                     {locked > 0 ? `${locked} ${x.key === "must_do" && t.first ? "more " : ""}${x.key === "closing_reasons" ? (locked === 1 ? "reason" : "reasons") : locked === 1 ? "item" : "items"}` : "shown above"}
                   </span>
                 </li>
@@ -160,7 +160,7 @@ function Teaser({ s, repo, signedIn, onUnlock, error }: { s: PlaybookState; repo
               </li>
             ))}
       </ul>
-      {!t && <p className="mt-2 font-sans text-[0.85rem] text-faint">A section only appears when the pull requests show something for it.</p>}
+      {!t && <p className="mt-2 font-sans text-[0.89rem] text-faint">A section only appears when the pull requests show something for it.</p>}
 
       {error && (
         <p role="alert" className="mt-5 border border-orange/50 px-3 py-2 font-sans text-[0.9rem] text-orange" data-playbook-error>
@@ -174,14 +174,14 @@ function Teaser({ s, repo, signedIn, onUnlock, error }: { s: PlaybookState; repo
             <Link href={`/signin?callbackUrl=${encodeURIComponent(back)}`} prefetch={false} className="btn-primary bg-blue">
               sign in to unlock <span aria-hidden="true">→</span>
             </Link>
-            <span className="text-[0.75rem] text-faint">{s.on_sale ? "Playbooks are a paid feature." : "Playbooks are a paid feature and aren't on sale yet."}</span>
+            <span className="text-[0.82rem] text-faint">{s.on_sale ? "Playbooks are a paid feature." : "Playbooks are a paid feature and aren't on sale yet."}</span>
           </>
         ) : (
           <>
             <button type="button" onClick={onUnlock} disabled={offer.kind !== "can-unlock"} className="btn-primary bg-blue disabled:cursor-not-allowed disabled:opacity-50" data-playbook-unlock>
               {error ? "try again" : "unlock the playbook"} <span aria-hidden="true">→</span>
             </button>
-            <span className={`font-sans text-[0.85rem] ${offer.kind === "can-unlock" ? "text-muted" : "text-orange"}`}>{offer.note}</span>
+            <span className={`font-sans text-[0.89rem] ${offer.kind === "can-unlock" ? "text-muted" : "text-orange"}`}>{offer.note}</span>
           </>
         )}
       </div>
@@ -197,7 +197,7 @@ function Writing({ stage, progress }: { stage: string; progress: number }) {
       <div className="mt-3 h-1.5 bg-panel-2" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Progress">
         <div className="h-full bg-blue transition-[width] duration-500 ease-out" style={{ width: `${pct}%` }} />
       </div>
-      <p className="mt-3 font-sans text-[0.85rem] text-faint">
+      <p className="mt-3 font-sans text-[0.89rem] text-faint">
         This takes 1 to 3 minutes and keeps going if you leave. If it fails, you aren&apos;t charged.
       </p>
     </div>
@@ -216,7 +216,7 @@ function FullPlaybook({ p }: { p: Playbook }) {
       <div className="mt-2 space-y-7">
         {shown.map((k) => (
           <div key={k}>
-            <h3 className="mt-5 text-[0.72rem] uppercase tracking-[0.08em] text-faint">{SECTION_TITLES[k]}</h3>
+            <h3 className="mt-5 text-[0.8rem] uppercase tracking-[0.08em] text-faint">{SECTION_TITLES[k]}</h3>
             {k === "closing_reasons" ? (
               <ul className="mt-2 space-y-5">
                 {p.sections.closing_reasons.map((r) => (
@@ -237,7 +237,7 @@ function FullPlaybook({ p }: { p: Playbook }) {
           </div>
         ))}
       </div>
-      <p className="mt-8 border-t border-dashed border-line pt-4 text-[0.72rem] text-faint">
+      <p className="mt-8 border-t border-dashed border-line pt-4 text-[0.8rem] text-faint">
         Written by {p.model ?? "an AI model"} from counts of {p.window_days ? `the last ${p.window_days === 365 ? "12 months" : `${p.window_days} days`}` : "recent"} of
         PRs. Every item was checked against those counts and quotes, and anything that didn&apos;t match was cut. It
         doesn&apos;t change the verdict. Updated <time dateTime={p.generated_at} suppressHydrationWarning>{timeAgo(p.generated_at)}</time>.
@@ -285,7 +285,7 @@ function ItemView({ item }: { item: PlaybookItem }) {
       {item.sources.map((src, i) => {
         const seen = seenLabel(src);
         return (
-          <p key={i} className="mt-1 flex flex-wrap items-baseline gap-x-2 text-[0.78rem] text-faint">
+          <p key={i} className="mt-1 flex flex-wrap items-baseline gap-x-2 text-[0.85rem] text-faint">
             {seen && <span data-seen>{seen}</span>}
             {!seen && <span>from the project&apos;s documents</span>}
             <Links links={src.links} />
@@ -307,12 +307,12 @@ function ReasonView({ r }: { r: PlaybookClosingReason }) {
           <Text text={r.explanation} />
         </p>
       )}
-      <p className="mt-1 text-[0.78rem] text-faint" data-seen>{seenLabel(r, "closed outside pull requests")}</p>
+      <p className="mt-1 text-[0.85rem] text-faint" data-seen>{seenLabel(r, "closed outside pull requests")}</p>
       <ul className="mt-2 space-y-2">
         {r.examples.filter((e) => isGitHubLink(e.url)).map((e) => (
           <li key={e.number} className="border-l-2 border-line-strong pl-3">
             <blockquote className="font-sans text-[0.95rem] text-ink">&ldquo;{e.quote}&rdquo;</blockquote>
-            <p className="mt-0.5 text-[0.75rem] text-faint [overflow-wrap:anywhere]">
+            <p className="mt-0.5 text-[0.82rem] text-faint [overflow-wrap:anywhere]">
               {e.who} on{" "}
               <a href={e.url} target="_blank" rel="noopener noreferrer" className="text-link">
                 #{e.number}

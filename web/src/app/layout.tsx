@@ -3,9 +3,11 @@ import { JetBrains_Mono } from "next/font/google";
 import { Footer } from "@/components/footer";
 import { Header } from "@/components/header";
 import { RouteFallback } from "@/components/motion/route-fallback";
+import { SmoothScroll } from "@/components/motion/smooth-scroll";
 import { themeScript } from "@/components/theme-toggle";
 import { ANALYTICS } from "@/lib/analytics";
 import { SITE_URL } from "@/lib/site";
+import "lenis/dist/lenis.css";
 import "./globals.css";
 
 const mono = JetBrains_Mono({
@@ -19,15 +21,15 @@ const mono = JetBrains_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: "Holt — will this repo merge your PR?",
-    template: "%s · Holt",
+    default: "Holt | will this repo merge your PR?",
+    template: "%s | Holt",
   },
   description:
     "Paste any GitHub repo. Holt reads its recent pull requests and tells you, in plain English, whether outside contributors get replies, get merged, and where their work lands.",
   openGraph: {
     siteName: "Holt",
     type: "website",
-    title: "Holt — check whether a repo actually merges outsiders' PRs",
+    title: "Holt | check whether a repo actually merges outsiders' PRs",
     description: "See how a project treats outside contributors before you spend your week on it. Swap hub for holt in any GitHub link.",
   },
   twitter: { card: "summary_large_image" },
@@ -61,6 +63,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           <RouteFallback />
         </main>
         <Footer />
+        <SmoothScroll />
       </body>
     </html>
   );

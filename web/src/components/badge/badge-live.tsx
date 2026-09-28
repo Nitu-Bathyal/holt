@@ -13,7 +13,7 @@ export function BadgeLive({ repo, site }: { repo: string; site: string }) {
       <div className="panel p-5 font-sans text-[0.92rem]" role="alert">
         <p className="text-orange">{state.error.message}</p>
         {(state.error.code === "upstream" || state.error.code === "internal") && (
-          <button type="button" onClick={retry} className="mt-3 min-h-11 text-[0.85rem] text-green underline">try again</button>
+          <button type="button" onClick={retry} className="mt-3 min-h-11 text-[0.89rem] text-green underline">try again</button>
         )}
       </div>
     );
@@ -24,7 +24,7 @@ export function BadgeLive({ repo, site }: { repo: string; site: string }) {
       <div className="mt-3 h-1 bg-panel-2">
         <div className="h-full bg-blue transition-[width] duration-500" style={{ width: `${Math.max(3, p * 100)}%` }} />
       </div>
-      <p className="mt-3 font-sans text-[0.8rem] text-faint">A first check takes about a minute.</p>
+      <p className="mt-3 font-sans text-[0.87rem] text-faint">A first check takes about a minute.</p>
     </div>
   );
 }

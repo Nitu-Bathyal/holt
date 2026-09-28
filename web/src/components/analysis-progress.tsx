@@ -10,7 +10,7 @@ export function AnalysisProgress({ repo, stage, progress, mode, kicker, note }: 
       {/* Phones: the cat sits above the text so the headline gets the full width. */}
       <div className="flex flex-col-reverse items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
         <div className="min-w-0">
-          <p className="break-words text-[0.72rem] uppercase tracking-[0.08em] text-faint">{kicker ?? `${mode === "ai" ? "writing your AI report" : "checking"} · ${repo}`}</p>
+          <p className="break-words text-[0.8rem] uppercase tracking-[0.08em] text-faint">{kicker ?? `${mode === "ai" ? "writing your AI report" : "checking"} · ${repo}`}</p>
           <h1 className="mt-3 text-[1.5rem] font-semibold leading-tight tracking-tight sm:text-[2.4rem]">{f.title}…</h1>
           <p className="mt-2 max-w-lg font-sans text-muted">{f.detail}</p>
         </div>
@@ -21,7 +21,7 @@ export function AnalysisProgress({ repo, stage, progress, mode, kicker, note }: 
         <div className="h-full bg-blue transition-[width] duration-500 ease-out" style={{ width: `${pct}%` }} />
       </div>
 
-      <ol className="mt-6 grid gap-2 text-[0.82rem] sm:grid-cols-4">
+      <ol className="mt-6 grid gap-2 text-[0.88rem] sm:grid-cols-4">
         {STAGE_ORDER.map((s, i) => {
           const done = i < idx;
           const now = i === idx;
@@ -36,7 +36,7 @@ export function AnalysisProgress({ repo, stage, progress, mode, kicker, note }: 
           );
         })}
       </ol>
-      <p className="mt-8 border-t border-dashed border-line pt-4 font-sans text-[0.85rem] text-faint">
+      <p className="mt-8 border-t border-dashed border-line pt-4 font-sans text-[0.89rem] text-faint">
         {note ?? "The first check of a repo takes about a minute. After that it's instant for everyone for a day."}
       </p>
     </div>
