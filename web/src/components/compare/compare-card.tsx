@@ -33,7 +33,8 @@ export function CompareBody({ report, leads = [] }: { report: Report; leads?: Le
     ["Outside PRs merged", <><strong className="text-ink">{s.outsider_merged}</strong> of {s.outsider_attempts} ({pct(s.outsider_merged, s.outsider_attempts)}%)</>, "merged"],
     ["Typical first reply", s.median_first_response_hours == null ? <span className="text-orange">no replies</span> : humanHours(s.median_first_response_hours), "reply"],
     ["First-timers merged", <strong key="f" className={s.first_time_merged_authors ? "text-green" : "text-orange"}>{s.first_time_merged_authors}</strong>, "firstTimers"],
-    ["Never got a reply", `${pct(s.no_reply, s.outsider_attempts)}%`, "silent"],
+    ["Sat open, no reply", `${pct(s.no_reply, s.outsider_attempts)}%`, "silent"],
+    ["Closed without a word", `${pct(s.closed_silently, s.outsider_attempts)}%`, null],
     ["Best way in", top ? <code key="c" className="text-ink">{top.path}/</code> : <span className="text-faint">none yet</span>, null],
   ];
   return (
