@@ -120,7 +120,7 @@ export function ReportSkeleton() {
   return (
     <div className="relative">
       <div aria-hidden="true" className="hero-backdrop bottom-auto h-[560px] [mask-image:linear-gradient(#000_55%,transparent)]" />
-      <SkeletonRegion label="Loading the report…" className="wrap relative py-8 sm:py-12">
+      <SkeletonRegion label="Loading the report…" className="report-wide relative py-8 sm:py-12">
         <ReportHeaderSkeleton />
         <ReportBodySkeleton />
       </SkeletonRegion>
