@@ -21,6 +21,9 @@ export function StarterIssueCard({ issue, compact = false }: { issue: StarterIss
           <span className="sr-only"> (opens GitHub)</span>
         </a>
       </h3>
+      {issue.on_it && (
+        <p className={`mt-1 text-[0.85rem] ${issue.people || issue.open_prs ? "text-amber" : "text-green"}`}>{issue.on_it}</p>
+      )}
       {!compact && issue.why.length > 0 && (
         <ul className="mt-2 space-y-0.5 font-sans text-[0.89rem] text-muted">
           {issue.why.map((w) => (

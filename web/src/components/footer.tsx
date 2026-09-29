@@ -19,11 +19,13 @@ import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/analytics";
 import { inputMood, type CatMood } from "@/lib/cat";
+import { deviceReduces, prefersReducedMotion, setMotion, toggledMotion } from "@/lib/motion";
 import { NOT_A_REPO, pasteTarget } from "@/lib/gate";
 import { timeAgo } from "@/lib/format";
 import { checkedLabel, type RecentChecks } from "@/lib/recent-checks";
 import { parseRepoInput } from "@/lib/repo";
 import { GITHUB_REPO_URL, LEGAL_PAGES, SITE_HOST } from "@/lib/site";
+import { useReducedMotion } from "./motion/use-seen";
 import { askExists, useBusy } from "./paste-box";
 import { ReactiveCat } from "./reactive-cat";
 
@@ -95,7 +97,7 @@ export function Footer({ signedIn = false }: { signedIn?: boolean }) {
     frame.current = requestAnimationFrame(() => {
       frame.current = 0;
       const r = cat.current?.getBoundingClientRect();
-      if (!r || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+      if (!r || prefersReducedMotion()) return;
       setLook(Math.max(-1, Math.min(1, (x - (r.left + r.width / 2)) / (innerWidth * 0.35))));
     });
   };
@@ -240,6 +242,8 @@ export function Footer({ signedIn = false }: { signedIn?: boolean }) {
             {LEGAL_PAGES.map((p) => (
               <FLink key={p.href} href={p.href}>{p.label}</FLink>
             ))}
+            {/* Signed in, it's under Settings → Display. */}
+            {!signedIn && <MotionSwitch />}
           </Group>
         </nav>
       </div>
@@ -274,6 +278,22 @@ function Group({ title, children }: { title: string; children: React.ReactNode }
       <p className="mb-2 text-faint">{title}</p>
       <ul>{children}</ul>
     </div>
+  );
+}
+
+function MotionSwitch() {
+  const reduced = useReducedMotion();
+  return (
+    <li>
+      <button
+        type="button"
+        aria-pressed={reduced}
+        onClick={() => setMotion(toggledMotion(reduced, deviceReduces()))}
+        className="inline-flex min-h-11 items-center text-left text-muted hover:text-ink sm:min-h-0 sm:py-1"
+      >
+        reduce motion<span aria-hidden="true" className={reduced ? "ml-1.5 text-blue" : "hidden"}>· on</span>
+      </button>
+    </li>
   );
 }
 

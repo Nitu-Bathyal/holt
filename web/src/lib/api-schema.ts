@@ -2592,6 +2592,15 @@ export interface components {
             labels: string[];
             /** Number */
             number: number;
+            /**
+             * On It
+             * @description "Nobody on it yet", "1 open pull request", "2 people already on it".
+             */
+            readonly on_it: string | null;
+            /** Open Prs */
+            open_prs: number | null;
+            /** People */
+            people: number | null;
             /** Title */
             title: string;
             /** Url */

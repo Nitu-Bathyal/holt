@@ -1,6 +1,29 @@
 @import "tailwindcss";
 
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+/* Tailwind's motion-safe / motion-reduce, with the site's motion setting
+   (<html data-motion>, lib/motion.ts) over the device's. Every other
+   prefers-reduced-motion block here gets the same through postcss-motion.mjs. */
+@custom-variant motion-safe {
+  @media (prefers-reduced-motion: no-preference) {
+    &:where(:root:not([data-motion="reduce"]) *) {
+      @slot;
+    }
+  }
+  &:where(:root[data-motion="full"] *) {
+    @slot;
+  }
+}
+@custom-variant motion-reduce {
+  @media (prefers-reduced-motion: reduce) {
+    &:where(:root:not([data-motion="full"]) *) {
+      @slot;
+    }
+  }
+  &:where(:root[data-motion="reduce"] *) {
+    @slot;
+  }
+}
 /* Phones held sideways: wide but under ~500px tall, so heroes need to be compact. */
 @custom-variant short (@media (orientation: landscape) and (max-height: 500px));
 /* Laptop screens (1280×720, 1366×768): a pane has ~660–710px under the header,

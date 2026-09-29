@@ -508,7 +508,8 @@ function mockPicks(): Recommendation[] {
   });
   const issue = (repo: string, number: number, title: string, labels: string[], areas: ContributionType[], daysAgo: number): StarterIssue => ({
     number, title, url: `https://github.com/${repo}/issues/${number}`, labels, created_at: at(daysAgo * 24), comments: 1,
-    why: ["Labelled good first issue", "Nobody has claimed it"], beginner: labels.some((l) => /good first/i.test(l)), areas,
+    why: ["Labelled good first issue"], beginner: labels.some((l) => /good first/i.test(l)), areas,
+    people: 0, open_prs: 0, on_it: "Nobody on it yet",
   });
   const pick = (repo: string, language: string, description: string, stars: number, topics: string[], s: Stats, why: string[], issues: StarterIssue[]): Recommendation => {
     const r = withDerived({ ...mockReport(repo, "rules", 7), stats: s });

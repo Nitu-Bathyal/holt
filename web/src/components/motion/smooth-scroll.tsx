@@ -12,13 +12,15 @@
 // - It only ran on one page. This runs on every page, so the feel is the same
 //   everywhere.
 //
-// Off under prefers-reduced-motion and on touch-only devices (they keep native
+// Off under reduced motion (lib/motion.ts) and on touch-only devices (they keep native
 // scrolling; loading GSAP there would buy nothing). Nested scroll areas scroll
 // on their own (allowNestedScroll, plus data-lenis-prevent on the focus dialog
 // and the menus), and a modal stops Lenis while it's open (pauseSmoothScroll).
 import type Lenis from "lenis";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
+import { prefersReducedMotion } from "@/lib/motion";
+import { useReducedMotion } from "./use-seen";
 
 let lenis: Lenis | null = null;
 let paused = false;
@@ -33,14 +35,15 @@ export function pauseSmoothScroll(on: boolean) {
 /** Back to the top of the page: a Lenis glide where it runs, otherwise native (instant under reduced motion). */
 export function scrollToTop() {
   if (lenis) return lenis.scrollTo(0);
-  window.scrollTo({ top: 0, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  window.scrollTo({ top: 0, behavior: prefersReducedMotion() ? "auto" : "smooth" });
 }
 
 export function SmoothScroll() {
   const pathname = usePathname();
+  const reduced = useReducedMotion();
 
   useEffect(() => {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches || !matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    if (reduced || !matchMedia("(hover: hover) and (pointer: fine)").matches) return;
     let cancelled = false;
     let cleanup: (() => void) | undefined;
     (async () => {
@@ -76,7 +79,7 @@ export function SmoothScroll() {
       cancelled = true;
       cleanup?.();
     };
-  }, []);
+  }, [reduced]);
 
   // A new page never shows mid-scroll: drop whatever glide was running and
   // take the position the router just set (the top, or where it was for a

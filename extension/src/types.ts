@@ -31,6 +31,8 @@ export interface StarterIssue {
   title?: string;
   url?: string;
   why?: string[];
+  /** "Nobody on it yet", "1 open pull request", …; missing from older servers. */
+  on_it?: string | null;
 }
 
 export interface StarterIssues {

@@ -9,6 +9,7 @@ export const SECTIONS = [
   { id: "ai-reports", href: "/settings/ai-reports", label: "AI reports", title: "AI reports and plan", blurb: "Free reports left, the weekly claim, your plan and purchases." },
   { id: "accounts", href: "/settings/accounts", label: "Accounts", title: "Connected accounts", blurb: "How you sign in, and your GitHub connection." },
   { id: "privacy", href: "/settings/privacy", label: "Privacy", title: "Privacy and data", blurb: "Statistics, what Holt keeps, and deleting it." },
+  { id: "display", href: "/settings/display", label: "Display", title: "Display", blurb: "Motion on the site." },
 ] as const;
 
 export type SectionId = (typeof SECTIONS)[number]["id"];
@@ -21,6 +22,7 @@ export const PROFILE_SETTINGS = section("profile").href;
 export const AI_SETTINGS = section("ai-reports").href;
 export const ACCOUNT_SETTINGS = section("accounts").href;
 export const PRIVACY_SETTINGS = section("privacy").href;
+export const DISPLAY_SETTINGS = section("display").href;
 
 // Old anchors. Anchors that still exist inside a section (#plan, #purchases) are kept.
 const BY_HASH: Record<string, { to: string; keep?: boolean }> = {

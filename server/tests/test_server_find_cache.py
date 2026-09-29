@@ -95,6 +95,17 @@ def test_cache_expires_after_six_hours(h, finder):
     assert find(h, languages=["go"]).status_code == 202
 
 
+def test_a_search_cached_before_issues_said_who_is_on_them_runs_again():
+    from holt_server.db import ENGINE_VERSION
+
+    def row(issue):
+        return FindCache(key="k", params={"engine_version": ENGINE_VERSION},
+                         results=[{"repo": "o/r", "issues": [issue]}])
+
+    assert row({"number": 1, "title": "t"}).outdated
+    assert not row({"number": 1, "title": "t", "people": 0, "open_prs": 0}).outdated
+
+
 def test_limit_beyond_what_was_computed_is_a_miss(h, finder):
     h.wait(find(h, languages=["go"]).json()["job_id"], kind="find")  # 3 results < 20
     # The search ran dry below its limit, so a bigger page would find nothing new.

@@ -194,6 +194,8 @@ export function evidenceRef(url: string): string {
 export function nextStep(issue: StarterIssue): string {
   const labels = issue.labels.map((l) => l.toLowerCase());
   const docs = labels.some((l) => l.includes("doc"));
+  if (issue.open_prs) return "Look at the open pull request first; if it has stalled, ask to take over.";
+  if (issue.people) return "Ask whether it's still free before you start.";
   if (issue.comments === 0) {
     return docs
       ? "Comment on the issue to say you'd like to fix the docs, then open a small pull request."

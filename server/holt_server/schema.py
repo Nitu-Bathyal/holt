@@ -34,7 +34,7 @@ from holt.agent.verdict import (
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_serializer
 
 # Bound here, not looked up per call: tests swap `holt.starter` for a fake.
-from holt.starter import is_beginner_issue, issue_areas
+from holt.starter import is_beginner_issue, issue_areas, on_it_text
 
 Verdict = Literal["viable", "long_shot", "not_viable", "insufficient_evidence", "personal"]
 Mode = Literal["rules", "ai"]
@@ -692,6 +692,19 @@ class StarterIssue(Model):
     created_at: str | None = None
     comments: int = 0
     why: list[str] = Field(default_factory=list)
+    # Distinct people already on it (open pull requests, recent claims, quiet
+    # assignees) and its open pull requests. Null from an engine that didn't
+    # count them.
+    people: int | None = None
+    open_prs: int | None = None
+
+    @computed_field
+    @property
+    def on_it(self) -> str | None:
+        """"Nobody on it yet", "1 open pull request", "2 people already on it"."""
+        if self.people is None:
+            return None
+        return on_it_text(self.people, self.open_prs or 0)
 
     # Derived from the labels and title, so cached issues get them too. The
     # web uses them with a profile: a newcomer sees only `beginner` issues,
