@@ -3,16 +3,14 @@
 import { PageTransition } from "@/components/motion/page-transition";
 import { SettingsNav } from "@/components/settings/settings-nav";
 import { AppPageHeader } from "@/components/shell/app-page";
-import { currentUser } from "@/lib/session";
 
-export default async function SettingsLayout({ children }: { children: React.ReactNode }) {
-  const user = await currentUser();
+export default function SettingsLayout({ children }: { children: React.ReactNode }) {
   return (
     <PageTransition>
       <div className="app-page">
-        <AppPageHeader title="Settings" lead={user ? user.name || user.email : null} />
+        <AppPageHeader title="Settings" />
         <SettingsNav />
-        <div className="min-w-0 max-w-3xl pt-6">{children}</div>
+        <div className="min-w-0 max-w-3xl pt-8">{children}</div>
       </div>
     </PageTransition>
   );

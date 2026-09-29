@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { compareHref, leaders, parseList } from "./compare.ts";
+import { compareHref, compareTitle, leaders, parseList } from "./compare.ts";
 import type { Stats } from "./types.ts";
 
 const st = (over: Partial<Stats> = {}): Stats => ({ outsider_attempts: 10, outsider_merged: 5, distinct_outsiders: 8, first_time_merged_authors: 2, no_reply: 1, median_first_response_hours: 10, bot_share: 0, still_open: 0, closed_silently: 0, too_old: 0, ...over });
@@ -27,4 +27,14 @@ test("no leader with one column, equal numbers or missing ones", () => {
   assert.deepEqual(leaders([st(), st()]).merged, []);
   assert.deepEqual(leaders([st({ median_first_response_hours: null }), st()]).reply, []);
   assert.deepEqual(leaders([st({ outsider_attempts: 0 }), st()]).merged, []);
+});
+
+test("compareTitle names the one repo that merges outsiders most often, once you picked", () => {
+  const repos = ["a/b", "c/d"];
+  const lead = leaders([st({ outsider_merged: 8 }), st()]);
+  assert.equal(compareTitle(true, repos, lead), "a/b merges outsiders most often.");
+  // The example on an empty page, a tie, or a single repo keep the question.
+  assert.equal(compareTitle(false, repos, lead), "Which one will review your pull request?");
+  assert.equal(compareTitle(true, repos, leaders([st(), st()])), "Which one will review your pull request?");
+  assert.equal(compareTitle(true, ["a/b"], leaders([st()])), "Which one will review your pull request?");
 });

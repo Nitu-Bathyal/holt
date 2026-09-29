@@ -8,7 +8,7 @@ import { canCancel, creditsLabel, formatPrice, STATUS_LABEL, subscriptionLabel, 
 import { currentUser } from "@/lib/session";
 import { AI_SETTINGS } from "@/lib/settings";
 import { WELCOME_AI_CREDITS } from "@/lib/site";
-import { Notice, SectionHead } from "@/components/settings/section-head";
+import { Block, Notice, SectionHead } from "@/components/settings/section-head";
 
 export const metadata: Metadata = { title: "AI reports and plan · Settings", robots: { index: false } };
 
@@ -30,8 +30,6 @@ async function cancelPlan() {
   revalidatePath("/settings", "layout");
   redirect(r.ok ? `${AI_SETTINGS}?cancelled=1#plan` : `${AI_SETTINGS}?error=cancel#plan`);
 }
-
-const H3 = "text-[1.1rem] font-semibold tracking-tight";
 
 export default async function AiReportSettings({ searchParams }: PageProps<"/settings/ai-reports">) {
   const user = await currentUser();
@@ -68,7 +66,7 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
       {!account.ok && <p role="alert" className="mb-6 border border-orange/50 px-4 py-3 font-sans text-[0.9rem] text-orange">{account.error.message}</p>}
 
       {m && c && (
-        <div className="grid gap-px border border-line bg-line shadow-soft sm:grid-cols-2">
+        <div className="grid gap-px border border-line bg-line sm:grid-cols-2">
           <div className="bg-panel p-5">
             <p className="text-[0.87rem] text-faint">{c.purchased > 0 ? "Credits left" : "Free AI reports left"}</p>
             <p className="mt-1 text-[1.6rem] font-semibold leading-tight">{c.balance}</p>
@@ -105,16 +103,15 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
         </ul>
       </details>
 
-      <div id="plan" className="mt-8 scroll-mt-24 border-t border-line pt-6">
-        <h3 className={H3}>Your plan</h3>
+      <Block id="plan" title="Your plan" className="mt-10">
         {!sub ? (
-          <p className="prose-sans mt-2 text-[0.95rem]">
+          <p className="prose-sans text-[0.95rem]">
             Free.{" "}
             {plansOnSale ? <Link href="/pricing#plans" className="text-link">See paid plans</Link> : <Link href="/pricing" className="text-link">See pricing</Link>}.
           </p>
         ) : (
           <>
-            <p className="mt-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
               <span className="text-[1.05rem] font-semibold">{sub.name}</span>
               <span className="text-muted">{formatPrice(sub.amount, sub.currency)} a month</span>
               <span className={`chip ${sub.status === "active" && !sub.cancel_at_period_end ? "border-green/60 text-green" : sub.status === "pending" ? "border-orange/60 text-orange" : "border-line-strong text-muted"}`}>
@@ -159,17 +156,16 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
             </ul>
           </>
         )}
-      </div>
+      </Block>
 
       {(purchases.length > 0 || onSale) && (
-        <div id="purchases" className="mt-8 scroll-mt-24 border-t border-line pt-6">
-          <h3 className={H3}>Purchases</h3>
+        <Block id="purchases" title="Purchases" className="mt-10">
           {purchases.length === 0 ? (
-            <p className="prose-sans mt-2 text-[0.95rem]">
+            <p className="prose-sans text-[0.95rem]">
               Nothing bought yet. <Link href="/pricing#packs" className="text-link">See credit packs</Link>.
             </p>
           ) : (
-            <ul className="mt-3 divide-y divide-line border-y border-line">
+            <ul className="divide-y divide-line border-b border-line">
               {purchases.map((o) => (
                 <li key={o.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-[0.9rem]">
                   <span className="min-w-0">
@@ -186,7 +182,7 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
           {onSale && purchases.length > 0 && (
             <p className="mt-4 text-[0.89rem]"><Link href="/pricing#packs" className="text-link">Buy more credits →</Link></p>
           )}
-        </div>
+        </Block>
       )}
     </section>
   );

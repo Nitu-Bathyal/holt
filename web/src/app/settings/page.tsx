@@ -39,12 +39,13 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
   return (
     <>
       <SettingsHashRedirect />
-      <ul className="divide-y divide-line border-y border-line">
+      <h2 className="sr-only">All settings</h2>
+      <ul className="border-t border-line">
         {SECTIONS.map((s) => (
           <li key={s.id}>
-            <Link href={s.href} className="group flex items-center gap-4 py-4 transition-colors hover:bg-panel-2 sm:px-3">
-              <span className="min-w-0 flex-1">
-                <span className="block text-[1.05rem] font-semibold group-hover:text-blue">{s.title}</span>
+            <Link href={s.href} className="app-row group grid-cols-[minmax(0,1fr)_auto]">
+              <span className="min-w-0">
+                <span className="block text-[1.02rem] font-semibold group-hover:text-blue">{s.title}</span>
                 <span className="mt-1 block font-sans text-[0.9rem] text-muted">{status[s.id] ?? s.blurb}</span>
               </span>
               <span aria-hidden="true" className="text-faint group-hover:text-blue">›</span>

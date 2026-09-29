@@ -4,14 +4,12 @@ import { redirect } from "next/navigation";
 import { remove } from "@/app/profile/actions";
 import { getProfile, githubConnection } from "@/lib/api";
 import { currentUser } from "@/lib/session";
-import { ACCOUNT_SETTINGS, PRIVACY_SETTINGS, PROFILE_SETTINGS } from "@/lib/settings";
+import { CONNECT_GITHUB, PRIVACY_SETTINGS, PROFILE_SETTINGS } from "@/lib/settings";
 import { StatsSwitch } from "@/components/connect-github-card";
 import { ContactEmail } from "@/components/legal-page";
-import { Notice, SectionHead } from "@/components/settings/section-head";
+import { Block, Notice, SectionHead } from "@/components/settings/section-head";
 
 export const metadata: Metadata = { title: "Privacy and data · Settings", robots: { index: false } };
-
-const H3 = "text-[1.1rem] font-semibold tracking-tight";
 
 export default async function PrivacySettings({ searchParams }: PageProps<"/settings/privacy">) {
   const user = await currentUser();
@@ -34,33 +32,36 @@ export default async function PrivacySettings({ searchParams }: PageProps<"/sett
       {sp.profile === "deleted" && <Notice tone="plain">Profile deleted.</Notice>}
       {(sp.github === "error" || sp.profile === "error") && <Notice tone="bad">That didn&apos;t work. Try again in a minute.</Notice>}
 
-      <h3 id="stats" className={`${H3} scroll-mt-24`}>Statistics</h3>
-      <div className="mt-3 border border-line-strong bg-panel p-4 shadow-soft">
-        {acct ? (
-          <StatsSwitch acct={acct} />
-        ) : (
-          <p className="font-sans text-[0.9rem] text-muted">
-            Only counts once you <Link href={ACCOUNT_SETTINGS} className="text-link">connect GitHub</Link>. Nothing of yours is in any statistics now.
+      <Block id="stats" title="Statistics">
+        <div className="py-4 sm:px-3">
+          {acct ? (
+            <StatsSwitch acct={acct} />
+          ) : (
+            <p className="font-sans text-[0.9rem] text-muted">
+              Only counts once you <Link href={CONNECT_GITHUB} className="text-link">connect GitHub</Link>. Nothing of yours is in any statistics now.
+            </p>
+          )}
+        </div>
+      </Block>
+
+      <Block title="Your profile" className="mt-10">
+        <div className="app-row flex flex-wrap justify-between">
+          <p className="min-w-0 flex-1 basis-56 font-sans text-[0.9rem] text-muted">
+            {p ? "Your languages, time, experience and topics. Deleting it doesn't touch your history." : <>No profile saved. <Link href={PROFILE_SETTINGS} className="text-link">Set one up</Link> for picks.</>}
           </p>
-        )}
-      </div>
+          {p && (
+            <form action={remove}>
+              <button type="submit" className="btn-ghost text-orange">delete my profile</button>
+            </form>
+          )}
+        </div>
+      </Block>
 
-      <h3 className={`${H3} mt-8`}>Your profile</h3>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border border-line-strong bg-panel p-4 shadow-soft">
-        <p className="min-w-0 flex-1 basis-56 font-sans text-[0.9rem] text-muted">
-          {p ? "Your languages, time, experience and topics. Deleting it doesn't touch your history." : <>No profile saved. <Link href={PROFILE_SETTINGS} className="text-link">Set one up</Link> for picks.</>}
+      <Block title="Your account" className="mt-10">
+        <p className="prose-sans py-4 text-[0.92rem] sm:px-3">
+          To delete your account and everything tied to it, or to get a copy of what we hold, email <ContactEmail /> from the address you sign in with.
         </p>
-        {p && (
-          <form action={remove}>
-            <button type="submit" className="btn-ghost text-orange">delete my profile</button>
-          </form>
-        )}
-      </div>
-
-      <h3 className={`${H3} mt-8`}>Your account</h3>
-      <p className="prose-sans mt-2 text-[0.92rem]">
-        To delete your account and everything tied to it, or to get a copy of what we hold, email <ContactEmail /> from the address you sign in with.
-      </p>
+      </Block>
     </section>
   );
 }

@@ -207,7 +207,13 @@ settings and pre-flight aren't drawn: they keep their pages and take the new fra
    tab; tabs come from `lib/find-tabs.ts` (Hacktoberfest from mid-August to
    October, and always on its own page). Signed out, `.app-page` centres
    itself (`[data-shell="marketing"]`).
-6. **Compare, settings, AI reports, pre-flight:** the new frame; `/connect` into Accounts.
+6. **Compare, settings, AI reports, pre-flight:** the new frame; `/connect` into Accounts. *Built.*
+   Compare's head names the repo that merges outsiders most often once you
+   pick two or more (`compareTitle` in `lib/compare.ts`). Settings sections
+   are blocks (`Block` in `components/settings/section-head.tsx`: `.section-head`
+   over rows) under `.app-tabs`; the lit tab names the section, so its h2 is
+   screen-reader only. Connecting GitHub is `ConnectGitHubForm` in Accounts
+   (`CONNECT_GITHUB`, `connectFailed` in `lib/settings.ts`); `/connect` 308s there.
 7. **States and motion pass:** empty, loading, the home moment, wait bars.
 
 Before 1 Oct only item 1 is small enough to land; the rest follows through October.
@@ -222,11 +228,8 @@ is #156 (`/lab/dashboard`). Close it once the rollout is done.
 
 **Left:**
 - ~~5, Find a project~~: built (see the rollout above).
-- **6, the frame for the rest:** `/compare`, `/settings/*` (including AI
-  reports and Display), `/preflight` and `/connect`. `/connect` folds into
-  Settings → Accounts (same consent), with a redirect in `RETIRED`. There's a
-  known bug to fix there: the selected card in Settings → Profile → "Your
-  experience" has an unreadable second line.
+- ~~6, the frame for the rest~~: built (see the rollout above), with the
+  unreadable hint on the selected "Your experience" card fixed.
 - **7, states and motion:** empty and loading states in the row or card
   shape on every page above; count-ups; one moment per page.
 

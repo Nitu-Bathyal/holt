@@ -54,3 +54,14 @@ export function leaders(stats: (Stats | null)[]): Record<Lead, number[]> {
     silent: pick(stats.map((s) => (s ? share(s.no_reply, s.outsider_attempts) : null)), "low"),
   };
 }
+
+/**
+ * The page's one sentence: the repo that merges outsiders most often, once
+ * you've picked two or more and one of them clearly leads; otherwise the
+ * question the page answers.
+ */
+export function compareTitle(picked: boolean, repos: string[], lead: Record<Lead, number[]>): string {
+  const top = lead.merged;
+  if (picked && repos.length >= 2 && top.length === 1) return `${repos[top[0]]} merges outsiders most often.`;
+  return "Which one will review your pull request?";
+}

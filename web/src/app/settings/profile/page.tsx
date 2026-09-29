@@ -20,12 +20,7 @@ export default async function ProfileSettings({ searchParams }: PageProps<"/sett
 
   return (
     <section aria-labelledby="profile-h">
-      <SectionHead id="profile">
-        <p>
-          Holt picks repos from this. <Link href="/find" className="text-link">Find</Link> and{" "}
-          <Link href="/hacktoberfest" className="text-link">Hacktoberfest</Link> start from it too, and you can change any search.
-        </p>
-      </SectionHead>
+      <SectionHead id="profile" />
 
       {notice === "saved" && p && (
         <Notice tone="good">
