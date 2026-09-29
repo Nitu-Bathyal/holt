@@ -191,8 +191,10 @@ settings and pre-flight aren't drawn: they keep their pages and take the new fra
    every size; the shared page frame and page head. (`lib/shell.ts`,
    `components/shell/*`) Hacktoberfest keeps a sidebar item in October until 5.
 2. **Your repos:** `/me/repos` merges saved and checked; 308s from the old URLs. *Built.*
-3. **Home:** the loop, needs you, in flight, picks with inline chips, your repos.
-   Rules stay pure in `lib/home.ts`. "Since your last visit" is a cookie.
+3. **Home:** the loop, also for you, in flight, picks, your repos. Rules stay
+   pure in `lib/home.ts`. *Built.* A merge in the last 72 hours gets the
+   headline (no "since your last visit" cookie); new accounts without picks keep
+   the one-question-at-a-time profile flow instead of inline chips.
 4. **Server, then PRs page:** each PR's repo carries its typical first reply,
    and a per-repo "don't count this" choice (a friend's project, your team's
    repo, a hackathon; engine 4's personal projects are left out by default)

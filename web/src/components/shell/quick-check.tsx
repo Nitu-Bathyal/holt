@@ -1,22 +1,19 @@
 "use client";
 // A small repo box: type or paste a repo, press enter, read its report. In the
-// top bar ("bar", hidden on /me, whose own box is the page's main action), and
-// as the quiet second option on a new account's home ("inline").
-import { usePathname, useRouter } from "next/navigation";
+// top bar on every app page ("bar", from md up), and on the home below md,
+// where the top bar has no room for it ("inline").
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { track } from "@/lib/analytics";
 import { pasteHref } from "@/lib/gate";
 import { parseRepoInput } from "@/lib/repo";
-import { HOME } from "@/lib/home";
 
 export function QuickCheck({ variant = "bar" }: { variant?: "bar" | "inline" }) {
   const bar = variant === "bar";
   const id = bar ? "bar-repo" : "home-repo";
   const router = useRouter();
-  const path = usePathname();
   const [value, setValue] = useState("");
   const [bad, setBad] = useState(false);
-  if (bar && path === HOME) return null;
 
   return (
     <form
