@@ -26,7 +26,7 @@ from holt.agent.verdict import MERGE_RATE_FLOOR, MIN_DISTINCT_AUTHORS, MIN_MERGE
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_serializer
 
 # Bound here, not looked up per call: tests swap `holt.starter` for a fake.
-from holt.starter import is_beginner_issue, issue_areas
+from holt.starter import is_beginner_issue, issue_areas, on_it_text
 
 Verdict = Literal["viable", "not_viable", "insufficient_evidence"]
 Mode = Literal["rules", "ai"]
@@ -357,7 +357,7 @@ def numbers_line(s: Stats, sample: Sample | None) -> str:
     if s.closed_silently:
         out.append(f"{_pct(s.closed_silently, n)}% were closed without a word.")
     if s.no_reply:
-        out.append(f"{_pct(s.no_reply, n)}% got no reply at all.")
+        out.append(f"{_pct(s.no_reply, n)}% sat open with no reply.")
     if s.still_open:
         out.append(f"Another {s.still_open} {'was' if s.still_open == 1 else 'were'} opened "
                    f"in the last {SETTLE_DAYS} days, too recently to count.")
@@ -631,6 +631,19 @@ class StarterIssue(Model):
     created_at: str | None = None
     comments: int = 0
     why: list[str] = Field(default_factory=list)
+    # Distinct people already on it (open pull requests, recent claims, quiet
+    # assignees) and its open pull requests. Null from an engine that didn't
+    # count them.
+    people: int | None = None
+    open_prs: int | None = None
+
+    @computed_field
+    @property
+    def on_it(self) -> str | None:
+        """"Nobody on it yet", "1 open pull request", "2 people already on it"."""
+        if self.people is None:
+            return None
+        return on_it_text(self.people, self.open_prs or 0)
 
     # Derived from the labels and title, so cached issues get them too. The
     # web uses them with a profile: a newcomer sees only `beginner` issues,
@@ -655,6 +668,8 @@ class FindResult(VerdictView):
     repo: str
     description: str | None = None
     language: str | None = None
+    # As on a Discover card: primary first, a second when it's a real share.
+    languages: list[str] = Field(default_factory=list)
     stars: int | None = None
     stats: PartialStats = Field(default_factory=PartialStats)
     issues: list[StarterIssue] = Field(default_factory=list)
@@ -1413,6 +1428,7 @@ class Recommendation(VerdictView):
     repo: str
     description: str | None = None
     language: str | None = None
+    languages: list[str] = Field(default_factory=list)
     stars: int | None = None
     topics: list[str] = Field(default_factory=list)
     # The report's one-line reason (the same sentence Discover shows).

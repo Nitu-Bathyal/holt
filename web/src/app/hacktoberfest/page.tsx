@@ -39,6 +39,16 @@ const LANGS = [
   { id: "php", label: "PHP", langs: ["php"] },
 ] as const;
 
+// The official rules, from the hacktoberfest.com FAQ as of 29 Sep 2026.
+// Re-read them each year; they changed completely in 2026.
+const RULES_URL = "https://hacktoberfest.com/questions/";
+const COUNTS = [
+  "Pull requests no longer earn rewards. Maintainers asked for less spam.",
+  "Stickers do. Collect them at a Fest, a livestream or a DEV Challenge. Three get you a sticker pack in the mail.",
+  "Sign in with MyMLH at hacktoberfest.com. Your dashboard opens by 1 October.",
+  "Pull requests are still welcome. Send them where they get merged.",
+] as const;
+
 const STEPS = [
   ["Pick a project that merges outside work", "Start from the list above, or paste any repo into Holt. Skip the ones where outside pull requests sit unanswered."],
   ["Take one real issue", "Choose something you understand, ask the maintainers if you can take it, and agree on the approach first."],
@@ -99,9 +109,24 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
               This October, make contributions <span className="text-hf">that actually land.</span>
             </h1>
             <p className="prose-sans mt-5 max-w-2xl text-[1.05rem]">
-              Hacktoberfest no longer counts pull requests, so aim for work that gets merged. Every project below is
-              tagged for Hacktoberfest and merges outside contributors&apos; work, with open issues you could pick up today.
+              Every project below is tagged for Hacktoberfest and merges outside contributors&apos; work, with open
+              issues you could pick up today.
             </p>
+            <section aria-labelledby="counts" className="mt-6 max-w-2xl border border-hf-line bg-panel px-4 py-4 sm:px-5">
+              <h2 id="counts" className="text-[0.8rem] uppercase tracking-[0.08em] text-hf">What counts in {YEAR}</h2>
+              <ul className="mt-3 space-y-2 font-sans text-[0.95rem] text-muted">
+                {COUNTS.map((line) => (
+                  <li key={line} className="flex gap-2">
+                    <span aria-hidden="true" className="text-hf">→</span>
+                    <span>{line}</span>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-3 text-[0.8rem] text-faint">
+                From the{" "}
+                <a className="text-link" href={RULES_URL} target="_blank" rel="noopener noreferrer">hacktoberfest.com FAQ ↗</a>
+              </p>
+            </section>
             <p className="mt-3 text-[0.85rem] text-faint">This page is for October. Outside Hacktoberfest, use <Link href="/find" className="text-link">find a project</Link>.</p>
             <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
               <a href="#tips" className="bracket-link bracket-link--hf px-3 text-center text-[0.83rem] sm:px-4 sm:text-[0.88rem]">[ 5 tips so your PR gets reviewed ]</a>

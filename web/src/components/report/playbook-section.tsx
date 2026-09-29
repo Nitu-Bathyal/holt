@@ -7,7 +7,7 @@
 import Link from "next/link";
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import { timeAgo } from "@/lib/format";
-import { codeSpans, isGitHubLink, linkLabel, SECTION_ORDER, SECTION_TITLES, seenLabel, unlockOffer } from "@/lib/playbook";
+import { codeSpans, isGitHubLink, linkLabel, SECTION_ORDER, SECTION_TITLES, seenLabel, showPlaybook, unlockOffer } from "@/lib/playbook";
 import type { ApiError, Playbook, PlaybookClosingReason, PlaybookItem, PlaybookState } from "@/lib/types";
 
 type Run =
@@ -96,8 +96,8 @@ export function PlaybookSection({ repo, signedIn }: { repo: string; signedIn: bo
     follow(body.job_id);
   }, [repo, follow]);
 
-  // Off, still loading, or the server couldn't be reached: nothing at all.
-  if (!s || !s.available) return null;
+  // Off, not on sale, still loading, or the server couldn't be reached: nothing at all.
+  if (!showPlaybook(s)) return null;
 
   return (
     <section aria-labelledby="playbook" className="border border-line-strong bg-panel p-5 shadow-card sm:p-8" data-playbook>

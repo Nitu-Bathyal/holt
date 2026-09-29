@@ -205,7 +205,7 @@ they cannot disagree with each other or with the verdict:
   (the verdict and one reason, without the counts), `numbers_line` (the
   counts with the dates they cover, e.g. "Of 120 pull requests from outside
   contributors (3 Jun – 26 Sep 2026), 22 were merged (18%). When a maintainer
-  replied, it was typically within 6 hours. 25% got no reply at all."), and
+  replied, it was typically within 6 hours. 25% sat open with no reply."), and
   `next_step` (where outside work lands, what the project asks, or where to go
   instead). `first_timer_line` is null when nobody outside tried.
 - The rule that decided the verdict is the last `decided_by` line whose code
@@ -303,7 +303,8 @@ when an older engine version made it (see "Engine version and `outdated`"). Publ
 key like every `/v1` route.
 
 ### `GET /v1/repos/{owner}/{repo}/starter-issues?limit=20`
-Open, unassigned issues in this repo that suit a newcomer, best first:
+Open issues in this repo that suit a newcomer and nobody has taken, best
+first (issues nobody is on before the rest):
 `{"repo": "…", "issues": [StarterIssue]}`. Cached per repository for 1 hour;
 a cache hit costs no GitHub call and no rate limit. A miss counts against the
 **read** limit, never the work limit (see Rate limits).
@@ -337,9 +338,21 @@ StarterIssue:
 { "number": 123, "title": "…", "url": "https://github.com/o/r/issues/123",
   "labels": ["good first issue"], "created_at": "…", "comments": 2,
   "why": ["Labelled good first issue", "Touches docs/, where 8 of 10 outsider PRs were merged"],
+  "people": 0,               // distinct people already on it; null from an older cache
+  "open_prs": 0,             // its open pull requests; null from an older cache
+  "on_it": "Nobody on it yet", // those two in words; null when they are
   "beginner": true,          // labelled for first-timers ("good first issue" and its spellings)
   "areas": ["docs"] }        // which of code/docs/tests/design/translations it looks like
 ```
+`people` counts distinct people with an open pull request that closes or
+mentions the issue, a "can I work on this?" comment in the last 45 days, or an
+assignment that went quiet. `on_it` is the line the web and `holt start` both
+show: "Nobody on it yet", "1 open pull request", "2 people already on it" or
+"2 people already on it, 1 open pull request". Issues already solved (a merged
+linked pull request), taken (an assignee active in the last 45 days, or a
+"taken" label), or not tasks at all (calls for maintainers, tracking and meta
+issues, epics) are never listed. Starter issues cached before these fields
+existed are fetched again rather than served.
 `beginner` and `areas` are worked out from the labels and title every time an
 issue is sent, so cached issues have them too. The web uses them with a
 profile (see Profile); they never change a verdict or which repos are listed.
@@ -947,16 +960,18 @@ Proxies `GET /v1/reports/{owner}/{repo}?mode=rules&days=7`.
   links to the report page, which re-runs it.
 - `404` → `{"error": {"code": "not_found", ...}}` when nothing is cached yet
   (or the repo is missing/private). The extension then shows "Check with Holt"
-  and links to `/{owner}/{repo}`, whose page starts the analysis for a
-  signed-in visitor and asks anyone else to sign in first (then starts it).
-  Signed out, that page shows a cached report as a teaser (verdict and reason)
-  unless it is one of the curated examples; these proxies are unaffected.
+  and links to `/{owner}/{repo}`, whose page starts the rules analysis for
+  any visitor who isn't a bot (signed out: rate-limited per IP by
+  `HOLT_ANON_RATE_PER_HOUR`, and over the limit it asks them to sign in first).
+  Signed out, that page shows a report as a teaser (verdict, reason, odds and
+  one number) unless it is one of the curated examples; these proxies are
+  unaffected.
 - `429` `rate_limited` / `5xx` → shown as "Check with Holt" too.
 
 ### `GET /api/public/starter-issues/{owner}/{repo}`
 Proxies `GET /v1/repos/{owner}/{repo}/starter-issues?limit=20` →
-`{"repo": "…", "issues": [StarterIssue]}`. The extension reads `number` and
-`why`. `404` when nothing is known.
+`{"repo": "…", "issues": [StarterIssue]}`. The extension reads `number`,
+`why` and `on_it`. `404` when nothing is known.
 
 Both routes:
 - Accept `GET` and `OPTIONS` only, no cookies or auth. Forward the caller's

@@ -93,6 +93,18 @@ def test_cache_expires_after_the_ttl(h, starter_calls):
     assert starter_calls == ["octo/one", "octo/one"]
 
 
+def test_a_row_cached_before_issues_said_who_is_on_them_is_fetched_again(h, starter_calls):
+    async def old_row():
+        async with h.svc.db.session() as s:
+            s.add(StarterCache(repo_key="octo/one", repo="octo/one",
+                               issues=[{"number": 1, "title": "Solved long ago"}]))
+            await s.commit()
+
+    h.client.portal.call(old_row)
+    issues = h.get("/v1/repos/octo/one/starter-issues").json()["issues"]
+    assert starter_calls == ["octo/one"] and issues[0]["title"] == "Issue 1"
+
+
 def test_missing_repo_is_not_cached(h, starter_calls):
     r = h.get("/v1/repos/nobody/nothing/starter-issues")
     assert r.status_code == 404

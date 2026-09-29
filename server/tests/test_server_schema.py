@@ -148,7 +148,7 @@ def test_numbers_line_carries_the_dates_and_the_same_counts():
     assert r.numbers_line == (
         "Of 120 pull requests from outside contributors (3 Jun – 26 Sep 2026), 22 were "
         "merged (18%). When a maintainer replied, it was typically within 2 hours. "
-        "25% got no reply at all.")
+        "25% sat open with no reply.")
     assert r.stat_line == "22 of 120 outside PRs merged"
 
 
@@ -156,7 +156,7 @@ def test_numbers_line_without_a_sample_or_replies():
     s = stats(10, 0, 10) | {"median_first_response_hours": None}
     assert top("not_viable", s).numbers_line == (
         "Of 10 pull requests from outside contributors, 0 were merged (0%). "
-        "No maintainer replied to any of them. 100% got no reply at all.")
+        "No maintainer replied to any of them. 100% sat open with no reply.")
     assert top("insufficient_evidence", stats(0, 0, 0)).numbers_line == (
         "Nobody outside the project's team opened a pull request.")
     assert top("insufficient_evidence", stats(0, 0, 0)).stat_line is None

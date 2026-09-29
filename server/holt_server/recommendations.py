@@ -43,7 +43,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import select
 
-from holt_server import entitlements, repos, schema
+from holt_server import entitlements, repos, schema, starter
 from holt_server.db import (
     Contribution,
     FindCache,
@@ -99,6 +99,7 @@ class Candidate:
     rule_codes: list[str] = field(default_factory=list)
     description: str | None = None
     language: str | None = None
+    languages: list[str] = field(default_factory=list)
     stars: int | None = None
     topics: list[str] = field(default_factory=list)
     checked_at: str | None = None
@@ -187,6 +188,7 @@ async def candidates(svc: Services) -> dict[str, Candidate]:
             decided_by=decided_by or [], rule_codes=rule_codes or [],
             description=meta.description if meta else None,
             language=meta.language if meta else None,
+            languages=list(meta.languages or []) if meta else [],
             stars=meta.stars if meta else None,
             topics=list(meta.topics or []) if meta else [],
             checked_at=generated or iso(created))
@@ -222,6 +224,7 @@ def _from_find(r: Any, created, metas: dict[str, RepoMeta]) -> Candidate | None:
         repo=r["repo"], key=key, stats=st,
         description=(meta.description if meta else None) or r.get("description"),
         language=(meta.language if meta else None) or r.get("language"),
+        languages=list(meta.languages or []) if meta else [],
         stars=meta.stars if meta else r.get("stars"),
         topics=list(meta.topics or []) if meta else [],
         checked_at=iso(created), issues=list(r.get("issues") or []))
@@ -235,7 +238,7 @@ async def starter_issues(svc: Services, keys: list[str]) -> dict[str, list[dict]
         rows = (await s.execute(select(StarterCache.repo_key, StarterCache.issues)
                                 .where(StarterCache.repo_key.in_(keys),
                                        StarterCache.created_at >= since))).all()
-    return {key: list(issues or []) for key, issues in rows}
+    return {key: list(issues or []) for key, issues in rows if starter.current(issues or [])}
 
 
 # --- the rules ------------------------------------------------------------------------
@@ -259,8 +262,10 @@ def fitting_issues(raw: list[dict], b: Basis) -> list[StarterIssue]:
     if b.level == "newcomer":
         issues = [i for i in issues if i.beginner]
     wanted = set(b.contributions)
-    # Stable: the finder's order within each group.
-    return sorted(issues, key=lambda i: not (wanted & set(i.areas)))
+    # Nobody on it first, then the kind of work they want. Stable: the
+    # finder's order within each group.
+    return sorted(issues, key=lambda i: (bool(i.people or i.open_prs),
+                                         not (wanted & set(i.areas))))
 
 
 def _names(items: list[str]) -> str:
@@ -344,7 +349,7 @@ def pick(x: Scored) -> schema.Recommendation:
     c = x.candidate
     return schema.Recommendation(
         repo=c.repo, verdict="viable", description=c.description, language=c.language,
-        stars=c.stars, topics=c.topics,
+        languages=c.languages, stars=c.stars, topics=c.topics,
         reason=verdict_line("viable", c.stats, c.decided_by, c.rule_codes),
         why=x.why, stats=c.stats, issues=x.issues, checked_at=c.checked_at)
 

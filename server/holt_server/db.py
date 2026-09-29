@@ -411,9 +411,13 @@ class FindCache(Base):
     @property
     def outdated(self) -> bool:
         """Screened by an older engine (`params.engine_version`, missing on
-        results stored before it was recorded): not served, searched again."""
+        results stored before it was recorded), or listing starter issues from
+        before they said who is on them: not served, searched again."""
+        from holt_server.starter import current
+
         version = (self.params or {}).get("engine_version")
-        return not isinstance(version, int) or version < ENGINE_VERSION
+        return (not isinstance(version, int) or version < ENGINE_VERSION
+                or not all(current(r.get("issues") or []) for r in self.results or []))
 
 
 def find_key(languages: list[str], topics: list[str], hacktoberfest: bool, days: int) -> str:
@@ -567,6 +571,9 @@ class RepoMeta(Base):
     repo: Mapped[str] = mapped_column(String(200))
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     language: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    # GitHub's primary language, then a second one when it is a real share of
+    # the code (github.main_languages). `language` stays the filter.
+    languages: Mapped[list] = mapped_column(JSON, default=list, server_default="[]")
     stars: Mapped[int] = mapped_column(Integer, default=0)
     topics: Mapped[list] = mapped_column(JSON, default=list)
     pushed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

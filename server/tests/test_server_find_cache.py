@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import sys
 import threading
+import time
 import types
 from datetime import timedelta
 
@@ -94,6 +95,17 @@ def test_cache_expires_after_six_hours(h, finder):
     assert find(h, languages=["go"]).status_code == 202
 
 
+def test_a_search_cached_before_issues_said_who_is_on_them_runs_again():
+    from holt_server.db import ENGINE_VERSION
+
+    def row(issue):
+        return FindCache(key="k", params={"engine_version": ENGINE_VERSION},
+                         results=[{"repo": "o/r", "issues": [issue]}])
+
+    assert row({"number": 1, "title": "t"}).outdated
+    assert not row({"number": 1, "title": "t", "people": 0, "open_prs": 0}).outdated
+
+
 def test_limit_beyond_what_was_computed_is_a_miss(h, finder):
     h.wait(find(h, languages=["go"]).json()["job_id"], kind="find")  # 3 results < 20
     # The search ran dry below its limit, so a bigger page would find nothing new.
@@ -148,3 +160,78 @@ def test_the_warm_pass_fetches_details_for_found_repos(h, finder):
     add(h, meta("octo/go-0", language="Go"))
     stale = h.client.portal.call(discover.stale_meta, h.svc)
     assert sorted(stale) == ["octo/go-1", "octo/go-2"]
+
+
+def queued_reports(h):
+    from holt_server.db import Job
+    from sqlalchemy import select
+
+    async def go():
+        async with h.svc.db.session() as s:
+            return sorted((j.repo, j.days, j.priority, j.user_id) for j in (await s.execute(
+                select(Job).where(Job.kind == "analysis"))).scalars())
+    return h.client.portal.call(go)
+
+
+def settle(h, n):
+    deadline = time.monotonic() + 10
+    while len(queued_reports(h)) < n and time.monotonic() < deadline:
+        time.sleep(0.05)
+    time.sleep(0.2)  # and nothing more arrives
+    return queued_reports(h)
+
+
+def test_a_search_queues_reports_for_its_top_results_only(h, finder, monkeypatch):
+    from holt_server import jobs
+
+    monkeypatch.setattr(jobs, "FOUND_PER_SEARCH", 2)
+    h.wait(find(h, languages=["go"]).json()["job_id"], kind="find")
+    assert [r[0] for r in settle(h, 2)] == ["octo/go-0", "octo/go-1"]
+
+
+def test_a_long_background_queue_stops_searches_queueing_more(h, finder, monkeypatch):
+    from holt_server import jobs
+
+    monkeypatch.setattr(jobs, "FOUND_QUEUE_MAX", 0)
+    h.wait(find(h, languages=["go"]).json()["job_id"], kind="find")
+    assert settle(h, 0) == []
+
+
+def test_searches_queue_nothing_when_github_points_run_low(h, finder):
+    # Two tokens, each still usable, 1200 points between them: under the
+    # warm pass's 1500 floor, which is kept for people's own checks.
+    h.svc.pool.note_points(0, 600)
+    h.svc.pool.note_points(1, 600)
+    assert h.svc.pool.points_left() == 1200
+    h.wait(find(h, languages=["go"]).json()["job_id"], kind="find")
+    assert settle(h, 0) == []
+
+
+def test_found_repos_without_a_report_get_one_queued(h, finder):
+    # A search screens repos without storing reports, so each one it lists
+    # gets a background rules report: its "report →" link then has something
+    # to show (beets was "Worth your time" on /hacktoberfest, "not checked yet"
+    # on its report page).
+    from holt_server.db import BADGE_PRIORITY, ENGINE_VERSION, Job, Report
+    from sqlalchemy import select
+
+    add(h, Report(repo="octo/go-1", repo_key="octo/go-1", mode="rules", days=30,
+                  report={"verdict": "viable"}, engine_version=ENGINE_VERSION))
+    h.wait(find(h, languages=["go"]).json()["job_id"], kind="find")
+
+    async def queued():
+        async with h.svc.db.session() as s:
+            return sorted((j.repo, j.days, j.priority, j.user_id) for j in (await s.execute(
+                select(Job).where(Job.kind == "analysis"))).scalars())
+
+    # Queued just after the search is marked done.
+    deadline = time.monotonic() + 10
+    while len(h.client.portal.call(queued)) < 2 and time.monotonic() < deadline:
+        time.sleep(0.05)
+    assert h.client.portal.call(queued) == [
+        ("octo/go-0", 7, BADGE_PRIORITY, None),
+        ("octo/go-2", 7, BADGE_PRIORITY, None),
+    ]
+    # The same search again (from the cache) queues nothing new.
+    find(h, languages=["go"])
+    assert len(h.client.portal.call(queued)) == 2

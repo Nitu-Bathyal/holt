@@ -84,7 +84,16 @@ def issue(obj: Any, repo: str | None = None) -> dict[str, Any]:
         "created_at": _plain(_get(obj, "created_at")),
         "comments": int(comments or 0),
         "why": [str(x) for x in (_get(obj, "why") or [])],
+        "people": _get(obj, "people"),
+        "open_prs": _get(obj, "open_prs"),
     }
+
+
+def current(issues: list[dict[str, Any]]) -> bool:
+    """False for starter issues cached before issues said who is on them: those
+    were ranked by older rules (and could list solved issues), so they are
+    fetched again rather than served."""
+    return all("people" in i for i in issues)
 
 
 STAT_KEYS = ("outsider_attempts", "outsider_merged", "distinct_outsiders",
