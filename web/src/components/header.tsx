@@ -123,15 +123,17 @@ export function MarketingHeader({ user, credits }: { user: SessionUser | null; c
   );
 }
 
-/** App pages, signed in: the sidebar holds the places, so this bar stays small. */
+/** App pages, signed in: the sidebar holds the places and, on desktop, the logo, so this bar stays small. */
 export function AppTopBar({ user, credits, railCollapsed, drawer }: { user: SessionUser; credits: string | null; railCollapsed: boolean; drawer: React.ReactNode }) {
   return (
     <header className="site-header sticky top-0 z-40 border-b border-line bg-header" style={{ viewTransitionName: "site-header" }}>
-      {/* On desktop the first slot is the rail's toggle, over the rail's icon column. */}
+      {/* On desktop the rail carries the logo, and the bar starts with the rail's toggle, on its edge. */}
       <div className="flex min-h-[60px] items-center gap-3 px-4 lg:pl-2 lg:pr-5">
         <MenuButton target="app-drawer" label="Menu" />
         <RailToggle initial={railCollapsed} />
-        <Logo href={HOME} />
+        <span className="lg:hidden">
+          <Logo href={HOME} />
+        </span>
         <div className="flex flex-1 justify-center px-2">
           <QuickCheck />
         </div>

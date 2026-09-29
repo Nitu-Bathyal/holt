@@ -1,11 +1,12 @@
 "use client";
-// Folds the desktop rail to icons and back: the button in the top bar's first
-// slot (under it sits the rail's icon column) and "[" from anywhere. The state
+// Folds the desktop rail to icons and back: the button at the start of the top
+// bar, on the rail's edge, and "[" from anywhere. The state
 // lives on <html data-rail> (CSS draws both rails from it) and in a cookie, so
 // the server paints the right one first (lib/shell.ts).
 //
-// The page reflows once: the rail's width changes at once, and the page slides
-// from where it was to where it now sits, in step with the rail's panel.
+// The page reflows once: the rail's width changes at once, and the column
+// beside it (top bar and page) slides from where it was to where it now sits,
+// in step with the rail's panel.
 import { useCallback, useEffect, useState } from "react";
 import { cssTimeMs, prefersReducedMotion } from "@/lib/motion";
 import { isRailKey, RAIL_KEY, railCookie } from "@/lib/shell";
@@ -15,17 +16,17 @@ const DESKTOP = "(min-width: 1024px)";
 
 function setRail(collapsed: boolean) {
   const root = document.documentElement;
-  const main = document.getElementById("content");
-  const before = main?.getBoundingClientRect().left ?? 0;
-  main?.getAnimations().forEach((a) => a.cancel());
+  const col = document.getElementById("app-column");
+  const before = col?.getBoundingClientRect().left ?? 0;
+  col?.getAnimations().forEach((a) => a.cancel());
   if (collapsed) root.dataset.rail = "collapsed";
   else delete root.dataset.rail;
   document.cookie = railCookie(collapsed);
-  if (!main || prefersReducedMotion()) return;
-  const dx = before - main.getBoundingClientRect().left;
+  if (!col || prefersReducedMotion()) return;
+  const dx = before - col.getBoundingClientRect().left;
   if (!dx) return;
   const css = getComputedStyle(root);
-  main.animate([{ transform: `translateX(${dx}px)` }, { transform: "none" }], {
+  col.animate([{ transform: `translateX(${dx}px)` }, { transform: "none" }], {
     duration: cssTimeMs(css.getPropertyValue("--dur-slow"), 240),
     easing: css.getPropertyValue("--ease-move").trim() || "ease",
   });
