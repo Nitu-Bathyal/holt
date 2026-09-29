@@ -7,6 +7,7 @@ import type { Mode, Report } from "@/lib/types";
 import { AnalysisProgress } from "../analysis-progress";
 import { ErrorPanel } from "../error-panel";
 import { useAnalysis } from "../use-analysis";
+import { PartialReport } from "./partial-report";
 import { ReportBodySkeleton } from "./report-skeleton";
 import { ReportTeaser } from "./report-teaser";
 import { ReportView } from "./report-view";
@@ -34,7 +35,7 @@ export function AnalysisRunner({ repo, mode, days, signedIn, fallback, ticket }:
   if (ticket && state.phase === "done")
     return (
       <ViewTransition enter="sk-in" default="none">
-        <ReportTeaser repo={state.report.repo} report={state.report} back={reportHref(state.report.repo, days)} land={state.fresh} />
+        <PartialReport report={state.report} back={reportHref(state.report.repo, days)} land={state.fresh} />
       </ViewTransition>
     );
   if (ticket && state.phase === "error" && checkNeedsSignIn(state.error.code)) return <ReportTeaser repo={repo} report={null} back={reportHref(repo, days)} />;

@@ -8,6 +8,7 @@ import { ErrorPanel } from "@/components/error-panel";
 import { AiStart } from "@/components/report/ai-start";
 import { AnalysisRunner } from "@/components/report/analysis-runner";
 import { BudgetPicker } from "@/components/report/budget-picker";
+import { PartialReport } from "@/components/report/partial-report";
 import { ReportTeaser } from "@/components/report/report-teaser";
 import { ReportView } from "@/components/report/report-view";
 import { StarterIssues, StarterIssuesSkeleton } from "@/components/report/starter-issues";
@@ -190,7 +191,11 @@ export default async function RepoPage({ params, searchParams }: Props) {
         <ViewTransition key={mode} name="report-body" share="swap" enter="swap" exit="swap" default="none">
           <div>
             {teaser ? (
-              <ReportTeaser repo={display} report={report.ok ? report.data : null} back={reportHref(display, days)} />
+              report.ok ? (
+                <PartialReport report={report.data} back={reportHref(display, days)} />
+              ) : (
+                <ReportTeaser repo={display} report={null} back={reportHref(display, days)} />
+              )
             ) : report.ok && report.data.outdated && mode === "rules" && signedIn ? (
               // Made by an older version of the rules: check again, with the
               // normal progress, and fall back to it only if that fails. (Signed
