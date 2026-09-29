@@ -150,14 +150,21 @@ export function moveLead(m: NextMove): string | null {
   }
 }
 
-/** Also for you: PRs waiting longer than usual (not the headline one), and saved repos that turned. */
-export type AlsoItem = { kind: "late"; wait: Waiting } | { kind: "turned"; repo: YourRepo };
+/** Also for you: your checks running or just finished, PRs waiting longer than
+ * usual (not the headline one), and saved repos that turned. */
+export type AlsoItem = { kind: "checking" | "ready"; repo: YourRepo } | { kind: "late"; wait: Waiting } | { kind: "turned"; repo: YourRepo };
+
+/** A finished check stays in Also for you this long. */
+const READY_HOURS = 1;
 
 export function alsoForYou(m: NextMove, s: { pulls: ContributionPR[]; repos: YourRepo[]; now: number }): AlsoItem[] {
   const lead = m.kind === "waiting" ? m.wait.pr.url : null;
+  const checks: AlsoItem[] = s.repos
+    .filter((r) => r.checking || (r.checkedAt && r.headline && s.now - Date.parse(r.checkedAt) < READY_HOURS * HOUR))
+    .map((repo) => ({ kind: repo.checking ? "checking" : "ready", repo }));
   const late: AlsoItem[] = inFlight(s.pulls, s.now).filter((w) => w.late && w.pr.url !== lead).map((wait) => ({ kind: "late", wait }));
-  const turned: AlsoItem[] = s.repos.filter((r) => r.savedAt && r.tone === "bad").map((repo) => ({ kind: "turned", repo }));
-  return [...late, ...turned].slice(0, 3);
+  const turned: AlsoItem[] = s.repos.filter((r) => r.savedAt && r.tone === "bad" && !r.checking).map((repo) => ({ kind: "turned", repo }));
+  return [...checks.slice(0, 2), ...late, ...turned].slice(0, 3);
 }
 
 /** In flight: open PRs that aren't the headline and aren't already in Also for you. */

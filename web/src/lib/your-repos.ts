@@ -16,6 +16,8 @@ export interface YourRepo {
   /** Your latest finished check, and whether it was an AI report. */
   checkedAt: string | null;
   ai: boolean;
+  /** A check of yours is running (or queued) now, newer than the last finished one. */
+  checking: boolean;
   /** Holt's current verdict: the latest free report when there is one, else your last check's. */
   headline: string | null;
   tone: Tone | null;
@@ -24,15 +26,26 @@ export interface YourRepo {
   at: string;
 }
 
+/** A check still queued or running after this long is stuck, not running. */
+const RUNNING_FOR_AT_MOST_MS = 30 * 60 * 1000;
+
 /** One row per repo (case doesn't matter), newest activity first. */
-export function yourRepos(saved: SavedItem[], history: HistoryItem[]): YourRepo[] {
+export function yourRepos(saved: SavedItem[], history: HistoryItem[], now = Date.now()): YourRepo[] {
   const rows = new Map<string, YourRepo>();
   const row = (repo: string) => {
     const k = repo.toLowerCase();
     let r = rows.get(k);
-    if (!r) rows.set(k, (r = { repo, savedAt: null, checkedAt: null, ai: false, headline: null, tone: null, stats: null, at: "" }));
+    if (!r) rows.set(k, (r = { repo, savedAt: null, checkedAt: null, ai: false, checking: false, headline: null, tone: null, stats: null, at: "" }));
     return r;
   };
+  // Checks still running: the row shows it, and sorts by when it started.
+  const running = new Map<string, string>();
+  for (const h of history) {
+    if ((h.status !== "queued" && h.status !== "running") || now - Date.parse(h.created_at) > RUNNING_FOR_AT_MOST_MS) continue;
+    row(h.repo);
+    const k = h.repo.toLowerCase();
+    if ((running.get(k) ?? "") < h.created_at) running.set(k, h.created_at);
+  }
   for (const h of history) {
     if (h.status !== "done" || !h.headline || !h.tone) continue;
     const r = row(h.repo);
@@ -45,13 +58,17 @@ export function yourRepos(saved: SavedItem[], history: HistoryItem[]): YourRepo[
     r.savedAt = s.saved_at;
     if (s.card) Object.assign(r, { repo: s.card.repo, headline: s.card.headline, tone: s.card.tone, stats: s.card.stats });
   }
-  for (const r of rows.values()) r.at = [r.savedAt, r.checkedAt].filter(Boolean).sort().at(-1) ?? "";
+  for (const [k, started] of running) {
+    const r = rows.get(k)!;
+    r.checking = !r.checkedAt || started > r.checkedAt;
+  }
+  for (const [k, r] of rows) r.at = [r.savedAt, r.checkedAt, r.checking ? running.get(k)! : null].filter(Boolean).sort().at(-1) ?? "";
   return [...rows.values()].sort((a, b) => b.at.localeCompare(a.at));
 }
 
 export function shown(rows: YourRepo[], show: Show): YourRepo[] {
   if (show === "saved") return rows.filter((r) => r.savedAt);
-  if (show === "checked") return rows.filter((r) => r.checkedAt);
+  if (show === "checked") return rows.filter((r) => r.checkedAt || r.checking);
   return rows;
 }
 

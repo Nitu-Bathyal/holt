@@ -12,6 +12,7 @@ import { WaitBar } from "@/components/home/wait-bar";
 import { PageTransition } from "@/components/motion/page-transition";
 import { ProfileFlow } from "@/components/profile-flow";
 import { RepoGrid } from "@/components/repo-card/repo-grid";
+import { VerdictPill } from "@/components/report/verdict-pill";
 import { SaveButton } from "@/components/save-button";
 import { SectionHead } from "@/components/shell/app-page";
 import { FocusOnHash } from "@/components/shell/check-focus";
@@ -66,7 +67,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
   const now = clock();
   const savedItems = saved.ok ? saved.data.saved : [];
   const savedNames = savedItems.map((i) => i.repo);
-  const repos = yourRepos(savedItems, checks.ok ? checks.data.items : []);
+  const repos = yourRepos(savedItems, checks.ok ? checks.data.items : [], now);
   // Pull requests to other people's projects that count (not left out of your numbers).
   const pulls = prs.ok ? outsidePulls(prs.data.pull_requests, prs.data.login).filter((p) => p.counted) : [];
   const move = nextMove({ pulls, repos, now });
@@ -166,7 +167,21 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
               <SectionHead id="also-h" title="Also for you" />
               <ul>
                 {also.map((a) =>
-                  a.kind === "late" ? (
+                  a.kind === "checking" || a.kind === "ready" ? (
+                    <li key={a.repo.repo} data-rule className="app-row grid-cols-[minmax(0,1fr)_auto]" style={{ "--rule": a.kind === "ready" ? "var(--green)" : "var(--blue)" } as React.CSSProperties}>
+                      <p className="pl-2 font-sans text-[0.95rem]">
+                        {a.kind === "checking" ? (
+                          <>Holt is checking <span className="font-mono font-semibold">{a.repo.repo}</span>.</>
+                        ) : (
+                          <>
+                            <span className="font-mono font-semibold">{a.repo.repo}</span> is checked:{" "}
+                            {a.repo.headline && a.repo.tone && <VerdictPill headline={a.repo.headline} tone={a.repo.tone} className="px-1.5 py-0.5 text-[0.74rem]" />}
+                          </>
+                        )}
+                      </p>
+                      <Link href={`/${a.repo.repo}${a.repo.ai ? "?mode=ai" : ""}`} className="text-link text-[0.84rem]">{a.kind === "checking" ? "watch it →" : "open it →"}</Link>
+                    </li>
+                  ) : a.kind === "late" ? (
                     <li key={a.wait.pr.url} data-rule className="app-row grid-cols-[minmax(0,1fr)_auto]" style={{ "--rule": "var(--orange)" } as React.CSSProperties}>
                       <p className="pl-2 font-sans text-[0.95rem]">
                         Your PR to <span className="font-mono font-semibold">{a.wait.pr.repo}</span> has waited {humanHours(a.wait.hours)}. Replies there usually take {humanHours(a.wait.typical)}.

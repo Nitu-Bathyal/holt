@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { friendlyStage, logStage, stageTime } from "./stages.ts";
+import { eta, friendlyStage, logStage, stageTime } from "./stages.ts";
 
 test("every engine and queue stage gets a friendly line", () => {
   assert.equal(friendlyStage(undefined).title, "Starting");
@@ -37,4 +37,14 @@ test("stage times read like a stopwatch", () => {
   assert.equal(stageTime(0), "0s");
   assert.equal(stageTime(4.4), "4s");
   assert.equal(stageTime(65), "1m 05s");
+});
+
+test("the ETA counts down from a typical free check, and gives up honestly", () => {
+  assert.equal(eta({ mode: "rules", elapsed: 0 }), "about 20s left");
+  assert.equal(eta({ mode: "rules", elapsed: 7 }), "about 15s left");
+  assert.equal(eta({ mode: "rules", elapsed: 16 }), "almost done");
+  assert.equal(eta({ mode: "rules", elapsed: 30 }), "almost done");
+  assert.equal(eta({ mode: "rules", elapsed: 45 }), null);
+  assert.equal(eta({ mode: "rules", elapsed: 0, ahead: 3 }), "about 1 min left");
+  assert.equal(eta({ mode: "ai", elapsed: 0 }), null);
 });
