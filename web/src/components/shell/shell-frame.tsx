@@ -28,7 +28,7 @@ export function ShellFrame({ marketingHeader, footer, topBar, rail, children }: 
   return (
     <>
       {marketingHeader}
-      <main id="content" className="flex-1">{children}</main>
+      <main id="content" data-shell="marketing" className="flex-1">{children}</main>
       {footer}
     </>
   );

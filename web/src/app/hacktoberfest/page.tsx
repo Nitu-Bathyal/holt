@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { CatFace } from "@/components/cat-face";
+import { FindFrame } from "@/components/find/find-frame";
 import { ErrorPanel } from "@/components/error-panel";
 import { FindResults } from "@/components/find/find-results";
 import { FindRunner } from "@/components/find/find-runner";
 import { ShareBar } from "@/components/report/share-bar";
-import { ProfileOnboarding } from "@/components/profile-onboarding";
 import { getProfile, savedNames } from "@/lib/api";
 import { cachedFind } from "@/lib/find-cached";
-import { days as daysOf, describe, personalise } from "@/lib/profile";
+import { days as daysOf, personalise } from "@/lib/profile";
 import { caller, currentUser } from "@/lib/session";
+import { CHECK_HREF } from "@/lib/shell";
 import { hacktoberfest, hacktoberfestOver, SITE_URL } from "@/lib/site";
 import { PageTransition } from "@/components/motion/page-transition";
 
@@ -80,145 +81,110 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
 
   return (
     <PageTransition>
-      <>
-        {/* Campaign header: a limited-time event page, not part of the core site. */}
-        <section className="relative overflow-hidden border-b border-hf-line bg-hf-bg">
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 opacity-[0.08]"
-            style={{ backgroundImage: "repeating-linear-gradient(135deg, var(--hf) 0 2px, transparent 2px 14px)" }}
-          />
-          <div className="wrap relative py-10 sm:py-14">
-            <div className="mb-6 flex flex-wrap items-center gap-2 text-[0.8rem] uppercase tracking-[0.08em]">
-              <span className="rounded-full bg-hf px-3 py-1 font-semibold text-bg">limited-time event</span>
-              <span className="rounded-full border border-hf-line px-3 py-1 text-hf">Hacktoberfest {YEAR} · 1–31 October</span>
-              {hf && (
-                <span className="inline-flex items-center gap-2 rounded-full border border-hf-line px-3 py-1 text-hf">
-                  <span aria-hidden="true" className="size-1.5 rounded-full bg-orange motion-safe:animate-pulse" />
-                  {hf.short}
-                </span>
-              )}
-            </div>
-            {ended && (
-              <p role="status" className="mb-6 max-w-2xl border border-hf-line bg-panel px-4 py-3 font-sans text-[0.92rem] text-muted">
-                Hacktoberfest {YEAR} has ended. The projects below still merge outside work, and{" "}
-                <Link href="/find" className="text-link">/find</Link> works all year.
-              </p>
-            )}
-            <h1 className="display max-w-4xl text-[clamp(2rem,6.5vw,3.6rem)]">
-              This October, make contributions <span className="text-hf">that actually land.</span>
-            </h1>
-            <p className="prose-sans mt-5 max-w-2xl text-[1.05rem]">
-              Every project below is tagged for Hacktoberfest and merges outside contributors&apos; work, with open
-              issues you could pick up today.
-            </p>
-            <section aria-labelledby="counts" className="mt-6 max-w-2xl border border-hf-line bg-panel px-4 py-4 sm:px-5">
-              <h2 id="counts" className="text-[0.8rem] uppercase tracking-[0.08em] text-hf">What counts in {YEAR}</h2>
-              <ul className="mt-3 space-y-2 font-sans text-[0.95rem] text-muted">
-                {COUNTS.map((line) => (
-                  <li key={line} className="flex gap-2">
-                    <span aria-hidden="true" className="text-hf">→</span>
-                    <span>{line}</span>
-                  </li>
-                ))}
-              </ul>
-              <p className="mt-3 text-[0.8rem] text-faint">
-                From the{" "}
-                <a className="text-link" href={RULES_URL} target="_blank" rel="noopener noreferrer">hacktoberfest.com FAQ ↗</a>
-              </p>
-            </section>
-            <p className="mt-3 text-[0.85rem] text-faint">This page is for October. Outside Hacktoberfest, use <Link href="/find" className="text-link">find a project</Link>.</p>
-            <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
-              <a href="#tips" className="bracket-link bracket-link--hf px-3 text-center text-[0.83rem] sm:px-4 sm:text-[0.88rem]">[ 5 tips so your PR gets reviewed ]</a>
-              <ShareBar url={`${SITE_URL}/hacktoberfest`} text={`Contributing this October? These repos actually merge outsiders' pull requests:`} />
-            </div>
-          </div>
+      <FindFrame
+        tab="hacktoberfest"
+        title={<>This October, make contributions <span className="text-hf">that actually land.</span></>}
+        mood={ended ? "thinking" : "determined"}
+        signedIn={Boolean(user)}
+      >
+        <p className="mb-5 flex flex-wrap items-center gap-2 text-[0.8rem] uppercase tracking-[0.08em]">
+          <span className="rounded-full border border-hf-line px-3 py-1 text-hf">Hacktoberfest {YEAR} · 1–31 October</span>
+          {hf && (
+            <span className="inline-flex items-center gap-2 rounded-full border border-hf-line px-3 py-1 text-hf">
+              <span aria-hidden="true" className="size-1.5 rounded-full bg-orange motion-safe:animate-pulse" />
+              {hf.short}
+            </span>
+          )}
+        </p>
+        {ended && (
+          <p role="status" className="mb-6 max-w-2xl border border-hf-line bg-panel px-4 py-3 font-sans text-[0.92rem] text-muted">
+            Hacktoberfest {YEAR} has ended. The projects below still merge outside work.
+          </p>
+        )}
+        <nav aria-label="Language">
+          <ul className="flex flex-wrap gap-2">
+            {LANGS.map((l) => (
+              <li key={l.id}>
+                <Link
+                  href={l.id === "all" ? (profile ? "/hacktoberfest?lang=all" : "/hacktoberfest") : `/hacktoberfest?lang=${l.id}`}
+                  scroll={false}
+                  aria-current={l.id === tab.id ? "page" : undefined}
+                  className={`chip min-h-11 whitespace-nowrap px-4 text-[0.89rem] transition-colors ${l.id === tab.id ? "border-hf bg-hf text-bg" : "hover:border-hf hover:text-ink"}`}
+                >
+                  {l.label}
+                  {l.id !== "all" && <span className="sr-only"> projects</span>}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <section aria-label={`Welcoming Hacktoberfest projects: ${tab.label}`} className="mt-6">
+          {!result.ok ? (
+            <ErrorPanel error={result.error} retryHref={here} />
+          ) : result.data.status === "queued" ? (
+            <FindRunner key={tab.id} jobId={result.data.job_id} days={days} retryHref={here} fit={fit} saved={saved} />
+          ) : (
+            <FindResults results={personalise(result.data.results, fit)} days={days} saved={saved} />
+          )}
         </section>
 
-        <div className="wrap py-10 sm:py-12">
-          <ProfileOnboarding back="/hacktoberfest" className="mb-8" />
-          {sp.profile === "saved" && (
-            <p role="status" className="mb-6 border border-green/50 bg-green/10 px-4 py-3 font-sans text-[0.9rem] text-green">Profile saved. The projects below use it.</p>
-          )}
-          {profile && (
-            <p className="mb-6 font-sans text-[0.9rem] text-muted">
-              Using your profile: {describe(profile)}. <Link href="/settings/profile" className="text-link">edit</Link>
-            </p>
-          )}
-          <nav aria-label="Language">
-            <ul className="flex flex-wrap gap-2">
-              {LANGS.map((l) => (
-                <li key={l.id}>
-                  <Link
-                    href={l.id === "all" ? (profile ? "/hacktoberfest?lang=all" : "/hacktoberfest") : `/hacktoberfest?lang=${l.id}`}
-                    scroll={false}
-                    aria-current={l.id === tab.id ? "page" : undefined}
-                    className={`chip min-h-11 whitespace-nowrap px-4 text-[0.89rem] transition-colors ${l.id === tab.id ? "border-hf bg-hf text-bg" : "hover:border-hf hover:text-ink"}`}
-                  >
-                    {l.label}
-                    {l.id !== "all" && <span className="sr-only"> projects</span>}
-                  </Link>
+        <div className="mt-14 grid grid-cols-1 gap-12 border-t border-line pt-10 lg:grid-cols-2">
+          <section aria-labelledby="counts">
+            <h2 id="counts" className="h2">What counts in {YEAR}</h2>
+            <ul className="mt-6 space-y-3 font-sans text-muted">
+              {COUNTS.map((line) => (
+                <li key={line} className="flex gap-2">
+                  <span aria-hidden="true" className="text-hf">→</span>
+                  <span>{line}</span>
                 </li>
               ))}
             </ul>
-          </nav>
-
-          <section aria-label={`Welcoming Hacktoberfest projects: ${tab.label}`} className="mt-8">
-            {!result.ok ? (
-              <ErrorPanel error={result.error} retryHref={here} />
-            ) : result.data.status === "queued" ? (
-              <FindRunner key={tab.id} jobId={result.data.job_id} days={days} retryHref={here} fit={fit} saved={saved} />
-            ) : (
-              <FindResults results={personalise(result.data.results, fit)} days={days} saved={saved} />
-            )}
+            <p className="mt-4 text-[0.8rem] text-faint">
+              From the{" "}
+              <a className="text-link" href={RULES_URL} target="_blank" rel="noopener noreferrer">hacktoberfest.com FAQ ↗</a>
+            </p>
+            <h2 id="how" className="h2 mt-12">How to make October count</h2>
+            <ol className="mt-6 space-y-6">
+              {STEPS.map(([title, body], i) => (
+                <li key={title} className="grid grid-cols-[2.5rem_1fr] gap-3">
+                  <span className="text-[1.4rem] font-semibold text-orange">{String(i + 1).padStart(2, "0")}</span>
+                  <div>
+                    <p className="font-semibold">{title}</p>
+                    <p className="mt-1 font-sans text-muted">{body}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
+          <section id="tips" aria-labelledby="tips-h" className="scroll-mt-24">
+            <h2 id="tips-h" className="h2">How not to get your PR ignored</h2>
+            <ol className="mt-6 space-y-5">
+              {TIPS.map(([title, body]) => (
+                <li key={title} className="flex gap-3">
+                  <span aria-hidden="true" className="text-green">→</span>
+                  <p className="font-sans text-muted">
+                    <strong className="font-semibold text-ink">{title}</strong> {body}
+                  </p>
+                </li>
+              ))}
+            </ol>
+            <div className="mt-8">
+              <ShareBar url={`${SITE_URL}/hacktoberfest`} text={`Contributing this October? These repos actually merge outsiders' pull requests:`} />
+            </div>
           </section>
         </div>
 
-        <section aria-labelledby="how" className="pane border-t border-line bg-panel">
-          <div className="wrap grid grid-cols-1 gap-12 lg:grid-cols-2">
-            <div>
-              <h2 id="how" className="h2">How to make October count</h2>
-              <ol className="mt-8 space-y-6">
-                {STEPS.map(([title, body], i) => (
-                  <li key={title} className="grid grid-cols-[2.5rem_1fr] gap-3">
-                    <span className="text-[1.4rem] font-semibold text-orange">{String(i + 1).padStart(2, "0")}</span>
-                    <div>
-                      <p className="font-semibold">{title}</p>
-                      <p className="mt-1 font-sans text-muted">{body}</p>
-                    </div>
-                  </li>
-                ))}
-              </ol>
-              <p className="mt-6 font-sans text-[0.9rem] text-faint">
-                Holt isn&apos;t affiliated with Hacktoberfest. For this year&apos;s events, see{" "}
-                <a className="text-link" href="https://hacktoberfest.com" target="_blank" rel="noopener noreferrer">hacktoberfest.com ↗</a>.
-              </p>
-            </div>
-            <div id="tips" className="scroll-mt-24">
-              <h2 className="h2">How not to get your PR ignored</h2>
-              <ol className="mt-8 space-y-5">
-                {TIPS.map(([title, body]) => (
-                  <li key={title} className="flex gap-3">
-                    <span aria-hidden="true" className="text-green">→</span>
-                    <p className="font-sans text-muted">
-                      <strong className="font-semibold text-ink">{title}</strong> {body}
-                    </p>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          </div>
-        </section>
-
-        <section className="py-14 text-center">
-          <div className="wrap max-w-2xl">
-            <CatFace mood="adoring" className="text-[1.8rem]" />
-            <p className="mt-4 text-[1.3rem] font-semibold tracking-tight">Already have a repo in mind?</p>
-            <p className="mt-2 font-sans text-muted">Check whether it merges outside work before you spend your October on it.</p>
-            <Link href="/" className="bracket-link mt-6">[ check any repo → ]</Link>
-          </div>
-        </section>
-      </>
+        <p className="mt-12 font-sans text-[0.9rem] text-faint">
+          Holt isn&apos;t affiliated with Hacktoberfest. For this year&apos;s events, see{" "}
+          <a className="text-link" href="https://hacktoberfest.com" target="_blank" rel="noopener noreferrer">hacktoberfest.com ↗</a>.
+        </p>
+        <div className="mt-10 flex flex-col items-start gap-4 border-t border-line pt-10">
+          <CatFace mood="adoring" className="text-[1.5rem] text-green" />
+          <p className="text-[1.2rem] font-semibold tracking-tight">Already have a repo in mind?</p>
+          <Link href={user ? CHECK_HREF : "/"} className="bracket-link">[ check any repo → ]</Link>
+        </div>
+      </FindFrame>
     </PageTransition>
   );
 }

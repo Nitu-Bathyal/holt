@@ -25,7 +25,7 @@ test("jump links glide on the landing page and go to it from anywhere else", () 
 });
 
 test("the sidebar holds five places, each once, with a plain label and an icon", () => {
-  const items = sidebarGroups({ hacktoberfest: false }).flatMap((g) => g.items);
+  const items = sidebarGroups().flatMap((g) => g.items);
   assert.deepEqual(items.map((i) => i.href), ["/me", "/find", "/me/contributions", "/me/repos", "/compare"]);
   for (const i of items) {
     assert.ok(i.icon, i.id);
@@ -38,20 +38,14 @@ test("the sidebar holds five places, each once, with a plain label and an icon",
   }
 });
 
-test("Hacktoberfest shows only in October, after Find a project", () => {
-  const ids = (hacktoberfest: boolean) => sidebarGroups({ hacktoberfest }).flatMap((g) => g.items).map((i) => i.id);
-  assert.ok(!ids(false).includes("hacktoberfest"));
-  assert.deepEqual(ids(true).slice(0, 3), ["home", "find", "hacktoberfest"]);
-});
-
 test("one sidebar item lights up per page, the most specific one", () => {
-  const g = sidebarGroups({ hacktoberfest: true });
+  const g = sidebarGroups();
   assert.equal(activeItem(g, "/me"), "home");
   assert.equal(activeItem(g, "/me/"), "home");
   assert.equal(activeItem(g, "/me/repos"), "repos");
   assert.equal(activeItem(g, "/me/contributions?refresh=done"), "prs");
   assert.equal(activeItem(g, "/discover/python"), "find");
-  assert.equal(activeItem(g, "/hacktoberfest"), "hacktoberfest");
+  assert.equal(activeItem(g, "/hacktoberfest"), "find");
   assert.equal(activeItem(g, "/compare"), "compare");
   // Settings has its own tabs; a report page isn't any of them.
   assert.equal(activeItem(g, "/settings/privacy"), null);
