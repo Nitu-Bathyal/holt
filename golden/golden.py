@@ -48,7 +48,7 @@ RECORDINGS = HERE / "recordings"
 PAGES = 8
 
 LABEL = {"viable": "Worth", "long_shot": "Long shot", "not_viable": "Not worth",
-         "insufficient_evidence": "Not enough", "personal": "Personal"}
+         "insufficient_evidence": "Not enough", "personal": "Personal", "catalogue": "List"}
 
 
 def recording_path(repo: str, root: Path = RECORDINGS) -> Path:

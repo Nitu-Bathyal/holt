@@ -58,6 +58,7 @@ VERDICT_COLOURS: dict[str, str] = {
     "not_viable": NOT_VIABLE,
     "insufficient_evidence": INSUFFICIENT,
     "personal": INSUFFICIENT,
+    "catalogue": INSUFFICIENT,
 }
 VERDICT_FALLBACK = DIM
 

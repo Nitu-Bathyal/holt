@@ -1390,7 +1390,7 @@ export interface components {
              * Verdict
              * @enum {string}
              */
-            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal";
+            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal" | "catalogue";
         };
         /**
          * Entitlements
@@ -1567,7 +1567,7 @@ export interface components {
              * Verdict
              * @enum {string}
              */
-            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal";
+            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal" | "catalogue";
         };
         /** GitHubAccount */
         GitHubAccount: {
@@ -1637,7 +1637,7 @@ export interface components {
             /** Tone */
             readonly tone: ("good" | "bad" | "warn" | "neutral") | null;
             /** Verdict */
-            verdict: ("viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal") | null;
+            verdict: ("viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal" | "catalogue") | null;
         };
         /**
          * HoltUsers
@@ -2417,7 +2417,7 @@ export interface components {
              * Verdict
              * @enum {string}
              */
-            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal";
+            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal" | "catalogue";
             /** Why */
             why: string[];
         };
@@ -2481,7 +2481,7 @@ export interface components {
              * Verdict
              * @enum {string}
              */
-            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal";
+            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal" | "catalogue";
         };
         /** Report */
         Report: {
@@ -2552,7 +2552,7 @@ export interface components {
              * Verdict
              * @enum {string}
              */
-            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal";
+            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal" | "catalogue";
             /** Verdict Line */
             readonly verdict_line: string;
         };
@@ -2573,7 +2573,7 @@ export interface components {
             /** Repo */
             repo: string;
             /** Verdict */
-            verdict: ("viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal") | null;
+            verdict: ("viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal" | "catalogue") | null;
         };
         /**
          * Sample
