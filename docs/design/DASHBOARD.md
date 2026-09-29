@@ -172,6 +172,16 @@ Derived from the landing (EXPRESSIVE.md), at working size:
 - **Two card families.** *Rows* for your things (PRs, your repos): a state rule on
   the left, the fact, one action on the right. *Cards* for discovery (picks, boards):
   verdict, odds bar, the reason, one starter issue. Your own work is never a grid of boxes.
+  A row whose actions are wider than a chevron takes `data-stack` (on the row
+  or on its list): below `sm`
+  the actions drop under the fact, so a phone never squeezes the name into a
+  sliver. When a row has one main link, it is stretched over the row
+  (`after:absolute after:inset-0`), and anything else in the row sits above
+  it (`relative z-10`).
+- **Phones get 44px targets.** Buttons, chips and segments are `min-h-11`
+  below `sm` (they may drop to 40px from `sm`). A standalone text link takes
+  `tap`, which grows its hit area to 44px without moving the text or its
+  underline; keep about 10px clear above and below it.
 - **Section head:** h2 plus a faint count, one quiet link on the right. No eyebrows.
 - **Colour means something:** green is the page's one primary action. Verdict
   colours only on verdicts. PR states: *needs you* orange, *waiting* blue, *merged*

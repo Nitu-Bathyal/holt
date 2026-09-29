@@ -70,7 +70,7 @@ export function SwapHost({ path = "", big = false }: { path?: string; big?: bool
       <button
         type="button"
         onClick={() => setSwapped((s) => !s)}
-        className={`swap font-mono text-left ${size}`}
+        className={`swap tap font-mono text-left ${size}`}
         data-swapped={swapped}
         aria-label={`github.com${path} becomes ${SITE_HOST}${path}. Press to flip it.`}
       >

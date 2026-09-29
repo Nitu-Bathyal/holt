@@ -99,13 +99,13 @@ export function MarketingHeader({ user, credits }: { user: SessionUser | null; c
           <ThemeToggle />
           {user ? (
             <>
-              <Link href={HOME} className="btn-primary ml-1 min-h-10 px-4 text-[0.84rem]">open Holt →</Link>
+              <Link href={HOME} className="btn-primary ml-1 min-h-11 px-4 text-[0.84rem] sm:min-h-10">open Holt →</Link>
               <AccountMenu user={user} credits={credits} />
             </>
           ) : (
             <>
               <Link href={EXAMPLES_PATH} className="hidden min-h-11 items-center px-3 text-[0.86rem] text-ink transition-colors hover:text-blue sm:inline-flex">try an example</Link>
-              <Link href="/signin" className="btn-primary ml-1 min-h-10 px-4 text-[0.84rem]">sign in</Link>
+              <Link href="/signin" className="btn-primary ml-1 min-h-11 px-4 text-[0.84rem] sm:min-h-10">sign in</Link>
             </>
           )}
           <MenuButton target="mobile-nav" label="Menu" />

@@ -31,10 +31,10 @@ export function LegalPage({
         <article className="wrap legal max-w-3xl py-10 sm:py-14">{children}</article>
 
         <nav aria-label="Policies" className="wrap max-w-3xl border-t border-line py-8 text-[0.87rem] text-faint">
-          <p className="flex flex-wrap gap-x-5 gap-y-2">
+          <p className="flex flex-wrap items-center gap-x-5">
             <span>See also:</span>
             {others.map((p) => (
-              <Link key={p.href} href={p.href} className="hover:text-ink">{p.label}</Link>
+              <Link key={p.href} href={p.href} className="inline-flex min-h-11 items-center hover:text-ink">{p.label}</Link>
             ))}
           </p>
         </nav>

@@ -87,7 +87,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
               </ul>
               <Link href={p.cta.href} className="btn-ghost mt-6 w-full">{p.cta.label} →</Link>
               {p.example && (
-                <Link href={EXAMPLE_PATH} className="text-link mt-3 text-center font-sans text-[0.9rem]" data-example-link>
+                <Link href={EXAMPLE_PATH} className="text-link tap mt-3 text-center font-sans text-[0.9rem]" data-example-link>
                   or read an example AI report first
                 </Link>
               )}

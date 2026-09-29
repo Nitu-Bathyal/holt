@@ -91,7 +91,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
     primary = preflight ? (
       <>
         <Link href={`/preflight?pr=${encodeURIComponent(url)}`} className="btn-primary">check it with pre-flight →</Link>
-        <a href={url} className="text-link text-[0.9rem]">open it on GitHub ↗</a>
+        <a href={url} className="text-link tap text-[0.9rem]">open it on GitHub ↗</a>
       </>
     ) : (
       <a href={url} className="btn-primary">open it on GitHub ↗</a>
@@ -131,7 +131,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
             {issues?.ok && issues.data.issues.length > 0 ? (
               <ul>
                 {issues.data.issues.map((iss, i) => (
-                  <li key={iss.number} data-rule className="app-row grid-cols-[minmax(0,1fr)_auto]" style={{ "--rule": "var(--blue)" } as React.CSSProperties}>
+                  <li key={iss.number} data-rule data-stack className="app-row grid-cols-[minmax(0,1fr)_auto]" style={{ "--rule": "var(--blue)" } as React.CSSProperties}>
                     <div className="min-w-0 pl-2">
                       <p className="font-sans text-[0.95rem]"><span className="text-blue">#{iss.number}</span> {iss.title}</p>
                       <p className="mt-1 text-[0.76rem] text-faint">
@@ -139,7 +139,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
                         {iss.created_at && <> · opened {timeAgo(iss.created_at)}</>}
                       </p>
                     </div>
-                    <a href={iss.url} className={i === 0 ? "btn-primary min-h-10 px-4 text-[0.84rem]" : "text-link text-[0.84rem]"}>
+                    <a href={iss.url} className={i === 0 ? "btn-primary min-h-11 px-4 text-[0.84rem] sm:min-h-10" : "text-link tap text-[0.84rem]"}>
                       {i === 0 ? "take this one ↗" : "open ↗"}
                     </a>
                   </li>
@@ -155,7 +155,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
           <form action={dismissNudge} className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-1 border-l-2 border-blue py-1 pl-3 font-sans text-[0.9rem] text-muted">
             <input type="hidden" name="nudge" value={nudge} />
             <span>{NUDGES[nudge].text}</span>
-            <Link href={NUDGES[nudge].href} className="font-mono text-[0.86rem] text-blue hover:underline">{NUDGES[nudge].cta}</Link>
+            <Link href={NUDGES[nudge].href} className="inline-flex min-h-11 items-center font-mono text-[0.86rem] text-blue hover:underline sm:min-h-0">{NUDGES[nudge].cta}</Link>
             <button type="submit" aria-label="Dismiss" className="ml-auto grid size-11 place-items-center text-faint hover:text-ink sm:size-8">×</button>
           </form>
         )}
@@ -164,7 +164,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
           {also.length > 0 && (
             <section aria-labelledby="also-h">
               <SectionHead id="also-h" title="Also for you" />
-              <ul>
+              <ul data-stack>
                 {also.map((a) =>
                   a.kind === "late" ? (
                     <li key={a.wait.pr.url} data-rule className="app-row grid-cols-[minmax(0,1fr)_auto]" style={{ "--rule": "var(--orange)" } as React.CSSProperties}>
@@ -194,7 +194,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
                   <li key={w.pr.url} data-rule className="app-row grid-cols-[minmax(0,1fr)]" style={{ "--rule": "var(--blue)" } as React.CSSProperties}>
                     <div className="min-w-0 pl-2">
                       <p className="text-[0.9rem]"><span className="font-semibold">{w.pr.repo}</span> <span className="text-faint">#{w.pr.number}</span></p>
-                      <a href={w.pr.url} className="block truncate font-sans text-[0.95rem] hover:underline">{w.pr.title}</a>
+                      <a href={w.pr.url} className="block truncate font-sans text-[0.95rem] after:absolute after:inset-0 hover:underline">{w.pr.title}</a>
                       <WaitBar w={w} />
                     </div>
                   </li>

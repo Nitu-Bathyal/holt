@@ -189,7 +189,7 @@ export function PreflightView({ initial, query, signedIn, badQuery }: { initial:
           </p>
         )}
 
-        <label className="mt-4 flex items-start gap-2 font-sans text-[0.9rem] text-muted">
+        <label className="mt-4 flex min-h-11 cursor-pointer items-start gap-2 font-sans text-[0.9rem] text-muted">
           <input type="checkbox" checked={summary} onChange={(e) => setSummary(e.target.checked)} className="mt-1 accent-[var(--color-blue)]" />
           <span>Add a short AI-written summary, checked against the results (same price)</span>
         </label>

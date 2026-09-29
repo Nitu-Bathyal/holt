@@ -183,9 +183,9 @@ function Focusable({ repos, layout, days, topicBase, card, actionsFor }: ListPro
             <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 text-[0.85rem] text-muted sm:px-6">
               <span className="tabular-nums">{nb.index + 1} of {repos.length}</span>
               <div className="flex items-center gap-1">
-                <button type="button" onClick={() => go(nb.prev)} disabled={!nb.prev} aria-label="Previous repo" className="grid size-10 place-items-center hover:text-ink disabled:opacity-30">←</button>
-                <button type="button" onClick={() => go(nb.next)} disabled={!nb.next} aria-label="Next repo" className="grid size-10 place-items-center hover:text-ink disabled:opacity-30">→</button>
-                <button type="button" onClick={close} aria-label="Close" className="ml-2 grid size-10 place-items-center text-[1.1rem] hover:text-ink">✕</button>
+                <button type="button" onClick={() => go(nb.prev)} disabled={!nb.prev} aria-label="Previous repo" className="grid size-11 place-items-center sm:size-10 hover:text-ink disabled:opacity-30">←</button>
+                <button type="button" onClick={() => go(nb.next)} disabled={!nb.next} aria-label="Next repo" className="grid size-11 place-items-center sm:size-10 hover:text-ink disabled:opacity-30">→</button>
+                <button type="button" onClick={close} aria-label="Close" className="ml-2 grid size-11 place-items-center sm:size-10 text-[1.1rem] hover:text-ink">✕</button>
               </div>
             </div>
             <div data-scroll className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:flex-initial sm:p-6">

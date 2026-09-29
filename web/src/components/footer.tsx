@@ -250,14 +250,14 @@ export function Footer({ signedIn = false }: { signedIn?: boolean }) {
 
       {/* Last, so it can arrive without moving anything. */}
       {recent && (
-        <div className="ft-ticker border-t border-line py-4 text-[0.85rem]">
-          <p className="wrap mb-2 text-faint">recently checked · {checkedLabel(recent)}</p>
+        <div className="ft-ticker border-t border-line pb-1.5 pt-4 text-[0.85rem]">
+          <p className="wrap text-faint">recently checked · {checkedLabel(recent)}</p>
           <div className="ft-ticker-mask">
             <ul className="ft-ticker-track">
               {[0, 1].map((copy) =>
                 recent.recent.map((r) => (
                   <li key={`${copy}-${r.repo}`} aria-hidden={copy === 1 || undefined} className="ft-ticker-item">
-                    <Link href={`/${r.repo}`} prefetch={false} tabIndex={copy === 1 ? -1 : undefined} className="hover:text-blue">
+                    <Link href={`/${r.repo}`} prefetch={false} tabIndex={copy === 1 ? -1 : undefined} className="inline-flex min-h-11 items-center hover:text-blue">
                       {r.repo}
                     </Link>
                     <span className="text-faint"> {timeAgo(r.generated_at)}</span>
