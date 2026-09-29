@@ -9,6 +9,141 @@
 > [REVIEW-2026-09-30.md](REVIEW-2026-09-30.md). This page is kept as the
 > history and method of the competition result.
 
+## Verdict tiers (engine 4, 29 Sep 2026)
+
+Three field tests (a product critic, a 10-year contributor, a first-timer)
+found the answer too green: facebook/react (71% of outside PRs unanswered),
+simonw/llm (63%), moment/moment (first replies ~100 days, a sample reaching
+back to 2021) and microsoft/vscode all read "Worth your time", while
+vercel/next.js (1 of 30 merged) and fastapi/fastapi (0 of 95) read "Not
+enough evidence". Engine 4 adds **Long shot** between Worth and Not worth,
+and **Personal project** beside Not enough evidence. This section is the
+rule table and the evidence for every threshold; the product only ever
+shows each rule's own plain sentence.
+
+### The rules (live readings; the first that applies decides)
+
+Only outside pull requests opened between 14 days and 12 months before the
+reading count.
+
+| # | Rule | Answer | code |
+|---|---|---|---|
+| 1 | Archived | Not worth | `archived` |
+| 2 | A mirror or a fork | Not worth | `elsewhere` |
+| 3 | **New.** Someone's own or a small team's project (below) | Personal project | `personal` |
+| 4 | Nothing merged and nothing pushed in 90 days | Not worth | `inactive` |
+| 5 | A catalogue or list | Not worth | `catalogue_shape`, `non_software_kind` |
+| 6 | Nobody outside opened a PR we can count | Not enough | `no_attempts` |
+| 7 | None merged, over 70% of at least 8 unanswered | Not worth | `ignored` |
+| 8 | **Changed.** 20+ decided, under 5% merged, whatever the merge count | Not worth | `long_odds` |
+| 8b | **New.** …and none merged while at least half got a reply | Not worth | `replies_no_merges` |
+| 9 | 2+ merged from 2+ people, but merges go unreviewed (as before) | Not worth | `rubber_stamp` |
+| 10 | **New.** 2+ merged from 2+ people, and any of: under 1 in 10 merged; over half unanswered; typical first reply over 21 days (from 5+ replies) | Long shot | `few_merged`, `mostly_silent`, `slow_replies` |
+| 11 | 2+ merged from 2+ people | Worth (slow note if replies exceed the budget) | `merges` |
+| 12 | **New.** 20+ decided, but only 1 merge, or every merge from one person | Long shot | `one_merge`, `one_person` |
+| 13 | Otherwise | Not enough | `few_merges`, `few_people`, `too_few_attempts` |
+
+Rule 10's silence and reply-time tests are skipped where at least half of
+the outside merges landed off GitHub's button (Gerrit, a merge bot): the
+review happened there, and GitHub's silence says nothing. golang/go lands all
+44 of its outside merges through Gerrit and answers 2 of 152 PRs on GitHub.
+
+The answer never depends on the reader's budget: the reply-time rule uses a
+fixed 21 days, and the budget only moves the "replies are slow" note
+(`server/report.retime` relies on this; a test holds it).
+
+### Why each threshold
+
+Data: the 311 latest engine-3 rules reports on staging (29 Sep; 260 Worth,
+38 Not enough, 13 Not worth), and the 73-repository golden set, 62 of them
+replayed before and after.
+
+**12-month cap.** 56 of the 260 staging "Worth" reports read samples reaching
+back more than a year (31 more than two), because a quiet project's newest
+200 PRs span years. moment's merges were from 2021–2024 while it sat in
+maintenance mode. A year covers a full release cycle and a Hacktoberfest; on
+the golden set it changes no verdict except monica (its 8 merges were older;
+0 of 41 in the last year) and moment.
+
+**Floor from 20 attempts (5%).** The 5% floor is unchanged
+(REVIEW-2026-09-30.md). It used to wait for 2 merges, so 1 of 30 read "Not
+enough evidence" while 2 of 41 read "Not worth". 20 decided attempts is the
+smallest sample where one merge is already the floor (1 in 20), so no sample
+under 20 is judged by it, and the ignored rule's 8 stays for the zero-merge,
+mostly-unanswered case. On staging it turns 5 "Not enough" reports down
+(dotnet/eShop 1/86, excalidraw 1/116, fastapi 0/94, semgrep 1/58, next.js
+1/30), all of them repositories where plenty tried and almost nobody got in.
+
+**Replies but never merges.** fastapi answered 67 of its 95 outside PRs and
+merged none; "Not enough evidence" read to a beginner as "maybe, give it a
+go". Half answered is the cut: below it, the plain floor sentence says it.
+
+**Long shot: over half unanswered.** "Most get silence" is the definition,
+and it is the same line the odds already used for "long" (no-reply over 50%),
+so a green headline can no longer sit beside red odds (react's complaint).
+The staging distribution has no gap near 50% (…0.54, 0.54, 0.52, 0.51, 0.51 |
+0.49, 0.49, 0.47…), so the threshold is the definition, not a fitted value:
+it turns 24 of 260 Worth reports to Long shot, react, llm, vscode, bat,
+tidb and zstd among them. kubernetes (49%) stays Worth.
+
+**Long shot: under 1 in 10 merged.** The odds band "fair" is 5–12%; 10% is
+the round number a reader can hold ("fewer than 1 in 10") and the one the
+first review already weighed as a Not-worth floor and rejected as too harsh
+for that (django 8.2%, git 9.6%). As a Long shot those read right: django
+takes cold PRs only with an accepted Trac ticket, git through GitGitGadget.
+12 of 260 staging Worth reports are under 10%; 7 of them are also over half
+unanswered.
+
+**Long shot: typical first reply over 21 days.** The widest gap in the
+staging medians above a week is between 19.3 and 29.7 days (values: 39.9,
+29.7, 29.7 | 19.3, 18.6, 18.2, 17.0, 15.3…), so the threshold sits inside it
+at three weeks, which is also most of a Hacktoberfest month. It catches
+swagger-ui (40 days), highlight.js (30) and moment (59 over its last year),
+and leaves efcore (12 days, 41 of 44 merged) Worth with the slow note. It
+needs 5 replies: facebook/fresco's 26-day "typical" reply over its last year
+came from 2.
+
+**One merge, or one person, among 20+.** Once 20 have tried, a single merge
+or a single person's merges means everyone else was turned away: a long shot
+rather than a mystery. 4 staging reports (appsmith 1/20, errbit, fuel-core,
+consul).
+
+**Personal project** (`agent/personal.py`). All must hold: no outside merge
+and at most 2 outside PRs; every PR from at most 5 people; under 25 stars; no
+CONTRIBUTING file; and one sign: hackathon or coursework words in the name,
+description, topics or the README's opening; a personal-site name
+(`*.github.io`, dotfiles, portfolio); or all activity within 60 days and
+nothing pushed for 30. Checked on 4 hackathon/team repos (all Personal) and 4
+small open projects that must stay out (flint, openbot, VeloGraphX stay "Not
+enough evidence"; taskuary stays Worth), all in the golden set. Deliberately
+conservative: a solo library with no outside PRs yet stays "Not enough
+evidence" unless it says it's a hackathon entry or has stopped.
+
+### What changed
+
+Staging, re-derived from the stored counts (the 12-month cap needs the
+threads, so it isn't in these numbers): Worth 260 → 228, Long shot 0 → 36,
+Not worth 13 → 18, Not enough 38 → 29.
+
+Golden set (62 replayed): 11 verdicts changed. Worth → Long shot: vscode,
+bat, CircuitVerse (over half unanswered); django, git (under 1 in 10). Not
+enough → Not worth: next.js, excalidraw, semgrep, lazygit (the floor from
+20), fastapi (replies, never merges). Worth → Not worth: monica (nothing
+merged in its last year). The 10 hand checks still agree (golang/go stays
+Worth through the review-elsewhere rule). Added: react, llm, moment (Long
+shot, as the field testers found by hand) and 8 personal-project cases.
+
+### Known limits
+
+- Policy and bot closures (Django's Trac bot, Flask's AI-PR policy) still
+  count as outside attempts; engine ticket A.3 turns them into asks.
+- CircuitVerse (54% unanswered) was a judgment-call "Worth" in the
+  30 Sep review; it is now a Long shot.
+- The thresholds were chosen on the data they are shown on; there is no
+  held-out set.
+
+---
+
 Holt's product output is a recommendation, so its quality has to be inspectable.
 This document explains how the benchmark pool was built, how ground truth is
 computed, what the result is sensitive to, and what it does not cover. Exact

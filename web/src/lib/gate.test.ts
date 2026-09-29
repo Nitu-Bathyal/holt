@@ -10,7 +10,7 @@ const back = (href: string) => new URL(href, "https://holt.test").searchParams.g
 
 test("the curated examples cover each verdict and are real repo names", () => {
   assert.ok(EXAMPLES.length >= 6 && EXAMPLES.length <= 8);
-  for (const v of ["viable", "not_viable", "insufficient_evidence"]) {
+  for (const v of ["viable", "long_shot", "not_viable", "insufficient_evidence"]) {
     assert.ok(EXAMPLES.filter((e) => e.verdict === v).length >= 2, v);
   }
   assert.equal(new Set(EXAMPLES.map((e) => e.repo.toLowerCase())).size, EXAMPLES.length);

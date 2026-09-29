@@ -8,9 +8,12 @@ export const TONE: Record<Tone | "neutral", { text: string; bg: string; border: 
   neutral: { text: "text-blue", bg: "bg-blue", border: "border-blue", soft: "bg-blue/10" },
 };
 
-/** The cat's face for a verdict, by the tone the server gave it. */
+/** The cat's face for a verdict, by the tone the server gave it: pleased at
+ * Worth your time, unsure at a Long shot, sad at Not worth your time, and a
+ * plain face where Holt can't say (Not enough evidence, Personal project). */
 export const TONE_MOOD: Record<Tone, CatMood> = {
   good: "celebrating",
-  bad: "heartbroken",
   warn: "thinking",
+  bad: "heartbroken",
+  neutral: "ready",
 };

@@ -29,9 +29,10 @@ def test_the_headline_says_what_the_verdict_means_for_the_reader(verdict, expect
     assert expected in build(verdict=verdict)
 
 
-def test_the_time_budget_is_stated_because_the_answer_depends_on_it():
-    assert "with 3 days" in build(contributor_days=3)
-    assert "with 1 day." in build(contributor_days=1)
+def test_the_headline_does_not_claim_the_answer_depends_on_a_budget():
+    """It no longer does (verdict.py): a budget only moves the slow-reply note."""
+    out = build(contributor_days=3)
+    assert "for a contributor with" not in out and "3 days" not in out
 
 
 def test_empty_sections_do_not_get_headings():

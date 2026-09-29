@@ -14,7 +14,8 @@
     "median_first_response_hours": 2.3,
     "bot_share": 0.055,
     "still_open": 0,
-    "closed_silently": 0
+    "closed_silently": 0,
+    "too_old": 0
   },
   "decided_by": [
     "28 pull requests from outside contributors were merged, by 28 different people, out of 119 attempts by 81 people. Of those who got a reply, half heard back within 2.3 hours. 55 attempts got no reply at all and weren't merged."
@@ -221,7 +222,7 @@
     },
     {
       "topic": "The rule",
-      "text": "“Worth your time” needs at least 2 merged pull requests from at least 2 different outside contributors, at least 5% of outside pull requests merged, and a typical first reply within your 7-day budget, with people actually reviewing what gets merged. Only pull requests opened at least 14 days ago count, so each has had time for an answer. “Not worth your time” is an archived repository, a mirror, a project with nothing merged or pushed in 90 days, a catalogue of entries, merges nobody reviews, fewer than 1 in 20 outside pull requests merged, or outside pull requests that are almost all ignored. Anything in between is “Not enough evidence”. These rules are fixed; no AI chooses the verdict."
+      "text": "Only pull requests from outside contributors opened between 14 days and a year ago count, so each has had time for an answer and reflects how the project works now. “Worth your time” needs at least 2 of them merged, from at least 2 different people, with at least 1 in 10 merged, no more than half left without any reply, a typical first reply within 3 weeks, and people actually reviewing what gets merged. “Long shot” is a project that merges some outside work but misses one of those: fewer than 1 in 10 merged, most left unanswered, very slow first replies, or only one person's work getting in. “Not worth your time” is an archived repository, a mirror, a project with nothing merged or pushed in 90 days, a catalogue of entries, merges nobody reviews, fewer than 1 in 20 outside pull requests merged once at least 20 have been decided, or outside pull requests that are almost all ignored. “Personal project” is someone's own project or a small team's, like a hackathon entry, with nothing from outside ever merged. Anything in between is “Not enough evidence”. These rules are fixed; no AI chooses the verdict."
     }
   ],
   "odds": {

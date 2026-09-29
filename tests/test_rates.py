@@ -140,8 +140,12 @@ def test_triage_closes_do_not_make_a_repo_look_hostile():
     s = signals_of(*(pr(i, outcome="closed") for i in range(1, 21)))
     assert s.outsider_ignored == 0 and s.outsider_closed_silently == 20
     verdict, trace = classify(Findings(), s)
-    assert verdict is Verdict.INSUFFICIENT_EVIDENCE
+    # Not "ignored": 0 of 20 merged is the merge-rate floor's call, whatever
+    # the closes said.
+    assert verdict is Verdict.NOT_VIABLE and rule_codes(trace)[-1] == "long_odds"
     assert "closed_silently" in rule_codes(trace) and "ignored" not in rule_codes(trace)
+    few = signals_of(*(pr(i, outcome="closed") for i in range(1, 11)))
+    assert classify(Findings(), few)[0] is Verdict.INSUFFICIENT_EVIDENCE
     legacy = signals_of(*(pr(i, outcome="closed") for i in range(1, 21)), as_of=None)
     assert classify(Findings(), legacy)[0] is Verdict.NOT_VIABLE
 
@@ -193,10 +197,13 @@ def test_no_merges_is_not_only_zero():
     s = signals_of(pr(1, replied=True), pr(2, replied=True))
     _, trace = classify(Findings(), s)
     line = next(r for r in trace if r.code == "few_merges")
-    assert "Only 0" not in line and line.startswith("No pull request")
+    assert "Only 0" not in line and line.startswith("None of the 2 pull requests")
     one = signals_of(pr(1, outcome="merged"), pr(2, replied=True))
     line = next(r for r in classify(Findings(), one)[1] if r.code == "few_merges")
-    assert line.startswith("Only 1 pull request from an outside contributor got merged")
+    assert line.startswith("Only 1 of 2 pull requests from outside contributors was merged")
+    alone = signals_of(pr(1, replied=True))
+    line = next(r for r in classify(Findings(), alone)[1] if r.code == "few_merges")
+    assert line.startswith("Only 1 pull request from an outside contributor has had time")
 
 
 # --- the dates, and dormancy ---------------------------------------------------------
@@ -214,9 +221,16 @@ def test_the_period_line_names_the_first_and_last_dates():
                     "between 26 Aug 2026 and 24 Sep 2026.")
 
 
-def test_the_period_line_warns_when_the_sample_is_over_a_year_old():
-    _, threads = threads_of(pr(1, hours_ago=24 * 400), pr(2, hours_ago=24))
-    assert "more than a year" in rates.period_sentence(threads, NOW)
+def test_pull_requests_over_a_year_old_leave_every_count():
+    old = [pr(i, outcome="merged", replied=True, hours_ago=24 * 400) for i in range(1, 6)]
+    s = signals_of(*old, pr(9, replied=True, hours_ago=24 * 30))
+    assert s.outsider_too_old == 5 and s.outsider_merged == 0 and s.outsider_threads == 1
+    trace = classify(Findings(), s)[1]
+    line = next(r for r in trace if r.code == "too_old")
+    assert line.startswith("5 pull requests from outside contributors were opened more "
+                           "than a year ago")
+    # The frozen benchmark counts everything, as it was scored.
+    assert signals_of(*old, as_of=None).outsider_too_old == 0
 
 
 def test_a_recent_merge_is_not_dormant():

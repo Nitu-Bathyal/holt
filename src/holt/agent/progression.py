@@ -28,6 +28,7 @@ import re
 from dataclasses import dataclass, field
 
 from holt.model import ModelClient
+from holt.report import cite
 from holt.types import EvidenceRecord
 
 # Fixed in the pre-registration. Changing one is an experiment, not a tweak.
@@ -178,17 +179,17 @@ def explain(vector: dict[str, float], weights: dict[str, float] | None = None) -
 # What `holt next` may claim about this ranking, verbatim in the output. The
 # elaborate weighted scorer above was cut for failing to beat this rule
 # (hit@10 0.211 against 0.234 across 128 pairs); the rule ships because it is
-# the best of five methods tried, and the interval is printed because it spans
-# zero. Measured by eval/progression_harness.py; per-pair rows in
-# eval/progression_results.json.
+# the best of five methods tried, and the output says how weak that is because
+# the 95% interval of its lead over chance, [-0.003, +0.132], spans zero.
+# Measured by eval/progression_harness.py; per-pair rows in
+# eval/progression_results.json. The numbers stay here and in the research
+# docs; the reader gets them in plain words.
 NEXT_MEASUREMENT = (
-    "Ranked by one deterministic rule: open issues naming a file or directory "
-    "you have already worked on here, newest first, then the rest by recency. "
-    "Measured across 128 (repository, contributor) pairs it is the best of "
-    "five methods we tried — hit@10 0.234 vs 0.211 for a weighted scorer, "
-    "0.188 for recency alone, 0.172 for chance. That is +0.06 over chance, "
-    "95% interval [-0.003, +0.132] — an interval that spans zero — and we "
-    "found nothing that beats it."
+    "Ranked by one fixed rule: open issues that name a file or folder you've "
+    "already worked on here come first, newest first, then the rest by how "
+    "recent they are. We tested it against four other ways of ordering issues "
+    "and it did best, but not by enough to be sure it beats a random order, so "
+    "treat the order as a rough guide."
 )
 
 
@@ -263,7 +264,7 @@ def render_next(
     for key, tokens in ranked[:top]:
         issue = issues[key]
         title = issue.payload.get("title") or "(untitled)"
-        lines.append(f"- **{title}** — `{issue.evidence_id}`")
+        lines.append(f"- **{title}** — {cite(issue.evidence_id)}")
         if tokens:
             shown = ", ".join(f"`{t}`" for t in sorted(tokens)[:4])
             lines.append(f"  names {shown} — work you have already touched")
