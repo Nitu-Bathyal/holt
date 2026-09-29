@@ -12,9 +12,8 @@ export default function Loading() {
             <span className="flex h-[clamp(2.09rem,3.96vw,3.3rem)] items-center">
               <Skeleton className="h-[62%] w-[min(34rem,90%)]" />
             </span>
-            <Skeleton className="mt-6 h-[3.1rem] max-w-2xl" />
+            <Skeleton className="mt-6 h-[3.1rem] max-w-xl" />
           </div>
-          <Skeleton className="mb-4 h-3.5 w-48" />
           <Suspense fallback={<CompareColumns n={2} />}>
             <CompareGridSkeleton />
           </Suspense>
