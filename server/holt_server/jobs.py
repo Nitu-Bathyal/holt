@@ -609,7 +609,8 @@ async def store_find(s, params: dict[str, Any], days: int, result: dict[str, Any
     key = find_key(params.get("languages") or [], params.get("topics") or [],
                    bool(params.get("hacktoberfest")), days)
     await s.execute(delete(FindCache).where(FindCache.key == key))
-    s.add(FindCache(key=key, params={**params, "days": days, "engine_version": ENGINE_VERSION},
+    s.add(FindCache(key=key, params={**params, "days": days, "engine_version": ENGINE_VERSION,
+                                     "starter_rules": starter.rules_version()},
                     results=list((result or {}).get("results") or [])))
 
 

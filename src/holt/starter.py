@@ -260,6 +260,11 @@ SOURCE_LABELS = ('"good first issue"', '"good-first-issue"', '"first-timers-only
 # ---------------------------------------------------------------------------
 # Scoring
 
+# Bump when a change alters which issues are listed, or their order, for the
+# same GitHub answer. The server stores it with every cached list and fetches
+# lists from older rules again instead of serving them.
+RULES_VERSION = 1
+
 # Only issues touched this recently count as alive.
 ACTIVE_DAYS = 180
 # Discussion past this size usually means the problem is not a first issue,

@@ -235,10 +235,12 @@ async def starter_issues(svc: Services, keys: list[str]) -> dict[str, list[dict]
         return {}
     since = now() - timedelta(hours=STARTER_MAX_HOURS)
     async with svc.db.session() as s:
-        rows = (await s.execute(select(StarterCache.repo_key, StarterCache.issues)
+        rows = (await s.execute(select(StarterCache.repo_key, StarterCache.issues,
+                                       StarterCache.rules_version)
                                 .where(StarterCache.repo_key.in_(keys),
                                        StarterCache.created_at >= since))).all()
-    return {key: list(issues or []) for key, issues in rows if starter.current(issues or [])}
+    return {key: list(issues or []) for key, issues, version in rows
+            if starter.current(issues or [], version)}
 
 
 # --- the rules ------------------------------------------------------------------------
