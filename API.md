@@ -630,6 +630,15 @@ background (`HOLT_CONTRIBUTIONS_REFRESH_HOURS`, 24; 0 = off), and on refresh. St
 `contributions` and `contribution_syncs`; each fetch replaces the user's rows.
 Nothing here starts an analysis.
 
+A person can leave a repository out of their numbers (a friend's project, their
+team's repo, a hackathon): its pull requests stay in the list with `counted:
+false`, and `summary` counts only the rest. The choice is per repository, kept
+in `contribution_choices` across fetches, and deleted on disconnect. Without a
+choice, a repository Holt finds is the person's own or their team's project is
+left out (`not_counted_because: "own_project"`); counting it again overrides
+that. It changes only this page's numbers, not the product metric or any
+repository's statistics.
+
 `Contributions` =
 ```jsonc
 {
@@ -639,15 +648,20 @@ Nothing here starts an analysis.
   "window_days": 365, "truncated": false, // true: GitHub had more than 200
   "summary": { "opened": 12, "merged": 6, "waiting": 3, "closed": 3,
                "landed_share": 0.5,  // merged / (merged + closed); null if none decided
-               "found_via_holt": 2 },
+               "found_via_holt": 2,
+               "not_counted": 1 },   // pull requests left out of the numbers above
   "pull_requests": [
     { "repo": "pallets/flask", "number": 5432, "title": "…",
       "url": "https://github.com/pallets/flask/pull/5432",
       "state": "open" | "merged" | "closed", "draft": false,
       "created_at": "…", "closed_at": "…" | null, "merged_at": "…" | null,
       "verdict": { "verdict": "viable", "headline": "Worth your time", "tone": "good",
-                   "checked_at": "…" } | null,   // latest cached 7-day rules report
-      "found_via_holt": true }
+                   "checked_at": "…",
+                   "first_reply_hours": 15.0 | null  // typical wait for an outside PR's first reply
+                 } | null,   // latest cached 7-day rules report
+      "found_via_holt": true,
+      "counted": true,                  // in `summary`; all of a repo's PRs, or none
+      "not_counted_because": null | "you" | "own_project" }
   ]
 }
 ```
@@ -661,6 +675,11 @@ Nothing here starts an analysis.
   unchanged (200) with `next_refresh_at`. Reads that reach GitHub are also
   limited to 6 per user per hour (429 `rate_limited`), which only matters when
   GitHub keeps failing.
+- `PUT /v1/me/contributions/repos/{owner}/{name}` body `{"counted": bool}` →
+  `Contributions`: count that repository's pull requests, or leave them out.
+  `DELETE` on the same path forgets the choice (back to the default). Only
+  repositories in the person's list; anything else → 404 `not_found`. Not
+  connected → 404.
 - `found_via_holt`: the user opened the pull request within 30 days after
   opening that repository's report page on Holt while connected (`repo_views`
   keeps the first and the last view of each repository; a pull request within

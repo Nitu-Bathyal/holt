@@ -42,6 +42,7 @@ from sqlalchemy import and_, delete, func, select, text
 from holt_server import repo_stats, repos, schema
 from holt_server.db import (
     Contribution,
+    ContributionChoice,
     ContributionSync,
     GitHubConnection,
     Report,
@@ -235,9 +236,11 @@ async def _fetch_and_store(svc: Services, user_id: str, login: str) -> bool:
 
 
 async def forget(s, user_id: str) -> None:
-    """Delete a user's fetched pull requests (disconnect). Caller commits."""
+    """Delete a user's fetched pull requests and their counting choices
+    (disconnect). Caller commits."""
     await s.execute(delete(Contribution).where(Contribution.user_id == user_id))
     await s.execute(delete(ContributionSync).where(ContributionSync.user_id == user_id))
+    await s.execute(delete(ContributionChoice).where(ContributionChoice.user_id == user_id))
 
 
 def fetch_soon(svc: Services, user_id: str, login: str) -> None:
@@ -279,15 +282,36 @@ async def verdicts(s, keys: set[str]) -> dict[str, schema.RepoVerdict]:
               .where(Report.repo_key.in_(keys), rules)
               .group_by(Report.repo_key).subquery())
     got = await s.execute(
-        select(Report.repo_key, Report.created_at, Report.report["verdict"].as_string())
+        select(Report.repo_key, Report.created_at, Report.report["verdict"].as_string(),
+               Report.report["stats"]["median_first_response_hours"].as_float())
         .join(latest, and_(Report.repo_key == latest.c.repo_key,
                            Report.created_at == latest.c.at))
         .where(rules))
     out = {}
-    for key, at, verdict in got:
+    for key, at, verdict, reply in got:
         if verdict in schema.TONES:
-            out[key] = schema.RepoVerdict(verdict=verdict, checked_at=iso(at))
+            out[key] = schema.RepoVerdict(verdict=verdict, checked_at=iso(at),
+                                          first_reply_hours=reply)
     return out
+
+
+# --- what counts ------------------------------------------------------------------------
+
+# Verdicts that mean a repository is the person's own or their team's project,
+# so their pull requests there aren't outside contributions. Empty until the
+# engine can tell (its personal/team outcome); the person can always override.
+NOT_OUTSIDE: frozenset[str] = frozenset()
+
+
+def not_counted_because(verdict: schema.RepoVerdict | None,
+                        choice: bool | None) -> str | None:
+    """Why a repository's pull requests are left out of the numbers, or None
+    when they count. The person's own choice wins over the default."""
+    if choice is not None:
+        return None if choice else "you"
+    if verdict is not None and verdict.verdict in NOT_OUTSIDE:
+        return "own_project"
+    return None
 
 
 async def page(svc: Services, user_id: str, conn: GitHubConnection) -> schema.Contributions:
@@ -298,29 +322,36 @@ async def page(svc: Services, user_id: str, conn: GitHubConnection) -> schema.Co
         seen = {v.repo_key: v for v in (await s.execute(
             select(RepoView).where(RepoView.user_id == user_id))).scalars()}
         known = await verdicts(s, {p.repo_key for p in prs})
+        chosen = {c.repo_key: c.counted for c in (await s.execute(
+            select(ContributionChoice).where(ContributionChoice.user_id == user_id))).scalars()}
     if sync is None:  # disconnected while the first fetch ran
         raise ApiError("not_found", "Connect your GitHub account to see your contributions.")
     items = []
     for p in prs:
         view = seen.get(p.repo_key)
+        verdict = known.get(p.repo_key)
+        why = not_counted_because(verdict, chosen.get(p.repo_key))
         items.append(schema.ContributionPullRequest(
             repo=p.repo, number=p.number, title=p.title, url=p.url, state=p.state,
             draft=p.draft, created_at=iso(p.created_at), closed_at=iso(p.closed_at),
-            merged_at=iso(p.merged_at), verdict=known.get(p.repo_key),
+            merged_at=iso(p.merged_at), verdict=verdict,
             found_via_holt=view is not None and after_holt(
-                p.created_at, view.first_viewed_at, view.last_viewed_at)))
-    merged = sum(i.state == "merged" for i in items)
-    closed = sum(i.state == "closed" for i in items)
+                p.created_at, view.first_viewed_at, view.last_viewed_at),
+            counted=why is None, not_counted_because=why))
+    counted = [i for i in items if i.counted]
+    merged = sum(i.state == "merged" for i in counted)
+    closed = sum(i.state == "closed" for i in counted)
     ready = utc(sync.fetched_at) + COOLDOWN
     return schema.Contributions(
         login=conn.login, fetched_at=iso(sync.fetched_at),
         next_refresh_at=iso(ready) if ready > now() else None,
         window_days=WINDOW_DAYS, truncated=sync.truncated,
         summary=schema.ContributionSummary(
-            opened=len(items), merged=merged, closed=closed,
-            waiting=sum(i.state == "open" for i in items),
+            opened=len(counted), merged=merged, closed=closed,
+            waiting=sum(i.state == "open" for i in counted),
             landed_share=round(merged / (merged + closed), 4) if merged + closed else None,
-            found_via_holt=sum(i.found_via_holt for i in items)),
+            found_via_holt=sum(i.found_via_holt for i in counted),
+            not_counted=len(items) - len(counted)),
         pull_requests=items)
 
 
@@ -360,6 +391,46 @@ async def refresh_contributions(request: Request,
         _refresh_limiter.hit(f"user:{user_id}", REFRESH_PER_HOUR)
         await fetch(svc, user_id, conn.login)
     return await page(svc, user_id, conn)
+
+
+async def _choose(svc: Services, user_id: str, owner: str, name: str,
+                  counted: bool | None) -> schema.Contributions:
+    """Store (or, with None, clear) whether a repository's pull requests count.
+    Only repositories in the person's list; anything else is 404."""
+    conn, sync = await _connection(svc, user_id)
+    if sync is None:
+        await fetch(svc, user_id, conn.login)
+    key = repos.key(repos.normalize(f"{owner}/{name}"))
+    async with svc.db.session() as s:
+        pr = (await s.execute(select(Contribution).where(
+            Contribution.user_id == user_id, Contribution.repo_key == key).limit(1))).scalar()
+        if pr is None:
+            raise ApiError("not_found", "None of your pull requests are to that repository.")
+        row = await s.get(ContributionChoice, (user_id, key))
+        if counted is None:
+            if row is not None:
+                await s.delete(row)
+        elif row is None:
+            s.add(ContributionChoice(user_id=user_id, repo_key=key, repo=pr.repo, counted=counted))
+        else:
+            row.counted, row.chosen_at = counted, now()
+        await s.commit()
+    return await page(svc, user_id, conn)
+
+
+@router.put("/me/contributions/repos/{owner}/{name}")
+async def put_contribution_choice(owner: str, name: str, body: schema.ContributionChoiceBody,
+                                  request: Request, who: Caller = Depends(caller),
+                                  ) -> schema.Contributions:
+    """Count this repository's pull requests in the numbers, or leave them out."""
+    return await _choose(services(request), signed_in(who), owner, name, body.counted)
+
+
+@router.delete("/me/contributions/repos/{owner}/{name}")
+async def delete_contribution_choice(owner: str, name: str, request: Request,
+                                     who: Caller = Depends(caller)) -> schema.Contributions:
+    """Forget the choice: the repository goes back to Holt's default."""
+    return await _choose(services(request), signed_in(who), owner, name, None)
 
 
 # --- the product metric -----------------------------------------------------------------

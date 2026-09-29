@@ -1218,6 +1218,10 @@ class RepoVerdict(Model):
 
     verdict: Verdict
     checked_at: str
+    # How long an outside pull request there typically waits for its first
+    # reply, in hours (the report's median_first_response_hours). Null when
+    # the report couldn't tell.
+    first_reply_hours: float | None = None
 
     @computed_field
     @property
@@ -1244,6 +1248,12 @@ class ContributionPullRequest(Model):
     verdict: RepoVerdict | None
     # Opened within 30 days after this user looked at the repository on Holt.
     found_via_holt: bool
+    # Whether it counts in `summary`. Every pull request to a repository
+    # counts, or none does.
+    counted: bool = True
+    # Why it doesn't count: "you" chose so, or Holt found the repository is
+    # the person's own or their team's project ("own_project"). Null when counted.
+    not_counted_because: Literal["you", "own_project"] | None = None
 
 
 class ContributionSummary(Model):
@@ -1256,6 +1266,8 @@ class ContributionSummary(Model):
     # merged / (merged + closed); null until any pull request was decided.
     landed_share: float | None
     found_via_holt: int
+    # Pull requests left out of the numbers above (see `counted`).
+    not_counted: int = 0
 
 
 class Contributions(Model):
@@ -1269,6 +1281,12 @@ class Contributions(Model):
     truncated: bool
     summary: ContributionSummary
     pull_requests: list[ContributionPullRequest]
+
+
+class ContributionChoiceBody(Model):
+    """PUT /v1/me/contributions/repos/{owner}/{name}."""
+
+    counted: bool
 
 
 class ContributionMetric(Model):
