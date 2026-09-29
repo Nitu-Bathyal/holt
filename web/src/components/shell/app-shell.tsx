@@ -1,10 +1,9 @@
 // What the shells need from the server, once per full page load: who's
-// signed in, their AI reports, and whether the sidebar was left folded.
-import { cookies } from "next/headers";
+// signed in and their AI reports.
 import { me } from "@/lib/api";
 import { statusLine } from "@/lib/home";
 import type { SessionUser } from "@/lib/session";
-import { sidebarGroups, SIDEBAR_COOKIE } from "@/lib/shell";
+import { sidebarGroups } from "@/lib/shell";
 import { hacktoberfest } from "@/lib/site";
 import { AppTopBar } from "../header";
 import { Drawer, Sidebar } from "./sidebar";
@@ -17,10 +16,9 @@ export async function creditsLine(user: SessionUser | null): Promise<string | nu
 }
 
 export async function appShell(user: SessionUser, credits: string | null) {
-  const jar = await cookies();
   const nav = { groups: sidebarGroups({ hacktoberfest: hacktoberfest()?.live === true }) };
   return {
     topBar: <AppTopBar user={user} credits={credits} drawer={<Drawer {...nav} />} />,
-    rail: <Sidebar {...nav} initialFolded={jar.get(SIDEBAR_COOKIE)?.value === "folded"} />,
+    rail: <Sidebar {...nav} />,
   };
 }

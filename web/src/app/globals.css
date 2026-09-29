@@ -2084,7 +2084,6 @@
 :root {
   --topbar-h: 61px; /* 60px bar + its 1px rule */
   --rail-w: 15rem;
-  --rail-w-folded: 3.75rem;
 }
 
 @layer components {
@@ -2100,29 +2099,11 @@
     border-right: 1px solid var(--line);
     background: var(--header);
     padding: 20px 10px 14px;
-    transition: width var(--dur-base) var(--ease-move);
   }
   @media (min-width: 1024px) {
     .app-rail {
       display: flex;
     }
-  }
-  .app-rail[data-folded] {
-    width: var(--rail-w-folded);
-  }
-  .app-rail[data-folded] .side-label,
-  .app-rail[data-folded] .side-group-label,
-  .app-rail[data-folded] .side-foot {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-  .app-rail[data-folded] .side-item {
-    justify-content: center;
-    padding-inline: 0;
   }
 
   /* A sidebar item: icon and label, 44px tall to tap. */

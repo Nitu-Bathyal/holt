@@ -108,9 +108,6 @@ export function activeItem(groups: NavGroup[], pathname: string): string | null 
   return best?.id ?? null;
 }
 
-/** The sidebar starts folded to icons when this cookie says so (desktop only). */
-export const SIDEBAR_COOKIE = "holt_sidebar";
-
 /** Old addresses and where they went. */
 export const RETIRED: Record<string, string> = {
   "/for-you": "/me#picks",
