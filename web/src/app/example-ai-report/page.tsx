@@ -28,7 +28,7 @@ export default async function ExampleAiReportPage({ searchParams }: PageProps<"/
     <PageTransition>
       <div className="relative">
         <div aria-hidden="true" className="hero-backdrop bottom-auto h-[560px] [mask-image:linear-gradient(#000_55%,transparent)]" />
-        <div className="wrap relative py-8 sm:py-12">
+        <div className="report-wide relative py-8 sm:py-12">
           <aside className="mb-6 border border-blue/50 bg-blue/[0.06] p-4 sm:p-5" data-example-banner>
             <p className="text-[0.8rem] uppercase tracking-[0.08em] text-blue">Example AI report (recorded {recorded})</p>
             <p className="mt-2 max-w-3xl font-sans text-[0.95rem] text-ink">A recorded example, not a live report. Free to read.</p>

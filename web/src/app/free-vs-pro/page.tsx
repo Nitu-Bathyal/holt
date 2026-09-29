@@ -32,7 +32,7 @@ export default async function FreeVsProPage() {
       <Band id="free" title="Free report" note={`/${REPO} · the full report, as a signed-in visitor sees it`} />
       <div className="relative">
         <div aria-hidden="true" className="hero-backdrop bottom-auto h-[560px] [mask-image:linear-gradient(#000_55%,transparent)]" />
-        <div className="wrap relative py-8 sm:py-12">
+        <div className="report-wide relative py-8 sm:py-12">
           <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3">
             <RepoAvatar repo={REPO} size={40} />
             <div className="min-w-0 flex-1">

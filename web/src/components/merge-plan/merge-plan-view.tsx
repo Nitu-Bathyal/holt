@@ -26,7 +26,7 @@ export function MergePlanView({ plan, locked = false }: { plan: MergePlan; locke
   const n = (id: string) => String(sections.findIndex(([s]) => s === id) + 1).padStart(2, "0");
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-10" data-merge-plan>
+    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_280px] lg:gap-12 2xl:gap-16" data-merge-plan>
       <div className="min-w-0 space-y-10">
         <PlanHero plan={plan} />
 
@@ -45,7 +45,7 @@ export function MergePlanView({ plan, locked = false }: { plan: MergePlan; locke
               </Section>
             )}
 
-            <Section n={n("first-pr")} id="first-pr" title="Your first pull request" note="step by step, tick them off">
+            <Section n={n("first-pr")} id="first-pr" title="Your first pull request">
               <PlanSteps repo={plan.repo} steps={plan.steps} />
             </Section>
 
@@ -71,37 +71,39 @@ export function MergePlanView({ plan, locked = false }: { plan: MergePlan; locke
               </ul>
             </Section>
 
-            <Section n={n("closed")} id="closed" title="What gets closed" note={`${plan.sample.closed_outside} closed outside pull requests`}>
-              <ul className="border-t border-line-strong">
-                {plan.closed.map((c) => (
-                  <li key={c.reason} className="border-b border-line py-5">
-                    <ClosingReason c={c} />
-                  </li>
-                ))}
-              </ul>
-            </Section>
+            <div className="grid grid-cols-[minmax(0,1fr)] gap-10 xl:grid-cols-2 xl:gap-12 [&>*]:min-w-0">
+              <Section n={n("closed")} id="closed" title="What gets closed" note={`${plan.sample.closed_outside} closed outside pull requests`}>
+                <ul className="border-t border-line-strong">
+                  {plan.closed.map((c) => (
+                    <li key={c.reason} className="border-b border-line py-5">
+                      <ClosingReason c={c} />
+                    </li>
+                  ))}
+                </ul>
+              </Section>
 
-            <Section n={n("reviewers")} id="reviewers" title="Who reviews" note="share of merged pull requests each reviewed">
-              <ul className="space-y-4">
-                {plan.reviewers.people.map((p) => (
-                  <li key={p.login}>
-                    <div className="flex items-baseline justify-between gap-4 text-[0.85rem]">
-                      <a href={`https://github.com/${p.login}`} target="_blank" rel="noopener noreferrer" className="truncate text-ink hover:text-blue">
-                        @{p.login}
-                        {p.areas.length > 0 && <span className="text-faint"> · {p.areas.join(", ")}</span>}
-                      </a>
-                      <span className="shrink-0 font-sans text-muted">
-                        <strong className="font-semibold text-blue">{p.reviewed}</strong> of {p.of} reviewed
-                      </span>
-                    </div>
-                    <div className="mt-2">
-                      <Meter seen={p.reviewed} of={p.of} tone="blue" label={`reviewed ${p.reviewed} of ${p.of}`} />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-              <Sources sources={plan.reviewers.sources} className="mt-4" />
-            </Section>
+              <Section n={n("reviewers")} id="reviewers" title="Who reviews" note="share of merged pull requests each reviewed">
+                <ul className="space-y-4">
+                  {plan.reviewers.people.map((p) => (
+                    <li key={p.login}>
+                      <div className="flex items-baseline justify-between gap-4 text-[0.85rem]">
+                        <a href={`https://github.com/${p.login}`} target="_blank" rel="noopener noreferrer" className="truncate text-ink hover:text-blue">
+                          @{p.login}
+                          {p.areas.length > 0 && <span className="text-faint"> · {p.areas.join(", ")}</span>}
+                        </a>
+                        <span className="shrink-0 font-sans text-muted">
+                          <strong className="font-semibold text-blue">{p.reviewed}</strong> of {p.of} reviewed
+                        </span>
+                      </div>
+                      <div className="mt-2">
+                        <Meter seen={p.reviewed} of={p.of} tone="blue" label={`reviewed ${p.reviewed} of ${p.of}`} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                <Sources sources={plan.reviewers.sources} className="mt-4" />
+              </Section>
+            </div>
 
             <p className="border-t border-dashed border-line-strong pt-4 font-sans text-[0.85rem] leading-relaxed text-faint">
               Counted from {plan.sample.merged} merged and {plan.sample.closed} closed pull requests since {dateLabel(plan.window.since)}
