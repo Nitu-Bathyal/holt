@@ -1,7 +1,6 @@
 "use client";
-// The settings sections as tabs, below lg. From lg up the sidebar lists them
-// under Settings, so this hides. Each is its own route, so the lit tab is the
-// page you're on.
+// The settings sections as tabs, at every size (the sidebar holds only the
+// five places). Each is its own route, so the lit tab is the page you're on.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { SECTIONS } from "@/lib/settings";
@@ -9,7 +8,7 @@ import { SECTIONS } from "@/lib/settings";
 export function SettingsNav() {
   const path = usePathname();
   return (
-    <nav aria-label="Settings" className="-mx-4 overflow-x-auto border-b border-line px-4 sm:mx-0 sm:px-0 lg:hidden">
+    <nav aria-label="Settings" className="-mx-4 overflow-x-auto border-b border-line px-4 sm:mx-0 sm:px-0">
       <ul className="flex gap-1">
         {SECTIONS.map((s) => {
           const on = path === s.href || path.startsWith(`${s.href}/`);

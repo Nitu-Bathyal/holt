@@ -31,7 +31,7 @@ export function QuickCheck({ variant = "bar" }: { variant?: "bar" | "inline" }) 
         // Only signed-in people see this box; same rule as every paste box.
         router.push(pasteHref(`${ref.owner}/${ref.repo}`, true));
       }}
-      className={`relative w-full items-center border border-line-strong bg-panel transition-colors focus-within:border-blue ${bar ? "hidden max-w-sm md:flex" : "flex max-w-xl"}`}
+      className={`relative w-full items-center border border-line-strong bg-panel transition-colors focus-within:border-blue ${bar ? "hidden max-w-xl md:flex" : "flex max-w-xl"}`}
     >
       <label htmlFor={id} className="sr-only">Check a repo</label>
       <span aria-hidden="true" className="pl-3 text-amber">$</span>
@@ -49,6 +49,7 @@ export function QuickCheck({ variant = "bar" }: { variant?: "bar" | "inline" }) 
         spellCheck={false}
         className={`min-w-0 flex-1 bg-transparent px-2 outline-none placeholder:text-faint ${bar ? "py-2 text-[0.85rem]" : "py-3 text-[0.92rem]"}`}
       />
+      {bar && !value && <kbd aria-hidden="true" className="mr-2 hidden border border-line-strong px-1.5 text-[0.72rem] leading-5 text-faint lg:block">/</kbd>}
       <button type="submit" className="self-stretch border-l border-line-strong px-3 text-[0.8rem] text-muted transition-colors hover:text-ink">check</button>
       {bad && (
         <p id={`${id}-error`} role="alert" className="absolute left-0 top-full mt-1 border border-orange/50 bg-panel px-3 py-2 font-sans text-[0.82rem] text-orange shadow-card">
