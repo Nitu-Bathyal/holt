@@ -1,22 +1,26 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ViewTransition } from "react";
+import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { after } from "next/server";
 import { ErrorPanel } from "@/components/error-panel";
 import { AiStart } from "@/components/report/ai-start";
 import { AnalysisRunner } from "@/components/report/analysis-runner";
 import { BudgetPicker } from "@/components/report/budget-picker";
+import { PartialReport } from "@/components/report/partial-report";
 import { ReportTeaser } from "@/components/report/report-teaser";
 import { ReportView } from "@/components/report/report-view";
 import { RepoAbout } from "@/components/report/repo-about";
 import { StarterIssues, StarterIssuesSkeleton } from "@/components/report/starter-issues";
 import { LinkHint } from "@/components/motion/link-hint";
 import { SkeletonReveal } from "@/components/motion/reveal";
+import { isBot, mintTicket } from "@/lib/anon-check";
 import { getReport, me, recordView, savedState, starterIssues } from "@/lib/api";
+import { authSecret } from "@/lib/auth-secret";
 import { budgetFrom, reportHref } from "@/lib/budget";
 import { EXAMPLES_PATH } from "@/lib/examples";
-import { reportAccess, signInHref } from "@/lib/gate";
+import { reportAccess, reportShows, signInHref } from "@/lib/gate";
 import { isValidRepo } from "@/lib/repo";
 import { caller, currentUser, type SessionUser } from "@/lib/session";
 import { humanHours } from "@/lib/format";
@@ -31,6 +35,13 @@ type Props = PageProps<"/[owner]/[repo]">;
 async function aiCredits(userId: string): Promise<Credits | null> {
   const r = await me(userId);
   return r.ok ? r.data.credits : null;
+}
+
+/** Signed out, a report nobody has made yet: a ticket to run the free check here, for people only (lib/anon-check.ts). */
+async function anonTicket(repo: string, days: number): Promise<string | null> {
+  const secret = authSecret(process.env);
+  if (!secret || isBot((await headers()).get("user-agent"))) return null;
+  return mintTicket(secret, repo, days);
 }
 
 function opts(sp: Record<string, string | string[] | undefined>): { mode: Mode; days: number } {
@@ -106,10 +117,14 @@ export default async function RepoPage({ params, searchParams }: Props) {
   // For Connect GitHub users' "opened a PR after checking it on Holt" (the server ignores the rest).
   if (user && report.ok) after(() => recordView(user.id, report.data.repo));
   const [dOwner, dRepo] = display.split("/");
-  // Signed out: the examples in full, every other repo as a teaser, and never a
-  // new check (a repo with no report yet gets a teaser that offers one).
+  // Signed out: the examples in full, every other repo as a teaser. A repo with
+  // no report yet runs the free check and ends on the teaser; bots, and anyone
+  // over the per-IP limit, get the teaser that offers sign-in instead.
   const access = reportAccess(display, signedIn);
-  const teaser = !signedIn && (report.ok ? access === "teaser" : report.error.code === "not_found");
+  const found = report.ok ? "report" : report.error.code === "not_found" ? "missing" : "error";
+  const ticket = !signedIn && found === "missing" ? await anonTicket(name, days) : null;
+  const shows = reportShows({ repo: display, signedIn, found, anonymousCheck: ticket !== null });
+  const teaser = shows === "teaser" || shows === "sign-in";
 
   return (
     <PageTransition>
@@ -179,7 +194,11 @@ export default async function RepoPage({ params, searchParams }: Props) {
         <ViewTransition key={mode} name="report-body" share="swap" enter="swap" exit="swap" default="none">
           <div>
             {teaser ? (
-              <ReportTeaser repo={display} report={report.ok ? report.data : null} back={reportHref(display, days)} />
+              report.ok ? (
+                <PartialReport report={report.data} back={reportHref(display, days)} />
+              ) : (
+                <ReportTeaser repo={display} report={null} back={reportHref(display, days)} />
+              )
             ) : report.ok && report.data.outdated && mode === "rules" && signedIn ? (
               // Made by an older version of the rules: check again, with the
               // normal progress, and fall back to it only if that fails. (Signed
@@ -199,7 +218,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
               mode === "ai" && user ? (
                 <AiStart repo={name} days={days} signedIn={signedIn} credits={await aiCredits(user.id)} />
               ) : (
-                <AnalysisRunner repo={name} mode={mode} days={days} signedIn={signedIn} />
+                <AnalysisRunner repo={name} mode={mode} days={days} signedIn={signedIn} ticket={ticket ?? undefined} />
               )
             ) : (
               <ErrorPanel error={report.error} repo={name} retryHref={reportHref(name, days, mode)} />

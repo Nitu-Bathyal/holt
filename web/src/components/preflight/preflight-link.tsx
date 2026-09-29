@@ -1,11 +1,12 @@
 "use client";
 
 // "Check your PR against this repo" on a report page. It asks whether
-// pre-flight is on after the report renders, and shows nothing when it's off
-// (or the answer doesn't come).
+// pre-flight is on after the report renders, and shows nothing when it's off,
+// not on sale, or the answer doesn't come.
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { preflightHref } from "@/lib/preflight";
+import { preflightHref, showPreflight } from "@/lib/preflight";
+import type { PreflightState } from "@/lib/types";
 
 export function PreflightLink({ repo }: { repo: string }) {
   const [on, setOn] = useState(false);
@@ -14,8 +15,8 @@ export function PreflightLink({ repo }: { repo: string }) {
     fetch("/api/preflight")
       .then((r) => (r.ok ? r.json() : null))
       .catch(() => null)
-      .then((body: { available?: boolean } | null) => {
-        if (!cancelled) setOn(body?.available === true);
+      .then((body: PreflightState | null) => {
+        if (!cancelled) setOn(showPreflight(body));
       });
     return () => {
       cancelled = true;

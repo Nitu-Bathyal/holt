@@ -1,13 +1,22 @@
 // PR pre-flight: the words and small rules the /preflight page uses. Pure, so
 // it can be tested without React. The checks and their verdicts come from the
 // server (API.md, PR pre-flight); nothing here decides one.
-import type { Access, Preflight, PreflightVerdict } from "./types";
+import type { Access, Preflight, PreflightState, PreflightVerdict } from "./types";
 
 export const VERDICT_WORDS: Record<PreflightVerdict, string> = {
   ok: "Looks fine",
   worth_fixing: "Worth fixing",
   unknown: "Can't tell yet",
 };
+
+/**
+ * Whether to link to pre-flight (the sidebar, report pages). Hidden while it
+ * isn't on sale, unless this person can run a check anyway.
+ */
+export function showPreflight(s: Pick<PreflightState, "available" | "on_sale" | "access"> | null | undefined): boolean {
+  if (!s?.available) return false;
+  return s.on_sale || s.access?.allowed === true;
+}
 
 /** Worth fixing first, then can't tell, then fine: the order a contributor acts in. */
 export const VERDICT_ORDER: PreflightVerdict[] = ["worth_fixing", "unknown", "ok"];

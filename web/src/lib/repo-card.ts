@@ -21,6 +21,8 @@ export interface CardRepo {
   repo: string;
   description: string | null;
   language: string | null;
+  /** What the card shows: "Go · TypeScript" when a second language is a real share of the code. */
+  languageLabel: string | null;
   stars: number | null;
   headline: string;
   tone: Tone;
@@ -34,12 +36,17 @@ export interface CardRepo {
   checkedThisWeek: number | null;
 }
 
+/** The primary language, and the second one when the server names one. */
+export function languageLabel(language: string | null | undefined, languages: string[] | null | undefined): string | null {
+  return languages && languages.length > 1 ? languages.slice(0, 2).join(" · ") : (language ?? languages?.[0] ?? null);
+}
+
 const n = (v: number | null | undefined) => (typeof v === "number" && Number.isFinite(v) ? v : null);
 
 export function fromFind(r: FindResult): CardRepo {
   const s = r.stats;
   return {
-    repo: r.repo, description: r.description, language: r.language, stars: r.stars, headline: r.headline, tone: r.tone,
+    repo: r.repo, description: r.description, language: r.language, languageLabel: languageLabel(r.language, r.languages), stars: r.stars, headline: r.headline, tone: r.tone,
     stats: { attempts: n(s.outsider_attempts), merged: n(s.outsider_merged), noReply: n(s.no_reply), closedSilently: null, stillOpen: null, firstTimers: n(s.first_time_merged_authors), replyHours: n(s.median_first_response_hours) },
     issues: r.issues, topics: [], why: [], reason: null, numbersLine: null, odds: null, checkedThisWeek: null,
   };
@@ -52,14 +59,14 @@ export function fullStats(s: Recommendation["stats"]): CardStats {
 
 export function fromPick(p: Recommendation): CardRepo {
   return {
-    repo: p.repo, description: p.description, language: p.language, stars: p.stars, headline: p.headline, tone: p.tone,
+    repo: p.repo, description: p.description, language: p.language, languageLabel: languageLabel(p.language, p.languages), stars: p.stars, headline: p.headline, tone: p.tone,
     stats: fullStats(p.stats), issues: p.issues, topics: p.topics, why: p.why, reason: p.reason, numbersLine: p.numbers_line, odds: p.odds, checkedThisWeek: null,
   };
 }
 
 export function fromDiscover(d: DiscoverRepo): CardRepo {
   return {
-    repo: d.repo, description: d.description, language: d.language, stars: d.stars, headline: d.headline, tone: d.tone,
+    repo: d.repo, description: d.description, language: d.language, languageLabel: languageLabel(d.language, d.languages), stars: d.stars, headline: d.headline, tone: d.tone,
     stats: fullStats(d.stats), issues: [], topics: d.topics, why: [], reason: d.reason, numbersLine: null, odds: null, checkedThisWeek: d.checked_this_week,
   };
 }

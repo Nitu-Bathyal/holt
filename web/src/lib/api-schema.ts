@@ -1324,6 +1324,8 @@ export interface components {
             readonly headline: string;
             /** Language */
             language: string | null;
+            /** Languages */
+            languages: string[];
             /** Pushed At */
             pushed_at: string | null;
             /** Reason */
@@ -1505,6 +1507,8 @@ export interface components {
             issues: components["schemas"]["StarterIssue"][];
             /** Language */
             language: string | null;
+            /** Languages */
+            languages: string[];
             /** Repo */
             repo: string;
             /** Stars */
@@ -2349,6 +2353,8 @@ export interface components {
             issues: components["schemas"]["StarterIssue"][];
             /** Language */
             language: string | null;
+            /** Languages */
+            languages: string[];
             /**
              * Numbers Line
              * @description The report's counts line, without its dates (a pick doesn't carry them).

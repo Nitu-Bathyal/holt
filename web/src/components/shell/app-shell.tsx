@@ -3,6 +3,7 @@
 // sidebar was left folded.
 import { cookies } from "next/headers";
 import { me, preflightState } from "@/lib/api";
+import { showPreflight } from "@/lib/preflight";
 import { statusLine } from "@/lib/home";
 import type { SessionUser } from "@/lib/session";
 import { sidebarGroups, SIDEBAR_COOKIE } from "@/lib/shell";
@@ -10,13 +11,13 @@ import { hacktoberfest } from "@/lib/site";
 import { AppTopBar, doSignOut } from "../header";
 import { Drawer, Sidebar } from "./sidebar";
 
-// Pre-flight is on or off for the whole server, so one answer serves everyone for a while.
+// Pre-flight is on (and on sale) or not for the whole server, so one answer serves everyone for a while.
 let preflight: { on: boolean; at: number } | null = null;
 async function preflightOn(): Promise<boolean> {
   if (preflight && Date.now() - preflight.at < 10 * 60_000) return preflight.on;
   const r = await preflightState({}, {});
   if (!r.ok) return preflight?.on ?? false;
-  preflight = { on: r.data.available, at: Date.now() };
+  preflight = { on: showPreflight(r.data), at: Date.now() };
   return preflight.on;
 }
 

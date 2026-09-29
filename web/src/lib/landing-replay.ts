@@ -1,6 +1,7 @@
 // "Watch Holt check a repo" (landing section 02, docs/design/EXPRESSIVE.md
-// pattern 3): what the replay plays, built from the recorded example report
-// (lib/example-report.ts), so its numbers are a real run's and never made up.
+// pattern 3): what the replay plays, built from a real report (the cached live
+// one, or the recorded example when that can't be read), so its numbers are a
+// real run's and never made up.
 // Pure, so it runs under `node --test`.
 import { pct, statLines } from "./format.ts";
 import type { Report, Tone } from "./types.ts";
@@ -42,7 +43,8 @@ export function cliHours(h: number): string {
 
 export function buildReplay(r: Report): Replay {
   const s = r.stats;
-  const replied = s.no_reply != null ? s.outsider_attempts - s.no_reply : null;
+  // Closed without a word is no reply either (the CLI says it apart).
+  const replied = s.no_reply != null ? s.outsider_attempts - s.no_reply - (s.closed_silently ?? 0) : null;
   const terminal: ReplayLine[] = [
     { text: `Reading recent pull requests for ${r.repo} from GitHub…`, style: "faint" },
     { text: r.repo, style: "heading" },
@@ -57,6 +59,8 @@ export function buildReplay(r: Report): Replay {
   if (replied != null && s.median_first_response_hours != null)
     terminal.push({ text: `Of the {n} that got a reply, half heard back within ${cliHours(s.median_first_response_hours)}.`, counts: [replied] });
   if (s.no_reply != null) terminal.push({ text: "{n} got no reply at all.", counts: [s.no_reply], style: "bad" });
+  if (s.closed_silently)
+    terminal.push({ text: "{n} were closed without a reply, which isn't counted as ignored.", counts: [s.closed_silently], style: "faint" });
   if (r.landing.length) {
     terminal.push({ text: "Where outsider work landed", style: "heading" });
     for (const l of r.landing.slice(0, 2))

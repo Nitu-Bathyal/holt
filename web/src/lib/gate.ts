@@ -1,8 +1,10 @@
 // Who sees what without signing in. Signed out, a visitor can read the
 // curated example reports (examples.ts) in full and a teaser of any other
-// report: the verdict and its reason, with the rest behind sign-in. Starting a
-// check or a search needs an account. The browser extension's public API
-// (/api/public/*) reads the cache and stays open. No runtime imports, so it
+// report: the verdict, the odds and one number, with the rest behind sign-in.
+// Opening a report with no result yet runs the free check (anon-check.ts: the
+// report page only, rate-limited per IP, never for bots); anything else that
+// starts a check or a search needs an account. The browser extension's public
+// API (/api/public/*) reads the cache and stays open. No runtime imports, so it
 // runs under `node --test` and in the browser.
 import { isExample } from "./examples.ts";
 import type { ApiError } from "./types.ts";
@@ -11,6 +13,25 @@ export type Access = "full" | "teaser";
 
 export function reportAccess(repo: string, signedIn: boolean): Access {
   return signedIn || isExample(repo) ? "full" : "teaser";
+}
+
+/**
+ * What the report page shows. `report`: a report is cached; `missing`: none
+ * yet. `anonymousCheck`: signed out, and the report page may run the free
+ * check for this visitor (a person, with a ticket: anon-check.ts).
+ *   full: the report · teaser: part of it, the rest after sign-in ·
+ *   check: run the check here (signed out, it ends on the teaser) ·
+ *   sign-in: no report, and the check waits for sign-in.
+ */
+export function reportShows(o: { repo: string; signedIn: boolean; found: "report" | "missing" | "error"; anonymousCheck: boolean }): "full" | "teaser" | "check" | "sign-in" | "error" {
+  if (o.found === "report") return reportAccess(o.repo, o.signedIn);
+  if (o.found === "error") return "error";
+  return o.signedIn || o.anonymousCheck ? "check" : "sign-in";
+}
+
+/** A signed-out check the server turned down (over the per-IP limit, say): offer sign-in instead. */
+export function checkNeedsSignIn(code: string): boolean {
+  return code === "rate_limited" || code === "unauthorized" || code === "invalid_request";
 }
 
 /** Sign-in, then back to `path` (a path on this site, with its query). */
@@ -43,9 +64,9 @@ type Refusal = { status: 401; error: ApiError };
 
 const refuse = (message: string): Refusal => ({ status: 401, error: { code: "unauthorized", message } });
 
-/** POST /api/analyses: null when this caller may start a check. */
-export function startGate(userId: string | null | undefined): Refusal | null {
-  return userId ? null : refuse("Sign in to check this repo.");
+/** POST /api/analyses: null when this caller may start a check. `anonymous`: the report page allowed a signed-out one. */
+export function startGate(userId: string | null | undefined, anonymous = false): Refusal | null {
+  return userId || anonymous ? null : refuse("Sign in to check this repo.");
 }
 
 /** POST /api/find: null when this caller may run a search. */

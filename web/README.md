@@ -36,7 +36,7 @@ npm run dev -- -p $PORT
 | Path | What |
 |---|---|
 | `/` | Landing: paste box, find CTA, Hacktoberfest banner, URL trick |
-| `/{owner}/{repo}` | Report. Signed in: starts a rules analysis if nothing is cached and streams progress. `?mode=ai` for the AI report, `?days=` for the time budget. Signed out: the curated examples in full, any other repo as a teaser (verdict and reason, then sign-in), and never a new analysis (`src/lib/gate.ts`) |
+| `/{owner}/{repo}` | Report. Signed in: starts a rules analysis if nothing is cached and streams progress. `?mode=ai` for the AI report, `?days=` for the time budget. Signed out: the curated examples in full, any other repo as a teaser (verdict, reason, odds bar and one number; the rest locked behind sign-in). With nothing cached it runs the rules check first, for people only (never bots), with a ticket only this page mints and the server's per-IP limit; over the limit it asks for sign-in (`src/lib/gate.ts`, `src/lib/anon-check.ts`) |
 | `/examples` | The curated example reports anyone can read without signing in (`src/lib/examples.ts`), plus the example AI report |
 | `/github.com/o/r`, `/https://github.com/o/r`, `/o/r/pulls`… | Redirect to `/o/r` (`src/proxy.ts`) |
 | `/{owner}/{repo}/opengraph-image` | Per-repo share image |
