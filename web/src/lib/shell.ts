@@ -120,3 +120,27 @@ export function retiredRedirect(pathname: string): string | null {
   const p = pathname.replace(/\/+$/, "");
   return Object.hasOwn(RETIRED, p) ? RETIRED[p] : null;
 }
+
+/**
+ * The desktop rail folds to icons and remembers it in a cookie, so the server
+ * renders <html data-rail="collapsed"> and the first paint is already right.
+ * Phones keep the drawer.
+ */
+export const RAIL_COOKIE = "holt-rail";
+
+/** "[" toggles the rail, like the button in the top bar. */
+export const RAIL_KEY = "[";
+
+export function railCollapsed(v: string | null | undefined): boolean {
+  return v === "collapsed";
+}
+
+/** The Set-Cookie value for document.cookie; expanded (the default) clears it. */
+export function railCookie(collapsed: boolean): string {
+  return collapsed ? `${RAIL_COOKIE}=collapsed; Path=/; Max-Age=${60 * 60 * 24 * 365}; SameSite=Lax` : `${RAIL_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`;
+}
+
+/** Whether a keypress is the rail shortcut: a bare "[", outside anything you type in. */
+export function isRailKey(e: { key: string; metaKey: boolean; ctrlKey: boolean; altKey: boolean; isComposing?: boolean }, typing: boolean): boolean {
+  return e.key === RAIL_KEY && !e.metaKey && !e.ctrlKey && !e.altKey && !e.isComposing && !typing;
+}

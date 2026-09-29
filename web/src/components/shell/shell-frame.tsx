@@ -16,13 +16,15 @@ export function ShellFrame({ marketingHeader, footer, topBar, rail, children }: 
   const kind = shellFor(usePathname(), topBar !== null);
   if (kind === "app") {
     return (
-      <>
-        {topBar}
-        <div className="flex flex-1 items-start">
-          {rail}
+      // The rail runs the full height on desktop; the top bar and the page
+      // share the column beside it (which rail-toggle.tsx slides as one).
+      <div className="flex flex-1 items-start overflow-x-clip">
+        {rail}
+        <div id="app-column" className="flex min-w-0 flex-1 flex-col self-stretch">
+          {topBar}
           <main id="content" className="min-w-0 flex-1 pb-16">{children}</main>
         </div>
-      </>
+      </div>
     );
   }
   return (

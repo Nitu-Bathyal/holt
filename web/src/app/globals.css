@@ -2085,35 +2085,207 @@
 :root {
   --topbar-h: 61px; /* 60px bar + its 1px rule */
   --rail-w: 15rem;
+  /* Folded: 8px, a 44px square item, 8px. The icons sit 22px in either way,
+     under the top bar's toggle, so nothing moves sideways but the edge. */
+  --rail-w-folded: 3.75rem;
+  --rail-bg: color-mix(in srgb, var(--panel-2) 55%, var(--bg));
 }
 
 @layer components {
+  /* The rail runs the full height on desktop, on its own surface a shade off
+     the page, with a hairline and a little depth on its edge. Its box takes
+     a new width at once, so the page reflows once (rail-toggle.tsx slides
+     the column across); the panel inside eases to it. */
   .app-rail {
+    --w: var(--rail-w);
     position: sticky;
-    top: var(--topbar-h);
+    top: 0;
+    z-index: 30;
     display: none;
-    height: calc(100dvh - var(--topbar-h));
-    width: var(--rail-w);
+    height: 100dvh;
+    width: var(--w);
     flex-shrink: 0;
-    flex-direction: column;
-    overflow-y: auto;
-    border-right: 1px solid var(--line);
-    background: var(--header);
-    padding: 20px 10px 14px;
+  }
+  :root[data-rail="collapsed"] .app-rail {
+    --w: var(--rail-w-folded);
   }
   @media (min-width: 1024px) {
     .app-rail {
-      display: flex;
+      display: block;
+    }
+  }
+  .rail-panel {
+    position: absolute;
+    inset: 0 auto 0 0;
+    display: flex;
+    width: var(--w);
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--rail-bg);
+    box-shadow:
+      inset -1px 0 0 var(--line),
+      12px 0 28px -26px rgb(0 0 0 / 0.45);
+  }
+  .rail-body {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden auto;
+    padding: 16px 8px 12px;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .rail-panel {
+      transition: width var(--dur-slow) var(--ease-move);
+    }
+    /* Opening, the words fade in once there's room for them. */
+    .rail-panel :is(.side-label, .rail-word, .side-credits, .side-legal) {
+      transition: opacity var(--dur-fast) var(--ease-out) var(--dur-base);
     }
   }
 
-  /* A sidebar item: icon and label, 44px tall to tap. */
+  /* The top of the rail: Holt's cat and name, on the top bar's line. */
+  .rail-brand {
+    display: flex;
+    height: var(--topbar-h);
+    flex-shrink: 0;
+    align-items: center;
+    border-bottom: 1px solid var(--line);
+    padding-inline: 8px;
+  }
+  .rail-logo {
+    position: relative;
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 10px;
+    padding-inline: 10px;
+    white-space: nowrap;
+  }
+  .rail-cat {
+    color: var(--blue);
+    font-size: 1.1rem;
+  }
+  .rail-word {
+    font-size: 1rem;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+  }
+  .rail-mark {
+    display: none;
+    width: 24px;
+    height: 24px;
+    color: var(--blue);
+  }
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .rail-mark-ears {
+      transition: transform var(--dur-fast) var(--ease-out);
+    }
+    .rail-logo:hover .rail-mark-ears {
+      transform: translateY(-5px);
+    }
+  }
+
+  /* Folded: icons only. Each label becomes its item's tooltip on hover and
+     keyboard focus (it stays the link's name for screen readers), badges
+     become dots, and the cat's glyph gives way to its drawn mark. */
+  :root[data-rail="collapsed"] :is(.rail-panel, .rail-body) {
+    overflow: visible;
+  }
+  :root[data-rail="collapsed"] .rail-panel :is(.side-group-label, .side-sub, .side-credits, .side-legal, .rail-cat) {
+    display: none;
+  }
+  :root[data-rail="collapsed"] .rail-mark {
+    display: block;
+  }
+  :root[data-rail="collapsed"] .rail-logo {
+    padding-inline: 10px;
+  }
+  :root[data-rail="collapsed"] .rail-word {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    transition: none;
+  }
+  :root[data-rail="collapsed"] .rail-panel .side-label {
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 10px);
+    translate: 0 -50%;
+    opacity: 0;
+    pointer-events: none;
+    transition: none;
+  }
+  :root[data-rail="collapsed"] .rail-panel .side-item:is(:hover, :focus-visible) .side-label {
+    opacity: 1;
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+  :root[data-rail="collapsed"] .rail-panel .side-badge {
+    position: absolute;
+    top: 8px;
+    left: 30px;
+    min-width: 0;
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    border: 2px solid var(--rail-bg);
+    font-size: 0;
+  }
+  :root[data-rail="collapsed"] .rail-panel .side-badge[data-tone="leaf"] {
+    background: var(--green);
+  }
+  :root[data-rail="collapsed"] .rail-panel .side-badge svg {
+    display: none;
+  }
+
+  /* A small dark label: the folded rail's names and the toggle's hint. */
+  .tip,
+  :root[data-rail="collapsed"] .rail-panel .side-label {
+    z-index: 50;
+    border-radius: 5px;
+    background: var(--ink);
+    color: var(--bg);
+    padding: 4px 8px;
+    font-size: 0.76rem;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
+    box-shadow: var(--shadow);
+  }
+  .tip {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+  .tip-below {
+    top: calc(100% + 4px);
+    left: 0;
+  }
+  .tip kbd {
+    margin-left: 6px;
+    border: 1px solid color-mix(in srgb, var(--bg) 35%, transparent);
+    border-radius: 3px;
+    padding: 0 4px;
+    font-family: inherit;
+    font-size: 0.72rem;
+  }
+  :is(:hover, :focus-visible) > .tip {
+    opacity: 1;
+  }
+  .rail-toggle {
+    position: relative;
+  }
+
+  /* A sidebar item: icon and label in a soft pill. The page you're on gets
+     a blue tint, a blue icon and an accent bar on the rail's edge. */
   .side-item {
     position: relative;
     display: flex;
     min-height: 44px;
     align-items: center;
     gap: 12px;
+    border-radius: 6px;
     padding-inline: 12px;
     color: var(--muted);
     font-size: 0.86rem;
@@ -2122,20 +2294,68 @@
       color var(--dur-fast) var(--ease-out),
       background-color var(--dur-fast) var(--ease-out);
   }
+  .rail-panel .side-item {
+    min-height: 40px;
+  }
+  .side-icon {
+    display: grid;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    place-items: center;
+    transition: color var(--dur-fast) var(--ease-out);
+  }
   .side-item:hover {
     color: var(--ink);
-    background: var(--panel-2);
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+  }
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .side-icon {
+      transition:
+        color var(--dur-fast) var(--ease-out),
+        translate var(--dur-fast) var(--ease-out);
+    }
+    :root:not([data-rail="collapsed"]) .side-item:hover .side-icon,
+    .drawer .side-item:hover .side-icon {
+      translate: 2px 0;
+    }
   }
   .side-item[aria-current="page"] {
     color: var(--ink);
-    background: var(--panel-2);
+    background: color-mix(in srgb, var(--blue) 11%, transparent);
+    font-weight: 600;
+  }
+  .side-item[aria-current="page"] .side-icon {
+    color: var(--blue);
   }
   .side-item[aria-current="page"]::before {
     position: absolute;
-    inset: 8px auto 8px 0;
-    width: 2px;
+    inset: 9px auto 9px -8px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
     background: var(--blue);
     content: "";
+  }
+  /* A count that needs you (orange, as on Your pull requests) or a season's mark. */
+  .side-badge {
+    display: inline-grid;
+    min-width: 20px;
+    height: 18px;
+    margin-left: auto;
+    place-items: center;
+    border-radius: 9px;
+    padding-inline: 5px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .side-badge[data-tone="needs"] {
+    background: var(--orange);
+    color: var(--on-accent);
+  }
+  .side-badge[data-tone="leaf"] {
+    color: var(--green);
   }
   .side-group-label {
     padding: 0 12px 6px;
@@ -2165,6 +2385,49 @@
     color: var(--ink);
   }
 
+  /* The foot: you, your AI reports, then the small print. */
+  .side-foot {
+    margin-top: auto;
+    border-top: 1px solid var(--line);
+    padding-top: 10px;
+  }
+  .side-you {
+    color: var(--ink);
+  }
+  .side-you .side-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .side-credits {
+    display: inline-flex;
+    margin: 4px 0 0 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 2px 10px;
+    color: var(--muted);
+    font-size: 0.74rem;
+    white-space: nowrap;
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out);
+  }
+  .side-credits:hover {
+    border-color: var(--blue);
+    color: var(--ink);
+  }
+  .side-legal {
+    display: flex;
+    gap: 12px;
+    padding: 12px 12px 0;
+    color: var(--faint);
+    font-size: 0.74rem;
+    white-space: nowrap;
+  }
+  .side-legal a:hover {
+    color: var(--ink);
+  }
+
   /* The phone and tablet drawer: the sidebar, sliding in from the left. */
   .drawer[popover] {
     position: fixed;
@@ -2178,9 +2441,9 @@
     overflow-y: auto;
     border: 0;
     border-right: 1px solid var(--line-strong);
-    background: var(--header);
+    background: var(--rail-bg);
     color: var(--ink);
-    padding: 16px 10px;
+    padding: 16px 8px;
     box-shadow: var(--shadow);
     transition:
       translate var(--dur-exit) var(--ease-in),

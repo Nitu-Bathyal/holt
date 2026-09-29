@@ -13,6 +13,7 @@ import { themeScript } from "@/components/theme-toggle";
 import { ANALYTICS } from "@/lib/analytics";
 import { motionAttr, motionFromCookies } from "@/lib/motion";
 import { currentUser } from "@/lib/session";
+import { RAIL_COOKIE, railCollapsed } from "@/lib/shell";
 import { SITE_URL } from "@/lib/site";
 import "lenis/dist/lenis.css";
 import "./globals.css";
@@ -53,13 +54,16 @@ export const viewport: Viewport = {
 
 export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Signed in: the app shell's sidebar and top bar, used on app pages (lib/shell.ts).
+  const jar = await cookies();
   const user = await currentUser();
   const credits = await creditsLine(user);
-  const app = user ? await appShell(user, credits) : null;
+  // The desktop rail folded or not, on <html> before the first paint (lib/shell.ts).
+  const rail = railCollapsed(jar.get(RAIL_COOKIE)?.value);
+  const app = user ? await appShell(user, credits, rail) : null;
   // The motion setting, on <html> before the first paint (lib/motion.ts).
-  const motion = motionAttr(motionFromCookies(await cookies()));
+  const motion = motionAttr(motionFromCookies(jar));
   return (
-    <html lang="en" className={mono.variable} data-motion={motion} suppressHydrationWarning>
+    <html lang="en" className={mono.variable} data-motion={motion} data-rail={rail ? "collapsed" : undefined} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         {ANALYTICS && <script defer src={ANALYTICS.src} data-website-id={ANALYTICS.websiteId} />}
