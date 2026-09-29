@@ -209,7 +209,10 @@ settings and pre-flight aren't drawn: they keep their pages and take the new fra
    itself (`[data-shell="marketing"]`).
 6. **Compare, settings, AI reports, pre-flight:** the new frame; `/connect` into Accounts. *Built.*
    Compare's head names the repo that merges outsiders most often once you
-   pick two or more (`compareTitle` in `lib/compare.ts`). Settings sections
+   pick two or more (`compareTitle` in `lib/compare.ts`). Its body is one table
+   (`components/compare/compare-table.tsx`): a column per repo, a row per number
+   (`ROWS`, `cells`), subgrid rows so cells line up; phones stack each label
+   over its numbers and swipe three or four columns. Settings sections
    are blocks (`Block` in `components/settings/section-head.tsx`: `.section-head`
    over rows) under `.app-tabs`; the lit tab names the section, so its h2 is
    screen-reader only. Connecting GitHub is `ConnectGitHubForm` in Accounts
