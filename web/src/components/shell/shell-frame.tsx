@@ -18,7 +18,7 @@ export function ShellFrame({ marketingHeader, footer, topBar, rail, children }: 
     return (
       <>
         {topBar}
-        <div className="flex flex-1 items-start">
+        <div className="flex flex-1 items-start overflow-x-clip">
           {rail}
           <main id="content" className="min-w-0 flex-1 pb-16">{children}</main>
         </div>

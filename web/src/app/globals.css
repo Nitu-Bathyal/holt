@@ -2085,26 +2085,111 @@
 :root {
   --topbar-h: 61px; /* 60px bar + its 1px rule */
   --rail-w: 15rem;
+  /* Folded: 8px, a 44px square item, 8px. The icons sit 22px in either way,
+     under the top bar's toggle, so nothing moves sideways but the edge. */
+  --rail-w-folded: 3.75rem;
 }
 
 @layer components {
+  /* The rail's box takes its new width at once, so the page reflows once
+     (rail-toggle.tsx slides the page across); the panel inside eases to it. */
   .app-rail {
+    --w: var(--rail-w);
     position: sticky;
     top: var(--topbar-h);
+    z-index: 30;
     display: none;
     height: calc(100dvh - var(--topbar-h));
-    width: var(--rail-w);
+    width: var(--w);
     flex-shrink: 0;
-    flex-direction: column;
-    overflow-y: auto;
-    border-right: 1px solid var(--line);
-    background: var(--header);
-    padding: 20px 10px 14px;
+  }
+  :root[data-rail="collapsed"] .app-rail {
+    --w: var(--rail-w-folded);
   }
   @media (min-width: 1024px) {
     .app-rail {
-      display: flex;
+      display: block;
     }
+  }
+  .rail-panel {
+    position: absolute;
+    inset: 0 auto 0 0;
+    display: flex;
+    width: var(--w);
+    flex-direction: column;
+    overflow: hidden auto;
+    border-right: 1px solid var(--line);
+    background: var(--header);
+    padding: 20px 8px 14px;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .rail-panel {
+      transition: width var(--dur-slow) var(--ease-move);
+    }
+    /* Opening, the labels fade in once there's room for them. */
+    .rail-panel .side-label {
+      transition: opacity var(--dur-fast) var(--ease-out) var(--dur-base);
+    }
+  }
+
+  /* Folded: icons only, and each label becomes its item's tooltip on hover
+     and keyboard focus (it stays the link's name for screen readers). */
+  :root[data-rail="collapsed"] .rail-panel {
+    overflow: visible;
+  }
+  :root[data-rail="collapsed"] .rail-panel :is(.side-foot, .side-group-label, .side-sub) {
+    display: none;
+  }
+  :root[data-rail="collapsed"] .rail-panel .side-label {
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 10px);
+    translate: 0 -50%;
+    opacity: 0;
+    pointer-events: none;
+    transition: none;
+  }
+  :root[data-rail="collapsed"] .rail-panel .side-item:is(:hover, :focus-visible) .side-label {
+    opacity: 1;
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+
+  /* A small dark label: the folded rail's names and the toggle's hint. */
+  .tip,
+  :root[data-rail="collapsed"] .rail-panel .side-label {
+    z-index: 50;
+    border-radius: 5px;
+    background: var(--ink);
+    color: var(--bg);
+    padding: 4px 8px;
+    font-size: 0.76rem;
+    line-height: 1.4;
+    white-space: nowrap;
+    box-shadow: var(--shadow);
+  }
+  .tip {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+  .tip-below {
+    top: calc(100% + 4px);
+    left: 0;
+  }
+  .tip kbd {
+    margin-left: 6px;
+    border: 1px solid color-mix(in srgb, var(--bg) 35%, transparent);
+    border-radius: 3px;
+    padding: 0 4px;
+    font-family: inherit;
+    font-size: 0.72rem;
+  }
+  :is(:hover, :focus-visible) > .tip {
+    opacity: 1;
+  }
+  .rail-toggle {
+    position: relative;
   }
 
   /* A sidebar item: icon and label, 44px tall to tap. */
@@ -2114,7 +2199,7 @@
     min-height: 44px;
     align-items: center;
     gap: 12px;
-    padding-inline: 12px;
+    padding-inline: 14px;
     color: var(--muted);
     font-size: 0.86rem;
     white-space: nowrap;

@@ -1,7 +1,8 @@
 "use client";
 // The app shell's sidebar: the five places a signed-in person goes
 // (docs/design/DASHBOARD.md). A slim rail on desktop, and the same list in a
-// drawer on phones and tablets. It doesn't fold: five places don't need the room.
+// drawer on phones and tablets. The rail folds to icons (rail-toggle.tsx);
+// folded, each label becomes the item's tooltip, so it stays its name.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { activeItem, type NavGroup, type NavItem } from "@/lib/shell";
@@ -64,8 +65,10 @@ function Nav({ groups }: SidebarProps) {
 /** The desktop rail. */
 export function Sidebar(props: SidebarProps) {
   return (
-    <aside data-lenis-prevent className="app-rail">
-      <Nav {...props} />
+    <aside id="app-rail" data-lenis-prevent className="app-rail">
+      <div className="rail-panel">
+        <Nav {...props} />
+      </div>
     </aside>
   );
 }

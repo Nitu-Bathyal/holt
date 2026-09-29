@@ -2,7 +2,7 @@
 // drawn in currentColor so they take the item's colour.
 import type { IconName } from "@/lib/shell";
 
-const PATHS: Record<IconName | "menu" | "close" | "fold" | "github", React.ReactNode> = {
+const PATHS: Record<IconName | "menu" | "close" | "rail-open" | "rail-closed" | "github", React.ReactNode> = {
   home: <path d="M4 11l8-7 8 7M6 9.5V20h12V9.5M10 20v-6h4v6" />,
   check: <><path d="M4 5h16v14H4z" /><path d="M8 10l2.5 2.5L8 15M13 15h3" /></>,
   find: <><circle cx="11" cy="11" r="6.5" /><path d="M16 16l4.5 4.5" /></>,
@@ -18,7 +18,9 @@ const PATHS: Record<IconName | "menu" | "close" | "fold" | "github", React.React
   signout: <path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9" />,
   menu: <path d="M4 7h16M4 12h16M4 17h16" />,
   close: <path d="M6 6l12 12M18 6L6 18" />,
-  fold: <path d="M4 4v16M15 7l-5 5 5 5M10 12h10" />,
+  // A panel and its left column, filled while the rail is open.
+  "rail-open": <><rect x="3.5" y="4.5" width="17" height="15" rx="2" /><path d="M9.5 4.5v15" /><path d="M5.5 6.5h2v11h-2z" fill="currentColor" stroke="none" opacity="0.35" /></>,
+  "rail-closed": <><rect x="3.5" y="4.5" width="17" height="15" rx="2" /><path d="M9.5 4.5v15" /></>,
   github: <path d="M9 19c-4 1.5-4-2-6-2.5M15 21v-3.5c0-1 .1-1.4-.5-2 2.8-.3 5.5-1.4 5.5-6a4.6 4.6 0 0 0-1.3-3.2 4.2 4.2 0 0 0-.1-3.2s-1.1-.3-3.5 1.3a12 12 0 0 0-6.2 0C6.5 2.8 5.4 3.1 5.4 3.1a4.2 4.2 0 0 0-.1 3.2A4.6 4.6 0 0 0 4 9.5c0 4.6 2.7 5.7 5.5 6-.6.6-.6 1.2-.5 2V21" />,
 };
 

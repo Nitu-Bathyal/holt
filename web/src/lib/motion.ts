@@ -81,3 +81,9 @@ export function setMotion(m: Motion) {
   if (a) document.documentElement.dataset.motion = a;
   else delete document.documentElement.dataset.motion;
 }
+
+/** A CSS time ("240ms", ".24s", as a custom property reads back) in milliseconds; `fallback` when it isn't one. */
+export function cssTimeMs(v: string, fallback: number): number {
+  const m = v.trim().match(/^(\d*\.?\d+)(ms|s)$/);
+  return m ? Number(m[1]) * (m[2] === "s" ? 1000 : 1) : fallback;
+}

@@ -11,6 +11,7 @@ import { JumpNav } from "./shell/jump-nav";
 import { LogoLink } from "./shell/logo-link";
 import { Icon } from "./shell/icons";
 import { QuickCheck } from "./shell/quick-check";
+import { RailToggle } from "./shell/rail-toggle";
 import { ThemeToggle } from "./theme-toggle";
 
 export async function doSignOut() {
@@ -123,11 +124,13 @@ export function MarketingHeader({ user, credits }: { user: SessionUser | null; c
 }
 
 /** App pages, signed in: the sidebar holds the places, so this bar stays small. */
-export function AppTopBar({ user, credits, drawer }: { user: SessionUser; credits: string | null; drawer: React.ReactNode }) {
+export function AppTopBar({ user, credits, railCollapsed, drawer }: { user: SessionUser; credits: string | null; railCollapsed: boolean; drawer: React.ReactNode }) {
   return (
     <header className="site-header sticky top-0 z-40 border-b border-line bg-header" style={{ viewTransitionName: "site-header" }}>
-      <div className="flex min-h-[60px] items-center gap-3 px-4 lg:px-5">
+      {/* On desktop the first slot is the rail's toggle, over the rail's icon column. */}
+      <div className="flex min-h-[60px] items-center gap-3 px-4 lg:pl-2 lg:pr-5">
         <MenuButton target="app-drawer" label="Menu" />
+        <RailToggle initial={railCollapsed} />
         <Logo href={HOME} />
         <div className="flex flex-1 justify-center px-2">
           <QuickCheck />

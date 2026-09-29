@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { test } from "node:test";
-import { motionAttr, motionCookie, motionFromCookies, parseMotion, prefersReducedMotion, resolveReduced, toggledMotion } from "./motion.ts";
+import { cssTimeMs, motionAttr, motionCookie, motionFromCookies, parseMotion, prefersReducedMotion, resolveReduced, toggledMotion } from "./motion.ts";
 
 test("the setting wins over the device: full > reduce > device", () => {
   assert.equal(resolveReduced("full", true), false);
@@ -84,3 +84,10 @@ for (const [file, uses] of COMPONENTS) {
     assert.doesNotMatch(src, /prefers-reduced-motion/);
   });
 }
+
+test("a CSS time reads back in milliseconds, minified or not", () => {
+  assert.equal(cssTimeMs("240ms", 0), 240);
+  assert.equal(cssTimeMs(" .24s", 0), 240);
+  assert.equal(cssTimeMs("1s", 0), 1000);
+  for (const v of ["", "fast", "var(--x)", "12px"]) assert.equal(cssTimeMs(v, 180), 180, v);
+});

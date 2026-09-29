@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { activeItem, CHECK_HREF, jumpHref, LANDING_SECTIONS, logoAction, logoHref, RETIRED, retiredRedirect, shellFor, sidebarGroups } from "./shell.ts";
+import { activeItem, CHECK_HREF, isRailKey, jumpHref, LANDING_SECTIONS, logoAction, logoHref, RAIL_COOKIE, RAIL_KEY, railCollapsed, railCookie, RETIRED, retiredRedirect, shellFor, sidebarGroups } from "./shell.ts";
 
 test("signed out, every page wears the marketing shell", () => {
   for (const p of ["/", "/me", "/find", "/pallets/flask", "/settings/profile", "/pricing"]) assert.equal(shellFor(p, false), "marketing", p);
@@ -74,4 +74,20 @@ test("the logo: signed out on the landing page it glides to the hero; signed in 
   assert.deepEqual(logoAction("/pricing", false), { href: "/" });
   assert.deepEqual(logoAction("/pricing", true), { href: "/me" });
   assert.deepEqual(logoAction("/pallets/flask", true), { href: "/me" });
+});
+
+test("the rail's cookie: collapsed is remembered, expanded clears it, anything else reads as expanded", () => {
+  assert.equal(railCollapsed("collapsed"), true);
+  for (const v of [undefined, null, "", "open", "1"]) assert.equal(railCollapsed(v), false, String(v));
+  assert.match(railCookie(true), new RegExp(`^${RAIL_COOKIE}=collapsed; Path=/; Max-Age=\\d+; SameSite=Lax$`));
+  assert.match(railCookie(false), new RegExp(`^${RAIL_COOKIE}=; Path=/; Max-Age=0;`));
+});
+
+test("a bare [ toggles the rail, but not with a modifier, mid-composition or while typing", () => {
+  const key = (k: string, extra: Partial<{ metaKey: boolean; ctrlKey: boolean; altKey: boolean; isComposing: boolean }> = {}) =>
+    ({ key: k, metaKey: false, ctrlKey: false, altKey: false, ...extra });
+  assert.equal(isRailKey(key(RAIL_KEY), false), true);
+  assert.equal(isRailKey(key(RAIL_KEY), true), false);
+  assert.equal(isRailKey(key("]"), false), false);
+  for (const m of ["metaKey", "ctrlKey", "altKey", "isComposing"] as const) assert.equal(isRailKey(key(RAIL_KEY, { [m]: true }), false), false, m);
 });

@@ -105,7 +105,7 @@ Primary sources, read 29 Sep. Full notes stay out of the repo; the links are bel
 ## The structure
 
 ```
-TOP BAR     holt   [$ check a repo: owner/name]  (press /)          (avatar ▾)
+TOP BAR     ▯ holt [$ check a repo: owner/name]  (press /)          (avatar ▾)
                                                                      AI reports: 3 left
 SIDEBAR     ⌂ Home               /me                                 Settings
             ⌕ Find a project     /find · /discover · /hacktoberfest  How Holt works
@@ -113,7 +113,7 @@ SIDEBAR     ⌂ Home               /me                                 Settings
             ▯ Your repos         /me/repos  (saved + checked)
             ▥ Compare            /compare
             ─────
-            Privacy · Terms · GitHub ↗        « fold
+            Privacy · Terms · GitHub ↗
 ```
 
 Five places, down from twelve. The check box is in the top bar on every app page,
@@ -232,7 +232,8 @@ Before 1 Oct only item 1 is small enough to land; the rest follows through Octob
 
 **Built:** the server half, #160 (each PR's `first_reply_hours`, the per-repo
 counted choice, migration 0019, `NOT_OUTSIDE = {"personal"}`). Then step 1, the
-shell (#164; the sidebar doesn't fold, by design). Step 2, Your repos (#169).
+shell (#164). The rail folds to icons again: the top bar's first slot or `[`,
+remembered in the `holt-rail` cookie (`components/shell/rail-toggle.tsx`). Step 2, Your repos (#169).
 Step 3, the home (#170). Step 4, Your pull requests (this PR). The prototype
 is #156 (`/lab/dashboard`). Close it once the rollout is done.
 

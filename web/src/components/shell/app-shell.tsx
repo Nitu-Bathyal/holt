@@ -14,10 +14,10 @@ export async function creditsLine(user: SessionUser | null): Promise<string | nu
   return (account.ok && statusLine({ waiting: 0, credits: account.data.credits })) || null;
 }
 
-export async function appShell(user: SessionUser, credits: string | null) {
+export async function appShell(user: SessionUser, credits: string | null, railCollapsed: boolean) {
   const nav = { groups: sidebarGroups() };
   return {
-    topBar: <AppTopBar user={user} credits={credits} drawer={<Drawer {...nav} />} />,
+    topBar: <AppTopBar user={user} credits={credits} railCollapsed={railCollapsed} drawer={<Drawer {...nav} />} />,
     rail: <Sidebar {...nav} />,
   };
 }
