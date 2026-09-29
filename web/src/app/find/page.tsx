@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
 import { cookies } from "next/headers";
-import Link from "next/link";
+import { FindFrame } from "@/components/find/find-frame";
 import { FindView } from "@/components/find/find-view";
 import { PageTransition } from "@/components/motion/page-transition";
-import { PageHead } from "@/components/page-head";
-import { ProfileOnboarding } from "@/components/profile-onboarding";
 import { getProfile, savedNames } from "@/lib/api";
 import { cachedFind } from "@/lib/find-cached";
 import { defaultPicks, findQuery, PICKS_COOKIE, resolvePicks } from "@/lib/find-picks";
@@ -34,23 +32,12 @@ export default async function FindPage({ searchParams }: PageProps<"/find">) {
 
   return (
     <PageTransition>
-      <>
-        <PageHead compact>
-          <h1 className="text-[clamp(1.45rem,3.4vw,2.1rem)] font-semibold leading-tight tracking-tight">Find a project that will merge your work</h1>
-          <p className="mt-2 hidden max-w-2xl font-sans text-[0.95rem] text-muted sm:block">
-            Every repo here replies to outsiders and merges their PRs. Each has issues you could take today.
-          </p>
-          {sp.profile === "saved" && (
-            <p role="status" className="mt-4 border border-green/50 bg-green/10 px-4 py-2.5 font-sans text-[0.9rem] text-green">
-              Profile saved. This search uses it; change it any time in <Link href="/settings/profile" className="underline">settings</Link>.
-            </p>
-          )}
-        </PageHead>
-        <div className="wrap py-5 sm:py-6">
-          <FindView initialPicks={picks} searched={searched} initial={result} source={source} hf={hf} saved={saved} signedIn={Boolean(user)} />
-          <ProfileOnboarding back="/find" className="mt-10" />
-        </div>
-      </>
+      <FindFrame tab="find" title="Find a project that will merge your work." signedIn={Boolean(user)}>
+        {sp.profile === "saved" && (
+          <p role="status" className="mb-5 border border-green/50 bg-green/10 px-4 py-2.5 font-sans text-[0.9rem] text-green">Profile saved.</p>
+        )}
+        <FindView initialPicks={picks} searched={searched} initial={result} source={source} hf={hf} saved={saved} signedIn={Boolean(user)} />
+      </FindFrame>
     </PageTransition>
   );
 }

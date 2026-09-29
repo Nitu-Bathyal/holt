@@ -14,7 +14,7 @@ const PAGES = [
   "/how-it-works",
   "/settings",
   "/signin",
-  "/me/history",
+  "/me/repos",
 ];
 
 const WIDTH = 360;

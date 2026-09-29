@@ -9,6 +9,7 @@ import { personalise } from "@/lib/profile";
 import type { FindResult, FindStart, Result } from "@/lib/types";
 import { CatFace } from "../cat-face";
 import { ErrorPanel } from "../error-panel";
+import { EmptyState } from "../shell/app-page";
 import { FindFilters } from "./find-filters";
 import { FindResults } from "./find-results";
 import { FindResultsSkeleton } from "./find-skeleton";
@@ -200,19 +201,12 @@ function SignInToSearch({ back }: { back: string }) {
 function Empty({ picks, setPicks }: { picks: Picks; setPicks: (p: Picks) => void }) {
   const fixes = widen(picks);
   return (
-    <div className="border border-dashed border-line-strong p-6 text-center sm:p-8">
-      <CatFace mood="thinking" className="text-[1.6rem]" />
-      <p className="mt-4 text-[1.1rem] font-semibold">No repos match all of that.</p>
-      <p className="mt-2 font-sans text-muted">{fixes.length ? "Loosen one thing:" : "Try another language."}</p>
-      {fixes.length > 0 && (
-        <div className="mt-4 flex flex-wrap justify-center gap-2">
-          {fixes.map((f) => (
-            <button key={f.label} type="button" onClick={() => setPicks(f.picks)} className="btn-ghost">
-              {f.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+    <EmptyState title={fixes.length ? "No repos match all of that." : "No repos match that. Try another language."}>
+      {fixes.map((f, i) => (
+        <button key={f.label} type="button" onClick={() => setPicks(f.picks)} className={i ? "text-link text-[0.9rem]" : "btn-primary"}>
+          {f.label}
+        </button>
+      ))}
+    </EmptyState>
   );
 }

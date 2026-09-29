@@ -78,7 +78,7 @@ function people(r: Report): Person[] {
 async function AiReportsCta() {
   if (await currentUser()) {
     return (
-      <Link href="/me/history" className="bracket-link">[ your reports → ]</Link>
+      <Link href="/me/repos?show=checked" className="bracket-link">[ your reports → ]</Link>
     );
   }
   return (

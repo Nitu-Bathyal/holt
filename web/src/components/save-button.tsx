@@ -109,7 +109,7 @@ export function SaveButton({ repo, saved: initial, onChange, compact = false, cl
     <span className={`inline-flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 ${className}`}>
       {button}
       {fresh && !error && !compact && (
-        <Link href="/me/saved" className="hidden text-[0.82rem] text-faint hover:text-blue sm:inline">
+        <Link href="/me/repos?show=saved" className="hidden text-[0.82rem] text-faint hover:text-blue sm:inline">
           see your saved repos
         </Link>
       )}

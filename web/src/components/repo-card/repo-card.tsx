@@ -20,7 +20,7 @@ export function RepoCard({ r, report, focusHref, onOpen, actions }: { r: CardRep
     onOpen();
   });
   return (
-    <article className="flex h-full flex-col border border-line-strong bg-panel p-4 shadow-soft transition-colors hover:border-blue/60">
+    <article className="app-card flex h-full flex-col border border-line-strong bg-panel p-4 shadow-soft hover:border-blue/60">
       <div className="flex items-start gap-3">
         <RepoAvatar repo={r.repo} />
         <div className="min-w-0 flex-1">

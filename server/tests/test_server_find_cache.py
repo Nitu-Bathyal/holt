@@ -9,6 +9,7 @@ import types
 from datetime import timedelta
 
 import pytest
+from holt.starter import RULES_VERSION
 from holt_server.db import FindCache, RepoMeta, now
 from sqlalchemy import update
 
@@ -99,11 +100,22 @@ def test_a_search_cached_before_issues_said_who_is_on_them_runs_again():
     from holt_server.db import ENGINE_VERSION
 
     def row(issue):
-        return FindCache(key="k", params={"engine_version": ENGINE_VERSION},
+        return FindCache(key="k", params={"engine_version": ENGINE_VERSION,
+                                          "starter_rules": RULES_VERSION},
                          results=[{"repo": "o/r", "issues": [issue]}])
 
     assert row({"number": 1, "title": "t"}).outdated
     assert not row({"number": 1, "title": "t", "people": 0, "open_prs": 0}).outdated
+
+
+@pytest.mark.parametrize("rules", [None, RULES_VERSION - 1])
+def test_a_search_older_starter_rules_picked_runs_again(rules):
+    from holt_server.db import ENGINE_VERSION
+
+    params = {"engine_version": ENGINE_VERSION}
+    if rules is not None:
+        params["starter_rules"] = rules
+    assert FindCache(key="k", params=params, results=[]).outdated
 
 
 def test_limit_beyond_what_was_computed_is_a_miss(h, finder):

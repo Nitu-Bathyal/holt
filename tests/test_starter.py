@@ -36,13 +36,15 @@ def _pr(entry):
 
 def issue(number=1, *, title="Fix crash", body="x" * 300, labels=("good first issue",),
           updated=3, created=40, comments=2, assignees=0, closing=(), xref=(),
-          recent=(), repo="o/r", archived=False, author="", assigned=()):
+          recent=(), repo="o/r", archived=False, author="", assigned=(),
+          association="NONE"):
     """A GraphQL issue node. `recent` comments are (days ago, body) or (days ago,
     body, login); `assigned` is (login, days ago) for each current assignee."""
     return {
         "number": number, "title": title, "body": body, "locked": False,
         # By default each issue has its own author, so helpers never form a farm.
         "author": None if author is None else {"login": author or f"user{number}"},
+        "authorAssociation": association,
         "url": f"https://github.com/{repo}/issues/{number}",
         "createdAt": iso(created), "updatedAt": iso(updated),
         "repository": {"nameWithOwner": repo, "isArchived": archived},
@@ -126,7 +128,20 @@ fragment StarterFields on Issue {
   }
 }
 """
-V1_REPO_ISSUES = V1_ISSUE_FIELDS + starter.REPO_ISSUES[len(starter.ISSUE_FIELDS):]
+V1_REPO_ISSUES = V1_ISSUE_FIELDS + """
+query($owner:String!, $name:String!, $q:String!) {
+  rateLimit { remaining resetAt }
+  repository(owner:$owner, name:$name) {
+    nameWithOwner isArchived
+    issues(states:OPEN, first:40, orderBy:{field:UPDATED_AT, direction:DESC}) {
+      nodes { ...StarterFields }
+    }
+  }
+  labelled: search(query:$q, type:ISSUE, first:50) {
+    nodes { ...StarterFields }
+  }
+}
+"""
 
 
 def as_recorded(document: str) -> str:
@@ -377,6 +392,76 @@ def test_a_scripted_burst_from_one_account_is_dropped():
 ])
 def test_farm_detection_leaves_ordinary_issues_alone(nodes):
     assert starter.farmed_issues(nodes) == set()
+
+
+# holt-oss/holt: distinct starter issues one maintainer filed two seconds apart
+# for Hacktoberfest, all dropped as a farm before.
+HOLT_TITLES = ["Document `holt start`", "Hide `ctrl+t mode` when there is nothing to switch to",
+               "`holt profile` writes broken TOML if a value contains a quote",
+               "Recognise good first task labels", "Show examples in `holt start --help`"]
+
+
+def _batch(**kw):
+    return [issue(16 + i, title=t, author="aahil-khan", created=4 + i * 2 / 86400,
+                  labels=("good first issue", "hacktoberfest"), **kw)
+            for i, t in enumerate(HOLT_TITLES)]
+
+
+@pytest.mark.parametrize("association", ["OWNER", "MEMBER", "COLLABORATOR"])
+def test_a_maintainers_scripted_batch_is_kept(association):
+    batch = _batch(association=association)
+    assert starter.farmed_issues(batch) == set()
+    ranked = starter.rank(batch, AS_OF)
+    assert sorted(i.number for _, i in ranked) == [16, 17, 18, 19, 20]
+
+
+def test_a_team_member_the_pull_requests_show_is_exempt_too():
+    # A private org member reads CONTRIBUTOR on their own issues.
+    batch = _batch(association="CONTRIBUTOR")
+    assert starter.farmed_issues(batch) == {16, 17, 18, 19, 20}
+    assert starter.farmed_issues(batch, team={"Aahil-Khan"}) == set()
+
+
+def test_a_scripted_burst_from_someone_else_is_still_dropped():
+    batch = [*_batch(association="CONTRIBUTOR"),
+             issue(1, title="Fix crash when the config file is empty", association="OWNER")]
+    assert [i.number for _, i in starter.rank(batch, AS_OF)] == [1]
+
+
+def test_a_maintainers_templated_batch_is_still_dropped():
+    farm = [issue(10 + i, title=f"Add a {lang} idiom", author="m", association="OWNER",
+                  labels=("hacktoberfest",), created=5 + i * 3)
+            for i, lang in enumerate(["Japanese", "Korean", "Italian", "Spanish"])]
+    assert starter.farmed_issues(farm) == {10, 11, 12, 13}
+
+
+def _one_repo(nodes, merged_by=()):
+    return scripted([httpx.Response(200, json={"data": {
+        "repository": {"nameWithOwner": "o/r", "isArchived": False,
+                       "issues": {"nodes": []},
+                       "mergers": {"nodes": [{"mergedBy": m} for m in merged_by]}},
+        "labelled": {"nodes": nodes}}})])
+
+
+def test_starter_issues_keeps_a_maintainers_batch_end_to_end():
+    transport = _one_repo(_batch(association="MEMBER"))
+    issues = starter.starter_issues("o/r", None, as_of=AS_OF, transport=transport)
+    assert sorted(i.number for i in issues) == [16, 17, 18, 19, 20]
+
+
+def test_starter_issues_counts_whoever_merges_pull_requests_as_team():
+    # Staging's token reads holt's private org owner as CONTRIBUTOR; they merge
+    # every pull request, which needs write access.
+    merged_by = [{"login": "aahil-khan", "__typename": "User"}, None]
+    transport = _one_repo(_batch(association="CONTRIBUTOR"), merged_by)
+    issues = starter.starter_issues("o/r", None, as_of=AS_OF, transport=transport)
+    assert sorted(i.number for i in issues) == [16, 17, 18, 19, 20]
+
+
+def test_a_bot_merging_pull_requests_is_not_team():
+    merged_by = [{"login": "aahil-khan", "__typename": "Bot"}]
+    transport = _one_repo(_batch(association="CONTRIBUTOR"), merged_by)
+    assert starter.starter_issues("o/r", None, as_of=AS_OF, transport=transport) == []
 
 
 LANDING = [Area("docs", 8, 10), Area("src/widgets", 4, 6), Area("src", 9, 20),

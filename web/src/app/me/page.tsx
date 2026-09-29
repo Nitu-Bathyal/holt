@@ -1,30 +1,33 @@
-// The signed-in home (docs/design/SIGNED-IN-HOME.md): your open-source to-do
-// list, with Holt's verdict on each item. One primary action per state (new or
-// returning, lib/home.ts), then your pull requests, saved repos, picks and
-// checks, each hidden when empty.
+// The signed-in home (docs/design/DASHBOARD.md): your next move in open
+// source, and why. The headline is the one thing to do now, over the loop
+// (find a repo → pick an issue → open a PR → get it merged), worked out from
+// the account by lib/home.ts. Below it, each hidden when empty: also for you,
+// in flight, next repos for you, your repos.
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { CheckedList } from "@/components/home/checked-list";
-import { PullCard } from "@/components/home/pull-card";
+import { MoveHead } from "@/components/home/move-head";
+import { WaitBar } from "@/components/home/wait-bar";
 import { PageTransition } from "@/components/motion/page-transition";
-import { PasteBox } from "@/components/paste-box";
 import { ProfileFlow } from "@/components/profile-flow";
 import { RepoGrid } from "@/components/repo-card/repo-grid";
-import { AppPageHeader, SectionHead } from "@/components/shell/app-page";
+import { SaveButton } from "@/components/save-button";
+import { SectionHead } from "@/components/shell/app-page";
 import { FocusOnHash } from "@/components/shell/check-focus";
 import { QuickCheck } from "@/components/shell/quick-check";
-import { contributions, getProfile, history, me, recommendations, savedRepos } from "@/lib/api";
-import { boardHref } from "@/lib/discover";
-import { dismissedNudges, groupPulls, homeKind, homeNudge, NUDGE_COOKIE, outsidePulls, primaryAction, statusLine, type Nudge } from "@/lib/home";
+import { RepoRows } from "@/components/your-repos/repo-rows";
+import { contributions, getProfile, history, preflightState, recommendations, savedRepos, starterIssues } from "@/lib/api";
+import type { CatMood } from "@/lib/cat";
+import { humanHours, timeAgo } from "@/lib/format";
+import { alsoForYou, clock, dismissedNudges, homeNudge, moveLead, moveTitle, nextMove, NUDGE_COOKIE, othersInFlight, outsidePulls, type NextMove, type Nudge } from "@/lib/home";
+import { showPreflight } from "@/lib/preflight";
 import { SKIP_COOKIE } from "@/lib/profile";
 import { basisLine, lockedLine } from "@/lib/recommendations";
-import { fromDiscover, fromPick } from "@/lib/repo-card";
-import { currentUser } from "@/lib/session";
-import { PROFILE_SETTINGS } from "@/lib/settings";
-import { hacktoberfest } from "@/lib/site";
-import type { DiscoverRepo } from "@/lib/types";
+import { fromPick } from "@/lib/repo-card";
+import { caller, currentUser } from "@/lib/session";
+import { CONNECT_GITHUB, PROFILE_SETTINGS } from "@/lib/settings";
+import { yourRepos } from "@/lib/your-repos";
 import { dismissNudge } from "./actions";
 
 export const metadata: Metadata = { title: "Your home", robots: { index: false } };
@@ -37,79 +40,119 @@ const NOTICES: Record<string, { tone: string; text: string }> = {
 
 const NUDGES: Record<Nudge, { text: string; href: string; cta: string }> = {
   profile: { text: "Tell Holt your languages and it picks repos for you.", href: PROFILE_SETTINGS, cta: "add your languages" },
-  github: { text: "Connect GitHub to see your pull requests here.", href: "/connect", cta: "connect GitHub" },
+  github: { text: "Connect GitHub to see your pull requests here.", href: CONNECT_GITHUB, cta: "connect GitHub" },
 };
+
+function mood(m: NextMove): CatMood {
+  if (m.kind === "merged") return "celebrating";
+  if (m.kind === "waiting") return m.wait.late ? "thinking" : "ready";
+  if (m.kind === "issue") return "determined";
+  return "ready";
+}
 
 export default async function HomePage({ searchParams }: PageProps<"/me">) {
   const user = await currentUser();
   if (!user) redirect("/signin?callbackUrl=/me");
-  const [sp, jar] = await Promise.all([searchParams, cookies()]);
-  const [account, checks, saved, picks, prs, profile] = await Promise.all([
-    me(user.id),
-    history(user.id, 20),
+  const [sp, jar, who] = await Promise.all([searchParams, cookies(), caller(user)]);
+  const [checks, saved, picks, prs, profile, pre] = await Promise.all([
+    history(user.id, 50),
     savedRepos(user.id),
     recommendations(user.id, 10),
     contributions(user.id),
     getProfile(user.id),
+    preflightState({}, who),
   ]);
 
-  const done = checks.ok ? checks.data.items.filter((h) => h.status === "done" && h.headline && h.tone) : [];
-  const recent = done.filter((h, i) => done.findIndex((x) => x.repo === h.repo) === i).slice(0, 6);
+  const now = clock();
   const savedItems = saved.ok ? saved.data.saved : [];
-  const savedCards = savedItems.flatMap((i) => (i.card ? [fromDiscover(i.card as DiscoverRepo)] : [])).slice(0, 6);
   const savedNames = savedItems.map((i) => i.repo);
-  // Pull requests to other people's projects only, one card per repo.
-  const pulls = prs.ok ? outsidePulls(prs.data.pull_requests, prs.data.login) : [];
-  const groups = groupPulls(pulls);
-  const waiting = groups.reduce((n, g) => n + g.open, 0);
-  const pickCards = picks.ok ? picks.data.picks.map(fromPick) : [];
-  const prefs = profile.ok ? profile.data.profile : null;
-  const hasProfile = profile.ok ? prefs !== null : null;
+  const repos = yourRepos(savedItems, checks.ok ? checks.data.items : []);
+  // Pull requests to other people's projects that count (not left out of your numbers).
+  const pulls = prs.ok ? outsidePulls(prs.data.pull_requests, prs.data.login).filter((p) => p.counted) : [];
+  const move = nextMove({ pulls, repos, now });
+  const also = alsoForYou(move, { pulls, repos, now });
+  const flying = othersInFlight(move, pulls, now);
+  const issues = move.kind === "issue" ? await starterIssues(move.repo, 3, who) : null;
 
-  const kind = homeKind({ checked: checks.ok ? checks.data.items.length : 0, saved: savedItems.length, pulls: pulls.length });
-  const primary = primaryAction(kind, { hasProfile, skipped: !!jar.get(SKIP_COOKIE) });
+  const pickCards = picks.ok ? picks.data.picks.map(fromPick) : [];
+  const hasProfile = profile.ok ? profile.data.profile !== null : null;
+  const askingProfile = move.kind === "first" && hasProfile === false && !jar.get(SKIP_COOKIE) && pickCards.length === 0;
   // Not connected is a 404; any other error means connected but GitHub was slow.
   const connected = prs.ok || prs.error.code !== "not_found";
-  const nudge = homeNudge({ primary, hasProfile, connected, dismissed: dismissedNudges(jar.get(NUDGE_COOKIE)?.value) });
-  const status = statusLine({ waiting, credits: account.ok ? account.data.credits : null });
+  // Picks already come from somewhere (a profile or GitHub): no asking for languages over them.
+  const nudge = homeNudge({ askingProfile, hasProfile: pickCards.length ? true : hasProfile, connected, dismissed: dismissedNudges(jar.get(NUDGE_COOKIE)?.value) });
   const notice = typeof sp.profile === "string" ? NOTICES[sp.profile] : undefined;
-  const first = (user.name || "").trim().split(/\s+/)[0];
-  const hf = hacktoberfest()?.live === true;
+  const preflight = pre.ok && showPreflight(pre.data);
+  const firstPicks = move.kind === "first" && pickCards.length > 0;
+
+  let primary: React.ReactNode = null;
+  if (move.kind === "waiting") {
+    const url = move.wait.pr.url;
+    primary = preflight ? (
+      <>
+        <Link href={`/preflight?pr=${encodeURIComponent(url)}`} className="btn-primary">check it with pre-flight →</Link>
+        <a href={url} className="text-link text-[0.9rem]">open it on GitHub ↗</a>
+      </>
+    ) : (
+      <a href={url} className="btn-primary">open it on GitHub ↗</a>
+    );
+  } else if (move.kind === "merged") {
+    primary = (
+      <>
+        <Link href={`/${move.pr.repo}`} className="btn-primary">find your next issue there →</Link>
+        <Link href="/find" className="text-link text-[0.9rem]">or a new repo</Link>
+      </>
+    );
+  } else if (move.kind === "first" && !askingProfile) {
+    primary = <Link href="/find" className="btn-primary">find a project →</Link>;
+  }
 
   return (
     <PageTransition>
       <div className="app-page">
         <FocusOnHash />
-        <AppPageHeader
-          title={`${kind === "new" ? "Welcome" : "Welcome back"}${first ? `, ${first}` : ""}`}
-          lead={kind === "new" ? "Let's find you a repo worth your time." : status || null}
-        />
+        <div id="check" className="scroll-mt-24 pt-6 md:hidden">
+          <QuickCheck variant="inline" />
+        </div>
+        <MoveHead title={moveTitle(move)} lead={moveLead(move)} mood={mood(move)} step={move.step}>
+          {primary && <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-3">{primary}</div>}
+        </MoveHead>
         {notice && <p role="status" className={`mb-6 border px-4 py-3 font-sans text-[0.9rem] ${notice.tone}`}>{notice.text}</p>}
 
-        {primary === "check" && (
-          <div id="check" data-check-target="page" className="scroll-mt-24">
-            <PasteBox size="md" examples={false} />
+        {askingProfile && (
+          <div className="mt-10">
+            <ProfileFlow adultConfirmed={profile.ok && profile.data.adult_confirmed} />
           </div>
         )}
-        {primary === "profile" && <ProfileFlow adultConfirmed={profile.ok && profile.data.adult_confirmed} />}
-        {primary === "find" && (
-          <section aria-labelledby="find-h" className="border border-line-strong bg-panel p-5 shadow-soft sm:p-6">
-            <h2 id="find-h" className="text-[1.15rem] font-semibold tracking-tight">Find a project worth your time</h2>
-            <p className="mt-1 max-w-xl font-sans text-[0.95rem] text-muted">
-              Repos that reply to and merge outsiders, in your languages, with issues to start on.
-            </p>
-            <Link href="/find" className="btn-primary mt-4">find a project →</Link>
+
+        {move.kind === "issue" && (
+          <section aria-labelledby="issues-h" className="mt-12">
+            <SectionHead id="issues-h" title="Starter issues" more={{ href: `/${move.repo}`, label: "the report" }} />
+            {issues?.ok && issues.data.issues.length > 0 ? (
+              <ul>
+                {issues.data.issues.map((iss, i) => (
+                  <li key={iss.number} data-rule className="app-row grid-cols-[minmax(0,1fr)_auto]" style={{ "--rule": "var(--blue)" } as React.CSSProperties}>
+                    <div className="min-w-0 pl-2">
+                      <p className="font-sans text-[0.95rem]"><span className="text-blue">#{iss.number}</span> {iss.title}</p>
+                      <p className="mt-1 text-[0.76rem] text-faint">
+                        {iss.labels.slice(0, 3).join(" · ")}
+                        {iss.created_at && <> · opened {timeAgo(iss.created_at)}</>}
+                      </p>
+                    </div>
+                    <a href={iss.url} className={i === 0 ? "btn-primary min-h-10 px-4 text-[0.84rem]" : "text-link text-[0.84rem]"}>
+                      {i === 0 ? "take this one ↗" : "open ↗"}
+                    </a>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <Link href={`/${move.repo}`} className="btn-primary mt-2">see what to work on →</Link>
+            )}
           </section>
-        )}
-        {kind === "new" && (
-          <div id="check" className="mt-6 scroll-mt-24">
-            <p className="mb-2 font-sans text-[0.92rem] text-muted">Have a repo in mind?</p>
-            <QuickCheck variant="inline" />
-          </div>
         )}
 
         {nudge && (
-          <form action={dismissNudge} className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1 border-l-2 border-blue py-1 pl-3 font-sans text-[0.9rem] text-muted">
+          <form action={dismissNudge} className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-1 border-l-2 border-blue py-1 pl-3 font-sans text-[0.9rem] text-muted">
             <input type="hidden" name="nudge" value={nudge} />
             <span>{NUDGES[nudge].text}</span>
             <Link href={NUDGES[nudge].href} className="font-mono text-[0.86rem] text-blue hover:underline">{NUDGES[nudge].cta}</Link>
@@ -117,56 +160,68 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
           </form>
         )}
 
-        <div className="mt-12 space-y-12">
-          {groups.length > 0 && (
-            <section aria-labelledby="prs-h">
-              <SectionHead id="prs-h" title="Your pull requests" more={{ href: "/me/contributions", label: "all your pull requests" }} />
-              <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {groups.slice(0, 6).map((g) => <li key={g.repo} className="min-w-0"><PullCard g={g} /></li>)}
-              </ol>
+        <div className="mt-14 space-y-14">
+          {also.length > 0 && (
+            <section aria-labelledby="also-h">
+              <SectionHead id="also-h" title="Also for you" />
+              <ul>
+                {also.map((a) =>
+                  a.kind === "late" ? (
+                    <li key={a.wait.pr.url} data-rule className="app-row grid-cols-[minmax(0,1fr)_auto]" style={{ "--rule": "var(--orange)" } as React.CSSProperties}>
+                      <p className="pl-2 font-sans text-[0.95rem]">
+                        Your PR to <span className="font-mono font-semibold">{a.wait.pr.repo}</span> has waited {humanHours(a.wait.hours)}. Replies there usually take {humanHours(a.wait.typical)}.
+                      </p>
+                      <a href={a.wait.pr.url} className="text-link text-[0.84rem]">open it ↗</a>
+                    </li>
+                  ) : (
+                    <li key={a.repo.repo} data-rule className="app-row grid-cols-[minmax(0,1fr)_auto]" style={{ "--rule": "var(--orange)" } as React.CSSProperties}>
+                      <p className="pl-2 font-sans text-[0.95rem]">
+                        You saved <Link href={`/${a.repo.repo}`} className="font-mono font-semibold hover:text-blue">{a.repo.repo}</Link>. Holt now says <span className="text-orange">{a.repo.headline?.toLowerCase()}</span>.
+                      </p>
+                      <SaveButton repo={a.repo.repo} saved compact />
+                    </li>
+                  ),
+                )}
+              </ul>
             </section>
           )}
 
-          {savedCards.length > 0 && (
-            <section aria-labelledby="saved-h">
-              <SectionHead id="saved-h" title="Saved" more={{ href: "/me/saved", label: `all saved (${savedItems.length})` }} />
-              <RepoGrid repos={savedCards} saved={savedNames} topicBase="/discover" />
+          {flying.length > 0 && (
+            <section aria-labelledby="flight-h">
+              <SectionHead id="flight-h" title="In flight" more={{ href: "/me/contributions", label: "all your pull requests" }} />
+              <ul>
+                {flying.map((w) => (
+                  <li key={w.pr.url} data-rule className="app-row grid-cols-[minmax(0,1fr)]" style={{ "--rule": "var(--blue)" } as React.CSSProperties}>
+                    <div className="min-w-0 pl-2">
+                      <p className="text-[0.9rem]"><span className="font-semibold">{w.pr.repo}</span> <span className="text-faint">#{w.pr.number}</span></p>
+                      <a href={w.pr.url} className="block truncate font-sans text-[0.95rem] hover:underline">{w.pr.title}</a>
+                      <WaitBar w={w} />
+                    </div>
+                  </li>
+                ))}
+              </ul>
             </section>
           )}
 
           {pickCards.length > 0 && picks.ok && (
             <section id="picks" aria-labelledby="picks-h" className="scroll-mt-24">
-              <SectionHead id="picks-h" title="Picked for you" more={{ href: PROFILE_SETTINGS, label: "edit your profile" }} />
+              <SectionHead id="picks-h" title={firstPicks ? "Picked for you" : "Next repos for you"} more={{ href: PROFILE_SETTINGS, label: "edit your profile" }} />
               {basisLine(picks.data.basis) && <p className="-mt-1 mb-4 font-sans text-[0.9rem] text-muted">{basisLine(picks.data.basis)}</p>}
-              <RepoGrid repos={pickCards} saved={savedNames} topicBase="/discover" />
+              <RepoGrid repos={pickCards.slice(0, 3)} saved={savedNames} topicBase="/discover" />
               {picks.data.locked > 0 && (
                 <p className="mt-4 font-sans text-[0.9rem] text-muted">
-                  {lockedLine(picks.data.locked)} The full list comes with Holt Pro.{" "}
-                  <Link href="/pricing" className="text-link font-mono text-[0.86rem]">see plans</Link>
+                  {lockedLine(picks.data.locked)} <Link href="/pricing" className="text-link font-mono text-[0.86rem]">see plans</Link>
                 </p>
               )}
             </section>
           )}
 
-          {recent.length > 0 && (
-            <section aria-labelledby="checked-h">
-              <SectionHead id="checked-h" title="Recently checked" more={{ href: "/me/history", label: "all checks" }} />
-              <CheckedList items={recent} />
+          {repos.length > 0 && (
+            <section aria-labelledby="mine-h">
+              <SectionHead id="mine-h" title="Your repos" more={{ href: "/me/repos", label: `all ${repos.length}` }} />
+              <RepoRows rows={repos.slice(0, 4)} saved={savedNames} compact />
             </section>
           )}
-
-          <p className="font-sans text-[0.92rem] text-muted">
-            Rather browse?{" "}
-            <Link href={boardHref({})} className="text-link font-mono text-[0.88rem]">most welcoming</Link>
-            {" · "}
-            <Link href={boardHref({ sort: "trending" })} className="text-link font-mono text-[0.88rem]">trending</Link>
-            {hf && (
-              <>
-                {" · "}
-                <Link href="/hacktoberfest" className="text-link font-mono text-[0.88rem]">Hacktoberfest</Link>
-              </>
-            )}
-          </p>
         </div>
       </div>
     </PageTransition>

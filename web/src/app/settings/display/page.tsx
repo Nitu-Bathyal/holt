@@ -5,7 +5,7 @@ import { currentUser } from "@/lib/session";
 import { motionFromCookies } from "@/lib/motion";
 import { DISPLAY_SETTINGS } from "@/lib/settings";
 import { MotionChoice } from "@/components/settings/motion-choice";
-import { SectionHead } from "@/components/settings/section-head";
+import { Block, SectionHead } from "@/components/settings/section-head";
 
 export const metadata: Metadata = { title: "Display · Settings", robots: { index: false } };
 
@@ -17,9 +17,11 @@ export default async function DisplaySettings() {
   return (
     <section aria-labelledby="display-h">
       <SectionHead id="display" />
-      <div className="border border-line-strong bg-panel p-4 shadow-soft">
-        <MotionChoice initial={motion} />
-      </div>
+      <Block title="Motion">
+        <div className="py-4 sm:px-3">
+          <MotionChoice initial={motion} />
+        </div>
+      </Block>
     </section>
   );
 }

@@ -4,7 +4,6 @@ import { me } from "@/lib/api";
 import { statusLine } from "@/lib/home";
 import type { SessionUser } from "@/lib/session";
 import { sidebarGroups } from "@/lib/shell";
-import { hacktoberfest } from "@/lib/site";
 import { AppTopBar } from "../header";
 import { Drawer, Sidebar } from "./sidebar";
 
@@ -16,7 +15,7 @@ export async function creditsLine(user: SessionUser | null): Promise<string | nu
 }
 
 export async function appShell(user: SessionUser, credits: string | null) {
-  const nav = { groups: sidebarGroups({ hacktoberfest: hacktoberfest()?.live === true }) };
+  const nav = { groups: sidebarGroups() };
   return {
     topBar: <AppTopBar user={user} credits={credits} drawer={<Drawer {...nav} />} />,
     rail: <Sidebar {...nav} />,

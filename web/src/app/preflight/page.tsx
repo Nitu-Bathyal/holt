@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { ErrorPanel } from "@/components/error-panel";
 import { PageTransition } from "@/components/motion/page-transition";
-import { PageHead } from "@/components/page-head";
 import { PreflightView } from "@/components/preflight/preflight-view";
+import { AppPageHeader } from "@/components/shell/app-page";
 import { preflightState } from "@/lib/api";
 import { caller, currentUser } from "@/lib/session";
 
@@ -32,28 +32,16 @@ export default async function PreflightPage({ searchParams }: PageProps<"/prefli
 
   return (
     <PageTransition>
-      <>
-        <PageHead narrow>
-          <p className="rail mb-4 flex gap-2">
-            <strong className="m-0">pr pre-flight</strong>
-            <span>before a maintainer sees it</span>
-          </p>
-          <h1 className="display max-w-3xl text-[clamp(2rem,6vw,3.2rem)]">
-            Check your PR <span className="text-blue">against what gets merged.</span>
-          </h1>
-          <p className="prose-sans mt-5 max-w-2xl text-[1.05rem]">
-            Paste your PR. Holt holds it up against a year of PRs this repo merged, point by point, with the evidence.
-            It never comments on GitHub or touches your code.
-          </p>
-        </PageHead>
-        <div className="wrap max-w-3xl py-8 sm:py-12">
+      <div className="app-page">
+        <AppPageHeader title="Check your PR against what this repo merges." lead="A year of its merged PRs, point by point, with the evidence." mood="determined" />
+        <div className="max-w-3xl">
           {r.ok ? (
             <PreflightView key={JSON.stringify(q)} initial={r.data} query={q} signedIn={Boolean(user)} badQuery={bad} />
           ) : (
             <ErrorPanel error={r.error} />
           )}
         </div>
-      </>
+      </div>
     </PageTransition>
   );
 }

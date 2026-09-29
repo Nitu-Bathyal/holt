@@ -190,21 +190,88 @@ settings and pre-flight aren't drawn: they keep their pages and take the new fra
    account menu holds credits, settings, help and sign-out; settings tabs at
    every size; the shared page frame and page head. (`lib/shell.ts`,
    `components/shell/*`) Hacktoberfest keeps a sidebar item in October until 5.
-2. **Your repos:** `/me/repos` merges saved and checked; 308s from the old URLs.
-3. **Home:** the loop, needs you, in flight, picks with inline chips, your repos.
-   Rules stay pure in `lib/home.ts`. "Since your last visit" is a cookie.
+2. **Your repos:** `/me/repos` merges saved and checked; 308s from the old URLs. *Built.*
+3. **Home:** the loop, also for you, in flight, picks, your repos. Rules stay
+   pure in `lib/home.ts`. *Built.* A merge in the last 72 hours gets the
+   headline (no "since your last visit" cookie); new accounts without picks keep
+   the one-question-at-a-time profile flow instead of inline chips.
 4. **Server, then PRs page:** each PR's repo carries its typical first reply,
    and a per-repo "don't count this" choice (a friend's project, your team's
    repo, a hackathon; engine 4's personal projects are left out by default)
    (#160, `API.md` in the same PR). Then `/me/contributions` grouped by next
    move, with pre-flight per PR, the toggle, and a collapsed "not counted"
    group. It leaves a slot for the contribution-history view another worker is
-   exploring. Later: "a maintainer replied" (needs new GitHub fields).
-5. **Find a project:** tabs over `/find`, `/discover`, `/hacktoberfest`; one profile prompt.
-6. **Compare, settings, AI reports, pre-flight:** the new frame; `/connect` into Accounts.
-7. **States and motion pass:** empty, loading, the home moment, wait bars.
+   exploring. Later: "a maintainer replied" (needs new GitHub fields). *Built.*
+5. **Find a project:** tabs over `/find`, `/discover`, `/hacktoberfest`; one profile prompt. *Built.*
+   Each URL renders `FindFrame` (`components/find/find-frame.tsx`) with its
+   tab; tabs come from `lib/find-tabs.ts` (Hacktoberfest from mid-August to
+   October, and always on its own page). Signed out, `.app-page` centres
+   itself (`[data-shell="marketing"]`).
+6. **Compare, settings, AI reports, pre-flight:** the new frame; `/connect` into Accounts. *Built.*
+   Compare's head names the repo that merges outsiders most often once you
+   pick two or more (`compareTitle` in `lib/compare.ts`). Settings sections
+   are blocks (`Block` in `components/settings/section-head.tsx`: `.section-head`
+   over rows) under `.app-tabs`; the lit tab names the section, so its h2 is
+   screen-reader only. Connecting GitHub is `ConnectGitHubForm` in Accounts
+   (`CONNECT_GITHUB`, `connectFailed` in `lib/settings.ts`); `/connect` 308s there.
+7. **States and motion pass:** empty, loading, the home moment, wait bars. *Built.*
+   `EmptyState` (`components/shell/app-page.tsx`: the cat lands once, one
+   sentence, one loud action, quiet ones after) on Your repos' tabs, find,
+   browse and Hacktoberfest; when the page head already says "nothing yet",
+   its one action sits under the head instead. `app/error.tsx` catches what
+   a page throws (the cat, "Something broke on our side.", try again).
+   `NewCount` (`components/motion/count-up.tsx`) counts a number from what
+   this visitor saw last (localStorage `holt-seen`), or from 0 the first
+   time, and leaves unchanged numbers still; on a full page load it only
+   remembers. Used on Your PRs' numbers and AI reports left. Discovery cards
+   lift 2px on hover (`.app-card`).
 
 Before 1 Oct only item 1 is small enough to land; the rest follows through October.
+
+## Handover (29 Sep 2026, after step 4)
+
+**Built:** the server half, #160 (each PR's `first_reply_hours`, the per-repo
+counted choice, migration 0019, `NOT_OUTSIDE = {"personal"}`). Then step 1, the
+shell (#164; the sidebar doesn't fold, by design). Step 2, Your repos (#169).
+Step 3, the home (#170). Step 4, Your pull requests (this PR). The prototype
+is #156 (`/lab/dashboard`). Close it once the rollout is done.
+
+**Left:**
+- ~~5, Find a project~~: built (see the rollout above).
+- ~~6, the frame for the rest~~: built (see the rollout above), with the
+  unreadable hint on the selected "Your experience" card fixed.
+- ~~7, states and motion~~: built (see the rollout above). Your PRs'
+  skeleton now has the grouped-rows shape.
+
+**Pieces to reuse:**
+- `.app-page` (the frame).
+- `AppPageHeader` (`mood` for the cat).
+- `MarkedTitle` and `MoveHead` (`components/home/move-head.tsx`): `*starred*`
+  words get the marker and land word by word.
+- `.app-row` with `data-rule` and `--rule`: rows for your things.
+- `.app-tabs` / `.app-tab`.
+- `WaitBar`.
+- `SectionHead`.
+- `RepoRows` (with `compact` on the home).
+- Rules: `lib/home.ts` (`nextMove`, `inFlight`, `alsoForYou`),
+  `lib/your-repos.ts`, `lib/contributions.ts` (`prGroups`, `prsTitle`).
+
+**Gotchas:**
+- Put motion CSS inside `@media (prefers-reduced-motion: no-preference)`.
+  `postcss-motion.mjs` maps those blocks onto the site's Motion setting.
+- The React compiler's lint rejects `Date.now()` during render. Use
+  `clock()` from `lib/home.ts`.
+- Web typecheck and build need `HOLT_ALLOW_PLACEHOLDER_CONTACT=1`. After
+  deleting a route, `rm -rf web/.next/dev/types`, or `tsc` trips on stale
+  validators.
+- The mock seeds every dev user with two checks, so a new user lands on "pick
+  an issue", not "first repo".
+- Connecting GitHub under the mock needs a `github` row in the local `account`
+  table for that user; the `/connect` form works after that.
+- Verdicts now include *Long shot* (tone `warn`) and *Personal project* (tone
+  `neutral`). `VerdictPill` handles both.
+- Several workers ship at once. Before each PR, run `git merge-tree` against
+  every `staging`-labelled branch, and chain migrations on main's head.
 
 ## Sources
 
