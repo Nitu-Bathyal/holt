@@ -47,7 +47,7 @@
     "date": "2026-09-29",
     "from": "viable",
     "to": "long_shot",
-    "reason": "engine 4: over half of decided outside PRs got no reply at all (Long shot, mostly_silent); matches the 29 Sep field tests (vscode 51%, bat 81%)"
+    "reason": "engine 4: over half of decided outside PRs got no reply at all (Long shot, mostly_silent); matches the 29 Sep field tests (vscode 51%, bat 82%)"
    }
   ]
  },
@@ -958,7 +958,7 @@
     "date": "2026-09-29",
     "from": "insufficient_evidence",
     "to": "not_viable",
-    "reason": "engine 4: replies but never merges: 0 of 94 merged, most answered (replies_no_merges); matches the field tests"
+    "reason": "engine 4: replies but never merges: 0 of 92 merged, 66 answered (replies_no_merges); matches the field tests"
    }
   ]
  },
@@ -1820,7 +1820,7 @@
     "date": "2026-09-29",
     "from": "viable",
     "to": "long_shot",
-    "reason": "engine 4: over half of decided outside PRs got no reply at all (Long shot, mostly_silent); matches the 29 Sep field tests (vscode 51%, bat 81%)"
+    "reason": "engine 4: over half of decided outside PRs got no reply at all (Long shot, mostly_silent); matches the 29 Sep field tests (vscode 51%, bat 82%)"
    }
   ]
  },
@@ -3020,7 +3020,7 @@
     "date": "2026-09-29",
     "from": "viable",
     "to": "long_shot",
-    "reason": "engine 4: over half of decided outside PRs got no reply at all (Long shot, mostly_silent); matches the 29 Sep field tests (vscode 51%, bat 81%)"
+    "reason": "engine 4: over half of decided outside PRs got no reply at all (Long shot, mostly_silent); matches the 29 Sep field tests (vscode 51%, bat 82%)"
    }
   ]
  },
