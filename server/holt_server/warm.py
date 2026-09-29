@@ -205,7 +205,7 @@ class Warmer:
         async with self.svc.db.session() as s:
             row = await s.get(StarterCache, repos.key(repo))
         return (row is not None and utc(row.created_at) >= now() - ttl
-                and starter.current(row.issues))
+                and starter.current(row.issues, row.rules_version))
 
     async def find_is_fresh(self, profile: Profile) -> bool:
         ttl = timedelta(hours=self.svc.settings.find_cache_hours * REFRESH_AFTER)

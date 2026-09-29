@@ -35,6 +35,12 @@ def now() -> datetime:
     return datetime.now(UTC)
 
 
+def _rules_version() -> int:
+    from holt_server.starter import rules_version
+
+    return rules_version()
+
+
 def utc(value: datetime | None) -> datetime | None:
     """SQLite hands timestamps back naive; they were written as UTC."""
     if value is None:
@@ -411,13 +417,16 @@ class FindCache(Base):
     @property
     def outdated(self) -> bool:
         """Screened by an older engine (`params.engine_version`, missing on
-        results stored before it was recorded), or listing starter issues from
-        before they said who is on them: not served, searched again."""
-        from holt_server.starter import current
+        results stored before it was recorded), or listing starter issues older
+        rules picked (`params.starter_rules`): not served, searched again."""
+        from holt_server.starter import current, rules_version
 
-        version = (self.params or {}).get("engine_version")
+        params = self.params or {}
+        version = params.get("engine_version")
+        rules = params.get("starter_rules")
         return (not isinstance(version, int) or version < ENGINE_VERSION
-                or not all(current(r.get("issues") or []) for r in self.results or []))
+                or rules != rules_version()
+                or not all(current(r.get("issues") or [], rules) for r in self.results or []))
 
 
 def find_key(languages: list[str], topics: list[str], hacktoberfest: bool, days: int) -> str:
@@ -436,6 +445,8 @@ class StarterCache(Base):
     repo: Mapped[str] = mapped_column(String(200))
     issues: Mapped[list] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    # `holt.starter.RULES_VERSION` of the rules that picked `issues`.
+    rules_version: Mapped[int | None] = mapped_column(Integer, default=_rules_version)
 
 
 class Feedback(Base):

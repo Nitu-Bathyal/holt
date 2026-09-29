@@ -491,7 +491,8 @@ async def cached_starter_issues(svc: Services, repo: str) -> StarterCache | None
     cutoff = now() - timedelta(hours=svc.settings.starter_cache_hours)
     async with svc.db.session() as s:
         row = await s.get(StarterCache, repos.key(repo))
-    fresh = row is not None and utc(row.created_at) >= cutoff and starter.current(row.issues)
+    fresh = (row is not None and utc(row.created_at) >= cutoff
+             and starter.current(row.issues, row.rules_version))
     return row if fresh else None
 
 
@@ -529,6 +530,7 @@ async def _fetch_and_store(svc: Services, repo: str) -> tuple[str, list[dict]]:
             s.add(StarterCache(repo_key=repos.key(canonical), repo=canonical, issues=issues))
         else:
             row.repo, row.issues, row.created_at = canonical, issues, now()
+            row.rules_version = starter.rules_version()
         await s.commit()
     return canonical, issues
 

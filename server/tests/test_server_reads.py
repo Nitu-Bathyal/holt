@@ -14,6 +14,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
 
 import pytest
+from holt.starter import RULES_VERSION
 from holt_server.db import StarterCache, now
 from sqlalchemy import update
 
@@ -32,6 +33,7 @@ def starter_calls(monkeypatch):
                  "why": []} for i in range(1, 31)]
 
     mod.starter_issues = starter_issues
+    mod.RULES_VERSION = RULES_VERSION
     monkeypatch.setitem(sys.modules, "holt.starter", mod)
     return calls
 
@@ -103,6 +105,24 @@ def test_a_row_cached_before_issues_said_who_is_on_them_is_fetched_again(h, star
     h.client.portal.call(old_row)
     issues = h.get("/v1/repos/octo/one/starter-issues").json()["issues"]
     assert starter_calls == ["octo/one"] and issues[0]["title"] == "Issue 1"
+
+
+@pytest.mark.parametrize("rules", [None, RULES_VERSION - 1])
+def test_a_list_older_starter_rules_picked_is_fetched_again(h, starter_calls, rules):
+    # holt-oss/holt: an empty list cached by the rules that dropped a
+    # maintainer's batch outlived the fix by a whole TTL.
+    async def old_row():
+        async with h.svc.db.session() as s:
+            s.add(StarterCache(repo_key="octo/one", repo="octo/one", issues=[]))
+            await s.commit()
+            # The release before the column writes NULL.
+            await s.execute(update(StarterCache).values(rules_version=rules))
+            await s.commit()
+
+    h.client.portal.call(old_row)
+    assert h.get("/v1/repos/octo/one/starter-issues").json()["issues"]
+    h.get("/v1/repos/octo/one/starter-issues")
+    assert starter_calls == ["octo/one"]  # the refetched row is stamped and served
 
 
 def test_missing_repo_is_not_cached(h, starter_calls):

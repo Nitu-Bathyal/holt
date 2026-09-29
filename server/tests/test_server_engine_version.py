@@ -9,6 +9,7 @@ from __future__ import annotations
 from datetime import timedelta
 
 import pytest
+from holt.starter import RULES_VERSION
 from conftest import STATS, canned_report
 from holt_server import api, discover, jobs, recommendations, warm
 from holt_server.contributions import verdicts
@@ -146,7 +147,8 @@ def test_an_outdated_find_is_not_served(h):
     async def restamp():
         async with h.svc.db.session() as s:
             row = await s.get(FindCache, key)
-            row.params = {"limit": 20, "days": 7, "engine_version": ENGINE_VERSION}
+            row.params = {"limit": 20, "days": 7, "engine_version": ENGINE_VERSION,
+                          "starter_rules": RULES_VERSION}
             await s.commit()
     h.client.portal.call(restamp)
     assert h.client.portal.call(lambda: api.cached_find(h.svc, key, 20)) == results
@@ -160,6 +162,7 @@ def test_a_stored_find_is_stamped(h):
     h.client.portal.call(store)
     [row] = all_rows(h, FindCache)
     assert row.params["engine_version"] == ENGINE_VERSION and not row.outdated
+    assert row.params["starter_rules"] == RULES_VERSION
 
 
 # --- Discover, recommendations, My Contributions -----------------------------------------
@@ -185,7 +188,8 @@ def test_recommendations_skip_outdated_reports_and_finds(h):
         RepoMeta(repo_key="octo/new", repo="octo/new", stars=10, topics=[]),
         FindCache(key="k-old", params={"days": 7}, results=[
             {"repo": "octo/found-old", "verdict": "viable", "stats": STATS}]),
-        FindCache(key="k-new", params={"days": 7, "engine_version": ENGINE_VERSION},
+        FindCache(key="k-new", params={"days": 7, "engine_version": ENGINE_VERSION,
+                                       "starter_rules": RULES_VERSION},
                   results=[{"repo": "octo/found-new", "verdict": "viable", "stats": STATS}]))
     got = h.client.portal.call(lambda: recommendations.candidates(h.svc))
     assert "octo/new" in got and "octo/found-new" in got
