@@ -139,8 +139,9 @@ def test_a_finding_that_quotes_nothing_is_not_accused_of_anything():
 def test_the_quote_check_cannot_change_a_verdict():
     """The guard is deliberately verdict-neutral: `classify` reads only
     `repo_kind`, `is_archived`, `contribute_elsewhere` (a mirror or fork,
-    from GitHub's repository fields) and `inactive` (no merge and no push in
-    90 days) from findings, and all four are unquoted.
+    from GitHub's repository fields), `personal_project` (agent/personal.py)
+    and `inactive` (no merge and no push in 90 days) from findings, and all
+    five are unquoted.
     A guard that could move a verdict would have needed the frozen benchmark
     re-run."""
     import inspect
@@ -149,4 +150,4 @@ def test_the_quote_check_cannot_change_a_verdict():
 
     source = inspect.getsource(verdict.classify)
     assert "quote" not in source
-    assert source.count("findings.get") == 4
+    assert source.count("findings.get") == 5

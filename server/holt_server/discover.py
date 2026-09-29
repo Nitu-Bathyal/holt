@@ -68,7 +68,9 @@ MAX_TOPICS = 20
 ODDS_RANK = {"good": 0, "fair": 1, "long": 2}
 # Welcoming order: small samples are pulled toward a typical merged share.
 PRIOR_PRS, PRIOR_RATE = 10, 0.2
-VERDICTS = set(schema.TONES)
+# Personal projects aren't set up for outside contributors, so Discover never
+# lists them, under any sort.
+VERDICTS = set(schema.TONES) - {"personal"}
 
 
 class DiscoverRepo(VerdictView):

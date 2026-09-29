@@ -66,6 +66,7 @@ query($owner:String!, $name:String!, $until:GitTimestamp!) {
     createdAt pushedAt isArchived isMirror isFork stargazerCount
     description homepageUrl primaryLanguage { name }
     nameWithOwner mirrorUrl parent { nameWithOwner }
+    repositoryTopics(first:20) { nodes { topic { name } } }
     releases(first:10, orderBy:{field:CREATED_AT, direction:DESC}) {
       totalCount
       nodes { tagName name createdAt publishedAt isPrerelease }
@@ -787,6 +788,11 @@ def project_repo_meta(repo_slug: str, repo: dict[str, Any]) -> EvidenceRecord:
         payload["mirror_url"] = repo["mirrorUrl"]
     if "releases" in repo:
         payload["release_count"] = (repo["releases"] or {}).get("totalCount", 0)
+    # Added with the personal-project rule (agent/personal.py); absent before.
+    if "repositoryTopics" in repo:
+        payload["topics"] = [
+            n["topic"]["name"] for n in _nodes(repo["repositoryTopics"]) if n.get("topic")
+        ]
     return EvidenceRecord(
         evidence_id=f"repo:{repo_slug}:meta",
         source="github",

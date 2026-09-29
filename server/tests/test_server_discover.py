@@ -69,6 +69,16 @@ def test_welcoming_board_is_only_worth_your_time_best_odds_first(h):
     assert card["checked_this_week"] is None
 
 
+def test_personal_projects_are_never_listed_and_long_shots_are_not_welcoming(h):
+    add(h, report("octo/great", outsider_merged=12, no_reply=1),
+        report("octo/mine", "personal", outsider_attempts=0, outsider_merged=0),
+        report("octo/far", "long_shot", outsider_merged=3, no_reply=12),
+        meta("octo/great", "Python", stars=10), meta("octo/mine", "Python", stars=5),
+        meta("octo/far", "Python", stars=1000))
+    assert names(get(h)) == ["octo/great"]
+    assert names(get(h, sort="stars")) == ["octo/far", "octo/great"]
+
+
 def test_equal_odds_break_ties_by_reply_time_then_sample(h):
     add(h, report("octo/slow", median_first_response_hours=40.0),
         report("octo/quick", median_first_response_hours=2.0),

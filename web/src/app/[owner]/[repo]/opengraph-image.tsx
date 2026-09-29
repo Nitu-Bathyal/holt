@@ -22,8 +22,8 @@ export default async function Image({ params }: { params: Promise<{ owner: strin
   const r = valid ? await getReport(`${owner}/${repo}`) : null;
   const report = r?.ok ? r.data : null;
   const name = report?.repo ?? `${owner}/${repo}`;
-  const tone = !report ? C.blue : { good: C.green, bad: C.orange, warn: C.amber }[report.tone];
-  const cat = !report ? "(=^•ω•^=)" : { good: "(=^•ω•^=)", bad: "(=;ω;=)", warn: "(=•_•=)?" }[report.tone];
+  const tone = !report ? C.blue : { good: C.green, bad: C.orange, warn: C.amber, neutral: C.blue }[report.tone];
+  const cat = !report ? "(=^•ω•^=)" : { good: "(=^•ω•^=)", bad: "(=;ω;=)", warn: "(=•_•=)?", neutral: "(=^•ω•^=)" }[report.tone];
   const s = report?.stats;
   const stats = s
     ? [

@@ -1,12 +1,13 @@
 {
  "CircuitVerse/CircuitVerse": {
-  "verdict": "viable",
+  "verdict": "long_shot",
   "rules": [
    "sample_period",
    "excluded",
    "still_open",
    "closed_silently",
-   "merges"
+   "merges",
+   "mostly_silent"
   ],
   "numbers": {
    "total_threads": 200,
@@ -30,6 +31,8 @@
    "outsider_still_open": 17,
    "outsider_closed_silently": 4,
    "outsider_excluded": 1,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 0.667,
    "merged_threads": 50
   },
@@ -39,6 +42,12 @@
     "from": null,
     "to": "viable",
     "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+   },
+   {
+    "date": "2026-09-29",
+    "from": "viable",
+    "to": "long_shot",
+    "reason": "engine 4: over half of decided outside PRs got no reply at all (Long shot, mostly_silent); matches the 29 Sep field tests (vscode 51%, bat 82%)"
    }
   ]
  },
@@ -73,6 +82,8 @@
    "outsider_still_open": 36,
    "outsider_closed_silently": 8,
    "outsider_excluded": 2,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 0.594,
    "merged_threads": 130
   },
@@ -113,6 +124,8 @@
    "outsider_still_open": 16,
    "outsider_closed_silently": 30,
    "outsider_excluded": 2,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 0.843,
    "merged_threads": 99
   },
@@ -159,6 +172,8 @@
    "outsider_still_open": 13,
    "outsider_closed_silently": 3,
    "outsider_excluded": 2,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 384
   },
@@ -174,6 +189,89 @@
     "from": "viable",
     "to": "not_viable",
     "reason": "Catalogue detection from diff shape (ticket 07): most outside pull requests here add one data file or package manifest, or a line to a list, which isn't a software contribution"
+   }
+  ]
+ },
+ "Le-n-n-ox/AI_powered_event_management_system": {
+  "verdict": "personal",
+  "rules": [
+   "sample_period",
+   "personal"
+  ],
+  "numbers": {
+   "total_threads": 12,
+   "outsider_threads": 0,
+   "outsider_merged": 0,
+   "outsider_ignored": 0,
+   "median_first_response_hours": null,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 0,
+   "distinct_merged_authors": 0,
+   "reviewed_share": 0.917,
+   "merge_rate": null,
+   "merged_files_median": 3.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 12,
+   "outsider_answered": 0,
+   "first_timer_threads": 0,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 0,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 0,
+   "outsider_excluded": 0,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
+   "outsider_reviewed_share": null,
+   "merged_threads": 12
+  },
+  "history": [
+   {
+    "date": "2026-09-29",
+    "from": null,
+    "to": "personal",
+    "reason": "added (personal-project rule): hackathon or team projects with no outside PRs; must read Personal project"
+   }
+  ]
+ },
+ "Limcyy/smichovsky-hackathon-site": {
+  "verdict": "personal",
+  "rules": [
+   "personal"
+  ],
+  "numbers": {
+   "total_threads": 0,
+   "outsider_threads": 0,
+   "outsider_merged": 0,
+   "outsider_ignored": 0,
+   "median_first_response_hours": null,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 0,
+   "distinct_merged_authors": 0,
+   "reviewed_share": null,
+   "merge_rate": null,
+   "merged_files_median": null,
+   "merged_dirs_median": null,
+   "merged_with_files": 0,
+   "outsider_answered": 0,
+   "first_timer_threads": 0,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 0,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 0,
+   "outsider_excluded": 0,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
+   "outsider_reviewed_share": null,
+   "merged_threads": 0
+  },
+  "history": [
+   {
+    "date": "2026-09-29",
+    "from": null,
+    "to": "personal",
+    "reason": "added (personal-project rule): hackathon or team projects with no outside PRs; must read Personal project"
    }
   ]
  },
@@ -209,6 +307,8 @@
    "outsider_still_open": 134,
    "outsider_closed_silently": 1,
    "outsider_excluded": 7,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 0.543,
    "merged_threads": 138
   },
@@ -253,6 +353,8 @@
    "outsider_still_open": 11,
    "outsider_closed_silently": 1,
    "outsider_excluded": 4,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 0.154,
    "merged_threads": 113
   },
@@ -302,6 +404,8 @@
    "outsider_still_open": 64,
    "outsider_closed_silently": 6,
    "outsider_excluded": 35,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 124
   },
@@ -311,6 +415,89 @@
     "from": null,
     "to": "viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   }
+  ]
+ },
+ "aahil-khan/SOP-Opera": {
+  "verdict": "personal",
+  "rules": [
+   "sample_period",
+   "personal"
+  ],
+  "numbers": {
+   "total_threads": 27,
+   "outsider_threads": 0,
+   "outsider_merged": 0,
+   "outsider_ignored": 0,
+   "median_first_response_hours": null,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 0,
+   "distinct_merged_authors": 0,
+   "reviewed_share": 0.087,
+   "merge_rate": null,
+   "merged_files_median": 11,
+   "merged_dirs_median": 2,
+   "merged_with_files": 23,
+   "outsider_answered": 0,
+   "first_timer_threads": 0,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 0,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 0,
+   "outsider_excluded": 0,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
+   "outsider_reviewed_share": null,
+   "merged_threads": 23
+  },
+  "history": [
+   {
+    "date": "2026-09-29",
+    "from": null,
+    "to": "personal",
+    "reason": "added (personal-project rule): hackathon or team projects with no outside PRs; must read Personal project"
+   }
+  ]
+ },
+ "angelraph/gloaming": {
+  "verdict": "personal",
+  "rules": [
+   "personal"
+  ],
+  "numbers": {
+   "total_threads": 0,
+   "outsider_threads": 0,
+   "outsider_merged": 0,
+   "outsider_ignored": 0,
+   "median_first_response_hours": null,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 0,
+   "distinct_merged_authors": 0,
+   "reviewed_share": null,
+   "merge_rate": null,
+   "merged_files_median": null,
+   "merged_dirs_median": null,
+   "merged_with_files": 0,
+   "outsider_answered": 0,
+   "first_timer_threads": 0,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 0,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 0,
+   "outsider_excluded": 0,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
+   "outsider_reviewed_share": null,
+   "merged_threads": 0
+  },
+  "history": [
+   {
+    "date": "2026-09-29",
+    "from": null,
+    "to": "personal",
+    "reason": "added (personal-project rule): hackathon or team projects with no outside PRs; must read Personal project"
    }
   ]
  },
@@ -345,6 +532,8 @@
    "outsider_still_open": 14,
    "outsider_closed_silently": 5,
    "outsider_excluded": 1,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 282
   },
@@ -388,6 +577,8 @@
    "outsider_still_open": 38,
    "outsider_closed_silently": 1,
    "outsider_excluded": 14,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 217
   },
@@ -431,6 +622,8 @@
    "outsider_still_open": 11,
    "outsider_closed_silently": 22,
    "outsider_excluded": 1,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 0.913,
    "merged_threads": 72
   },
@@ -444,13 +637,14 @@
   ]
  },
  "django/django": {
-  "verdict": "viable",
+  "verdict": "long_shot",
   "rules": [
    "sample_period",
    "excluded",
    "still_open",
    "closed_silently",
-   "merges"
+   "merges",
+   "few_merged"
   ],
   "numbers": {
    "total_threads": 200,
@@ -474,6 +668,8 @@
    "outsider_still_open": 51,
    "outsider_closed_silently": 52,
    "outsider_excluded": 9,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 30
   },
@@ -483,6 +679,12 @@
     "from": null,
     "to": "viable",
     "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+   },
+   {
+    "date": "2026-09-29",
+    "from": "viable",
+    "to": "long_shot",
+    "reason": "engine 4: fewer than 1 in 10 decided outside PRs merged (Long shot, few_merged). django 9 of 110 (veteran field test: cold PRs need a Trac ticket); git 9.6% (GitGitGadget)"
    }
   ]
  },
@@ -518,6 +720,8 @@
    "outsider_still_open": 20,
    "outsider_closed_silently": 3,
    "outsider_excluded": 3,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 332
   },
@@ -550,27 +754,29 @@
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 136,
-   "outsider_merged": 26,
-   "outsider_ignored": 47,
-   "median_first_response_hours": 40.5,
+   "outsider_threads": 62,
+   "outsider_merged": 4,
+   "outsider_ignored": 32,
+   "median_first_response_hours": 25.8,
    "bot_share": 0.095,
-   "distinct_outsider_authors": 99,
-   "distinct_merged_authors": 23,
+   "distinct_outsider_authors": 42,
+   "distinct_merged_authors": 4,
    "reviewed_share": 0.6,
-   "merge_rate": 0.191,
+   "merge_rate": 0.065,
    "merged_files_median": 2.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 60,
-   "outsider_answered": 59,
-   "first_timer_threads": 127,
-   "first_timer_merged": 24,
-   "distinct_first_timer_authors": 97,
-   "distinct_first_timer_merged_authors": 23,
+   "outsider_answered": 16,
+   "first_timer_threads": 61,
+   "first_timer_merged": 4,
+   "distinct_first_timer_authors": 41,
+   "distinct_first_timer_merged_authors": 4,
    "outsider_still_open": 0,
-   "outsider_closed_silently": 29,
+   "outsider_closed_silently": 14,
    "outsider_excluded": 3,
-   "outsider_reviewed_share": 0.962,
+   "outsider_too_old": 74,
+   "outsider_landed_elsewhere": 0,
+   "outsider_reviewed_share": 1.0,
    "merged_threads": 60
   },
   "history": [
@@ -589,14 +795,13 @@
   ]
  },
  "excalidraw/excalidraw": {
-  "verdict": "insufficient_evidence",
+  "verdict": "not_viable",
   "rules": [
    "sample_period",
    "excluded",
    "still_open",
    "closed_silently",
-   "slow",
-   "few_merges"
+   "long_odds"
   ],
   "numbers": {
    "total_threads": 200,
@@ -620,6 +825,8 @@
    "outsider_still_open": 40,
    "outsider_closed_silently": 17,
    "outsider_excluded": 7,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 25
   },
@@ -635,6 +842,12 @@
     "from": "viable",
     "to": "insufficient_evidence",
     "reason": "Ticket 03 (outsiders by association): the 4 'first-time' merges that made it Worth were by the maintainers (dwelle, MEMBER, merged 20; mtolmacs and zsviczian, COLLABORATOR). Counted as outsiders, 1 of 168 outside PRs was merged."
+   },
+   {
+    "date": "2026-09-29",
+    "from": "insufficient_evidence",
+    "to": "not_viable",
+    "reason": "engine 4: merge-rate floor now applies from 20 decided attempts whatever merged (next.js 1/30, excalidraw 1/121, semgrep 1/58, lazygit 2/62 with both from one person)"
    }
   ]
  },
@@ -642,35 +855,39 @@
   "verdict": "viable",
   "rules": [
    "sample_period",
+   "too_old",
    "excluded",
    "still_open",
    "closed_silently",
    "merges",
+   "slow_note",
    "landed_off_button"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 134,
-   "outsider_merged": 75,
-   "outsider_ignored": 6,
-   "median_first_response_hours": 73.6,
+   "outsider_threads": 11,
+   "outsider_merged": 4,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 627.7,
    "bot_share": 0.005,
-   "distinct_outsider_authors": 90,
-   "distinct_merged_authors": 57,
+   "distinct_outsider_authors": 8,
+   "distinct_merged_authors": 4,
    "reviewed_share": 0.98,
-   "merge_rate": 0.568,
+   "merge_rate": 0.444,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 100,
-   "outsider_answered": 83,
-   "first_timer_threads": 111,
-   "first_timer_merged": 67,
-   "distinct_first_timer_authors": 86,
-   "distinct_first_timer_merged_authors": 57,
+   "outsider_answered": 2,
+   "first_timer_threads": 9,
+   "first_timer_merged": 4,
+   "distinct_first_timer_authors": 8,
+   "distinct_first_timer_merged_authors": 4,
    "outsider_still_open": 2,
-   "outsider_closed_silently": 20,
+   "outsider_closed_silently": 4,
    "outsider_excluded": 2,
-   "outsider_reviewed_share": 0.987,
+   "outsider_too_old": 123,
+   "outsider_landed_elsewhere": 4,
+   "outsider_reviewed_share": 1.0,
    "merged_threads": 100
   },
   "history": [
@@ -689,13 +906,13 @@
   ]
  },
  "fastapi/fastapi": {
-  "verdict": "insufficient_evidence",
+  "verdict": "not_viable",
   "rules": [
    "sample_period",
    "excluded",
    "still_open",
    "closed_silently",
-   "few_merges"
+   "replies_no_merges"
   ],
   "numbers": {
    "total_threads": 200,
@@ -719,6 +936,8 @@
    "outsider_still_open": 29,
    "outsider_closed_silently": 23,
    "outsider_excluded": 3,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": null,
    "merged_threads": 68
   },
@@ -734,6 +953,12 @@
     "from": "viable",
     "to": "insufficient_evidence",
     "reason": "Ticket 03: the 3 'first-time' merges that made it Worth were the maintainers' own PRs (tiangolo, YuriiMotov, alejsdev, all MEMBER). No outside PR of the 124 in the sample was merged."
+   },
+   {
+    "date": "2026-09-29",
+    "from": "insufficient_evidence",
+    "to": "not_viable",
+    "reason": "engine 4: replies but never merges: 0 of 92 merged, 66 answered (replies_no_merges); matches the field tests"
    }
   ]
  },
@@ -765,6 +990,8 @@
    "outsider_still_open": 199,
    "outsider_closed_silently": 2,
    "outsider_excluded": 1,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 0.0,
    "merged_threads": 233
   },
@@ -808,6 +1035,8 @@
    "outsider_still_open": 189,
    "outsider_closed_silently": 5,
    "outsider_excluded": 3,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 150
   },
@@ -821,14 +1050,15 @@
   ]
  },
  "git/git": {
-  "verdict": "viable",
+  "verdict": "long_shot",
   "rules": [
    "sample_period",
    "excluded",
    "still_open",
    "closed_silently",
    "merges",
-   "landed_off_button"
+   "landed_off_button",
+   "few_merged"
   ],
   "numbers": {
    "total_threads": 200,
@@ -852,6 +1082,8 @@
    "outsider_still_open": 14,
    "outsider_closed_silently": 70,
    "outsider_excluded": 18,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 16,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 16
   },
@@ -867,6 +1099,12 @@
     "from": "insufficient_evidence",
     "to": "viable",
     "reason": "ticket 05: PRs landed off the merge button (merge bot / internal sync commit, Gerrit, GitGitGadget, maintainer 'Merged to' comments) now count as merged; outside work visibly lands here"
+   },
+   {
+    "date": "2026-09-29",
+    "from": "viable",
+    "to": "long_shot",
+    "reason": "engine 4: fewer than 1 in 10 decided outside PRs merged (Long shot, few_merged). django 9 of 110 (veteran field test: cold PRs need a Trac ticket); git 9.6% (GitGitGadget)"
    }
   ]
  },
@@ -902,6 +1140,8 @@
    "outsider_still_open": 40,
    "outsider_closed_silently": 21,
    "outsider_excluded": 4,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 44,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 52
   },
@@ -948,6 +1188,8 @@
    "outsider_still_open": 194,
    "outsider_closed_silently": 18,
    "outsider_excluded": 7,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": null,
    "merged_threads": 0
   },
@@ -991,6 +1233,8 @@
    "outsider_still_open": 75,
    "outsider_closed_silently": 4,
    "outsider_excluded": 27,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 0.977,
    "merged_threads": 183
   },
@@ -1011,12 +1255,12 @@
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 188,
+   "outsider_threads": 171,
    "outsider_merged": 0,
-   "outsider_ignored": 125,
+   "outsider_ignored": 117,
    "median_first_response_hours": null,
    "bot_share": 0.005,
-   "distinct_outsider_authors": 127,
+   "distinct_outsider_authors": 115,
    "distinct_merged_authors": 0,
    "reviewed_share": null,
    "merge_rate": 0.0,
@@ -1024,13 +1268,15 @@
    "merged_dirs_median": null,
    "merged_with_files": 0,
    "outsider_answered": 0,
-   "first_timer_threads": 180,
+   "first_timer_threads": 164,
    "first_timer_merged": 0,
-   "distinct_first_timer_authors": 126,
+   "distinct_first_timer_authors": 115,
    "distinct_first_timer_merged_authors": 0,
    "outsider_still_open": 7,
-   "outsider_closed_silently": 56,
+   "outsider_closed_silently": 47,
    "outsider_excluded": 11,
+   "outsider_too_old": 17,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": null,
    "merged_threads": 0
   },
@@ -1083,6 +1329,8 @@
    "outsider_still_open": 199,
    "outsider_closed_silently": 34,
    "outsider_excluded": 0,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 19
   },
@@ -1105,35 +1353,37 @@
   "verdict": "viable",
   "rules": [
    "sample_period",
+   "too_old",
    "excluded",
    "still_open",
-   "closed_silently",
    "merges",
-   "landed_off_button"
+   "slow_note"
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 156,
-   "outsider_merged": 74,
-   "outsider_ignored": 2,
-   "median_first_response_hours": 19.5,
+   "outsider_threads": 8,
+   "outsider_merged": 2,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 402.9,
    "bot_share": 0.0,
-   "distinct_outsider_authors": 97,
-   "distinct_merged_authors": 45,
+   "distinct_outsider_authors": 3,
+   "distinct_merged_authors": 2,
    "reviewed_share": 0.645,
-   "merge_rate": 0.477,
+   "merge_rate": 0.286,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 106,
-   "outsider_answered": 110,
-   "first_timer_threads": 117,
-   "first_timer_merged": 48,
-   "distinct_first_timer_authors": 96,
-   "distinct_first_timer_merged_authors": 45,
+   "outsider_answered": 7,
+   "first_timer_threads": 7,
+   "first_timer_merged": 2,
+   "distinct_first_timer_authors": 3,
+   "distinct_first_timer_merged_authors": 2,
    "outsider_still_open": 1,
-   "outsider_closed_silently": 15,
+   "outsider_closed_silently": 0,
    "outsider_excluded": 9,
-   "outsider_reviewed_share": 0.622,
+   "outsider_too_old": 148,
+   "outsider_landed_elsewhere": 0,
+   "outsider_reviewed_share": 1.0,
    "merged_threads": 107
   },
   "history": [
@@ -1146,13 +1396,13 @@
   ]
  },
  "jesseduffield/lazygit": {
-  "verdict": "insufficient_evidence",
+  "verdict": "not_viable",
   "rules": [
    "sample_period",
    "excluded",
    "still_open",
    "closed_silently",
-   "few_people"
+   "long_odds"
   ],
   "numbers": {
    "total_threads": 249,
@@ -1176,6 +1426,8 @@
    "outsider_still_open": 3,
    "outsider_closed_silently": 17,
    "outsider_excluded": 8,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 148
   },
@@ -1191,6 +1443,12 @@
     "from": "viable",
     "to": "insufficient_evidence",
     "reason": "distinct merged authors (ticket 08): both merges are one person's; the pass rule used to count people who tried"
+   },
+   {
+    "date": "2026-09-29",
+    "from": "insufficient_evidence",
+    "to": "not_viable",
+    "reason": "engine 4: merge-rate floor now applies from 20 decided attempts whatever merged (next.js 1/30, excalidraw 1/121, semgrep 1/58, lazygit 2/62 with both from one person)"
    }
   ]
  },
@@ -1226,6 +1484,8 @@
    "outsider_still_open": 12,
    "outsider_closed_silently": 8,
    "outsider_excluded": 1,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 0.941,
    "merged_threads": 222
   },
@@ -1275,6 +1535,8 @@
    "outsider_still_open": 125,
    "outsider_closed_silently": 2,
    "outsider_excluded": 3,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 70
   },
@@ -1317,6 +1579,8 @@
    "outsider_still_open": 35,
    "outsider_closed_silently": 6,
    "outsider_excluded": 0,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 0.952,
    "merged_threads": 113
   },
@@ -1326,6 +1590,50 @@
     "from": null,
     "to": "viable",
     "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+   }
+  ]
+ },
+ "ldbumble/taskuary": {
+  "verdict": "viable",
+  "rules": [
+   "sample_period",
+   "still_open",
+   "merges",
+   "landed_off_button"
+  ],
+  "numbers": {
+   "total_threads": 64,
+   "outsider_threads": 52,
+   "outsider_merged": 11,
+   "outsider_ignored": 0,
+   "median_first_response_hours": 3.6,
+   "bot_share": 0.125,
+   "distinct_outsider_authors": 5,
+   "distinct_merged_authors": 3,
+   "reviewed_share": 0.225,
+   "merge_rate": 0.786,
+   "merged_files_median": 3.0,
+   "merged_dirs_median": 2.0,
+   "merged_with_files": 40,
+   "outsider_answered": 10,
+   "first_timer_threads": 7,
+   "first_timer_merged": 5,
+   "distinct_first_timer_authors": 5,
+   "distinct_first_timer_merged_authors": 3,
+   "outsider_still_open": 38,
+   "outsider_closed_silently": 0,
+   "outsider_excluded": 0,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 1,
+   "outsider_reviewed_share": 0.636,
+   "merged_threads": 40
+  },
+  "history": [
+   {
+    "date": "2026-09-29",
+    "from": null,
+    "to": "viable",
+    "reason": "added (personal-project rule): small genuinely open projects that must stay out of Personal project"
    }
   ]
  },
@@ -1360,6 +1668,8 @@
    "outsider_still_open": 86,
    "outsider_closed_silently": 2,
    "outsider_excluded": 9,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 120
   },
@@ -1372,11 +1682,55 @@
    }
   ]
  },
+ "mainak55512/flint": {
+  "verdict": "insufficient_evidence",
+  "rules": [
+   "sample_period",
+   "still_open",
+   "few_merges"
+  ],
+  "numbers": {
+   "total_threads": 7,
+   "outsider_threads": 2,
+   "outsider_merged": 0,
+   "outsider_ignored": 0,
+   "median_first_response_hours": null,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 0,
+   "distinct_merged_authors": 0,
+   "reviewed_share": 0.0,
+   "merge_rate": null,
+   "merged_files_median": 6,
+   "merged_dirs_median": 4,
+   "merged_with_files": 7,
+   "outsider_answered": 0,
+   "first_timer_threads": 0,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 0,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 2,
+   "outsider_closed_silently": 0,
+   "outsider_excluded": 0,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
+   "outsider_reviewed_share": null,
+   "merged_threads": 7
+  },
+  "history": [
+   {
+    "date": "2026-09-29",
+    "from": null,
+    "to": "insufficient_evidence",
+    "reason": "added (personal-project rule): small genuinely open projects that must stay out of Personal project"
+   }
+  ]
+ },
  "material-components/material-components-android": {
   "verdict": "viable",
   "rules": [
    "sample_period",
    "dormant",
+   "too_old",
    "excluded",
    "closed_silently",
    "merges",
@@ -1384,26 +1738,28 @@
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 181,
-   "outsider_merged": 81,
-   "outsider_ignored": 43,
-   "median_first_response_hours": 132.1,
+   "outsider_threads": 30,
+   "outsider_merged": 8,
+   "outsider_ignored": 12,
+   "median_first_response_hours": 23.4,
    "bot_share": 0.075,
-   "distinct_outsider_authors": 32,
-   "distinct_merged_authors": 11,
+   "distinct_outsider_authors": 12,
+   "distinct_merged_authors": 3,
    "reviewed_share": 0.988,
-   "merge_rate": 0.448,
+   "merge_rate": 0.267,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 86,
-   "outsider_answered": 77,
-   "first_timer_threads": 49,
-   "first_timer_merged": 12,
-   "distinct_first_timer_authors": 31,
-   "distinct_first_timer_merged_authors": 11,
+   "outsider_answered": 11,
+   "first_timer_threads": 10,
+   "first_timer_merged": 2,
+   "distinct_first_timer_authors": 10,
+   "distinct_first_timer_merged_authors": 2,
    "outsider_still_open": 0,
-   "outsider_closed_silently": 20,
+   "outsider_closed_silently": 2,
    "outsider_excluded": 2,
+   "outsider_too_old": 151,
+   "outsider_landed_elsewhere": 8,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 86
   },
@@ -1417,13 +1773,14 @@
   ]
  },
  "microsoft/vscode": {
-  "verdict": "viable",
+  "verdict": "long_shot",
   "rules": [
    "sample_period",
    "excluded",
    "still_open",
    "closed_silently",
-   "merges"
+   "merges",
+   "mostly_silent"
   ],
   "numbers": {
    "total_threads": 400,
@@ -1447,6 +1804,8 @@
    "outsider_still_open": 64,
    "outsider_closed_silently": 6,
    "outsider_excluded": 3,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 223
   },
@@ -1456,6 +1815,12 @@
     "from": null,
     "to": "viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-29",
+    "from": "viable",
+    "to": "long_shot",
+    "reason": "engine 4: over half of decided outside PRs got no reply at all (Long shot, mostly_silent); matches the 29 Sep field tests (vscode 51%, bat 82%)"
    }
   ]
  },
@@ -1487,6 +1852,8 @@
    "outsider_still_open": 181,
    "outsider_closed_silently": 8,
    "outsider_excluded": 0,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 175
   },
@@ -1513,12 +1880,12 @@
   ],
   "numbers": {
    "total_threads": 26,
-   "outsider_threads": 26,
+   "outsider_threads": 7,
    "outsider_merged": 0,
-   "outsider_ignored": 14,
+   "outsider_ignored": 2,
    "median_first_response_hours": null,
    "bot_share": 0.0,
-   "distinct_outsider_authors": 25,
+   "distinct_outsider_authors": 7,
    "distinct_merged_authors": 0,
    "reviewed_share": null,
    "merge_rate": 0.0,
@@ -1526,13 +1893,15 @@
    "merged_dirs_median": null,
    "merged_with_files": 0,
    "outsider_answered": 0,
-   "first_timer_threads": 26,
+   "first_timer_threads": 7,
    "first_timer_merged": 0,
-   "distinct_first_timer_authors": 25,
+   "distinct_first_timer_authors": 7,
    "distinct_first_timer_merged_authors": 0,
    "outsider_still_open": 0,
-   "outsider_closed_silently": 12,
+   "outsider_closed_silently": 5,
    "outsider_excluded": 0,
+   "outsider_too_old": 19,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": null,
    "merged_threads": 0
   },
@@ -1551,37 +1920,86 @@
    }
   ]
  },
- "monicahq/monica": {
-  "verdict": "viable",
+ "moment/moment": {
+  "verdict": "long_shot",
   "rules": [
    "sample_period",
+   "too_old",
+   "excluded",
+   "still_open",
    "closed_silently",
    "merges",
-   "slow_note"
+   "slow_replies"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 35,
+   "outsider_merged": 13,
+   "outsider_ignored": 1,
+   "median_first_response_hours": 1414.4,
+   "bot_share": 0.005,
+   "distinct_outsider_authors": 24,
+   "distinct_merged_authors": 11,
+   "reviewed_share": 0.343,
+   "merge_rate": 0.394,
+   "merged_files_median": 2.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 70,
+   "outsider_answered": 25,
+   "first_timer_threads": 31,
+   "first_timer_merged": 11,
+   "distinct_first_timer_authors": 23,
+   "distinct_first_timer_merged_authors": 10,
+   "outsider_still_open": 2,
+   "outsider_closed_silently": 5,
+   "outsider_excluded": 1,
+   "outsider_too_old": 116,
+   "outsider_landed_elsewhere": 0,
+   "outsider_reviewed_share": 0.846,
+   "merged_threads": 70
+  },
+  "history": [
+   {
+    "date": "2026-09-29",
+    "from": null,
+    "to": "long_shot",
+    "reason": "added (29 Sep field tests): Long shot, as the testers checked by hand (react 65 of 100 unanswered; llm 93 of 147 unanswered; moment typical first reply ~59 days over its last 12 months)"
+   }
+  ]
+ },
+ "monicahq/monica": {
+  "verdict": "not_viable",
+  "rules": [
+   "sample_period",
+   "too_old",
+   "closed_silently",
+   "ignored"
   ],
   "numbers": {
    "total_threads": 343,
-   "outsider_threads": 61,
-   "outsider_merged": 8,
-   "outsider_ignored": 40,
-   "median_first_response_hours": 253.0,
+   "outsider_threads": 41,
+   "outsider_merged": 0,
+   "outsider_ignored": 35,
+   "median_first_response_hours": 633.3,
    "bot_share": 0.691,
-   "distinct_outsider_authors": 49,
-   "distinct_merged_authors": 7,
+   "distinct_outsider_authors": 34,
+   "distinct_merged_authors": 0,
    "reviewed_share": 0.096,
-   "merge_rate": 0.131,
+   "merge_rate": 0.0,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 114,
-   "outsider_answered": 12,
-   "first_timer_threads": 60,
-   "first_timer_merged": 8,
-   "distinct_first_timer_authors": 49,
-   "distinct_first_timer_merged_authors": 7,
+   "outsider_answered": 2,
+   "first_timer_threads": 41,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 34,
+   "distinct_first_timer_merged_authors": 0,
    "outsider_still_open": 0,
-   "outsider_closed_silently": 9,
+   "outsider_closed_silently": 4,
    "outsider_excluded": 0,
-   "outsider_reviewed_share": 1.0,
+   "outsider_too_old": 20,
+   "outsider_landed_elsewhere": 0,
+   "outsider_reviewed_share": null,
    "merged_threads": 114
   },
   "history": [
@@ -1602,6 +2020,12 @@
     "from": "insufficient_evidence",
     "to": "viable",
     "reason": "slow replies are a note, not a reason (user decision, 28 Sep): outside work is merged (efcore 41/44, keploy 17/51, monica 8/61, each from 5+ people) but first replies take 9-12 days, past the 7-day budget, so Worth with 'Replies are slow here'"
+   },
+   {
+    "date": "2026-09-29",
+    "from": "viable",
+    "to": "not_viable",
+    "reason": "engine 4: 12-month cap: 0 of 41 outside PRs from the last year merged, 35 unanswered (ignored); the 8 merges were older"
    }
   ]
  },
@@ -1635,6 +2059,8 @@
    "outsider_still_open": 14,
    "outsider_closed_silently": 4,
    "outsider_excluded": 0,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 182
   },
@@ -1677,6 +2103,8 @@
    "outsider_still_open": 109,
    "outsider_closed_silently": 4,
    "outsider_excluded": 0,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": null,
    "merged_threads": 52
   },
@@ -1727,6 +2155,8 @@
    "outsider_still_open": 69,
    "outsider_closed_silently": 1,
    "outsider_excluded": 7,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 6,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 96
   },
@@ -1752,7 +2182,6 @@
    "excluded",
    "still_open",
    "closed_silently",
-   "merges",
    "long_odds"
   ],
   "numbers": {
@@ -1777,6 +2206,8 @@
    "outsider_still_open": 25,
    "outsider_closed_silently": 25,
    "outsider_excluded": 1,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 57
   },
@@ -1820,6 +2251,8 @@
    "outsider_still_open": 2,
    "outsider_closed_silently": 1,
    "outsider_excluded": 140,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 49
   },
@@ -1838,7 +2271,6 @@
    "sample_period",
    "excluded",
    "closed_silently",
-   "merges",
    "long_odds"
   ],
   "numbers": {
@@ -1863,6 +2295,8 @@
    "outsider_still_open": 0,
    "outsider_closed_silently": 99,
    "outsider_excluded": 18,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 0.4,
    "merged_threads": 15
   },
@@ -1889,27 +2323,29 @@
   ],
   "numbers": {
    "total_threads": 299,
-   "outsider_threads": 75,
-   "outsider_merged": 34,
+   "outsider_threads": 19,
+   "outsider_merged": 0,
    "outsider_ignored": 1,
-   "median_first_response_hours": 2.5,
+   "median_first_response_hours": 0.7,
    "bot_share": 0.535,
-   "distinct_outsider_authors": 69,
-   "distinct_merged_authors": 31,
+   "distinct_outsider_authors": 18,
+   "distinct_merged_authors": 0,
    "reviewed_share": 0.071,
-   "merge_rate": 0.459,
+   "merge_rate": 0.0,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 226,
-   "outsider_answered": 33,
-   "first_timer_threads": 68,
-   "first_timer_merged": 31,
-   "distinct_first_timer_authors": 66,
-   "distinct_first_timer_merged_authors": 31,
+   "outsider_answered": 7,
+   "first_timer_threads": 18,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 18,
+   "distinct_first_timer_merged_authors": 0,
    "outsider_still_open": 1,
-   "outsider_closed_silently": 15,
+   "outsider_closed_silently": 10,
    "outsider_excluded": 3,
-   "outsider_reviewed_share": 0.265,
+   "outsider_too_old": 56,
+   "outsider_landed_elsewhere": 0,
+   "outsider_reviewed_share": null,
    "merged_threads": 226
   },
   "history": [
@@ -1958,6 +2394,8 @@
    "outsider_still_open": 3,
    "outsider_closed_silently": 4,
    "outsider_excluded": 1,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 0.458,
    "merged_threads": 207
   },
@@ -2007,6 +2445,8 @@
    "outsider_still_open": 16,
    "outsider_closed_silently": 6,
    "outsider_excluded": 5,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 0.912,
    "merged_threads": 115
   },
@@ -2047,6 +2487,8 @@
    "outsider_still_open": 179,
    "outsider_closed_silently": 3,
    "outsider_excluded": 1,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 0.02,
    "merged_threads": 149
   },
@@ -2090,6 +2532,8 @@
    "outsider_still_open": 137,
    "outsider_closed_silently": 2,
    "outsider_excluded": 1,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 0.444,
    "merged_threads": 183
   },
@@ -2134,6 +2578,8 @@
    "outsider_still_open": 62,
    "outsider_closed_silently": 7,
    "outsider_excluded": 42,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 4,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 74
   },
@@ -2149,6 +2595,52 @@
     "from": "insufficient_evidence",
     "to": "viable",
     "reason": "ticket 05: PRs landed off the merge button (merge bot / internal sync commit, Gerrit, GitGitGadget, maintainer 'Merged to' comments) now count as merged; outside work visibly lands here"
+   }
+  ]
+ },
+ "react/react": {
+  "verdict": "long_shot",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges",
+   "mostly_silent"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 147,
+   "outsider_merged": 14,
+   "outsider_ignored": 65,
+   "median_first_response_hours": 27.5,
+   "bot_share": 0.02,
+   "distinct_outsider_authors": 42,
+   "distinct_merged_authors": 13,
+   "reviewed_share": 0.947,
+   "merge_rate": 0.14,
+   "merged_files_median": 3,
+   "merged_dirs_median": 1,
+   "merged_with_files": 37,
+   "outsider_answered": 22,
+   "first_timer_threads": 76,
+   "first_timer_merged": 13,
+   "distinct_first_timer_authors": 38,
+   "distinct_first_timer_merged_authors": 13,
+   "outsider_still_open": 47,
+   "outsider_closed_silently": 13,
+   "outsider_excluded": 17,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
+   "outsider_reviewed_share": 1.0,
+   "merged_threads": 38
+  },
+  "history": [
+   {
+    "date": "2026-09-29",
+    "from": null,
+    "to": "long_shot",
+    "reason": "added (29 Sep field tests): Long shot, as the testers checked by hand (react 65 of 100 unanswered; llm 93 of 147 unanswered; moment typical first reply ~59 days over its last 12 months)"
    }
   ]
  },
@@ -2184,6 +2676,8 @@
    "outsider_still_open": 33,
    "outsider_closed_silently": 5,
    "outsider_excluded": 6,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 5,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 142
   },
@@ -2202,6 +2696,49 @@
    }
   ]
  },
+ "regnull/openbot": {
+  "verdict": "insufficient_evidence",
+  "rules": [
+   "sample_period",
+   "still_open",
+   "few_merges"
+  ],
+  "numbers": {
+   "total_threads": 201,
+   "outsider_threads": 3,
+   "outsider_merged": 0,
+   "outsider_ignored": 0,
+   "median_first_response_hours": null,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 0,
+   "distinct_merged_authors": 0,
+   "reviewed_share": 0.086,
+   "merge_rate": null,
+   "merged_files_median": 4.0,
+   "merged_dirs_median": 1.0,
+   "merged_with_files": 198,
+   "outsider_answered": 0,
+   "first_timer_threads": 0,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 0,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 3,
+   "outsider_closed_silently": 0,
+   "outsider_excluded": 0,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
+   "outsider_reviewed_share": null,
+   "merged_threads": 198
+  },
+  "history": [
+   {
+    "date": "2026-09-29",
+    "from": null,
+    "to": "insufficient_evidence",
+    "reason": "added (personal-project rule): small genuinely open projects that must stay out of Personal project"
+   }
+  ]
+ },
  "request/request": {
   "verdict": "not_viable",
   "rules": [
@@ -2210,27 +2747,29 @@
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 184,
-   "outsider_merged": 27,
-   "outsider_ignored": 17,
-   "median_first_response_hours": 186.5,
+   "outsider_threads": 2,
+   "outsider_merged": 0,
+   "outsider_ignored": 0,
+   "median_first_response_hours": null,
    "bot_share": 0.03,
-   "distinct_outsider_authors": 159,
-   "distinct_merged_authors": 27,
+   "distinct_outsider_authors": 1,
+   "distinct_merged_authors": 0,
    "reviewed_share": 0.342,
-   "merge_rate": 0.148,
+   "merge_rate": 0.0,
    "merged_files_median": 1.0,
    "merged_dirs_median": 1.0,
    "merged_with_files": 38,
-   "outsider_answered": 22,
-   "first_timer_threads": 181,
-   "first_timer_merged": 27,
-   "distinct_first_timer_authors": 157,
-   "distinct_first_timer_merged_authors": 27,
+   "outsider_answered": 0,
+   "first_timer_threads": 1,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 1,
+   "distinct_first_timer_merged_authors": 0,
    "outsider_still_open": 1,
-   "outsider_closed_silently": 129,
+   "outsider_closed_silently": 1,
    "outsider_excluded": 4,
-   "outsider_reviewed_share": 0.444,
+   "outsider_too_old": 182,
+   "outsider_landed_elsewhere": 0,
+   "outsider_reviewed_share": null,
    "merged_threads": 38
   },
   "history": [
@@ -2279,6 +2818,8 @@
    "outsider_still_open": 82,
    "outsider_closed_silently": 1,
    "outsider_excluded": 17,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 0.78,
    "merged_threads": 177
   },
@@ -2295,6 +2836,7 @@
   "verdict": "viable",
   "rules": [
    "sample_period",
+   "too_old",
    "excluded",
    "still_open",
    "closed_silently",
@@ -2302,27 +2844,29 @@
   ],
   "numbers": {
    "total_threads": 200,
-   "outsider_threads": 167,
-   "outsider_merged": 45,
-   "outsider_ignored": 4,
-   "median_first_response_hours": 65.5,
+   "outsider_threads": 80,
+   "outsider_merged": 19,
+   "outsider_ignored": 1,
+   "median_first_response_hours": 26.6,
    "bot_share": 0.005,
-   "distinct_outsider_authors": 136,
-   "distinct_merged_authors": 44,
+   "distinct_outsider_authors": 64,
+   "distinct_merged_authors": 19,
    "reviewed_share": 0.901,
-   "merge_rate": 0.271,
+   "merge_rate": 0.241,
    "merged_files_median": 1,
    "merged_dirs_median": 1,
    "merged_with_files": 71,
-   "outsider_answered": 106,
-   "first_timer_threads": 159,
-   "first_timer_merged": 44,
-   "distinct_first_timer_authors": 134,
-   "distinct_first_timer_merged_authors": 44,
+   "outsider_answered": 52,
+   "first_timer_threads": 78,
+   "first_timer_merged": 19,
+   "distinct_first_timer_authors": 64,
+   "distinct_first_timer_merged_authors": 19,
    "outsider_still_open": 1,
-   "outsider_closed_silently": 54,
+   "outsider_closed_silently": 26,
    "outsider_excluded": 1,
-   "outsider_reviewed_share": 0.956,
+   "outsider_too_old": 87,
+   "outsider_landed_elsewhere": 0,
+   "outsider_reviewed_share": 1.0,
    "merged_threads": 71
   },
   "history": [
@@ -2334,15 +2878,57 @@
    }
   ]
  },
- "semgrep/semgrep": {
+ "sauravsingla/VeloGraphX": {
   "verdict": "insufficient_evidence",
+  "rules": [
+   "sample_period",
+   "no_attempts"
+  ],
+  "numbers": {
+   "total_threads": 76,
+   "outsider_threads": 0,
+   "outsider_merged": 0,
+   "outsider_ignored": 0,
+   "median_first_response_hours": null,
+   "bot_share": 0.171,
+   "distinct_outsider_authors": 0,
+   "distinct_merged_authors": 0,
+   "reviewed_share": 0.0,
+   "merge_rate": null,
+   "merged_files_median": 5.0,
+   "merged_dirs_median": 3.0,
+   "merged_with_files": 60,
+   "outsider_answered": 0,
+   "first_timer_threads": 0,
+   "first_timer_merged": 0,
+   "distinct_first_timer_authors": 0,
+   "distinct_first_timer_merged_authors": 0,
+   "outsider_still_open": 0,
+   "outsider_closed_silently": 0,
+   "outsider_excluded": 0,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
+   "outsider_reviewed_share": null,
+   "merged_threads": 60
+  },
+  "history": [
+   {
+    "date": "2026-09-29",
+    "from": null,
+    "to": "insufficient_evidence",
+    "reason": "added (personal-project rule): small genuinely open projects that must stay out of Personal project"
+   }
+  ]
+ },
+ "semgrep/semgrep": {
+  "verdict": "not_viable",
   "rules": [
    "sample_period",
    "excluded",
    "still_open",
    "closed_silently",
-   "few_merges",
-   "landed_off_button"
+   "landed_off_button",
+   "long_odds"
   ],
   "numbers": {
    "total_threads": 322,
@@ -2366,6 +2952,8 @@
    "outsider_still_open": 12,
    "outsider_closed_silently": 8,
    "outsider_excluded": 4,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 1,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 82
   },
@@ -2375,17 +2963,24 @@
     "from": null,
     "to": "insufficient_evidence",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-29",
+    "from": "insufficient_evidence",
+    "to": "not_viable",
+    "reason": "engine 4: merge-rate floor now applies from 20 decided attempts whatever merged (next.js 1/30, excalidraw 1/121, semgrep 1/58, lazygit 2/62 with both from one person)"
    }
   ]
  },
  "sharkdp/bat": {
-  "verdict": "viable",
+  "verdict": "long_shot",
   "rules": [
    "sample_period",
    "excluded",
    "still_open",
    "closed_silently",
-   "merges"
+   "merges",
+   "mostly_silent"
   ],
   "numbers": {
    "total_threads": 200,
@@ -2409,6 +3004,8 @@
    "outsider_still_open": 7,
    "outsider_closed_silently": 10,
    "outsider_excluded": 5,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 38
   },
@@ -2418,6 +3015,58 @@
     "from": null,
     "to": "viable",
     "reason": "Initial snapshot (ticket 02): the engine's answer on each recording as of main 049a41e, before tickets 03-08."
+   },
+   {
+    "date": "2026-09-29",
+    "from": "viable",
+    "to": "long_shot",
+    "reason": "engine 4: over half of decided outside PRs got no reply at all (Long shot, mostly_silent); matches the 29 Sep field tests (vscode 51%, bat 82%)"
+   }
+  ]
+ },
+ "simonw/llm": {
+  "verdict": "long_shot",
+  "rules": [
+   "sample_period",
+   "excluded",
+   "still_open",
+   "closed_silently",
+   "merges",
+   "mostly_silent"
+  ],
+  "numbers": {
+   "total_threads": 200,
+   "outsider_threads": 173,
+   "outsider_merged": 21,
+   "outsider_ignored": 93,
+   "median_first_response_hours": 135.3,
+   "bot_share": 0.0,
+   "distinct_outsider_authors": 96,
+   "distinct_merged_authors": 19,
+   "reviewed_share": 0.333,
+   "merge_rate": 0.143,
+   "merged_files_median": 3.0,
+   "merged_dirs_median": 2.0,
+   "merged_with_files": 42,
+   "outsider_answered": 30,
+   "first_timer_threads": 139,
+   "first_timer_merged": 19,
+   "distinct_first_timer_authors": 96,
+   "distinct_first_timer_merged_authors": 19,
+   "outsider_still_open": 26,
+   "outsider_closed_silently": 16,
+   "outsider_excluded": 4,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
+   "outsider_reviewed_share": 0.619,
+   "merged_threads": 42
+  },
+  "history": [
+   {
+    "date": "2026-09-29",
+    "from": null,
+    "to": "long_shot",
+    "reason": "added (29 Sep field tests): Long shot, as the testers checked by hand (react 65 of 100 unanswered; llm 93 of 147 unanswered; moment typical first reply ~59 days over its last 12 months)"
    }
   ]
  },
@@ -2449,6 +3098,8 @@
    "outsider_still_open": 0,
    "outsider_closed_silently": 80,
    "outsider_excluded": 4,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 0.125,
    "merged_threads": 8
   },
@@ -2498,6 +3149,8 @@
    "outsider_still_open": 30,
    "outsider_closed_silently": 1,
    "outsider_excluded": 2,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 119
   },
@@ -2548,6 +3201,8 @@
    "outsider_still_open": 43,
    "outsider_closed_silently": 1,
    "outsider_excluded": 6,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 0.984,
    "merged_threads": 287
   },
@@ -2590,6 +3245,8 @@
    "outsider_still_open": 27,
    "outsider_closed_silently": 21,
    "outsider_excluded": 0,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 306
   },
@@ -2629,6 +3286,8 @@
    "outsider_still_open": 0,
    "outsider_closed_silently": 0,
    "outsider_excluded": 0,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": null,
    "merged_threads": 0
   },
@@ -2649,26 +3308,28 @@
   ],
   "numbers": {
    "total_threads": 166,
-   "outsider_threads": 107,
+   "outsider_threads": 8,
    "outsider_merged": 0,
    "outsider_ignored": 1,
-   "median_first_response_hours": 2.8,
+   "median_first_response_hours": 1.7,
    "bot_share": 0.343,
-   "distinct_outsider_authors": 87,
+   "distinct_outsider_authors": 8,
    "distinct_merged_authors": 0,
    "reviewed_share": null,
    "merge_rate": 0.0,
    "merged_files_median": null,
    "merged_dirs_median": null,
    "merged_with_files": 0,
-   "outsider_answered": 37,
-   "first_timer_threads": 97,
+   "outsider_answered": 4,
+   "first_timer_threads": 7,
    "first_timer_merged": 0,
-   "distinct_first_timer_authors": 78,
+   "distinct_first_timer_authors": 7,
    "distinct_first_timer_merged_authors": 0,
    "outsider_still_open": 0,
-   "outsider_closed_silently": 69,
+   "outsider_closed_silently": 3,
    "outsider_excluded": 0,
+   "outsider_too_old": 99,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": null,
    "merged_threads": 0
   },
@@ -2688,13 +3349,13 @@
   ]
  },
  "vercel/next.js": {
-  "verdict": "insufficient_evidence",
+  "verdict": "not_viable",
   "rules": [
    "sample_period",
    "excluded",
    "still_open",
    "closed_silently",
-   "few_merges"
+   "long_odds"
   ],
   "numbers": {
    "total_threads": 350,
@@ -2718,6 +3379,8 @@
    "outsider_still_open": 34,
    "outsider_closed_silently": 2,
    "outsider_excluded": 26,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 124
   },
@@ -2733,6 +3396,12 @@
     "from": "viable",
     "to": "insufficient_evidence",
     "reason": "ticket 06: the 200 newest PRs span 4 days; of 33 outside PRs, 31 are still open and 18 more are drafts, leaving 2 decided (both merged, one author): too little to judge"
+   },
+   {
+    "date": "2026-09-29",
+    "from": "insufficient_evidence",
+    "to": "not_viable",
+    "reason": "engine 4: merge-rate floor now applies from 20 decided attempts whatever merged (next.js 1/30, excalidraw 1/121, semgrep 1/58, lazygit 2/62 with both from one person)"
    }
   ]
  },
@@ -2766,6 +3435,8 @@
    "outsider_still_open": 94,
    "outsider_closed_silently": 0,
    "outsider_excluded": 21,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 0.968,
    "merged_threads": 71
   },
@@ -2821,6 +3492,8 @@
    "outsider_still_open": 25,
    "outsider_closed_silently": 6,
    "outsider_excluded": 2,
+   "outsider_too_old": 0,
+   "outsider_landed_elsewhere": 0,
    "outsider_reviewed_share": 1.0,
    "merged_threads": 113
   },

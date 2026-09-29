@@ -3,7 +3,7 @@ import type { Lookup, Report, Repo, Tone } from "./types";
 
 export const CHIP_CLASS = "holt-chip";
 
-const TONES: readonly string[] = ["good", "bad", "warn"] satisfies Tone[];
+const TONES: readonly string[] = ["good", "bad", "warn", "neutral"] satisfies Tone[];
 const MAX_HEADLINE = 60;
 
 export type ChipState = { state: "loading" } | Lookup<Report>;
