@@ -8,8 +8,8 @@ export function MotionChoice({ initial }: { initial: Motion }) {
   const [value, setValue] = useState(initial);
   return (
     <fieldset>
-      <legend className="text-[0.95rem] font-semibold">Motion</legend>
-      <div className="mt-3 flex flex-wrap gap-2">
+      <legend className="sr-only">Motion</legend>
+      <div className="flex flex-wrap gap-2">
         {MOTION_OPTIONS.map((o) => (
           <label
             key={o.value}

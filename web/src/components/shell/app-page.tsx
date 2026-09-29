@@ -21,6 +21,21 @@ export function AppPageHeader({ title, lead, mood, children }: { title: React.Re
   );
 }
 
+/**
+ * Nothing to show: the cat, one sentence, and the one next thing to do
+ * (DASHBOARD.md, "Empty states"). The first action is the loud one; any
+ * others should be quiet text links. The cat lands once (globals.css).
+ */
+export function EmptyState({ title, mood = "thinking", children }: { title: React.ReactNode; mood?: CatMood; children?: React.ReactNode }) {
+  return (
+    <div className="app-empty">
+      <CatFace mood={mood} className="app-empty-cat" />
+      <p className="app-empty-line">{title}</p>
+      {children && <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3">{children}</div>}
+    </div>
+  );
+}
+
 export function SectionHead({ id, title, more, note }: { id: string; title: string; more?: { href: string; label: string }; note?: string | null }) {
   return (
     <div className="section-head">

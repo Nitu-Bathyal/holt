@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { afterSignIn, dismissedNudges, groupPulls, homeKind, homeNudge, outsidePulls, primaryAction, pullCountLine, statusLine } from "./home.ts";
+import { afterSignIn, alsoForYou, dismissedNudges, homeNudge, moveLead, moveTitle, nextMove, othersInFlight, outsidePulls, statusLine } from "./home.ts";
+import type { YourRepo } from "./your-repos.ts";
 import type { ContributionPR } from "./types";
 
 test("sign-in without somewhere to go back to lands on the home", () => {
@@ -26,26 +27,10 @@ test("an unsafe callbackUrl falls back to the home, never off-site", () => {
 });
 
 
-test("new until there's something to come back to: a check, a saved repo or a pull request", () => {
-  assert.equal(homeKind({ checked: 0, saved: 0, pulls: 0 }), "new");
-  assert.equal(homeKind({ checked: 1, saved: 0, pulls: 0 }), "returning");
-  assert.equal(homeKind({ checked: 0, saved: 2, pulls: 0 }), "returning");
-  assert.equal(homeKind({ checked: 0, saved: 0, pulls: 1 }), "returning");
-});
-
-test("one primary action: new asks for the profile, then finds a project; returning checks a repo", () => {
-  assert.equal(primaryAction("new", { hasProfile: false, skipped: false }), "profile");
-  assert.equal(primaryAction("new", { hasProfile: false, skipped: true }), "find");
-  assert.equal(primaryAction("new", { hasProfile: true, skipped: false }), "find");
-  // Server couldn't say: don't ask.
-  assert.equal(primaryAction("new", { hasProfile: null, skipped: false }), "find");
-  for (const hasProfile of [false, true, null]) assert.equal(primaryAction("returning", { hasProfile, skipped: false }), "check");
-});
-
-test("at most one nudge: the profile first, then GitHub, never repeating the primary action", () => {
-  const base = { primary: "check" as const, hasProfile: false, connected: false, dismissed: [] as string[] };
+test("at most one nudge: the profile first, then GitHub, never the question the page is asking", () => {
+  const base = { askingProfile: false, hasProfile: false, connected: false, dismissed: [] as string[] };
   assert.equal(homeNudge(base), "profile");
-  assert.equal(homeNudge({ ...base, primary: "profile" }), "github");
+  assert.equal(homeNudge({ ...base, askingProfile: true }), "github");
   assert.equal(homeNudge({ ...base, hasProfile: true }), "github");
   assert.equal(homeNudge({ ...base, hasProfile: null }), "github");
   assert.equal(homeNudge({ ...base, dismissed: ["profile"] }), "github");
@@ -77,17 +62,63 @@ test("pull requests to your own repos are left out, whatever the case", () => {
   assert.equal(outsidePulls(all, null).length, 2);
 });
 
-test("pull requests group by repo: waiting ones first, then the newest", () => {
-  const groups = groupPulls([
-    pull("a/old", 1, "merged", "2026-09-01"),
-    pull("b/busy", 2, "merged", "2026-09-10"),
-    pull("B/Busy", 3, "merged", "2026-09-12"),
-    pull("c/waiting", 4, "open", "2026-08-01"),
-    pull("b/busy", 5, "closed", "2026-09-05"),
-  ]);
-  assert.deepEqual(groups.map((g) => g.repo), ["c/waiting", "B/Busy", "a/old"]);
-  const busy = groups[1];
-  assert.deepEqual(busy.pulls.map((p) => p.number), [3, 2, 5]);
-  assert.equal(pullCountLine(busy), "3 pull requests: 2 merged, 1 closed, not merged");
-  assert.equal(pullCountLine(groups[0]), "1 pull request: 1 waiting");
+const NOW = Date.parse("2026-10-05T12:00:00Z");
+const hoursAgo = (h: number) => new Date(NOW - h * 3_600_000).toISOString();
+const pr = (repo: string, state: ContributionPR["state"], openedHoursAgo: number, over: Partial<ContributionPR> = {}): ContributionPR => ({
+  repo, number: openedHoursAgo, state, title: `PR to ${repo}`, url: `https://github.com/${repo}/pull/${openedHoursAgo}`, draft: false,
+  created_at: hoursAgo(openedHoursAgo), closed_at: null, merged_at: null, found_via_holt: false, counted: true, not_counted_because: null,
+  verdict: { verdict: "viable", headline: "Worth your time", tone: "good", checked_at: hoursAgo(1), first_reply_hours: 15 },
+  ...over,
+} as ContributionPR);
+const repo = (name: string, tone: YourRepo["tone"], saved: boolean): YourRepo => ({
+  repo: name, savedAt: saved ? hoursAgo(10) : null, checkedAt: saved ? null : hoursAgo(10), ai: false,
+  headline: tone === "good" ? "Worth your time" : "Not worth your time", tone, stats: null, at: hoursAgo(10),
+});
+
+test("the next move: a fresh merge, then an open PR, then a repo worth your time, then finding one", () => {
+  const merged = pr("NixOS/nixpkgs", "merged", 200, { merged_at: hoursAgo(20) });
+  const open = pr("home-assistant/core", "open", 50);
+  const worth = repo("pallets/click", "good", true);
+  let m = nextMove({ pulls: [merged, open], repos: [worth], now: NOW });
+  assert.equal(m.kind, "merged");
+  assert.equal(moveTitle(m), "NixOS/nixpkgs *merged your PR.*");
+  assert.equal(moveLead(m), "PR to NixOS/nixpkgs. That's your 1st merged PR this year.");
+  // Three days on, the open PR leads.
+  m = nextMove({ pulls: [{ ...merged, merged_at: hoursAgo(80) }, open], repos: [worth], now: NOW });
+  assert.equal(m.kind, "waiting");
+  assert.equal(m.step, 3);
+  assert.equal(moveTitle(m), "Your PR to home-assistant/core has *waited 2 days.*");
+  assert.equal(moveLead(m), "Replies there usually come within 15 hours.");
+  m = nextMove({ pulls: [], repos: [repo("x/checked", "good", false), worth], now: NOW });
+  assert.deepEqual(m, { kind: "issue", step: 1, repo: "pallets/click" }); // saved beats checked
+  assert.equal(moveTitle(m), "Next: pick an issue in *click.*");
+  m = nextMove({ pulls: [], repos: [repo("pallets/flask", "bad", true)], now: NOW });
+  assert.equal(moveTitle(m), "Let's find your *first repo.*");
+  m = nextMove({ pulls: [pr("octo/old", "closed", 900)], repos: [], now: NOW });
+  assert.equal(moveTitle(m), "Let's find your *next repo.*");
+});
+
+test("waiting: the most overdue PR leads; within the usual time it says so", () => {
+  const fine = pr("a/fine", "open", 5);
+  const late = pr("b/late", "open", 40);
+  const m = nextMove({ pulls: [fine, late], repos: [], now: NOW });
+  assert.equal(m.kind === "waiting" && m.wait.pr.repo, "b/late");
+  const calm = nextMove({ pulls: [fine], repos: [], now: NOW });
+  assert.equal(moveTitle(calm), "Your PR to a/fine is *waiting.*");
+  assert.equal(moveLead(calm), "It's been 5 hours. Replies there usually come within 15 hours.");
+  const unknown = nextMove({ pulls: [pr("c/new", "open", 30, { verdict: null })], repos: [], now: NOW });
+  assert.equal(moveTitle(unknown), "Your PR to c/new has *waited about a day.*");
+  assert.equal(moveLead(unknown), null);
+});
+
+test("also for you: other late PRs and saved repos that turned; in flight: the rest", () => {
+  const lead = pr("b/late", "open", 60);
+  const alsoLate = pr("c/late", "open", 40);
+  const fine = pr("a/fine", "open", 5);
+  const pulls = [lead, alsoLate, fine];
+  const repos = [repo("pallets/flask", "bad", true), repo("x/checked-bad", "bad", false)];
+  const m = nextMove({ pulls, repos, now: NOW });
+  const also = alsoForYou(m, { pulls, repos, now: NOW });
+  assert.deepEqual(also.map((a) => (a.kind === "late" ? a.wait.pr.repo : a.repo.repo)), ["c/late", "pallets/flask"]);
+  assert.deepEqual(othersInFlight(m, pulls, NOW).map((w) => w.pr.repo), ["a/fine"]);
 });

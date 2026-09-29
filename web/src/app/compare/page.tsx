@@ -4,16 +4,16 @@ import { CompareLive } from "@/components/compare/compare-live";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getReport } from "@/lib/api";
-import { compareHref as href, EXAMPLE_POOL, leaders, MAX, parseList, SUGGESTIONS, type Lead } from "@/lib/compare";
+import { compareHref as href, compareTitle, EXAMPLE_POOL, leaders, MAX, parseList, SUGGESTIONS, type Lead } from "@/lib/compare";
 import type { Report } from "@/lib/types";
-import { PageHead } from "@/components/page-head";
 import { PageTransition } from "@/components/motion/page-transition";
+import { AppPageHeader } from "@/components/shell/app-page";
 import { SignInToCheck } from "@/components/sign-in-to-check";
 import { currentUser } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "Compare repositories",
-  description: "Put a few repositories side by side and see which one will actually review your first pull request.",
+  description: "Put up to four repos side by side and see which one reviews and merges outside pull requests.",
 };
 
 const short = (list: string[]) => list.map((r) => r.split("/")[1]).join(" vs ");
@@ -39,47 +39,45 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
   const leadsFor = (i: number) => (Object.keys(lead) as Lead[]).filter((k) => lead[k].includes(i));
   const list = shown.map((s) => s.repo);
 
+  const title = compareTitle(all.length > 0, shown.map(({ r, repo }) => (r.ok ? r.data.repo : repo)), lead);
+
   return (
     <PageTransition>
-      <>
-      <PageHead compact>
-        <h1 className="text-[clamp(1.45rem,3.4vw,2.1rem)] font-semibold leading-tight tracking-tight">Which one will review your pull request?</h1>
-        <p className="mt-2 hidden max-w-2xl font-sans text-[0.95rem] text-muted sm:block">Up to {MAX} repos. Same rules, same numbers.</p>
+      <div className="app-page">
+        <AppPageHeader title={title} mood={shown.length ? "ready" : "thinking"}>
+          <form action="/compare" method="get" className="mt-6 grid max-w-2xl grid-cols-[1fr_auto] border border-line-strong bg-panel shadow-soft focus-within:border-blue">
+            <input type="hidden" name="repos" value={all.join(",")} />
+            <label htmlFor="add" className="sr-only">Add repositories</label>
+            <input
+              id="add"
+              name="add"
+              placeholder={all.length >= MAX ? "remove one to add another" : all.length ? "add another: owner/name or URL" : "owner/name, owner/name… or GitHub URLs"}
+              disabled={all.length >= MAX}
+              autoFocus={!all.length}
+              autoComplete="off"
+              autoCapitalize="none"
+              spellCheck={false}
+              className="h-12 min-w-0 bg-transparent px-4 text-ink outline-none placeholder:text-faint"
+            />
+            <button type="submit" disabled={all.length >= MAX} className="btn-primary m-1 min-h-10">{all.length ? "add" : "compare"}</button>
+          </form>
+          {!all.length && (
+            <p className="mt-3 flex flex-wrap items-center gap-2 text-[0.85rem] text-faint">
+              <span>or try</span>
+              {SUGGESTIONS.map((s) => (
+                <Link key={s.label} href={href(s.repos)} className="border border-line-strong px-2.5 py-1 text-muted hover:border-blue hover:text-ink">
+                  {s.label}
+                </Link>
+              ))}
+            </p>
+          )}
+        </AppPageHeader>
 
-        <form action="/compare" method="get" className="mt-5 grid max-w-2xl grid-cols-[1fr_auto] border border-line-strong bg-panel shadow-soft focus-within:border-blue">
-          <input type="hidden" name="repos" value={all.join(",")} />
-          <label htmlFor="add" className="sr-only">Add repositories</label>
-          <input
-            id="add"
-            name="add"
-            placeholder={all.length >= MAX ? "remove one to add another" : all.length ? "add another: owner/name or URL" : "owner/name, owner/name… or GitHub URLs"}
-            disabled={all.length >= MAX}
-            autoFocus={!all.length}
-            autoComplete="off"
-            autoCapitalize="none"
-            spellCheck={false}
-            className="h-12 min-w-0 bg-transparent px-4 text-ink outline-none placeholder:text-faint"
-          />
-          <button type="submit" disabled={all.length >= MAX} className="btn-primary m-1 min-h-10">{all.length ? "add" : "compare"}</button>
-        </form>
-        {!all.length && (
-          <p className="mt-3 flex flex-wrap items-center gap-2 text-[0.85rem] text-faint">
-            <span>or try</span>
-            {SUGGESTIONS.map((s) => (
-              <Link key={s.label} href={href(s.repos)} className="border border-line-strong px-2.5 py-1 text-muted hover:border-blue hover:text-ink">
-                {s.label}
-              </Link>
-            ))}
-          </p>
-        )}
-      </PageHead>
-
-      <div className="wrap py-6 sm:py-8">
         {shown.length > 0 && (
           <p className="mb-4 text-[0.87rem] text-faint">
             {all.length
-              ? <>▲ marks the best of these on each number.{all.length < MAX && " Add another above."}</>
-              : <>Example: <Link href={href(list)} className="text-link">{short(list)}</Link>. ▲ marks the best of these on each number.</>}
+              ? <>▲ best of these on each number.</>
+              : <>Example: <Link href={href(list)} className="text-link">{short(list)}</Link>. ▲ best of these on each number.</>}
           </p>
         )}
         {shown.length === 0 ? (
@@ -104,7 +102,6 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
           </ul>
         )}
       </div>
-      </>
     </PageTransition>
   );
 }

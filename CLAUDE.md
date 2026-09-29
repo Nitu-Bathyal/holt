@@ -3,8 +3,9 @@
 Holt tells a would-be open-source contributor whether a GitHub repository is
 worth their time. It reads recent PR history (do outsiders get replies? get
 merged? where does their work land?) and computes a deterministic verdict:
-**Worth your time / Not worth your time / Not enough evidence**. A model can
-add a written, cited explanation; it never chooses the verdict.
+**Worth your time / Long shot / Not worth your time / Not enough evidence /
+Personal project**. A model can add a written, cited explanation; it never
+chooses the verdict.
 
 It started as a competition CLI/TUI (micro1 Frontier Engineering Challenge,
 "most useful real-world workflow"). It is now being relaunched as an

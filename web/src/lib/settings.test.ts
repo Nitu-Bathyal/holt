@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { legacySettingsHref, SECTIONS } from "./settings.ts";
+import { RETIRED } from "./shell.ts";
+import { connectFailed, CONNECT_GITHUB, legacySettingsHref, SECTIONS } from "./settings.ts";
 
 test("old anchors open their section", () => {
   assert.equal(legacySettingsHref("#profile", ""), "/settings/profile");
@@ -38,4 +39,9 @@ test("plain /settings and unknown anchors stay on the overview", () => {
 
 test("every section lives under /settings", () => {
   for (const s of SECTIONS) assert.equal(s.href, `/settings/${s.id}`);
+});
+
+test("connecting GitHub happens in Accounts, and /connect lands there", () => {
+  assert.equal(RETIRED["/connect"], CONNECT_GITHUB);
+  assert.equal(connectFailed("adult"), "/settings/accounts?connect=adult#github");
 });

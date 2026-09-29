@@ -1,18 +1,10 @@
 import { fromFind } from "@/lib/repo-card";
 import type { FindResult } from "@/lib/types";
-import { CatFace } from "../cat-face";
 import { RepoGrid } from "../repo-card/repo-grid";
+import { EmptyState } from "../shell/app-page";
 
-/** Find results as compact cards; each opens into the focus view with its starter issues. */
-export function FindResults({ results, days, saved }: { results: FindResult[]; days: number; saved?: string[] | null }) {
-  if (!results.length) {
-    return (
-      <div className="border border-dashed border-line-strong p-8 text-center">
-        <CatFace mood="thinking" className="text-[1.6rem]" />
-        <p className="mt-4 text-[1.1rem] font-semibold">No welcoming repos matched all of that.</p>
-        <p className="mt-2 font-sans text-muted">Try another language, or turn off the Hacktoberfest filter.</p>
-      </div>
-    );
-  }
+/** Find results as compact cards; each opens into the focus view with its starter issues. `empty` is the one thing to try when there are none. */
+export function FindResults({ results, days, saved, empty }: { results: FindResult[]; days: number; saved?: string[] | null; empty?: React.ReactNode }) {
+  if (!results.length) return <EmptyState title="No welcoming repos match that yet.">{empty}</EmptyState>;
   return <RepoGrid repos={results.map(fromFind)} days={days} saved={saved} />;
 }

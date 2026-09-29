@@ -1,41 +1,85 @@
-// GitHub in settings. Accounts shows the connection (connect, disconnect);
-// Privacy shows the statistics switch. Connecting itself happens on /connect,
-// which shows the notice and the 18+ box.
+// GitHub in settings. Accounts shows the connection: the connect form (the
+// notice and the 18+ box) until it's connected, then who and disconnect.
+// Privacy shows the statistics switch.
 import Link from "next/link";
-import { disconnect, setStats } from "@/app/connect/actions";
+import { connect, disconnect, setStats } from "@/app/settings/accounts/actions";
 import { shortDate } from "@/lib/format";
+import type { ConnectError } from "@/lib/settings";
 import type { GitHubConnection } from "@/lib/types";
 
-/** The one plain line people agree to by connecting. Shown on /connect and in settings. */
+/** The one plain line people agree to by connecting. Shown on the connect form and in Privacy. */
 export const STATS_NOTICE =
   "Connecting lets Holt track your public contributions and include them anonymously in repo statistics (shown only when 5+ people contribute).";
 
+const CONNECT_ERRORS: Record<ConnectError, string> = {
+  adult: "Connecting GitHub is for people 18 or older. Tick the box to go on. Reports stay open to everyone.",
+  taken: "That GitHub account is already connected to another Holt account. Sign in with that one instead.",
+  link: "GitHub didn't confirm your account. Try again.",
+  unavailable: "Connecting GitHub isn't set up on this server.",
+  save: "That didn't connect. Try again in a minute.",
+};
+
 type Account = GitHubConnection["account"];
 
-export function GitHubConnectionCard({ acct }: { acct: Account }) {
-  if (!acct) {
-    return (
-      <div className="border border-line-strong bg-panel p-5 shadow-soft">
-        <p className="font-semibold">GitHub isn&apos;t connected</p>
-        <p className="prose-sans mt-1 text-[0.92rem] text-muted">
-          Connect it to see your public PRs with Holt&apos;s verdict on each repo, and get picks from where they got merged.
-        </p>
-        <Link href="/connect" className="btn-primary mt-4 inline-flex">connect GitHub</Link>
+/**
+ * Not connected: the consent and the two choices. `viaGitHub` when this
+ * person signs in some other way, so GitHub has to confirm the account
+ * first; `canLink` when this server can ask it to.
+ */
+export function ConnectGitHubForm({ viaGitHub, canLink, error }: { viaGitHub: boolean; canLink: boolean; error?: string }) {
+  const message = error && Object.hasOwn(CONNECT_ERRORS, error) ? CONNECT_ERRORS[error as ConnectError] : null;
+  return (
+    <form action={connect} className="py-4 sm:px-3">
+      {message && <p role="alert" className="mb-5 border border-orange/50 bg-orange/10 px-4 py-3 font-sans text-[0.9rem] text-orange">{message}</p>}
+      <p className="font-sans text-[0.95rem]">See your public PRs here, and get picks from where they got merged.</p>
+      <ul className="prose-sans mt-4 list-disc space-y-1.5 pl-5 text-[0.92rem] text-muted">
+        <li>Holt reads only <strong>public</strong> data about your account, with its own access. It can&apos;t touch your repos and never posts, comments or opens anything as you.</li>
+        {viaGitHub && <li>GitHub asks you once to confirm which account is yours. Holt gets what GitHub sign-in gets: your public profile and email.</li>}
+        <li>Disconnect any time here. That deletes the connection and the list of repos you viewed.</li>
+      </ul>
+
+      <p className="mt-5 border-l-2 border-blue pl-4 text-[0.95rem] font-semibold">{STATS_NOTICE}</p>
+
+      <fieldset className="mt-5 space-y-3">
+        <legend className="sr-only">Your choices</legend>
+        <label className="flex min-h-11 cursor-pointer items-start gap-3 text-[0.95rem]">
+          <input type="checkbox" name="stats_opt_out" className="mt-1 size-4 accent-blue" />
+          <span>
+            <strong>Don&apos;t include me in statistics</strong>
+            <span className="block text-[0.89rem] text-muted">Your contributions stay out of every repo&apos;s numbers. Change it later in Privacy.</span>
+          </span>
+        </label>
+        <label className="flex min-h-11 cursor-pointer items-start gap-3 text-[0.95rem]">
+          <input type="checkbox" name="adult" required className="mt-1 size-4 accent-blue" />
+          <span><strong>I&apos;m 18 or older</strong></span>
+        </label>
+      </fieldset>
+
+      <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2">
+        <button type="submit" className="btn-primary" disabled={viaGitHub && !canLink}>
+          {viaGitHub ? "continue to GitHub" : "connect GitHub"}
+        </button>
+        <Link href="/privacy#connect-github" className="text-[0.87rem] text-muted hover:text-ink">what Holt keeps</Link>
       </div>
-    );
-  }
+      {viaGitHub && !canLink && <p className="mt-3 font-sans text-[0.89rem] text-faint">{CONNECT_ERRORS.unavailable}</p>}
+    </form>
+  );
+}
+
+/** Connected: who, since when, and disconnect. */
+export function GitHubConnectionRow({ acct }: { acct: NonNullable<Account> }) {
   return (
     <>
-      <div className="flex flex-wrap items-center justify-between gap-3 border border-green/50 bg-green/10 p-4">
-        <div className="min-w-0 text-[0.89rem]">
-          <p className="text-green">
-            ● connected as{" "}
+      <div className="app-row flex flex-wrap justify-between" data-rule style={{ "--rule": "var(--green)" } as React.CSSProperties}>
+        <div className="min-w-0 pl-2 text-[0.9rem]">
+          <p>
+            <span className="text-green">connected as </span>
             <a href={`https://github.com/${acct.login}`} target="_blank" rel="noopener noreferrer" className="font-semibold [overflow-wrap:anywhere] hover:underline">
               @{acct.login}
             </a>
+            <span className="text-muted"> · since {shortDate(acct.connected_at)}</span>
           </p>
-          <p className="mt-1 text-muted">since {shortDate(acct.connected_at)}</p>
-          <Link href="/me/contributions" className="mt-2 inline-block text-link">see your contributions →</Link>
+          <Link href="/me/contributions" className="mt-1 inline-flex min-h-11 items-center text-link sm:min-h-0">your pull requests →</Link>
         </div>
         <form action={disconnect}>
           <button type="submit" className="btn-ghost text-orange">disconnect</button>

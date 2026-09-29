@@ -34,18 +34,25 @@ export function boardTitle(sort: DiscoverSort, language: string | null): string 
   return `Most welcoming ${lang}repos`;
 }
 
-export function boardIntro(sort: DiscoverSort, trendingMin: number): string {
-  if (sort === "stars") return "Every repo Holt has checked, biggest first, with its verdict. A famous project isn't always a welcoming one.";
-  if (sort === "trending")
-    return `Repos that at least ${trendingMin} people checked on Holt in the last 7 days. Each person counts once a day.`;
-  return "Only repos that are worth your time, ranked by how many outside pull requests get merged and how fast someone replies. No AI picks the order, and nobody can pay to be here.";
-}
-
 export function emptyText(sort: DiscoverSort, language: string | null, topic: string | null, trendingMin: number): string {
   const repo = `${language ? `${language} ` : ""}repo${topic ? ` tagged "${topic}"` : ""}`;
   if (sort === "trending") return `No ${repo} has been checked by ${trendingMin} or more people this week yet.`;
   if (sort === "welcoming") return `No ${repo} Holt has checked is worth your time yet.`;
   return `Holt hasn't checked a ${repo} yet.`;
+}
+
+/**
+ * An empty board's ways out, widest-first as the visitor would try them: drop
+ * the topic, then the language, then go back to most welcoming. With nothing
+ * to drop, check a repo (it joins the boards once it has a verdict).
+ */
+export function widenBoard(opts: { sort: DiscoverSort; language: string | null; topic: string | null }): { href: string; label: string }[] {
+  const { sort, language, topic } = opts;
+  const out: { href: string; label: string }[] = [];
+  if (topic) out.push({ href: boardHref({ sort, language }), label: "all topics" });
+  if (language) out.push({ href: boardHref({ sort, topic }), label: "any language" });
+  if (sort !== "welcoming") out.push({ href: boardHref({ language, topic }), label: "most welcoming" });
+  return out.length ? out : [{ href: "/", label: "check a repo" }];
 }
 
 /** The board's path: /discover or /discover/<language>, with sort and topic kept. */

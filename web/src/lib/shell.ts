@@ -75,17 +75,16 @@ export const CHECK_HREF = "/me#check";
 /**
  * The five places a signed-in person goes (docs/design/DASHBOARD.md). The
  * check box lives in the top bar, account things in the avatar menu.
- * Hacktoberfest shows in October until it becomes a tab of Find a project.
+ * Hacktoberfest is a tab of Find a project (lib/find-tabs.ts).
  */
-export function sidebarGroups(opts: { hacktoberfest: boolean }): NavGroup[] {
+export function sidebarGroups(): NavGroup[] {
   const items: NavItem[] = [
     { id: "home", label: "Home", href: "/me", icon: "home" },
-    { id: "find", label: "Find a project", href: "/find", icon: "find", also: ["/discover"] },
+    { id: "find", label: "Find a project", href: "/find", icon: "find", also: ["/discover", "/hacktoberfest"] },
     { id: "prs", label: "Your pull requests", href: "/me/contributions", icon: "pr" },
-    { id: "repos", label: "Your repos", href: "/me/saved", icon: "saved", also: ["/me/history"] },
+    { id: "repos", label: "Your repos", href: "/me/repos", icon: "saved" },
     { id: "compare", label: "Compare", href: "/compare", icon: "compare" },
   ];
-  if (opts.hacktoberfest) items.splice(2, 0, { id: "hacktoberfest", label: "Hacktoberfest", href: "/hacktoberfest", icon: "leaf" });
   return [{ label: null, items }];
 }
 
@@ -111,6 +110,9 @@ export function activeItem(groups: NavGroup[], pathname: string): string | null 
 /** Old addresses and where they went. */
 export const RETIRED: Record<string, string> = {
   "/for-you": "/me#picks",
+  "/me/saved": "/me/repos?show=saved",
+  "/me/history": "/me/repos?show=checked",
+  "/connect": "/settings/accounts#github",
 };
 
 /** Where an old address now lives, or null. A trailing slash doesn't matter. */
