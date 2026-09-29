@@ -11,15 +11,22 @@ module does two things and keeps them apart:
   default screen is `discover`'s free pass (one page of pull-request threads,
   arithmetic only, no model); the web server can pass its cached full verdict
   instead.
-* **Some issues are never listed**: ones someone has already taken (assigned,
-  labelled "taken" or "in progress", or claimed in a recent comment), ones
-  opened more than a year ago, and batches one account filed from a template
-  or a script (the "add a Japanese idiom" pattern). `find` also skips
-  repositories that are both brand new and tiny.
+* **Some issues are never listed**: ones already solved (a linked pull request
+  was merged, even if the issue stayed open), ones someone has taken (an
+  assignee who is active on it, or a "taken" or "in progress" label), things
+  that aren't tasks ("looking for co-maintainers", tracking and meta issues,
+  epics), ones opened more than a year ago, and batches one account filed from
+  a template or a script (the "add a Japanese idiom" pattern). `find` also
+  skips repositories that are both brand new and tiny.
+* **Every listed issue says who is already on it**: distinct people with an
+  open pull request, a recent "can I work on this?", or an assignment that
+  went quiet (`on_it_text`). Issues nobody is on come first; an issue with
+  `CROWDED` people on it is not listed.
 * **The issue score only orders.** It is a transparent sum over labels,
-  recency, discussion size and where outsider work has landed, and every point
-  it adds comes with a plain-English line in `why`. It makes no claim beyond
-  that list.
+  recency, docs or tests work, special setup (Windows, a GPU, a cloud
+  account, compiler internals), discussion size and where outsider work has
+  landed, and every point it adds comes with a plain-English line in `why`. It
+  makes no claim beyond that list.
 
 Holt is read-only toward GitHub: everything here is a query.
 """
@@ -68,11 +75,33 @@ class StarterIssue:
     created_at: str
     comments: int
     why: list[str]
+    # Who is already on it: distinct people with an open pull request, a
+    # recent "can I work on this?", or an assignment gone quiet.
+    people: int = 0
+    open_prs: int = 0
+
+    @property
+    def on_it(self) -> str:
+        return on_it_text(self.people, self.open_prs)
 
     def as_dict(self) -> dict[str, Any]:
         return {"number": self.number, "title": self.title, "url": self.url,
                 "labels": list(self.labels), "created_at": self.created_at,
-                "comments": self.comments, "why": list(self.why)}
+                "comments": self.comments, "why": list(self.why),
+                "people": self.people, "open_prs": self.open_prs, "on_it": self.on_it}
+
+
+def on_it_text(people: int, open_prs: int) -> str:
+    """How many are already on an issue, in words: "Nobody on it yet", "1 open
+    pull request", "2 people already on it, 1 open pull request". The web and
+    the CLI both show this line."""
+    if not people and not open_prs:
+        return "Nobody on it yet"
+    prs = f"{open_prs} open pull request{'s' if open_prs != 1 else ''}"
+    if people <= open_prs:
+        return prs
+    who = f"{people} {'person' if people == 1 else 'people'} already on it"
+    return f"{who}, {prs}" if open_prs else who
 
 
 @dataclass(slots=True)
@@ -151,16 +180,20 @@ fragment StarterFields on Issue {
   author { login }
   repository { nameWithOwner isArchived }
   labels(first:15) { nodes { name } }
-  assignees { totalCount }
+  assignees(first:5) { totalCount nodes { login } }
   comments { totalCount }
   recent: comments(last:10) { nodes { createdAt body author { login } } }
-  closedByPullRequestsReferences(first:5, includeClosedPrs:false) { nodes { state } }
-  timelineItems(last:10, itemTypes:[CROSS_REFERENCED_EVENT, CONNECTED_EVENT]) {
+  closedByPullRequestsReferences(first:5, includeClosedPrs:true) { nodes { ...LinkedPR } }
+  timelineItems(last:15, itemTypes:[CROSS_REFERENCED_EVENT, CONNECTED_EVENT, ASSIGNED_EVENT]) {
     nodes {
-      ... on CrossReferencedEvent { source { ... on PullRequest { state } } }
-      ... on ConnectedEvent { subject { ... on PullRequest { state } } }
+      ... on CrossReferencedEvent { source { ... on PullRequest { ...LinkedPR } } }
+      ... on ConnectedEvent { subject { ... on PullRequest { ...LinkedPR } } }
+      ... on AssignedEvent { createdAt assignee { ... on User { login } } }
     }
   }
+}
+fragment LinkedPR on PullRequest {
+  number state author { login } repository { nameWithOwner }
 }
 """
 
@@ -231,6 +264,9 @@ LONG_DISCUSSION = 12
 # A claim ("can I work on this?") younger than this means the issue is taken;
 # older, it is probably abandoned.
 CLAIM_FRESH_DAYS = 45
+# This many people already on an issue is a stampede: another newcomer joining
+# it will likely waste their time, so it is not listed.
+CROWDED = 3
 # An issue opened longer ago than this has usually been passed over for a
 # reason, whatever its label says.
 MAX_ISSUE_AGE_DAYS = 365
@@ -277,6 +313,48 @@ _RELEASE = re.compile(r"\b(no longer (working|able|have time)|not working on (th
                       r"(free|open|available|up for grabs) (again|for anyone)|"
                       r"anyone (can|is welcome to) (take|pick|work))\b", re.I)
 
+# Not a task at all: calls for maintainers, tracking and meta issues, epics.
+_NON_TASK_TITLE = re.compile(
+    r"\b(looking for|seeking|searching for|call for|recruiting|need(ing)?)"
+    r"( a| new| more| additional)* (co-?)?maintainers?\b|"
+    r"\b(co-?)?maintainers? (wanted|needed)\b|\btracking issue\b|\bumbrella issue\b|"
+    r"\bmeta[- ]issue\b|^\W*(meta|epic|tracking|umbrella|roadmap)\b", re.I)
+_NON_TASK_LABEL = re.compile(r"\b(meta|tracking( issue)?|tracker|epic|umbrella|roadmap|"
+                             r"announcement)\b")
+# Labels saying it is harder than a first issue.
+_HARD = re.compile(r"\b(hard|difficult|complex|advanced|expert|difficulty (medium|high)|"
+                   r"complexity (medium|high)|size (l|xl|large)|e medium|effort (high|large))\b")
+# Setup a beginner usually doesn't have, spotted in the title or a label. Each
+# is (the line shown, title pattern, label pattern).
+_SETUP = [
+    ("Needs Windows",
+     re.compile(r"\b(on|in|under|for) windows\b|^\W*windows\s*[:\]]|\bwindows[ -]?(1[01]|7|8|xp|"
+                r"only|specific|terminal|registry|defender)\b|\bwin(32|64)\b|\bwsl2?\b|"
+                r"\bpowershell\b", re.I),
+     re.compile(r"\b(windows|win32|wsl)\b")),
+    ("Needs a Mac",
+     re.compile(r"\b(macos|mac os|os x|osx|xcode|on (a )?mac|ios|ipados|swiftui)\b", re.I),
+     re.compile(r"\b(macos|mac|osx|darwin|ios)\b")),
+    ("Needs a GPU",
+     re.compile(r"\b(gpus?|cuda|rocm|nvidia|vulkan|directx|opengl|tpus?)\b", re.I),
+     re.compile(r"\b(gpu|cuda|rocm|nvidia)\b")),
+    ("Needs special hardware",
+     re.compile(r"\b(hardware|firmware|bluetooth|usb|serial port|raspberry pi|arduino|"
+                r"printers?|microcontrollers?|fpga|sonos|chromecast|zigbee|z-wave)\b", re.I),
+     re.compile(r"\b(hardware|firmware|bluetooth|usb)\b")),
+    ("Needs a cloud account",
+     re.compile(r"\b(aws|s3|gcp|google cloud|azure|ec2|bigquery|dynamodb)\b", re.I),
+     re.compile(r"\b(aws|s3|gcp|azure)\b")),
+    ("Needs a Kubernetes cluster",
+     re.compile(r"\b(kubernetes|k8s|kubectl|openshift|eks|gke|aks)\b", re.I),
+     re.compile(r"\b(kubernetes|k8s)\b")),
+    ("Deep compiler work",
+     re.compile(r"\b(compiler|type ?checker|typecheck\w*|codegen|code generation|llvm|"
+                r"borrow checker|ambient|declaration emit|type inference|bytecode|jit|"
+                r"monomorphi[sz]ation|register allocation)\b", re.I),
+     re.compile(r"\b(compiler|codegen|type checker|typechecker|llvm)\b")),
+]
+
 # Directory names too generic to count as a mention on their own.
 _GENERIC_SEGMENTS = {"src", "lib", "libs", "source", "main", "core", "app", "apps",
                      "pkg", "pkgs", "packages", "internal", "(root)", "java", "python",
@@ -320,7 +398,7 @@ _AREA_LABELS = {
     "translations": re.compile(r"\b(translations?|i18n|l10n|locali[sz]ation)\b"),
 }
 _AREA_TITLES = {
-    "docs": re.compile(r"\b(docs?|documentation|readme|docstrings?|typos?|tutorial)\b", re.I),
+    "docs": re.compile(r"\b(docs?|document\w*|readme|docstrings?|typos?|tutorial)\b", re.I),
     "tests": re.compile(r"\b(tests?|testing|test coverage|unit tests?)\b", re.I),
     "design": re.compile(r"\b(ui|ux|css|styling|dark mode|layout|icons?|logo)\b", re.I),
     "translations": re.compile(r"\b(translat\w*|i18n|l10n|locali[sz]\w*)\b", re.I),
@@ -351,30 +429,96 @@ def _ts(value: str) -> datetime:
     return datetime.fromisoformat(value.replace("Z", "+00:00"))
 
 
-def _has_open_pr(node: dict[str, Any]) -> bool:
-    for pr in (node.get("closedByPullRequestsReferences") or {}).get("nodes") or []:
-        if pr and pr.get("state") == "OPEN":
-            return True
+def _linked_prs(node: dict[str, Any]) -> list[dict[str, Any]]:
+    """Pull requests in this repository that close or mention the issue.
+
+    A pull request in another repository ("see upstream #12") is not work on
+    this issue, so it is left out when its repository is known.
+    """
+    repo = ((node.get("repository") or {}).get("nameWithOwner") or "").lower()
+    prs = [pr for pr in (node.get("closedByPullRequestsReferences") or {}).get("nodes") or []
+           if pr]
     for item in (node.get("timelineItems") or {}).get("nodes") or []:
-        pr = (item or {}).get("source") or (item or {}).get("subject") or {}
-        if pr.get("state") == "OPEN":
-            return True
-    return False
-
-
-def _last_claim_age(node: dict[str, Any], as_of: datetime) -> float | None:
-    """Days since the latest recent comment asking to work on this, unless a
-    later comment handed it back."""
-    claimed: datetime | None = None
-    for c in (node.get("recent") or {}).get("nodes") or []:
-        if not c:
+        pr = (item or {}).get("source") or (item or {}).get("subject")
+        if pr and pr.get("state"):
+            prs.append(pr)
+    unique: dict[Any, dict[str, Any]] = {}
+    for pr in prs:
+        there = ((pr.get("repository") or {}).get("nameWithOwner") or "").lower()
+        if repo and there and there != repo:
             continue
+        # One pull request often shows up twice: as the closing reference and
+        # as a cross-reference.
+        unique.setdefault(pr.get("number") or (pr.get("state"), _login(pr)), pr)
+    return list(unique.values())
+
+
+def _login(thing: dict[str, Any] | None) -> str:
+    return (((thing or {}).get("author") or {}).get("login") or "").lower()
+
+
+def _live_claims(node: dict[str, Any]) -> dict[str, datetime]:
+    """Who asked to work on this in the recent comments, and when, minus claims
+    handed back. A release from the claimer drops their claim; a release from
+    anyone else ("feel free to take it") drops them all."""
+    claims: dict[str, datetime] = {}
+    comments = [c for c in (node.get("recent") or {}).get("nodes") or [] if c]
+    for i, c in enumerate(sorted(comments, key=lambda c: c["createdAt"])):
         body = c.get("body") or ""
+        who = _login(c) or f"#{i}"  # a deleted account is still someone
         if _CLAIM.search(body):
-            claimed = _ts(c["createdAt"])
-        elif claimed and _RELEASE.search(body):
-            claimed = None
-    return None if claimed is None else (as_of - claimed).total_seconds() / 86400
+            claims[who] = _ts(c["createdAt"])
+        elif claims and _RELEASE.search(body):
+            if who in claims:
+                del claims[who]
+            else:
+                claims.clear()
+    return claims
+
+
+@dataclass(slots=True)
+class OnIt:
+    people: int
+    open_prs: int
+    # Days since the latest claim too old to count, if any.
+    stale_claim_days: float | None
+
+
+def on_it(node: dict[str, Any], prs: Sequence[dict[str, Any]], as_of: datetime
+          ) -> OnIt | None:
+    """Who is already working on the issue, or None when it is taken: someone
+    assigned in the last `CLAIM_FRESH_DAYS` days, or an assignee who has
+    commented or opened a pull request since. An assignee who went quiet is
+    counted, not trusted."""
+    def age(when: datetime) -> float:
+        return (as_of - when).total_seconds() / 86400
+
+    open_prs = [pr for pr in prs if pr.get("state") == "OPEN"]
+    authors = {_login(pr) or f"pr#{i}" for i, pr in enumerate(open_prs)}
+    claims = _live_claims(node)
+    fresh = {who for who, when in claims.items() if age(when) <= CLAIM_FRESH_DAYS}
+    stale = [age(when) for who, when in claims.items() if who not in fresh]
+    people = authors | fresh
+
+    assignees = node.get("assignees") or {}
+    if assignees.get("totalCount"):
+        logins = {(n.get("login") or "").lower() for n in assignees.get("nodes") or [] if n}
+        if not logins:
+            return None  # can't tell who, so can't tell they went quiet
+        assigned_at: dict[str, datetime] = {}
+        for item in (node.get("timelineItems") or {}).get("nodes") or []:
+            who = ((item or {}).get("assignee") or {}).get("login")
+            if who and item.get("createdAt"):
+                assigned_at[who.lower()] = _ts(item["createdAt"])
+        spoke = {_login(c) for c in (node.get("recent") or {}).get("nodes") or []
+                 if c and age(_ts(c["createdAt"])) <= CLAIM_FRESH_DAYS}
+        for who in logins:
+            if who in authors or who in spoke or (
+                    who in assigned_at and age(assigned_at[who]) <= CLAIM_FRESH_DAYS):
+                return None
+        people |= logins
+    return OnIt(people=len(people), open_prs=len(open_prs),
+                stale_claim_days=min(stale) if stale else None)
 
 
 def _title_words(title: str) -> list[str]:
@@ -476,11 +620,13 @@ def score_issue(node: dict[str, Any], as_of: datetime, *,
     not handed back) and issues opened over `MAX_ISSUE_AGE_DAYS` ago. Every
     point comes with a sentence in `why`, positives first.
     """
-    if (node.get("assignees") or {}).get("totalCount"):
-        return None
     if node.get("locked") or (node.get("repository") or {}).get("isArchived"):
         return None
-    if _has_open_pr(node):
+    prs = _linked_prs(node)
+    if any(pr.get("state") == "MERGED" for pr in prs):
+        return None  # solved, even if nobody closed the issue
+    busy = on_it(node, prs, as_of)
+    if busy is None or busy.people >= CROWDED:
         return None
     if (as_of - _ts(node["createdAt"])).days > MAX_ISSUE_AGE_DAYS:
         return None
@@ -493,8 +639,8 @@ def score_issue(node: dict[str, Any], as_of: datetime, *,
     kinds = label_kinds(labels)
     if kinds & {"not_ready", "taken"}:
         return None
-    claim_age = _last_claim_age(node, as_of)
-    if claim_age is not None and claim_age <= CLAIM_FRESH_DAYS:
+    if _NON_TASK_TITLE.search(node.get("title") or "") or any(
+            _NON_TASK_LABEL.search(_norm(label)) for label in labels):
         return None
     title = node.get("title") or ""
     body = (node.get("body") or "")[:MAX_BODY]
@@ -527,18 +673,41 @@ def score_issue(node: dict[str, Any], as_of: datetime, *,
         score += 1.5
         why.append(f"Looks like a small fix (about {match.group(0).lower()})")
 
+    small_fix = bool(why) and why[0].startswith("Looks like a small fix")
+    areas = issue_areas(labels, title)
+    if not small_fix and areas[0] in ("docs", "tests"):
+        score += 1
+        why.append(f"{areas[0].capitalize()} work")
+
+    if any(_HARD.search(_norm(label)) for label in labels):
+        score -= 2
+        cautions.append(f"Marked as harder (“{label_named(_HARD)}”)")
     repo = (node.get("repository") or {}).get("nameWithOwner", "")
+    whole_repo = re.sub(r"[^a-z0-9]+", " ", repo.lower())
+    normed = [_norm(label) for label in labels]
+    setup = [line for line, in_title, in_label in _SETUP
+             if (in_title.search(title) or any(in_label.search(n) for n in normed))
+             and not in_title.search(whole_repo)]  # a Kubernetes project needs a cluster
+    score -= 2 * min(len(setup), 2)
+    cautions += setup
+
     if landing and (area := _mentioned_area(f"{title}\n{body}", landing, repo)):
         score += 2
         why.append(f"Mentions {area.path}/, where {area.landed} of {area.attempted} "
                    "pull requests from outside contributors were merged")
 
+    opened = (as_of - _ts(node["createdAt"])).total_seconds() / 86400
+    if opened <= 30:
+        score += 1
+        why.append(f"Opened {_ago(opened)}")
     if idle <= 14:
         score += 1.5
-        why.append(f"Active recently (last update {_ago(idle)})")
+        if opened > 30:
+            why.append(f"Active recently (last update {_ago(idle)})")
     elif idle <= 60:
         score += 0.5
-        why.append(f"Updated {_ago(idle)}")
+        if opened > 30:
+            why.append(f"Updated {_ago(idle)}")
 
     if len(body) >= 200:
         score += 0.5
@@ -555,9 +724,13 @@ def score_issue(node: dict[str, Any], as_of: datetime, *,
         cautions.append(f"Long discussion ({comments} comments): it may be harder than "
                         "it looks")
 
-    if claim_age is not None:
-        cautions.append(f"Someone asked to work on this {_ago(claim_age)}; ask whether "
-                        "it is still free before you start")
+    if busy.people or busy.open_prs:
+        # Ordering puts these after every free issue; the points carry that
+        # into `find`, which weighs a repository by its best issues.
+        score -= 2 * min(max(busy.people, busy.open_prs), 3)
+    elif busy.stale_claim_days is not None:
+        cautions.append(f"Someone asked to work on this {_ago(busy.stale_claim_days)}; "
+                        "ask whether it is still free before you start")
 
     number = node["number"]
     issue = StarterIssue(
@@ -568,6 +741,8 @@ def score_issue(node: dict[str, Any], as_of: datetime, *,
         created_at=node["createdAt"],
         comments=comments,
         why=why + cautions,
+        people=busy.people,
+        open_prs=busy.open_prs,
     )
     return round(score, 2), issue
 
@@ -575,8 +750,8 @@ def score_issue(node: dict[str, Any], as_of: datetime, *,
 def rank(nodes: Iterable[dict[str, Any]], as_of: datetime, *,
          landing: Sequence[Area] = (), hacktoberfest: bool = False,
          limit: int = 20) -> list[tuple[float, StarterIssue]]:
-    """Deduplicate, drop farmed batches, score and sort. Ties go to the newer
-    issue, then the number. `nodes` are one repository's issues."""
+    """Deduplicate, drop farmed batches, score and sort: issues nobody is on
+    first, then by score. Ties go to the newer issue, then the number. `nodes` are one repository's issues."""
     unique: dict[int, dict[str, Any]] = {}
     for node in nodes:
         if node and "number" in node:
@@ -588,8 +763,8 @@ def rank(nodes: Iterable[dict[str, Any]], as_of: datetime, *,
             continue
         if result := score_issue(node, as_of, landing=landing, hacktoberfest=hacktoberfest):
             scored.append(result)
-    scored.sort(key=lambda pair: (-pair[0], -_ts(pair[1].created_at).timestamp(),
-                                  pair[1].number))
+    scored.sort(key=lambda pair: (bool(pair[1].people or pair[1].open_prs), -pair[0],
+                                  -_ts(pair[1].created_at).timestamp(), pair[1].number))
     return scored[:limit]
 
 
@@ -619,7 +794,7 @@ def starter_issues(repo: str, token: str | None, limit: int = 20,
                    as_of: datetime | None = None, *,
                    landing: Sequence[Area] = (), hacktoberfest: bool = False,
                    transport: GitHubGraphQL | None = None) -> list[StarterIssue]:
-    """Open, unassigned issues in `repo` that suit a newcomer, best first.
+    """Open issues in `repo` that suit a newcomer and nobody has taken, best first.
 
     One GraphQL call. `landing` (directories where outsider work merged) boosts
     issues that name them; pass it when you already have it.
@@ -890,6 +1065,7 @@ def render_issues(issues: Sequence[StarterIssue], indent: str = "") -> list[str]
     for issue in issues:
         lines.append(f"{indent}- #{issue.number} {issue.title}")
         lines.append(f"{indent}  {issue.url}")
+        lines.append(f"{indent}  {issue.on_it}")
         if issue.why:
             lines.append(f"{indent}  " + " · ".join(issue.why))
     return lines

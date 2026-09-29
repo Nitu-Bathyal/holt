@@ -57,6 +57,7 @@ function starterBadge(doc: Document, issue: StarterIssue): HTMLSpanElement {
   s.textContent = "Holt pick";
   const why = (issue.why ?? []).filter((w) => typeof w === "string").slice(0, 3);
   s.title = why.length ? `Good for a first contribution: ${why.join("; ")}` : "Good for a first contribution";
+  if (typeof issue.on_it === "string" && issue.on_it) s.title += `. ${issue.on_it}`;
   return s;
 }
 

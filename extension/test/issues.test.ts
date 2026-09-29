@@ -41,6 +41,13 @@ describe("markStarterIssues", () => {
     );
   });
 
+  it("says who is already on the issue", () => {
+    markStarterIssues(document, flask, [{ number: 101, why: ["Labelled good first issue"], on_it: "1 open pull request" }]);
+    expect((document.querySelector(".holt-starter") as HTMLElement).title).toBe(
+      "Good for a first contribution: Labelled good first issue. 1 open pull request",
+    );
+  });
+
   it("matches the repo case-insensitively", () => {
     expect(markStarterIssues(document, { owner: "Pallets", repo: "Flask" }, [{ number: 103 }])).toBe(1);
   });
