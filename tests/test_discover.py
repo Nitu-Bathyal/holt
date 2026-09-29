@@ -166,3 +166,13 @@ def test_the_merge_rate_floor_has_its_own_bucket():
 
     trace = [Rule("2 merged.", code="merges"), Rule("Only 2 of 60.", code="long_odds")]
     assert _categorise(Verdict.NOT_VIABLE, trace) == CAT_LONG_ODDS
+
+
+def test_long_shots_and_personal_projects_have_their_own_buckets():
+    from holt.discover import CAT_LONG_SHOT, CAT_PERSONAL, _categorise
+    from holt.report import Verdict
+    from holt.agent.verdict import Rule
+
+    assert _categorise(Verdict.LONG_SHOT, [Rule("x", code="merges"),
+                                           Rule("y", code="mostly_silent")]) == CAT_LONG_SHOT
+    assert _categorise(Verdict.PERSONAL, [Rule("z", code="personal")]) == CAT_PERSONAL

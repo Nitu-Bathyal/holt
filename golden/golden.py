@@ -47,7 +47,8 @@ RECORDINGS = HERE / "recordings"
 # github_graphql.SETTLED_TARGET).
 PAGES = 8
 
-LABEL = {"viable": "Worth", "not_viable": "Not worth", "insufficient_evidence": "Not enough"}
+LABEL = {"viable": "Worth", "long_shot": "Long shot", "not_viable": "Not worth",
+         "insufficient_evidence": "Not enough", "personal": "Personal"}
 
 
 def recording_path(repo: str, root: Path = RECORDINGS) -> Path:

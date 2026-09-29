@@ -6,6 +6,8 @@ test("only a passing repo is offered a badge", () => {
   assert.equal(badgeOffered({ verdict: "viable" }), true);
   assert.equal(badgeOffered({ verdict: "not_viable" }), false);
   assert.equal(badgeOffered({ verdict: "insufficient_evidence" }), false);
+  assert.equal(badgeOffered({ verdict: "long_shot" }), false);
+  assert.equal(badgeOffered({ verdict: "personal" }), false);
 });
 
 test("snippets point at the badge and the report", () => {
@@ -22,6 +24,7 @@ test("advice follows the rule that decided the verdict", () => {
   const slow = whatWouldChangeIt({ verdict: "not_viable", rule_codes: ["merges", "slow"] });
   assert.match(slow[0], /first reply/);
   assert.match(whatWouldChangeIt({ verdict: "insufficient_evidence", rule_codes: ["no_attempts"] }).join(" "), /good first issue/);
+  assert.match(whatWouldChangeIt({ verdict: "long_shot", rule_codes: ["merges", "mostly_silent"] })[0], /no reply/);
 });
 
 test("unknown or missing rule codes get general advice", () => {

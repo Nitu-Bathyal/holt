@@ -1,6 +1,7 @@
 # The signed-in home
 
-Status: **round 2, built** (28 Sep 2026). Round 1 (PR #123) put `/me` in
+Status: **round 2, built** (28 Sep 2026). **Superseded** for navigation and `/me`
+by [DASHBOARD.md](DASHBOARD.md) (29 Sep): the sidebar is five places now. Round 1 (PR #123) put `/me` in
 place. The user's verdict: a pile of unrelated boxes, and the signed-in pages
 bolted onto the nav at random. This redoes the navigation (two shells) and
 `/me`. What sign-in does and the `/` redirect stay as they are.

@@ -24,10 +24,10 @@ export function RepoFocus({ r, report, actions, topicBase }: { r: CardRepo; repo
           {r.description && <p className="mt-1.5 font-sans text-[0.95rem] text-muted">{r.description}</p>}
           <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2 text-[0.82rem] text-faint">
             <VerdictPill headline={r.headline} tone={r.tone} />
-            {r.language && (
+            {r.language && r.languageLabel && (
               <span className="flex items-center gap-1.5">
                 <LangDot color={langColor(r.language)} />
-                {r.language}
+                {r.languageLabel}
               </span>
             )}
             {r.stars != null && <span>★ {compact(r.stars)}<span className="sr-only"> stars</span></span>}

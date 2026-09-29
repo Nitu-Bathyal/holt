@@ -20,7 +20,7 @@ interface Seed {
   landing: Report["landing"];
   never_landed: Report["never_landed"];
   evidence: [kind: string, pr: number, text: string, quote: string | null][];
-  issues: Omit<StarterIssue, "url" | "created_at" | "beginner" | "areas">[];
+  issues: Omit<StarterIssue, "url" | "created_at" | "beginner" | "areas" | "people" | "open_prs" | "on_it">[];
   summary: string;
 }
 
@@ -34,7 +34,7 @@ const SEEDS: Seed[] = [
     hacktoberfest: true,
     stats: {
       outsider_attempts: 58, outsider_merged: 43, distinct_outsiders: 40,
-      first_time_merged_authors: 30, no_reply: 8, median_first_response_hours: 14.7, bot_share: 0.052, still_open: 75, closed_silently: 4
+      first_time_merged_authors: 30, no_reply: 8, median_first_response_hours: 14.7, bot_share: 0.052, still_open: 75, closed_silently: 4, too_old: 0
     },
     decided_by: [
       "75 pull requests from outside contributors were opened in the last 14 days, too recently to know how they will end, so they aren't counted yet.",
@@ -72,7 +72,7 @@ const SEEDS: Seed[] = [
     hacktoberfest: false,
     stats: {
       outsider_attempts: 171, outsider_merged: 5, distinct_outsiders: 147,
-      first_time_merged_authors: 4, no_reply: 0, median_first_response_hours: 0.7, bot_share: 0, still_open: 0, closed_silently: 99
+      first_time_merged_authors: 4, no_reply: 0, median_first_response_hours: 0.7, bot_share: 0, still_open: 0, closed_silently: 99, too_old: 0
     },
     decided_by: [
       "99 pull requests from outside contributors were closed without a reply. That's often how maintainers clear out spam, so they aren't counted as ignored.",
@@ -113,7 +113,7 @@ const SEEDS: Seed[] = [
     hacktoberfest: true,
     stats: {
       outsider_attempts: 57, outsider_merged: 35, distinct_outsiders: 23,
-      first_time_merged_authors: 12, no_reply: 9, median_first_response_hours: 16.8, bot_share: 0.083, still_open: 133, closed_silently: 1
+      first_time_merged_authors: 12, no_reply: 9, median_first_response_hours: 16.8, bot_share: 0.083, still_open: 133, closed_silently: 1, too_old: 0
     },
     decided_by: [
       "133 pull requests from outside contributors were opened in the last 14 days, too recently to know how they will end, so they aren't counted yet.",
@@ -156,7 +156,7 @@ const SEEDS: Seed[] = [
     hacktoberfest: false,
     stats: {
       outsider_attempts: 120, outsider_merged: 14, distinct_outsiders: 81,
-      first_time_merged_authors: 11, no_reply: 13, median_first_response_hours: 3, bot_share: 0.115, still_open: 0, closed_silently: 68
+      first_time_merged_authors: 11, no_reply: 13, median_first_response_hours: 3, bot_share: 0.115, still_open: 0, closed_silently: 68, too_old: 0
     },
     decided_by: [
       "68 pull requests from outside contributors were closed without a reply. That's often how maintainers clear out spam, so they aren't counted as ignored.",
@@ -189,7 +189,7 @@ const SEEDS: Seed[] = [
     hacktoberfest: false,
     stats: {
       outsider_attempts: 35, outsider_merged: 4, distinct_outsiders: 25,
-      first_time_merged_authors: 4, no_reply: 10, median_first_response_hours: 163.6, bot_share: 0.037, still_open: 62, closed_silently: 7
+      first_time_merged_authors: 4, no_reply: 10, median_first_response_hours: 163.6, bot_share: 0.037, still_open: 62, closed_silently: 7, too_old: 0
     },
     decided_by: [
       "62 pull requests from outside contributors were opened in the last 14 days, too recently to know how they will end, so they aren't counted yet.",
@@ -224,7 +224,7 @@ const SEEDS: Seed[] = [
     hacktoberfest: false,
     stats: {
       outsider_attempts: 183, outsider_merged: 2, distinct_outsiders: 82,
-      first_time_merged_authors: 2, no_reply: 42, median_first_response_hours: null, bot_share: 0, still_open: 5, closed_silently: 139
+      first_time_merged_authors: 2, no_reply: 42, median_first_response_hours: null, bot_share: 0, still_open: 5, closed_silently: 139, too_old: 0
     },
     decided_by: [
       "139 pull requests from outside contributors were closed without a reply. That's often how maintainers clear out spam, so they aren't counted as ignored.",
@@ -252,7 +252,7 @@ const SEEDS: Seed[] = [
     hacktoberfest: false,
     stats: {
       outsider_attempts: 30, outsider_merged: 1, distinct_outsiders: 26,
-      first_time_merged_authors: 1, no_reply: 23, median_first_response_hours: 24.3, bot_share: 0.04, still_open: 34, closed_silently: 2
+      first_time_merged_authors: 1, no_reply: 23, median_first_response_hours: 24.3, bot_share: 0.04, still_open: 34, closed_silently: 2, too_old: 0
     },
     decided_by: [
       "34 pull requests from outside contributors were opened in the last 14 days, too recently to know how they will end, so they aren't counted yet.",
@@ -277,7 +277,7 @@ const SEEDS: Seed[] = [
     hacktoberfest: true,
     stats: {
       outsider_attempts: 31, outsider_merged: 29, distinct_outsiders: 11,
-      first_time_merged_authors: 10, no_reply: 0, median_first_response_hours: 2.6, bot_share: 0.0, still_open: 0, closed_silently: 1
+      first_time_merged_authors: 10, no_reply: 0, median_first_response_hours: 2.6, bot_share: 0.0, still_open: 0, closed_silently: 1, too_old: 0
     },
     decided_by: ["29 pull requests from outside contributors were merged, by 10 different people, out of 31 attempts by 11 people. Of those who got a reply, half heard back within 2.6 hours."],
     unknowns: ["This is a small project; a few pull requests make up the whole picture."],
@@ -299,7 +299,7 @@ const FIND_ONLY: Seed[] = [
   {
     repo: "microsoft/vscode", verdict: "viable", description: "Visual Studio Code",
     language: "TypeScript", stars: 193000, hacktoberfest: false,
-    stats: { outsider_attempts: 38, outsider_merged: 11, distinct_outsiders: 23, first_time_merged_authors: 4, no_reply: 20, median_first_response_hours: 121.4, bot_share: 0.093, still_open: 64, closed_silently: 6 },
+    stats: { outsider_attempts: 38, outsider_merged: 11, distinct_outsiders: 23, first_time_merged_authors: 4, no_reply: 20, median_first_response_hours: 121.4, bot_share: 0.093, still_open: 64, closed_silently: 6, too_old: 0 },
     decided_by: [], unknowns: [], landing: [{ path: "src/vs", merged: 9, attempted: 30, is_file: false }], never_landed: [], evidence: [],
     issues: [
       { number: 244138, title: "Disabled and enabled (workspace) extension Disable button dropdown contains both \"Disable\" and \"Disable (Workspace)\" items", labels: ["good first issue", "bug"], comments: 40, why: ["Labelled good first issue", "A maintainer confirmed the bug"] },
@@ -309,7 +309,7 @@ const FIND_ONLY: Seed[] = [
   {
     repo: "charmbracelet/bubbletea", verdict: "viable", description: "A powerful little TUI framework.",
     language: "Go", stars: 31000, hacktoberfest: true,
-    stats: { outsider_attempts: 111, outsider_merged: 23, distinct_outsiders: 79, first_time_merged_authors: 21, no_reply: 53, median_first_response_hours: 67.5, bot_share: 0.16, still_open: 11, closed_silently: 21 },
+    stats: { outsider_attempts: 111, outsider_merged: 23, distinct_outsiders: 79, first_time_merged_authors: 21, no_reply: 53, median_first_response_hours: 67.5, bot_share: 0.16, still_open: 11, closed_silently: 21, too_old: 0 },
     decided_by: [], unknowns: [], landing: [{ path: "examples", merged: 5, attempted: 9, is_file: false }], never_landed: [], evidence: [],
     issues: [
       { number: 1203, title: "Example: add a spinner with a progress bar", labels: ["good first issue", "examples"], comments: 0, why: ["examples/ is where 5 of 9 outsider PRs were merged"] },
@@ -319,7 +319,7 @@ const FIND_ONLY: Seed[] = [
   {
     repo: "rust-lang/rustlings", verdict: "viable", description: "Small exercises to get you used to reading and writing Rust code.",
     language: "Rust", stars: 57000, hacktoberfest: true,
-    stats: { outsider_attempts: 166, outsider_merged: 45, distinct_outsiders: 136, first_time_merged_authors: 44, no_reply: 4, median_first_response_hours: 65.5, bot_share: 0.005, still_open: 1, closed_silently: 54 },
+    stats: { outsider_attempts: 166, outsider_merged: 45, distinct_outsiders: 136, first_time_merged_authors: 44, no_reply: 4, median_first_response_hours: 65.5, bot_share: 0.005, still_open: 1, closed_silently: 54, too_old: 0 },
     decided_by: [], unknowns: [], landing: [{ path: "exercises", merged: 9, attempted: 20, is_file: false }], never_landed: [], evidence: [],
     issues: [
       { number: 2150, title: "Hint for `iterators3` mentions a function that was renamed", labels: ["good first issue"], comments: 0, why: ["Labelled good first issue", "Hint fixes are merged almost every time"] },
@@ -330,7 +330,7 @@ const FIND_ONLY: Seed[] = [
   {
     repo: "freeCodeCamp/devdocs", verdict: "viable", description: "API documentation browser.",
     language: "JavaScript", stars: 38000, hacktoberfest: true,
-    stats: { outsider_attempts: 85, outsider_merged: 67, distinct_outsiders: 43, first_time_merged_authors: 30, no_reply: 6, median_first_response_hours: 90.2, bot_share: 0.435, still_open: 3, closed_silently: 3 },
+    stats: { outsider_attempts: 85, outsider_merged: 67, distinct_outsiders: 43, first_time_merged_authors: 30, no_reply: 6, median_first_response_hours: 90.2, bot_share: 0.435, still_open: 3, closed_silently: 3, too_old: 0 },
     decided_by: [], unknowns: [], landing: [{ path: "lib/docs/scrapers", merged: 7, attempted: 15, is_file: false }], never_landed: [], evidence: [],
     issues: [
       { number: 2311, title: "Update the Vite documentation to v7", labels: ["good first issue", "docs update"], comments: 1, why: ["Scraper updates are the most-merged newcomer change here"] },
@@ -340,7 +340,7 @@ const FIND_ONLY: Seed[] = [
   {
     repo: "go-gitea/gitea", verdict: "viable", description: "Painless self-hosted all-in-one software development service.",
     language: "Go", stars: 49000, hacktoberfest: false,
-    stats: { outsider_attempts: 47, outsider_merged: 25, distinct_outsiders: 33, first_time_merged_authors: 17, no_reply: 7, median_first_response_hours: 7, bot_share: 0.098, still_open: 48, closed_silently: 4 },
+    stats: { outsider_attempts: 47, outsider_merged: 25, distinct_outsiders: 33, first_time_merged_authors: 17, no_reply: 7, median_first_response_hours: 7, bot_share: 0.098, still_open: 48, closed_silently: 4, too_old: 0 },
     decided_by: [], unknowns: [], landing: [{ path: "templates", merged: 8, attempted: 20, is_file: false }], never_landed: [], evidence: [],
     issues: [
       { number: 35412, title: "Dark theme: diff line numbers have low contrast", labels: ["good first issue", "topic/ui"], comments: 0, why: ["templates/ is where 8 of 20 outsider PRs were merged"] },
@@ -368,6 +368,10 @@ function toIssues(repo: string, seed: Seed["issues"]): StarterIssue[] {
     areas: ((a) => (a.length ? a : ["code" as const]))(AREAS.filter(([, re]) => i.labels.some((l) => re.test(l)) || re.test(i.title)).map(([k]) => k)),
     url: `https://github.com/${repo}/issues/${i.number}`,
     created_at: hoursAgo(30 + n * 41),
+    // The second issue shows what an issue someone is already on looks like.
+    people: n === 1 ? 1 : 0,
+    open_prs: 0,
+    on_it: n === 1 ? "1 person already on it" : "Nobody on it yet",
   }));
 }
 
@@ -410,6 +414,8 @@ const BOTTOM_LINE: Record<Verdict, string> = {
   viable: "You'd likely get a reply and a real review here. Start with something small, like a docs or test fix.",
   not_viable: "Your pull request would probably sit without an answer here. Your time is better spent on a more responsive project.",
   insufficient_evidence: "Too few outsiders have tried here lately to say how you'd be treated. If you try, keep your first change very small.",
+  long_shot: "Some outside work lands here, but most gets no answer. Ask on an issue first, and start only if a maintainer replies.",
+  personal: "This is someone's own project, not one run for outside contributors. Pick a project that takes outside pull requests.",
 };
 
 function fromSeed(seed: Seed, mode: "rules" | "ai", days: number): Report {
@@ -470,7 +476,7 @@ function generated(repo: string, mode: "rules" | "ai", days: number): Report {
       outsider_attempts: attempts, outsider_merged: merged, distinct_outsiders: Math.max(1, Math.floor(attempts * 0.8)),
       first_time_merged_authors: firstTimers, no_reply: noReply,
       median_first_response_hours: reply == null ? null : Math.round(reply * 10) / 10,
-      bot_share: Math.round(r() * 200) / 1000, still_open: 0, closed_silently: 0
+      bot_share: Math.round(r() * 200) / 1000, still_open: 0, closed_silently: 0, too_old: 0
     },
     decided_by:
       verdict === "viable"

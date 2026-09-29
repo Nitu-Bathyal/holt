@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { getProfile, githubConnection, me } from "@/lib/api";
+import { MOTION_OPTIONS, motionFromCookies } from "@/lib/motion";
 import { describe } from "@/lib/profile";
 import { currentUser } from "@/lib/session";
 import { legacySettingsHref, SECTIONS, type SectionId } from "@/lib/settings";
@@ -20,7 +22,8 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
   const moved = legacySettingsHref("", q.toString());
   if (moved) redirect(moved);
 
-  const [account, profile, gh] = await Promise.all([me(user.id), getProfile(user.id), githubConnection(user.id)]);
+  const [account, profile, gh, jar] = await Promise.all([me(user.id), getProfile(user.id), githubConnection(user.id), cookies()]);
+  const motion = motionFromCookies(jar);
   const c = account.ok ? account.data.credits : null;
   const p = profile.ok ? profile.data.profile : null;
   const acct = gh.ok ? gh.data.account : null;
@@ -29,6 +32,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
     profile: profile.ok ? (p ? describe(p) : "Not set yet. Your picks need it.") : null,
     "ai-reports": c ? `${c.balance} ${c.purchased > 0 ? "credits" : "free AI reports"} left${c.can_claim ? ". This week's free one is ready to claim." : "."}` : null,
     accounts: gh.ok ? (acct ? `GitHub connected as @${acct.login}.` : "GitHub not connected.") : null,
+    display: `${MOTION_OPTIONS.find((o) => o.value === motion)!.label}.`,
     privacy: acct ? (acct.stats_opt_out ? "You're left out of statistics." : "Your contributions count, without your name, in repo statistics.") : null,
   };
 

@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { cooldownLabel, foundViaHoltLine, landedLine, landedPct, minutesLeft } from "./contributions.ts";
 
 const summary = (merged: number, closed: number, share: number | null) => ({
-  opened: merged + closed + 1, merged, closed, waiting: 1, landed_share: share, found_via_holt: 0,
+  opened: merged + closed + 1, merged, closed, waiting: 1, landed_share: share, found_via_holt: 0, not_counted: 0,
 });
 
 test("landed counts only decided pull requests", () => {

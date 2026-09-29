@@ -30,3 +30,10 @@ test("waits read the way the CLI writes them", () => {
   assert.equal(cliHours(5), "5 hours");
   assert.equal(cliHours(72), "3 days");
 });
+
+test("closed without a word is neither a reply nor left open", () => {
+  const r = buildReplay({ ...EXAMPLE_REPORT, stats: { ...EXAMPLE_REPORT.stats, outsider_attempts: 171, outsider_merged: 5, no_reply: 0, closed_silently: 99 } });
+  const text = r.terminal.map(plainLine);
+  assert.ok(text.includes("Of the 72 that got a reply, half heard back within 2.3 hours."));
+  assert.ok(text.includes("99 were closed without a reply, which isn't counted as ignored."));
+});

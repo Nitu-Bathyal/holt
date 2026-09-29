@@ -59,6 +59,8 @@ CAT_SLOW = "replies too slow for the day budget"
 CAT_RUBBER_STAMP = "work merged without review (the rubber-stamp rule)"
 CAT_HOSTILE = "outsider attempts went unanswered"
 CAT_LONG_ODDS = "few outsider attempts get merged (the merge-rate floor)"
+CAT_LONG_SHOT = "a long shot: few merged, most unanswered or very slow replies"
+CAT_PERSONAL = "a personal or team project"
 
 
 @dataclass(slots=True)
@@ -162,9 +164,13 @@ def _categorise(verdict: Verdict, trace: list[str]) -> str | None:
     joined = " ".join(getattr(r, "legacy", r) for r in trace)
     if "archived" in codes or "archived" in joined:
         return CAT_ARCHIVED
+    if "personal" in codes:
+        return CAT_PERSONAL
+    if verdict is Verdict.LONG_SHOT:
+        return CAT_LONG_SHOT
     if "rubber_stamp" in codes or "waved through unread" in joined:
         return CAT_RUBBER_STAMP
-    if "long_odds" in codes:
+    if "long_odds" in codes or "replies_no_merges" in codes:
         return CAT_LONG_ODDS
     if "slow" in codes or "exceeds the" in joined:
         return CAT_SLOW

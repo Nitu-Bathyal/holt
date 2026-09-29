@@ -16,7 +16,8 @@ from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
 from holt.agent import (
-    labels, landing, landing_detection, narration, rates, repo_kind_rules, stages,
+    examples, labels, landing, landing_detection, narration, personal, rates, repo_kind_rules,
+    stages,
 )
 from holt.agent.findings import Finding, Findings
 from holt.agent.signals import (
@@ -184,6 +185,7 @@ def analyze(
     contested = contested_kind(findings, signals, meta.payload if meta else None)
     if contested:
         findings.drop("repo_kind")
+    _add_personal(findings, records, threads, signals, as_of, meta)
     _add_inactive(findings, records, threads, signals, as_of, meta)
 
     verdict, rules = decide(findings, signals, contributor_days)
@@ -200,7 +202,7 @@ def analyze(
             contributor_days,
         )
     # After narration, so the prompt the recordings were made with is unchanged.
-    _say_how_merges_landed(rules, threads)
+    _say_how_merges_landed(rules, threads, as_of, _min_age(provider, min_age_hours))
     _say_what_was_read(rules, records, threads, as_of, _min_age(provider, min_age_hours))
 
     # The evidence list is built from verified findings, not written by the
@@ -330,7 +332,8 @@ def _legacy_measurements(signals: Signals) -> dict:
                      "merged_dirs_median", "merged_with_files",
                      "outsider_answered", "outsider_still_open",
                      "outsider_closed_silently", "outsider_excluded",
-                     "outsider_reviewed_share", "merged_threads")
+                     "outsider_reviewed_share", "merged_threads",
+                     "outsider_too_old", "outsider_landed_elsewhere")
         and not k.startswith(("first_timer_", "distinct_first_timer_"))
     }
 
@@ -459,10 +462,7 @@ def _counted_summary(signals: Signals) -> str:
 # `eval/evidence_integrity.py`'s yield column, and it is stated on the report
 # rather than left for the reader to notice.
 
-NO_MODEL_METHOD = (
-    "holt --no-model (deterministic verdict from arithmetic; "
-    "stages A, B, C and E did not run)"
-)
+NO_MODEL_METHOD = "holt --no-model (the answer from counting alone; no model ran)"
 
 
 def analyze_without_model(
@@ -504,6 +504,7 @@ def analyze_without_model(
         findings.add("contribute_elsewhere", elsewhere, (meta.evidence_id,),
                      "read from GitHub's mirror and fork fields and the description")
 
+    _add_personal(findings, records, threads, signals, as_of, meta)
     _add_inactive(findings, records, threads, signals, as_of, meta)
 
     # What Stage A would call a registry or a list, measured from the diffs
@@ -515,7 +516,7 @@ def analyze_without_model(
 
     report("Applying the rules", 0.9)
     verdict, rules = decide(findings, signals, contributor_days)
-    _say_how_merges_landed(rules, threads)
+    _say_how_merges_landed(rules, threads, as_of, _min_age(provider, min_age_hours))
     # After the line above, which the generic kind rule silences: the measured
     # sentence replaces it and stays last, where the web reads the reason.
     rules = repo_kind_rules.explain(rules, kind, verdict)
@@ -530,12 +531,8 @@ def analyze_without_model(
             "No model ran. This answer comes from counting the pull request "
             "history, so it can't tell you what specific threads said or who was "
             "welcoming, and beyond spotting catalogues and lists it can't tell what "
-            "kind of project this is. It cites no specific "
-            "threads, where a full AI report cites about 12. In our testing on "
-            "repositories it hadn't seen, counting alone predicted how newcomers "
-            "would fare a little less well than the full report (a score of 0.55 "
-            "against 0.63, where 1 is perfect). Ask for the AI report for "
-            "something you can check thread by thread."
+            "kind of project this is. Ask for the AI report for what maintainers "
+            "actually said, thread by thread."
         ),
         rules=list(rules),
         contributor_days=contributor_days,
@@ -552,6 +549,9 @@ def analyze_without_model(
         replayed=False,
         models=[],
         dropped_claims=0,
+        examples=examples.counted(threads, {r.evidence_id: r for r in records},
+                                  as_of or datetime.now(UTC),
+                                  _min_age(provider, min_age_hours)),
     ), _done(report, Trace(signals=signals, rules=rules))
 
 
@@ -574,7 +574,8 @@ def first_timer_sentence(signals: Signals) -> str:
 
 
 # Rules after which how the merges happened is beside the point.
-_NOT_ABOUT_MERGES = {"archived", "elsewhere", "closed_kind", "non_software_kind", "inactive"}
+_NOT_ABOUT_MERGES = {"archived", "elsewhere", "closed_kind", "non_software_kind", "inactive",
+                     "personal"}
 # Rules that follow the merge count and turn the repository down.
 _TURNED_DOWN = rates.OVERRULING_CODES
 
@@ -594,7 +595,20 @@ def _add_inactive(findings: Findings, records: list, threads: dict[str, Thread],
                      "no merge in the sample and no push on GitHub in 90 days")
 
 
-def _say_how_merges_landed(rules: list[str], threads: dict[str, Thread]) -> None:
+def _add_personal(findings: Findings, records: list, threads: dict[str, Thread],
+                  signals: Signals, as_of: datetime | None, meta) -> None:
+    """Someone's own project or a small team's (agent/personal.py): a finding
+    the verdict answers "Personal project" on. Live readings only, as above."""
+    if meta is None or not signals.settle_hours:
+        return
+    line = personal.detect(records, threads, as_of or datetime.now(UTC))
+    if line:
+        findings.add("personal_project", line, (meta.evidence_id,),
+                     "who opened the pull requests, the stars, and what the project says about itself")
+
+
+def _say_how_merges_landed(rules: list[str], threads: dict[str, Thread],
+                           as_of: datetime | None = None, settle_hours: float = 0.0) -> None:
     """Add a line saying which merges GitHub shows as closed, and how they landed.
 
     Counting a pull request GitHub calls "closed" as merged is a claim the
@@ -602,7 +616,13 @@ def _say_how_merges_landed(rules: list[str], threads: dict[str, Thread]) -> None
     """
     if any(getattr(r, "code", "") in _NOT_ABOUT_MERGES for r in rules):
         return
-    if line := landing_detection.landed_sentence(outsider_threads(threads)):
+    outside = outsider_threads(threads)
+    # The same pull requests the counts are over (decided, and inside the last
+    # year), so "4 of the 13 merged" matches the merge count beside it.
+    at = as_of or datetime.now(UTC)
+    if rates.judges_time(at, settle_hours):
+        outside = rates.split(outside, at, settle_hours).decided
+    if line := landing_detection.landed_sentence(outside):
         # Never after a rule that turned the repository down: the web reads
         # the reason from the last line.
         at = len(rules) - 1 if rules and getattr(rules[-1], "code", "") in _TURNED_DOWN else len(rules)

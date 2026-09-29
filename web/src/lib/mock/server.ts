@@ -224,7 +224,7 @@ export async function discover(sort: DiscoverSort, language: string | null, topi
     .filter((r) => !hacktoberfest || tagged.has(r.repo))
     .map((r) => ({
       repo: r.repo, verdict: r.verdict, headline: r.headline, tone: r.tone, reason: r.verdict_line, stats: r.stats,
-      description: null, language: null, stars: null, topics: [], pushed_at: null, checked_this_week: null, generated_at: r.generated_at,
+      description: null, language: null, languages: [], stars: null, topics: [], pushed_at: null, checked_this_week: null, generated_at: r.generated_at,
     }));
   const chosen = language || topic || sort === "trending" ? [] : sort === "welcoming" ? cards.filter((c) => c.verdict === "viable") : cards;
   return { ok: true, data: { sort, language, topic, hacktoberfest, repos: chosen.slice(0, limit), languages: [], trending_min: 5 } };
@@ -312,6 +312,7 @@ function findResults(q: FindQuery): FindResult[] {
       verdict: seed.verdict,
       description: seed.description,
       language: seed.language,
+      languages: [seed.language],
       stars: seed.stars,
       stats: {
         outsider_attempts: seed.stats.outsider_attempts,
@@ -459,14 +460,15 @@ function mockContributions(userId: string, login: string): Contributions {
   const verdict = (v: "viable" | "not_viable" | "insufficient_evidence") => ({
     verdict: v,
     headline: { viable: "Worth your time", not_viable: "Not worth your time", insufficient_evidence: "Not enough evidence" }[v],
-    tone: ({ viable: "good", not_viable: "bad", insufficient_evidence: "warn" } as const)[v],
+    tone: ({ viable: "good", not_viable: "bad", insufficient_evidence: "neutral" } as const)[v],
     checked_at: at(1),
+    first_reply_hours: { viable: 15, not_viable: 60, insufficient_evidence: null }[v],
   });
   const pr = (repo: string, number: number, title: string, state: "open" | "merged" | "closed", daysAgo: number,
     v: ReturnType<typeof verdict> | null, found = false) => ({
     repo, number, title, url: `https://github.com/${repo}/pull/${number}`, state, draft: false,
     created_at: at(daysAgo), closed_at: state === "open" ? null : at(daysAgo - 2), merged_at: state === "merged" ? at(daysAgo - 2) : null,
-    verdict: v, found_via_holt: found,
+    verdict: v, found_via_holt: found, counted: true, not_counted_because: null as "you" | "own_project" | null,
   });
   const prs = [
     pr("home-assistant/core", 153340, "Add a battery sensor to the Roborock integration", "open", 2, verdict("viable"), true),
@@ -474,12 +476,40 @@ function mockContributions(userId: string, login: string): Contributions {
     pr("octo/one", 88, "Fix a typo in the contributing guide", "merged", 40, null),
     pr("octo/two", 14, "Add a --quiet flag", "closed", 95, verdict("not_viable")),
   ];
+  // The person's choices win; nothing is a personal or team project in the mock.
+  const chosen = choices().get(userId) ?? new Map<string, boolean>();
+  for (const p of prs) {
+    const c = chosen.get(p.repo.toLowerCase());
+    if (c === false) Object.assign(p, { counted: false, not_counted_because: "you" });
+  }
+  const counted = prs.filter((p) => p.counted);
+  const n = (s: string) => counted.filter((p) => p.state === s).length;
+  const decided = n("merged") + n("closed");
   return {
     login, fetched_at: new Date(fetched).toISOString(), next_refresh_at: next > Date.now() ? new Date(next).toISOString() : null,
     window_days: 365, truncated: false,
-    summary: { opened: 4, merged: 2, waiting: 1, closed: 1, landed_share: 0.6667, found_via_holt: 2 },
+    summary: {
+      opened: counted.length, merged: n("merged"), waiting: n("open"), closed: n("closed"),
+      landed_share: decided ? Math.round((n("merged") / decided) * 10_000) / 10_000 : null,
+      found_via_holt: counted.filter((p) => p.found_via_holt).length, not_counted: prs.length - counted.length,
+    },
     pull_requests: prs,
   };
+}
+
+const g6 = globalThis as unknown as { holtMockChoices?: Map<string, Map<string, boolean>> };
+const choices = () => (g6.holtMockChoices ??= new Map());
+
+export async function setContributionCounted(userId: string, repo: string, counted: boolean | null): Promise<Result<Contributions>> {
+  const r = await contributions(userId);
+  if (!r.ok) return r;
+  const key = repo.toLowerCase();
+  if (!r.data.pull_requests.some((p) => p.repo.toLowerCase() === key)) return err(404, "not_found", "None of your pull requests are to that repository.");
+  const mine = choices().get(userId) ?? new Map<string, boolean>();
+  if (counted === null) mine.delete(key);
+  else mine.set(key, counted);
+  choices().set(userId, mine);
+  return contributions(userId);
 }
 
 export async function contributions(userId: string): Promise<Result<Contributions>> {
@@ -503,15 +533,16 @@ function mockPicks(): Recommendation[] {
   const at = (hoursAgo: number) => new Date(Date.now() - hoursAgo * 3_600_000).toISOString();
   const stats = (attempts: number, merged: number, noReply: number, reply: number, firstTimers: number): Stats => ({
     outsider_attempts: attempts, outsider_merged: merged, distinct_outsiders: Math.round(attempts * 0.8),
-    first_time_merged_authors: firstTimers, no_reply: noReply, median_first_response_hours: reply, bot_share: 0.05, still_open: 3, closed_silently: 1,
+    first_time_merged_authors: firstTimers, no_reply: noReply, median_first_response_hours: reply, bot_share: 0.05, still_open: 3, closed_silently: 1, too_old: 0,
   });
   const issue = (repo: string, number: number, title: string, labels: string[], areas: ContributionType[], daysAgo: number): StarterIssue => ({
     number, title, url: `https://github.com/${repo}/issues/${number}`, labels, created_at: at(daysAgo * 24), comments: 1,
-    why: ["Labelled good first issue", "Nobody has claimed it"], beginner: labels.some((l) => /good first/i.test(l)), areas,
+    why: ["Labelled good first issue"], beginner: labels.some((l) => /good first/i.test(l)), areas,
+    people: 0, open_prs: 0, on_it: "Nobody on it yet",
   });
   const pick = (repo: string, language: string, description: string, stars: number, topics: string[], s: Stats, why: string[], issues: StarterIssue[]): Recommendation => {
     const r = withDerived({ ...mockReport(repo, "rules", 7), stats: s });
-    return { repo, ...verdictView("viable"), verdict: "viable", odds: r.odds, reason: r.verdict_line, numbers_line: r.numbers_line, why, stats: s, description, language, stars, topics, issues, checked_at: at(5) };
+    return { repo, ...verdictView("viable"), verdict: "viable", odds: r.odds, reason: r.verdict_line, numbers_line: r.numbers_line, why, stats: s, description, language, languages: [language], stars, topics, issues, checked_at: at(5) };
   };
   return [
     pick("pallets/click", "Python", "Python composable command line interface toolkit", 16_200, ["cli", "python"], stats(42, 19, 3, 6, 9), [

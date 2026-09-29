@@ -68,6 +68,7 @@ test("the status line: waiting PRs and AI reports left, in plain words", () => {
 const pull = (repo: string, number: number, state: ContributionPR["state"], created: string): ContributionPR => ({
   repo, number, state, title: `PR ${number}`, url: `https://github.com/${repo}/pull/${number}`, draft: false,
   created_at: created, closed_at: null, merged_at: state === "merged" ? created : null, verdict: null, found_via_holt: false,
+  counted: true, not_counted_because: null,
 });
 
 test("pull requests to your own repos are left out, whatever the case", () => {

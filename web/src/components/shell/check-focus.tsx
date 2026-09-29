@@ -5,6 +5,7 @@
 // sight (a phone, or a page without one) it goes to /me#check, and /me does
 // the same on arrival.
 import { useEffect } from "react";
+import { prefersReducedMotion } from "@/lib/motion";
 import { CHECK_HREF } from "@/lib/shell";
 
 function visibleTarget(): HTMLElement | null {
@@ -19,7 +20,7 @@ export function focusCheck(): boolean {
   const box = visibleTarget();
   const input = box?.querySelector<HTMLInputElement>("input");
   if (!box || !input) return false;
-  box.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  box.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
   input.focus({ preventScroll: true });
   box.classList.remove("check-flash");
   void box.offsetWidth; // restart the animation on a second click
@@ -27,8 +28,18 @@ export function focusCheck(): boolean {
   return true;
 }
 
-/** Catches clicks on "Check a repo" links anywhere in the shell. */
+/** Catches clicks on "Check a repo" links anywhere in the shell, and "/" from anywhere focuses the box. */
 export function CheckLinks() {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest("input, textarea, select, [contenteditable]")) return;
+      if (focusCheck()) e.preventDefault();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;

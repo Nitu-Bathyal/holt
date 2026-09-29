@@ -15,10 +15,10 @@ from datetime import UTC, datetime
 from typing import Any
 
 from holt.agent import asks as asks_mod
+from holt.agent import examples
 from holt.agent import labels
 from holt.agent import landing as landing_mod
 from holt.agent import rates
-from holt.agent.landing_detection import VIA
 from holt.agent.signals import Signals, Thread, Threads, build_threads, outsider_threads
 from holt.agent.verdict import rule_codes, slow_note, slow_sentence
 from holt.report import Assessment, Claim
@@ -89,43 +89,15 @@ def evidence_item(claim: Claim, records: dict[str, EvidenceRecord]) -> dict[str,
             "text": body, "quote": quote}
 
 
-RULES_EVIDENCE_EACH = 4
+RULES_EVIDENCE_EACH = examples.EACH
 
 
 def counted_examples(threads: dict[str, Thread],
                      records: dict[str, EvidenceRecord],
                      as_of: datetime | None = None,
                      settle_hours: float = 0.0) -> list[dict[str, Any]]:
-    """Recent outsider pull requests behind the counts, for a report with no AI.
-
-    Without a model the engine cites nothing, which leaves a beginner with
-    numbers and no way to look for themselves. These are picked by arithmetic
-    only (newest merged, newest with no reply), so they say nothing the counts
-    do not already say; they just make the counts clickable.
-    """
-    outsiders = sorted((t for t in outsider_threads(threads) if not rates.excluded(t)),
-                       key=lambda t: t.opened_at, reverse=True)
-    picks = [("merged", t) for t in outsiders if t.merged][:RULES_EVIDENCE_EACH]
-    # The pull requests the "no reply" count is made of: open, unanswered and
-    # past the settle window. Not a silent close, and not one opened yesterday.
-    picks += [("no_reply", t) for t in outsiders
-              if rates.outcome(t, as_of, settle_hours) == rates.IGNORED][:RULES_EVIDENCE_EACH]
-    out = []
-    for value, t in picks:
-        evidence_id = f"{t.key}:opened"
-        url = url_for(evidence_id, records)
-        if not url:
-            continue
-        title = (records.get(evidence_id).payload.get("title") or "").strip() \
-            if evidence_id in records else ""
-        what = "had no reply from anyone when we looked"
-        if value == "merged":
-            # GitHub shows an off-button landing as closed; say how it went in.
-            what = f"landed {VIA[t.landed_via]}" if t.landed_via else "was merged"
-        text = f"Outside contributor's pull request #{t.number} {what}"
-        out.append({"id": evidence_id, "url": url, "kind": "outsider_pr", "value": value,
-                    "text": text + (f": “{title}”" if title else ""), "quote": None})
-    return out
+    """Recent outside pull requests behind the counts (agent/examples.py)."""
+    return examples.counted(threads, records, as_of, settle_hours)
 
 
 def split_limits(limits: str) -> list[str]:
@@ -150,6 +122,7 @@ def stats(signals: Signals) -> dict[str, Any]:
         "bot_share": round(signals.bot_share, 3),
         "still_open": signals.outsider_still_open,
         "closed_silently": signals.outsider_closed_silently,
+        "too_old": signals.outsider_too_old,
     }
 
 
@@ -253,7 +226,7 @@ def build(
 
 # The lines that read the reader's budget, and the ones a slow line goes before.
 _BUDGET_CODES = ("slow", "slow_note")
-_THIN_EVIDENCE = ("too_few_attempts", "few_merges", "few_people")
+_THIN_EVIDENCE = ("too_few_attempts", "few_merges", "few_people", "one_merge", "one_person")
 
 
 def retime(report: dict[str, Any], days: int) -> dict[str, Any] | None:
@@ -276,7 +249,7 @@ def retime(report: dict[str, Any], days: int) -> dict[str, Any] | None:
         if report.get("verdict") == "viable" and "merges" in codes:
             note = slow_note(median, days)
             lines.insert(codes.index("merges") + 1, (str(note), note.code))
-        elif report.get("verdict") == "insufficient_evidence":
+        elif report.get("verdict") in ("insufficient_evidence", "long_shot"):
             at = next((i for i, c in enumerate(codes) if c in _THIN_EVIDENCE), None)
             if at is not None:
                 lines.insert(at, (slow_sentence(median, days), "slow"))

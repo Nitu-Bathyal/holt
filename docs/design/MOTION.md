@@ -370,3 +370,21 @@ After the mobile-fixes PR lands. One PR, or two: tokens, menus and skeletons fir
 - **Progress bars:** nprogress source; Inertia https://inertiajs.com/progress-indicators; Turbo https://turbo.hotwired.dev/handbook/drive
 - **Browser support:** caniuse `view-transitions.json` and `cross-document-view-transitions.json` (updated 2026-09-24); MDN BCD `view-transition-group.json`
 - **Motion bundle size:** https://motion.dev/docs/react-reduce-bundle-size, plus our own esbuild measurement of motion 13.4.4
+
+## The motion setting
+
+Visitors choose **Match my device** (the default), **Reduce motion** or
+**Full motion**: Settings → Display when signed in, the "reduce motion" switch
+in the footer when signed out. It's a cookie (`holt-motion`); the root layout
+puts it on `<html data-motion="reduce|full">` before the first paint.
+
+- **CSS:** keep writing plain `@media (prefers-reduced-motion: reduce)` and
+  `(… no-preference)` blocks. `web/postcss-motion.mjs` rewrites each one so the
+  attribute wins over the device ("full" beats a device that reduces). Join a
+  motion query to others only with `and`, and don't nest motion blocks; the
+  build fails otherwise. Tailwind's `motion-safe:` / `motion-reduce:` follow the
+  setting too (`@custom-variant` in `globals.css`).
+- **Scripts:** never call `matchMedia("(prefers-reduced-motion…)")`. Use
+  `prefersReducedMotion()` from `lib/motion.ts`, or `useReducedMotion()`
+  (`components/motion/use-seen.ts`) when the component should react to a change
+  while the page is open. `lib/motion.test.ts` checks the motion components.

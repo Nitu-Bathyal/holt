@@ -1,13 +1,15 @@
 import { LoadingTransition } from "@/components/motion/page-transition";
-import { PageHeadSkeleton } from "@/components/page-head-skeleton";
 import { Skeleton, SkeletonRegion } from "@/components/skeleton";
 
 export default function Loading() {
   return (
     <LoadingTransition>
       <SkeletonRegion>
-        <PageHeadSkeleton headline={1} lead={1} />
-        <div className="wrap py-10 sm:py-12">
+        <div className="app-page">
+          <div className="app-head">
+            <Skeleton className="h-10 w-72 max-w-full" />
+            <Skeleton className="mt-4 h-3 w-56 max-w-full" />
+          </div>
           <ul className="divide-y divide-line border border-line-strong bg-panel shadow-soft">
             {[0, 1, 2].map((i) => (
               <li key={i} className="grid gap-4 p-5 sm:p-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)] lg:gap-8">

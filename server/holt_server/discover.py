@@ -67,13 +67,18 @@ MAX_TOPICS = 20
 ODDS_RANK = {"good": 0, "fair": 1, "long": 2}
 # Welcoming order: small samples are pulled toward a typical merged share.
 PRIOR_PRS, PRIOR_RATE = 10, 0.2
-VERDICTS = set(schema.TONES)
+# Personal projects aren't set up for outside contributors, so Discover never
+# lists them, under any sort.
+VERDICTS = set(schema.TONES) - {"personal"}
 
 
 class DiscoverRepo(VerdictView):
     repo: str
     description: str | None = None
     language: str | None = None
+    # The main languages, primary first; a second only when it is a real
+    # share of the code. Empty until the details are read.
+    languages: list[str] = Field(default_factory=list)
     stars: int | None = None
     topics: list[str] = Field(default_factory=list)
     # When someone last pushed to the repository, per GitHub.
@@ -158,6 +163,7 @@ def _card(row: tuple, views: dict[str, int]) -> DiscoverRepo | None:
         repo=meta.repo if meta else repo, verdict=verdict,
         description=meta.description if meta else None,
         language=meta.language if meta else None,
+        languages=list(meta.languages or []) if meta else [],
         stars=meta.stars if meta else None,
         topics=list(meta.topics or []) if meta else [],
         pushed_at=iso(meta.pushed_at) if meta else None,
@@ -272,7 +278,8 @@ async def with_meta(s, results: list[dict[str, Any]]) -> list[dict[str, Any]]:
         m = metas.get(repos.key(r.get("repo") or "")) if isinstance(r, dict) else None
         out.append(r if m is None else {
             **r, "description": m.description or r.get("description"),
-            "language": m.language or r.get("language"), "stars": m.stars})
+            "language": m.language or r.get("language"),
+            "languages": list(m.languages or []), "stars": m.stars})
     return out
 
 
@@ -296,6 +303,7 @@ async def store_meta(svc: Services, details: dict[str, dict[str, Any] | None]) -
             row.repo = d.get("repo") or requested
             row.description = (d.get("description") or "")[:500] or None
             row.language = d.get("language") or None
+            row.languages = list(d.get("languages") or [])[:2]
             row.stars = int(d.get("stars") or 0)
             row.topics = list(d.get("topics") or [])[:MAX_TOPICS]
             row.pushed_at = _parse_ts(d.get("pushed_at"))

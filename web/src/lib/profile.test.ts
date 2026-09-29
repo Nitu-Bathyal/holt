@@ -3,11 +3,12 @@ import { test } from "node:test";
 import { days, describe, fromForm, personalise, topics } from "./profile.ts";
 import type { FindResult, StarterIssue } from "./types.ts";
 
-const issue = (number: number, beginner: boolean, areas: StarterIssue["areas"]): StarterIssue => ({
+const issue = (number: number, beginner: boolean, areas: StarterIssue["areas"], people = 0): StarterIssue => ({
   number, title: `#${number}`, url: `https://github.com/o/r/issues/${number}`, labels: [], created_at: null, comments: 0, why: [], beginner, areas,
+  people, open_prs: 0, on_it: null,
 });
 const repo = (name: string, issues: StarterIssue[]): FindResult => ({
-  repo: name, headline: "Worth your time", tone: "good", verdict: "viable", description: null, language: null, stars: null, stats: {}, issues,
+  repo: name, headline: "Worth your time", tone: "good", verdict: "viable", description: null, language: null, languages: [], stars: null, stats: {}, issues,
 });
 
 const results = [
@@ -35,6 +36,11 @@ test("matching contribution types come first, issues and then repos", () => {
   assert.deepEqual(got.map((r) => [r.repo, r.issues.map((i) => i.number)]), [
     ["b/help", [3]], ["c/docs", [5, 4]], ["a/code", [1, 2]],
   ]);
+});
+
+test("an issue somebody is on stays behind free ones, even when it fits", () => {
+  const got = personalise([repo("d/busy", [issue(6, true, ["docs"], 2), issue(7, true, ["code"])])], { level: "experienced", contributions: ["docs"] });
+  assert.deepEqual(got[0].issues.map((i) => i.number), [7, 6]);
 });
 
 test("issues cached before the flags existed still show", () => {

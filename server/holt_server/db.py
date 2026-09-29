@@ -411,9 +411,13 @@ class FindCache(Base):
     @property
     def outdated(self) -> bool:
         """Screened by an older engine (`params.engine_version`, missing on
-        results stored before it was recorded): not served, searched again."""
+        results stored before it was recorded), or listing starter issues from
+        before they said who is on them: not served, searched again."""
+        from holt_server.starter import current
+
         version = (self.params or {}).get("engine_version")
-        return not isinstance(version, int) or version < ENGINE_VERSION
+        return (not isinstance(version, int) or version < ENGINE_VERSION
+                or not all(current(r.get("issues") or []) for r in self.results or []))
 
 
 def find_key(languages: list[str], topics: list[str], hacktoberfest: bool, days: int) -> str:
@@ -535,6 +539,22 @@ class ContributionSync(Base):
     truncated: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
+class ContributionChoice(Base):
+    """Whether a repository's pull requests count in a connected user's
+    contribution numbers (contributions.py). A row is the person's own choice
+    and wins over the default; no row means the default. Kept across fetches,
+    deleted on disconnect."""
+
+    __tablename__ = "contribution_choices"
+
+    user_id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    repo_key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    # owner/name as the pull requests showed it.
+    repo: Mapped[str] = mapped_column(String(200))
+    counted: Mapped[bool] = mapped_column(Boolean)
+    chosen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
 class Contribution(Base):
     """One public pull request a connected user opened, as GitHub last showed
     it. Replaced wholesale on every fetch; deleted on disconnect."""
@@ -567,6 +587,9 @@ class RepoMeta(Base):
     repo: Mapped[str] = mapped_column(String(200))
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     language: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    # GitHub's primary language, then a second one when it is a real share of
+    # the code (github.main_languages). `language` stays the filter.
+    languages: Mapped[list] = mapped_column(JSON, default=list, server_default="[]")
     stars: Mapped[int] = mapped_column(Integer, default=0)
     topics: Mapped[list] = mapped_column(JSON, default=list)
     pushed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

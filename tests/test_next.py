@@ -82,8 +82,11 @@ def test_renderer_cannot_print_a_ranking_without_the_measurement():
     contributor.merged_count = 1
     out = render_next("o/r", contributor, path_overlap_rank(files, issues), issues)
     assert NEXT_MEASUREMENT in out
-    assert "hit@10 0.234" in NEXT_MEASUREMENT  # the claim, exactly, nothing more
-    assert "interval that spans zero" in NEXT_MEASUREMENT
+    # The claim in plain words: best of the orderings tried, not surely better
+    # than chance. No statistics in product output.
+    assert "rough guide" in NEXT_MEASUREMENT and "random order" in NEXT_MEASUREMENT
+    assert "hit@10" not in NEXT_MEASUREMENT and "interval" not in NEXT_MEASUREMENT
+    assert "](https://github.com/o/r/issues/1)" in out  # a link, not an evidence id
     assert "src/core.py" in out  # the reason a row is where it is, not just the row
 
 

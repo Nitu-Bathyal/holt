@@ -1,6 +1,6 @@
 // The curated example reports: the few reports anyone can read in full
 // without signing in (every other report shows signed-out visitors a teaser;
-// see gate.ts). One of each verdict, picked from repos with a current report,
+// see gate.ts). At least two of each verdict, picked from repos with a current report,
 // plus the recorded AI report at /example-ai-report. The verdict here only
 // orders and labels the list; the page always shows what the rules say today.
 // No runtime imports, so it runs under `node --test` and in the browser.
@@ -8,16 +8,25 @@ import type { Verdict } from "./types.ts";
 
 export interface Example {
   repo: string;
-  /** The verdict it had when picked, so the list keeps one of each. */
+  /** The verdict it had when picked, so the list keeps at least two of each. */
   verdict: Verdict;
-  /** Why it's worth a look, in one line. */
+  /** GitHub's main language for the repo. */
+  language: string;
+  /** Stars when picked (rounded), shown as "★ 91k". */
+  stars: number;
+  /** Why it's worth a look, in one short line. */
   why: string;
 }
 
 export const EXAMPLES: Example[] = [
-  { repo: "home-assistant/core", verdict: "viable", why: "A huge project that still replies to and merges outsiders." },
-  { repo: "pallets/flask", verdict: "not_viable", why: "Famous and loved, but most outside pull requests don't get merged." },
-  { repo: "vercel/next.js", verdict: "insufficient_evidence", why: "Busy, yet too few outside pull requests finished recently to say." },
+  { repo: "home-assistant/core", verdict: "viable", language: "Python", stars: 91_000, why: "Huge, and most outside PRs get merged." },
+  { repo: "kubernetes/kubernetes", verdict: "viable", language: "Go", stars: 128_000, why: "Outsiders get merged, though many wait for a reply." },
+  { repo: "react/react", verdict: "long_shot", language: "JavaScript", stars: 251_000, why: "Outsiders get merged, but most PRs get no reply." },
+  { repo: "sharkdp/bat", verdict: "long_shot", language: "Rust", stars: 61_000, why: "Outside fixes land, but most PRs go unanswered." },
+  { repo: "pallets/flask", verdict: "not_viable", language: "Python", stars: 75_000, why: "Famous, but few outside PRs get merged." },
+  { repo: "vercel/next.js", verdict: "not_viable", language: "JavaScript", stars: 143_000, why: "Busy, yet only 1 in 30 outside PRs got merged." },
+  { repo: "getsentry/sentry", verdict: "insufficient_evidence", language: "Python", stars: 45_000, why: "Too few outsiders tried recently. Holt won't guess." },
+  { repo: "tldraw/tldraw", verdict: "insufficient_evidence", language: "TypeScript", stars: 51_000, why: "Busy, but nearly every PR comes from its own team." },
 ];
 
 export const EXAMPLES_PATH = "/examples";

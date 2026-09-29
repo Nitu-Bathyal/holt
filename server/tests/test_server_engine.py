@@ -51,11 +51,11 @@ def check_report_shape(report: dict, mode: str) -> None:
         assert set(entry) == {"topic", "text"}
     assert len(report["rule_codes"]) == len(report["decided_by"])
     assert report["repo"] == REPO and report["mode"] == mode
-    assert report["verdict"] in ("viable", "not_viable", "insufficient_evidence")
+    assert report["verdict"] in ("viable", "long_shot", "not_viable", "insufficient_evidence", "personal")
     assert set(report["stats"]) == {
         "outsider_attempts", "outsider_merged", "distinct_outsiders",
         "first_time_merged_authors", "no_reply", "median_first_response_hours", "bot_share",
-        "still_open", "closed_silently"}
+        "still_open", "closed_silently", "too_old"}
     for item in report["evidence"]:
         assert item["url"].startswith("https://github.com/"), item
         assert set(item) == {"id", "url", "kind", "value", "text", "quote"}
@@ -71,7 +71,7 @@ def check_report_shape(report: dict, mode: str) -> None:
                       (report["odds"] or {}).get("text", ""), report["bottom_line"] or "",
                       report["summary"] or "", *report["decided_by"],
                       *report["unknowns"], *(e["text"] for e in report["evidence"])])
-    for jargon in ("not_viable", "MCC", "repo_kind", "insufficient_evidence"):
+    for jargon in ("not_viable", "long_shot", "MCC", "repo_kind", "insufficient_evidence"):
         assert jargon not in prose
 
 

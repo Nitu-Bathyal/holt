@@ -26,7 +26,8 @@ def test_passing_repo_gets_a_factual_line(s, expected):
     assert badge.message("viable", s) == (expected, badge.POSITIVE_COLOR)
 
 
-@pytest.mark.parametrize("verdict", ["not_viable", "insufficient_evidence", "something_new"])
+@pytest.mark.parametrize("verdict", ["long_shot", "not_viable", "insufficient_evidence",
+                                     "personal", "something_new"])
 def test_anything_but_a_pass_is_neutral(verdict):
     assert badge.message(verdict, stats()) == ("see report", badge.NEUTRAL_COLOR)
 

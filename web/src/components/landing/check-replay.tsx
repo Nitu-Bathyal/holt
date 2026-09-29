@@ -21,7 +21,7 @@ type Mode = "web" | "terminal";
 
 const TONE_TEXT = { good: "text-green", bad: "text-orange", warn: "text-amber", neutral: "text-ink" } as const;
 const TONE_BG = { good: "bg-green", bad: "bg-orange", warn: "bg-amber", neutral: "bg-blue" } as const;
-const MOOD: Record<Replay["tone"], CatMood> = { good: "celebrating", bad: "heartbroken", warn: "thinking" };
+const MOOD: Record<Replay["tone"], CatMood> = { good: "celebrating", bad: "heartbroken", warn: "thinking", neutral: "ready" };
 const LINE_STYLE: Record<NonNullable<ReplayLine["style"]>, string> = {
   heading: "font-semibold text-ink",
   verdict: "font-semibold text-green",

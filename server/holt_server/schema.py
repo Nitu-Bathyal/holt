@@ -22,22 +22,32 @@ from typing import Literal
 
 from holt.agent.verdict import headline as verdict_headline
 from holt.agent.rates import SETTLE_DAYS
-from holt.agent.verdict import MERGE_RATE_FLOOR, MIN_DISTINCT_AUTHORS, MIN_MERGES, hours_phrase
+from holt.agent.verdict import (
+    LONG_SHOT_MERGE_RATE,
+    LONG_SHOT_REPLY_DAYS,
+    MERGE_RATE_FLOOR,
+    MIN_ATTEMPTS_FOR_RATE,
+    MIN_DISTINCT_AUTHORS,
+    MIN_MERGES,
+    hours_phrase,
+)
 from pydantic import BaseModel, ConfigDict, Field, computed_field, model_serializer
 
 # Bound here, not looked up per call: tests swap `holt.starter` for a fake.
-from holt.starter import is_beginner_issue, issue_areas
+from holt.starter import is_beginner_issue, issue_areas, on_it_text
 
-Verdict = Literal["viable", "not_viable", "insufficient_evidence"]
+Verdict = Literal["viable", "long_shot", "not_viable", "insufficient_evidence", "personal"]
 Mode = Literal["rules", "ai"]
 ContributionType = Literal["code", "docs", "tests", "design", "translations"]
 Level = Literal["newcomer", "experienced"]
-Tone = Literal["good", "bad", "warn"]
+Tone = Literal["good", "bad", "warn", "neutral"]
 OddsLevel = Literal["good", "fair", "long"]
 JobState = Literal["queued", "running", "done", "error"]
 
-TONES: dict[str, Tone] = {"viable": "good", "not_viable": "bad",
-                          "insufficient_evidence": "warn"}
+# Amber is Long shot's: a caution, not a no. "Not enough evidence" and
+# "Personal project" say nothing either way, so they are neutral.
+TONES: dict[str, Tone] = {"viable": "good", "long_shot": "warn", "not_viable": "bad",
+                          "insufficient_evidence": "neutral", "personal": "neutral"}
 
 
 class Model(BaseModel):
@@ -88,6 +98,8 @@ class Stats(Model):
     bot_share: float
     still_open: int = 0
     closed_silently: int = 0
+    # Opened more than a year ago: read, and in no count.
+    too_old: int = 0
 
 
 class PartialStats(Model):
@@ -143,7 +155,8 @@ class Cost(Model):
 
 
 class Odds(Model):
-    """A newcomer's chances, for a report whose verdict is `viable` only."""
+    """A newcomer's chances, for a report whose verdict is `viable` only.
+    ("Long shot" is already the odds, so it has none.)"""
 
     level: OddsLevel
     tone: Tone
@@ -240,8 +253,12 @@ RUBBER_STAMP_LINE = ("Outside pull requests here get merged without anyone revie
 INFO_CODES = frozenset({
     "awaiting_reply", "landed_off_button", "package_updates", "kind_contested",
     "kind_uncited", "sample_period", "dormant", "excluded", "still_open",
-    "closed_silently", "slow_note",
+    "closed_silently", "slow_note", "too_old",
 })
+
+# The reasons a project that merges outside work is still a long shot, in the
+# order the engine gives them (verdict.py). The first is the headline's reason.
+LONG_SHOT_CODES = ("few_merged", "mostly_silent", "slow_replies", "one_merge", "one_person")
 
 
 def deciding_rule(decided_by: list[str], rule_codes: list[str]) -> tuple[str, str]:
@@ -285,6 +302,10 @@ def verdict_line(verdict: str, s: Stats, decided_by: list[str], rule_codes: list
             if silent < 0.3 else
             "Outside contributors get merged here, though some wait a while for a reply.",
             decided_by, rule_codes)
+    if verdict == "long_shot":
+        codes = rule_codes if len(rule_codes) == len(decided_by) else [""] * len(decided_by)
+        first = next((t for t, c in zip(decided_by, codes) if c in LONG_SHOT_CODES), None)
+        return first or deciding_rule(decided_by, rule_codes)[0]
     if verdict == "not_viable":
         # Rubber-stamping reads as a "but" after the merge count, so it gets
         # its own sentence. Reports cached before `rule_codes` existed are
@@ -298,7 +319,10 @@ def verdict_line(verdict: str, s: Stats, decided_by: list[str], rule_codes: list
             return f"None of the last {n} pull requests from outside contributors were merged."
         return (f"Only {s.outsider_merged} of {n} pull requests from outside contributors "
                 "were merged, and most never got a useful reply.")
-    return "Too few outside contributors have tried recently for Holt to say either way."
+    # "Not enough evidence" and "Personal project": the rule that decided,
+    # in its own words (verdict.py has one line per rule).
+    return (deciding_rule(decided_by, rule_codes)[0]
+            or "Too few outside contributors have tried recently for Holt to say either way.")
 
 
 def _pct(part: int, whole: int) -> int:
@@ -357,10 +381,13 @@ def numbers_line(s: Stats, sample: Sample | None) -> str:
     if s.closed_silently:
         out.append(f"{_pct(s.closed_silently, n)}% were closed without a word.")
     if s.no_reply:
-        out.append(f"{_pct(s.no_reply, n)}% got no reply at all.")
+        out.append(f"{_pct(s.no_reply, n)}% sat open with no reply.")
     if s.still_open:
         out.append(f"Another {s.still_open} {'was' if s.still_open == 1 else 'were'} opened "
                    f"in the last {SETTLE_DAYS} days, too recently to count.")
+    if s.too_old:
+        out.append(f"{s.too_old} older than a year {'isn' if s.too_old == 1 else 'aren'}'t "
+                   "counted.")
     return " ".join(out)
 
 
@@ -405,8 +432,24 @@ NOT_VIABLE_STEP: dict[str, str] = {
     "rubber_stamp": "Your change would probably be merged, but nobody would review it. "
                     "For feedback on your code, pick a project that reviews.",
 }
+NOT_VIABLE_STEP["replies_no_merges"] = (
+    "Talk ideas over in an issue if you like, but put your code into a project "
+    "that merges outside work.")
 NOT_VIABLE_DEFAULT_STEP = ("Put your time into a project that answers outside "
                            "contributors; Holt's Find page lists some.")
+LONG_SHOT_STEP: dict[str, str] = {
+    "mostly_silent": "Before you write code, ask on an issue whether a pull request "
+                     "would be welcome, and start only if a maintainer answers.",
+    "slow_replies": "Start here only if you can wait a month or more for a first reply.",
+    "few_merged": "Pick an issue a maintainer has asked for help with, and keep the "
+                  "change small.",
+    "one_merge": "Pick an issue a maintainer has asked for help with, and keep the "
+                 "change small.",
+    "one_person": "Pick an issue a maintainer has asked for help with, and keep the "
+                  "change small.",
+}
+PERSONAL_STEP = ("Read it or fork it, but for a contribution pick a project that "
+                 "takes outside pull requests; Holt's Find page lists some.")
 INSUFFICIENT_STEP = ("There's too little to go on. Before writing code, open an issue "
                      "and ask whether a pull request would be welcome.")
 
@@ -419,6 +462,11 @@ def next_step(verdict: str, decided_by: list[str], rule_codes: list[str],
     if verdict == "not_viable":
         _, code = deciding_rule(decided_by, rule_codes)
         return NOT_VIABLE_STEP.get(code, NOT_VIABLE_DEFAULT_STEP)
+    if verdict == "personal":
+        return PERSONAL_STEP
+    if verdict == "long_shot":
+        first = next((c for c in rule_codes if c in LONG_SHOT_CODES), "few_merged")
+        return " ".join([LONG_SHOT_STEP[first]] + [ASK_STEP[a.code] for a in asks])
     if verdict != "viable":
         return INSUFFICIENT_STEP
     areas = [a for a in landing if a.path != "(root)" and a.merged >= BEST_AREA_MIN_MERGED]
@@ -447,21 +495,34 @@ INFO_TOPICS: dict[str, str] = {
     "package_updates": "What the work is",
     "kind_contested": "What kind of project this is",
     "kind_uncited": "What kind of project this is",
+    "too_old": "Older than a year",
 }
 
 
 def verdict_rule_text(days: int) -> str:
+    """"The rule" on every report, written from the thresholds the engine
+    reads, so it can't go stale. `days` is kept for callers; the answer no
+    longer depends on the reader's budget."""
     return (
-        f"“{verdict_headline('viable')}” needs at least {MIN_MERGES} merged pull requests "
-        f"from at least {MIN_DISTINCT_AUTHORS} different outside contributors, at least "
-        f"{MERGE_RATE_FLOOR:.0%} of outside pull requests merged, and a typical first reply "
-        f"within your {days}-day budget, with people actually reviewing what gets merged. "
-        "Only pull requests opened at least "
-        f"{SETTLE_DAYS} days ago count, so each has had time for an answer. "
+        f"Only pull requests from outside contributors opened between {SETTLE_DAYS} days "
+        "and a year ago count, so each has had time for an answer and reflects how the "
+        "project works now. "
+        f"“{verdict_headline('viable')}” needs at least {MIN_MERGES} of them merged, from "
+        f"at least {MIN_DISTINCT_AUTHORS} different people, with at least 1 in "
+        f"{round(1 / LONG_SHOT_MERGE_RATE)} merged, no more than half left without any "
+        f"reply, a typical first reply within {LONG_SHOT_REPLY_DAYS // 7} weeks, and people "
+        "actually reviewing what gets merged. "
+        f"“{verdict_headline('long_shot')}” is a project that merges some outside work "
+        f"but misses one of those: fewer than 1 in {round(1 / LONG_SHOT_MERGE_RATE)} "
+        "merged, most left unanswered, very slow first replies, or only one person's "
+        "work getting in. "
         f"“{verdict_headline('not_viable')}” is an archived repository, a mirror, a "
         "project with nothing merged or pushed in 90 days, a catalogue of entries, "
         f"merges nobody reviews, fewer than 1 in {round(1 / MERGE_RATE_FLOOR)} outside pull "
-        "requests merged, or outside pull requests that are almost all ignored. "
+        f"requests merged once at least {MIN_ATTEMPTS_FOR_RATE} have been decided, or "
+        "outside pull requests that are almost all ignored. "
+        f"“{verdict_headline('personal')}” is someone's own project or a small team's, "
+        "like a hackathon entry, with nothing from outside ever merged. "
         f"Anything in between is “{verdict_headline('insufficient_evidence')}”. "
         "These rules are fixed; no AI chooses the verdict."
     )
@@ -631,6 +692,19 @@ class StarterIssue(Model):
     created_at: str | None = None
     comments: int = 0
     why: list[str] = Field(default_factory=list)
+    # Distinct people already on it (open pull requests, recent claims, quiet
+    # assignees) and its open pull requests. Null from an engine that didn't
+    # count them.
+    people: int | None = None
+    open_prs: int | None = None
+
+    @computed_field
+    @property
+    def on_it(self) -> str | None:
+        """"Nobody on it yet", "1 open pull request", "2 people already on it"."""
+        if self.people is None:
+            return None
+        return on_it_text(self.people, self.open_prs or 0)
 
     # Derived from the labels and title, so cached issues get them too. The
     # web uses them with a profile: a newcomer sees only `beginner` issues,
@@ -655,6 +729,8 @@ class FindResult(VerdictView):
     repo: str
     description: str | None = None
     language: str | None = None
+    # As on a Discover card: primary first, a second when it's a real share.
+    languages: list[str] = Field(default_factory=list)
     stars: int | None = None
     stats: PartialStats = Field(default_factory=PartialStats)
     issues: list[StarterIssue] = Field(default_factory=list)
@@ -1218,6 +1294,10 @@ class RepoVerdict(Model):
 
     verdict: Verdict
     checked_at: str
+    # How long an outside pull request there typically waits for its first
+    # reply, in hours (the report's median_first_response_hours). Null when
+    # the report couldn't tell.
+    first_reply_hours: float | None = None
 
     @computed_field
     @property
@@ -1244,6 +1324,12 @@ class ContributionPullRequest(Model):
     verdict: RepoVerdict | None
     # Opened within 30 days after this user looked at the repository on Holt.
     found_via_holt: bool
+    # Whether it counts in `summary`. Every pull request to a repository
+    # counts, or none does.
+    counted: bool = True
+    # Why it doesn't count: "you" chose so, or Holt found the repository is
+    # the person's own or their team's project ("own_project"). Null when counted.
+    not_counted_because: Literal["you", "own_project"] | None = None
 
 
 class ContributionSummary(Model):
@@ -1256,6 +1342,8 @@ class ContributionSummary(Model):
     # merged / (merged + closed); null until any pull request was decided.
     landed_share: float | None
     found_via_holt: int
+    # Pull requests left out of the numbers above (see `counted`).
+    not_counted: int = 0
 
 
 class Contributions(Model):
@@ -1269,6 +1357,12 @@ class Contributions(Model):
     truncated: bool
     summary: ContributionSummary
     pull_requests: list[ContributionPullRequest]
+
+
+class ContributionChoiceBody(Model):
+    """PUT /v1/me/contributions/repos/{owner}/{name}."""
+
+    counted: bool
 
 
 class ContributionMetric(Model):
@@ -1413,6 +1507,7 @@ class Recommendation(VerdictView):
     repo: str
     description: str | None = None
     language: str | None = None
+    languages: list[str] = Field(default_factory=list)
     stars: int | None = None
     topics: list[str] = Field(default_factory=list)
     # The report's one-line reason (the same sentence Discover shows).

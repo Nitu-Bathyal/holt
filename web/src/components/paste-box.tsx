@@ -126,7 +126,8 @@ export function PasteBox({
       {examples && (
         <p className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2 text-[0.82rem] text-faint">
           <span>try</span>
-          {EXAMPLES.map(({ repo }) => (
+          {/* One of each verdict; /examples has the rest. */}
+          {EXAMPLES.filter((e, i) => EXAMPLES.findIndex((x) => x.verdict === e.verdict) === i).map(({ repo }) => (
             <button
               key={repo}
               type="button"
