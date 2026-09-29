@@ -66,9 +66,6 @@ query($owner:String!, $name:String!, $until:GitTimestamp!) {
     createdAt pushedAt isArchived isMirror isFork stargazerCount
     description homepageUrl primaryLanguage { name }
     nameWithOwner mirrorUrl parent { nameWithOwner }
-    forkCount licenseInfo { spdxId name } issues(states:OPEN) { totalCount }
-    repositoryTopics(first:20) { nodes { topic { name } } }
-    languages(first:3, orderBy:{field:SIZE, direction:DESC}) { totalSize edges { size node { name } } }
     releases(first:10, orderBy:{field:CREATED_AT, direction:DESC}) {
       totalCount
       nodes { tagName name createdAt publishedAt isPrerelease }
@@ -79,6 +76,8 @@ query($owner:String!, $name:String!, $until:GitTimestamp!) {
         ... on Commit { history(until:$until, first:1) { nodes { oid committedDate } } }
       }
     }
+    forkCount licenseInfo { spdxId name } issues(states:OPEN) { totalCount }
+    languages(first:3, orderBy:{field:SIZE, direction:DESC}) { totalSize edges { size node { name } } }
   }
 }
 """
@@ -764,6 +763,19 @@ def project_repo_meta(repo_slug: str, repo: dict[str, Any]) -> EvidenceRecord:
         "stargazer_count": repo["stargazerCount"],
         "_counters_are_as_of_fetch_not_cutoff": True,
     }
+    # For the report's header only (holt/about.py); nothing downstream reads
+    # them. Absent from captures made before they were asked for. (`topics`, which
+    # the header shows too, comes with the personal-project rule.)
+    if "forkCount" in repo:
+        payload["fork_count"] = repo["forkCount"]
+    if "issues" in repo:
+        payload["open_issues"] = (repo["issues"] or {}).get("totalCount")
+    if "licenseInfo" in repo:
+        payload["license"] = license_name(repo["licenseInfo"])
+    if "languages" in repo:
+        payload["languages"] = language_shares(repo["languages"])
+    if "defaultBranchRef" in repo:
+        payload["default_branch"] = (repo["defaultBranchRef"] or {}).get("name")
     # Added with the v2 capture; absent from older fixtures. `parent` is the
     # repository this one was forked from, `mirror_url` where a mirror copies
     # from: both say "the real project is elsewhere".
@@ -775,23 +787,6 @@ def project_repo_meta(repo_slug: str, repo: dict[str, Any]) -> EvidenceRecord:
         payload["mirror_url"] = repo["mirrorUrl"]
     if "releases" in repo:
         payload["release_count"] = (repo["releases"] or {}).get("totalCount", 0)
-    # For the report's header only (holt/about.py); nothing downstream reads
-    # them. Absent from captures made before they were asked for.
-    if "forkCount" in repo:
-        payload["fork_count"] = repo["forkCount"]
-    if "issues" in repo:
-        payload["open_issues"] = (repo["issues"] or {}).get("totalCount")
-    if "licenseInfo" in repo:
-        payload["license"] = license_name(repo["licenseInfo"])
-    if "repositoryTopics" in repo:
-        payload["topics"] = [
-            name for t in _nodes(repo["repositoryTopics"])
-            if (name := ((t or {}).get("topic") or {}).get("name"))
-        ]
-    if "languages" in repo:
-        payload["languages"] = language_shares(repo["languages"])
-    if "defaultBranchRef" in repo:
-        payload["default_branch"] = (repo["defaultBranchRef"] or {}).get("name")
     return EvidenceRecord(
         evidence_id=f"repo:{repo_slug}:meta",
         source="github",

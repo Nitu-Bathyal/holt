@@ -136,15 +136,15 @@ class Assessment:
     # every statement was thrown out. `psf/requests` was the second one, and it
     # read like the first.
     dropped_claims: int = 0
+    # What the repository is, from GitHub's own fields and its README
+    # (holt/about.py). Printed under the name; it never feeds the verdict.
+    about: About | None = None
     # The models that actually answered, in first-use order. Printed because the
     # model-written sections degrade with the model behind them while the counts
     # and the verdict do not, and a report that does not name its model leaves a
     # reader unable to tell those two halves apart. On a replay these are the ids
     # from the recording.
     models: list[str] = field(default_factory=list)
-    # What the repository is, from GitHub's own fields and its README
-    # (holt/about.py). Printed under the name; it never feeds the verdict.
-    about: About | None = None
 
     def render(self) -> str:
         lines = [f"# {self.repo}", ""]
