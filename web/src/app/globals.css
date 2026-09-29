@@ -2089,6 +2089,17 @@
      under the top bar's toggle, so nothing moves sideways but the edge. */
   --rail-w-folded: 3.75rem;
   --rail-bg: color-mix(in srgb, var(--panel-2) 55%, var(--bg));
+  /* The app frame (.app-page). The start gutter clears the top bar's rail
+     toggle (8px + 44px + 12px) from lg. */
+  --frame-max: 76rem;
+  --frame-max-wide: 120rem;
+  --frame-pad: clamp(16px, 4vw, 48px);
+  --frame-pad-start: var(--frame-pad);
+}
+@media (min-width: 1024px) {
+  :root {
+    --frame-pad-start: 64px;
+  }
 }
 
 @layer components {
@@ -2474,18 +2485,95 @@
     display: block;
   }
 
-  /* A section on an app page: heading left, one quiet link right. */
-  /* One frame for every app page: the same left edge and width, so content
-     never jumps sideways between pages (docs/design/DASHBOARD.md). */
-  .app-page {
+  /* One frame for every app page (docs/design/DASHBOARD.md, "The frame"):
+     the page sits in the column beside the rail, fills it up to its width
+     and centres once the screen is wider, so there's no dead band on one
+     side. Two widths: the default for your things, rows, forms and reading,
+     and `data-frame="wide"` for grids and tables, which add columns as
+     they get room. The top bar's check box starts at the frame's edge
+     (.app-bar-frame follows the page's width). */
+  .app-page,
+  .app-bar-frame {
+    --frame: var(--frame-max);
     width: 100%;
-    max-width: 72rem;
-    padding: 0 clamp(16px, 4vw, 48px) 72px;
-  }
-  /* Public app pages (find a project) signed out: no sidebar, so centre the frame. */
-  [data-shell="marketing"] .app-page {
+    max-width: calc(var(--frame) + var(--frame-pad-start) + var(--frame-pad));
     margin-inline: auto;
   }
+  .app-page {
+    padding: 0 var(--frame-pad) 72px var(--frame-pad-start);
+  }
+  .app-page[data-frame="wide"],
+  #app-column:has(.app-page[data-frame="wide"]) .app-bar-frame {
+    --frame: var(--frame-max-wide);
+  }
+  /* Pages built on the marketing .wrap (a report, examples) take the same
+     frame when they're shown in the app shell, so their edge matches. */
+  #app-column .wrap {
+    --frame: var(--frame-max);
+    width: 100%;
+    max-width: calc(var(--frame) + var(--frame-pad-start) + var(--frame-pad));
+    padding-inline: var(--frame-pad-start) var(--frame-pad);
+  }
+  /* Signed out (find a project), there's no rail toggle to clear. */
+  [data-shell="marketing"] .app-page {
+    --frame-pad-start: var(--frame-pad);
+  }
+
+  /* The top bar: menu and logo, the check box, then theme and account.
+     From lg the rail carries the logo; the rail toggle sits in the frame's
+     start gutter, the check box at the frame's edge, and theme and account
+     at the column's end. All three share one grid cell, so none of them
+     pushes the others. */
+  .app-bar {
+    display: flex;
+    min-height: 60px;
+    align-items: center;
+    gap: 12px;
+    padding-inline: 16px;
+  }
+  .app-bar-frame {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    justify-content: center;
+    padding-inline: 8px;
+  }
+  @media (min-width: 1024px) {
+    .app-bar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      padding-inline: 0;
+    }
+    .app-bar > * {
+      grid-area: 1 / 1;
+    }
+    .app-bar > .rail-toggle {
+      z-index: 1;
+      justify-self: start;
+      margin-left: 8px;
+    }
+    .app-bar-end {
+      z-index: 1;
+      justify-self: end;
+      margin-right: 20px;
+    }
+    .app-bar-frame {
+      justify-content: flex-start;
+      /* Room for theme and account, which sit over the frame's end. */
+      padding: 0 max(var(--frame-pad), 9rem) 0 var(--frame-pad-start);
+    }
+  }
+
+  /* Cards for discovery: one column on a phone, then as many as fit at
+     18rem or more, up to --cols (5 by default). */
+  .card-grid {
+    --cols: 5;
+    --gap: 16px;
+    display: grid;
+    gap: var(--gap);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, max(18rem, (100% - (var(--cols) - 1) * var(--gap)) / var(--cols))), 1fr));
+  }
+
   .app-head {
     padding: clamp(28px, 6svh, 64px) 0 28px;
   }

@@ -207,7 +207,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
             <section id="picks" aria-labelledby="picks-h" className="scroll-mt-24">
               <SectionHead id="picks-h" title={firstPicks ? "Picked for you" : "Next repos for you"} more={{ href: PROFILE_SETTINGS, label: "edit your profile" }} />
               {basisLine(picks.data.basis) && <p className="-mt-1 mb-4 font-sans text-[0.9rem] text-muted">{basisLine(picks.data.basis)}</p>}
-              <RepoGrid repos={pickCards.slice(0, 3)} saved={savedNames} topicBase="/discover" />
+              <RepoGrid repos={pickCards.slice(0, 3)} cols={3} saved={savedNames} topicBase="/discover" />
               {picks.data.locked > 0 && (
                 <p className="mt-4 font-sans text-[0.9rem] text-muted">
                   {lockedLine(picks.data.locked)} <Link href="/pricing" className="text-link font-mono text-[0.86rem]">see plans</Link>
