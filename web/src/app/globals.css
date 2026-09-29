@@ -2813,6 +2813,14 @@
     color: var(--green);
     font-size: 0.62rem;
   }
+  /* About the project (stars first): context under the numbers Holt reads,
+     set off by a stronger rule. Stars get the room; nothing here is "best". */
+  .cmp-row[data-about="first"] {
+    border-top: 1px solid var(--line-strong);
+  }
+  .cmp-stars {
+    font-size: 1.12rem;
+  }
   @media (max-width: 639px) {
     /* Phones: the table runs to the screen's edges, labels stay in view as
        the columns slide under them. */
