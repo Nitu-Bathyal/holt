@@ -23,8 +23,8 @@ class Verdict(str, Enum):
     of it meets silence, very slow replies or a closed door. `PERSONAL` is not
     a judgement of the project at all: it is someone's own project (or a small
     team's, like a hackathon entry), not one run for outside contributors.
-    `CATALOGUE` isn't one either: a list or a registry, where entries get
-    merged easily but aren't code work. All three only come from live
+    `CATALOGUE` isn't one either: a list or a registry, where a merged entry
+    isn't code work. All three only come from live
     readings; the frozen benchmark was scored on the first three.
     """
 

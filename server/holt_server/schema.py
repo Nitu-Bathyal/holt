@@ -540,7 +540,7 @@ def verdict_rule_text(days: int) -> str:
         f"“{verdict_headline('personal')}” is someone's own project or a small team's, "
         "like a hackathon entry, with nothing from outside ever merged. "
         f"“{verdict_headline('catalogue')}” is a list or a catalogue of entries, like "
-        "links or package listings: entries get merged easily, but they aren't code. "
+        "links or package listings, where a merged entry isn't code work. "
         f"Anything in between is “{verdict_headline('insufficient_evidence')}”. "
         "These rules are fixed; no AI chooses the verdict."
     )

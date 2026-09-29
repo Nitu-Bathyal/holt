@@ -143,7 +143,7 @@ report. It updates when the report does; you never have to touch it again.
 | **Not worth your time** | The record says a newcomer's week is unlikely to go anywhere here. |
 | **Not enough evidence** | Too little outside activity to call it either way. That is an answer, not an error. |
 | **Personal project** | Someone's own project or a small team's, like a hackathon entry: not set up for outside contributions. |
-| **A list, not code** | A list or a catalogue of entries, like links or package listings: easy to get merged, but not code work. |
+| **A list, not code** | A list or a catalogue of entries, like links or package listings: a merged entry isn't code work. |
 
 **Rules decide. AI only explains.** The answer comes from fixed rules applied
 to counted evidence: who tried, who got merged, how fast the first reply came,

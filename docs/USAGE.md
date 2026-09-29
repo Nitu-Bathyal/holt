@@ -103,7 +103,7 @@ The report opens with one of five headlines:
 | **Not worth your time** | the record says a stranger's week goes nowhere here |
 | **Not enough evidence to say** | too little outsider activity to call it either way |
 | **Personal project** | someone's own project or a small team's, not set up for outside contributions |
-| **A list, not code** | a list or catalogue of entries: easy to get merged, but not code work |
+| **A list, not code** | a list or catalogue of entries: a merged entry isn't code work |
 
 Not enough evidence is a real answer, not a failure. Then:
 

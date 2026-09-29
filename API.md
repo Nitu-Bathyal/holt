@@ -209,8 +209,8 @@ they cannot disagree with each other or with the verdict:
   project or a small team's (a hackathon entry, coursework), with nothing from
   outside ever merged; Discover, Find and picks never list it. `catalogue`
   ("A list, not code"; engine 5): a list or a catalogue of entries, like
-  links or package manifests, where entries get merged easily but aren't
-  code. Before engine 5 these were `not_viable`. All three come only from
+  links or package manifests, where a merged entry isn't code work (and
+  whose merge odds aren't what the answer is about). Before engine 5 these were `not_viable`. All three come only from
   live readings.
 - `verdict_line` never oversells: "Worth your time" with many unanswered pull
   requests says so. Under every other verdict it is the sentence of the rule

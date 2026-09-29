@@ -389,11 +389,11 @@ def classify(
                 code="non_software_kind",
                 legacy=f"repo_kind={kind}: merged work here is not a software contribution",
             ))
-            # A catalogue or a list takes entries easily: its answer is about
-            # what a merge there is worth, not whether one happens, so it gets
-            # its own (live readings; the frozen benchmark kept Not worth). The
-            # backtest found every one of engine 4's false "Not worth" answers
-            # was a catalogue whose next newcomers mostly got in.
+            # A catalogue or a list: its answer is about what a merge there is
+            # worth, not whether one happens (winget merged 8 in 10 newcomers,
+            # awesome 1 in 20), so it gets its own (live readings; the frozen
+            # benchmark kept Not worth). Every one of engine 4's false "Not
+            # worth" answers in the backtest was a catalogue.
             if kind in CATALOGUE_KINDS and signals.settle_hours > 0:
                 return Verdict.CATALOGUE, trace
             return Verdict.NOT_VIABLE, trace
