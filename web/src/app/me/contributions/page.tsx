@@ -67,7 +67,7 @@ function PrRow({ p, w, rule, action }: { p: ContributionPR; w?: Waiting; rule: s
       </div>
       <div className="relative z-10 flex flex-wrap items-center gap-x-5 gap-y-2 sm:flex-nowrap sm:gap-4">
         {action}
-        <CountForm repo={p.repo} counted="no" label="don't count" className="min-h-11 text-[0.8rem] text-faint sm:min-h-9 transition-colors hover:text-ink" />
+        <CountForm repo={p.repo} counted="no" label="don't count" className="min-h-11 text-[0.8rem] text-faint transition-colors hover:text-ink sm:min-h-9" />
       </div>
     </li>
   );

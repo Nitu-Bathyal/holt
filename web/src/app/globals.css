@@ -3018,11 +3018,11 @@
   .app-row:is([data-stack], [data-stack] > *):has(> :first-child:is(input, label)) {
     grid-template-columns: auto minmax(0, 1fr);
   }
-  .app-row:is([data-stack], [data-stack] > *) > :last-child {
+  .app-row:is([data-stack], [data-stack] > *) > :last-child:not(:first-child) {
     grid-column: -2 / -1;
     justify-self: start;
   }
-  .app-row:is([data-stack], [data-stack] > *)[data-rule] > :last-child {
+  .app-row:is([data-stack], [data-stack] > *)[data-rule] > :last-child:not(:first-child) {
     margin-left: 8px;
   }
 }
