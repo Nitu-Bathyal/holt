@@ -59,11 +59,22 @@ const GENERIC = (
 
 /** Settings pages share a layout, and its loading.tsx only covers the section. */
 const SETTINGS = (
-  <div className="wrap max-w-3xl pb-14">
-    <div className="pb-6 pt-8 sm:pt-10">
-      <Skeleton className="h-8 w-40" />
+  <div className="app-page">
+    <div className="app-head">
+      <span className="flex h-[clamp(2.09rem,3.96vw,3.3rem)] items-center">
+        <Skeleton className="h-[62%] w-40" />
+      </span>
     </div>
-    <SettingsLoading />
+    <div className="app-tabs">
+      {[0, 1, 2, 3, 4].map((i) => (
+        <span key={i} className="flex min-h-11 items-center px-3">
+          <Skeleton className="h-3 w-16" />
+        </span>
+      ))}
+    </div>
+    <div className="max-w-3xl pt-8">
+      <SettingsLoading />
+    </div>
   </div>
 );
 

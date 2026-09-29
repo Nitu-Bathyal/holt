@@ -81,10 +81,11 @@ export function ProfileForm({
         <legend className={LEGEND}>Your experience</legend>
         <div className="grid gap-2 sm:grid-cols-2">
           {LEVELS.map((l) => (
-            <label key={l.id} className={`${BOX} flex-col !items-start gap-1 py-3 text-left`}>
+            <label key={l.id} className={`${BOX} group flex-col !items-start gap-1 py-3 text-left`}>
               <input type="radio" name="level" value={l.id} defaultChecked={level === l.id} className="sr-only" />
               <span className="font-semibold">{l.label}</span>
-              <span className="font-sans text-[0.87rem] text-muted">{l.hint}</span>
+              {/* On the selected card the hint takes the card's text colour: muted grey on green can't be read. */}
+              <span className="font-sans text-[0.87rem] font-normal text-muted group-has-[:checked]:text-on-accent">{l.hint}</span>
             </label>
           ))}
         </div>

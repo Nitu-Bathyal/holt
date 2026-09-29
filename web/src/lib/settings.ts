@@ -24,6 +24,16 @@ export const ACCOUNT_SETTINGS = section("accounts").href;
 export const PRIVACY_SETTINGS = section("privacy").href;
 export const DISPLAY_SETTINGS = section("display").href;
 
+/** Connecting GitHub: the form in Accounts. /connect lands here (lib/shell.ts, RETIRED). */
+export const CONNECT_GITHUB = `${ACCOUNT_SETTINGS}#github`;
+
+export type ConnectError = "adult" | "taken" | "link" | "unavailable" | "save";
+
+/** Back to the connect form, saying what went wrong. */
+export function connectFailed(error: ConnectError): string {
+  return `${ACCOUNT_SETTINGS}?connect=${error}#github`;
+}
+
 // Old anchors. Anchors that still exist inside a section (#plan, #purchases) are kept.
 const BY_HASH: Record<string, { to: string; keep?: boolean }> = {
   profile: { to: PROFILE_SETTINGS },

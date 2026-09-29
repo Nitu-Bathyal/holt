@@ -8,7 +8,7 @@ test("signed out, every page wears the marketing shell", () => {
 
 test("signed in, the app pages get the sidebar and the pages that explain or sell Holt don't", () => {
   for (const p of ["/me", "/me/saved", "/me/history", "/me/contributions", "/find", "/discover", "/discover/python", "/compare",
-    "/pallets/flask", "/settings", "/settings/ai-reports", "/preflight", "/hacktoberfest", "/connect", "/example-ai-report"]) {
+    "/pallets/flask", "/settings", "/settings/ai-reports", "/preflight", "/hacktoberfest", "/example-ai-report"]) {
     assert.equal(shellFor(p, true), "app", p);
   }
   for (const p of ["/", "/how-it-works", "/pricing", "/pricing/thanks", "/privacy", "/terms", "/refunds", "/contact", "/badge", "/signin", "/pricing/"]) {
@@ -59,6 +59,7 @@ test("retired addresses go to where their content lives now", () => {
   // Saved and checked are one list now, on the tab you came for.
   assert.equal(retiredRedirect("/me/saved"), "/me/repos?show=saved");
   assert.equal(retiredRedirect("/me/history/"), "/me/repos?show=checked");
+  assert.equal(retiredRedirect("/connect"), "/settings/accounts#github");
   for (const p of ["/", "/me", "/constructor", "/__proto__", "/for-you/x"]) assert.equal(retiredRedirect(p), null, p);
 });
 

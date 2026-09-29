@@ -7,7 +7,7 @@ import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/db";
 import { accounts } from "@/db/schema";
 
-/** Carries the choices made on /connect through GitHub's sign-in page and back
+/** Carries the choices made on the connect form (Settings → Accounts) through GitHub's sign-in page and back
  *  to /api/github/connect. Only ever set by the connect action, after the 18+
  *  box was ticked. */
 export const PENDING_COOKIE = "holt_connect";

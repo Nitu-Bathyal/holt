@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
-import { signOut } from "@/auth";
+import { oauthProviders, signOut } from "@/auth";
 import { githubConnection } from "@/lib/api";
-import { signInProviders } from "@/lib/github-account";
+import { linkedGitHubId, signInProviders } from "@/lib/github-account";
 import { currentUser } from "@/lib/session";
 import { ACCOUNT_SETTINGS } from "@/lib/settings";
-import { GitHubConnectionCard } from "@/components/connect-github-card";
-import { Notice, SectionHead } from "@/components/settings/section-head";
+import { ConnectGitHubForm, GitHubConnectionRow } from "@/components/connect-github-card";
+import { Block, Notice, SectionHead } from "@/components/settings/section-head";
 
 export const metadata: Metadata = { title: "Connected accounts · Settings", robots: { index: false } };
 
@@ -31,8 +31,8 @@ async function signInWith(userId: string): Promise<string | null> {
 export default async function AccountSettings({ searchParams }: PageProps<"/settings/accounts">) {
   const user = await currentUser();
   if (!user) redirect(`/signin?callbackUrl=${ACCOUNT_SETTINGS}`);
-  const { github: notice } = await searchParams;
-  const [gh, via] = await Promise.all([githubConnection(user.id), signInWith(user.id)]);
+  const { github: notice, connect: connectError } = await searchParams;
+  const [gh, via, githubId] = await Promise.all([githubConnection(user.id), signInWith(user.id), linkedGitHubId(user.id)]);
   const acct = gh.ok ? gh.data.account : null;
 
   return (
@@ -45,25 +45,27 @@ export default async function AccountSettings({ searchParams }: PageProps<"/sett
       )}
       {notice === "error" && <Notice tone="bad">That didn&apos;t work. Try again in a minute.</Notice>}
 
-      <h3 className="text-[1.1rem] font-semibold tracking-tight">Signing in</h3>
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-3 border border-line-strong bg-panel p-4 shadow-soft">
-        <div className="min-w-0 text-[0.9rem]">
-          <p className="font-semibold [overflow-wrap:anywhere]">{user.email || user.name}</p>
-          <p className="mt-1 text-muted">{via ? `You sign in with ${via}.` : "Signed in."}</p>
+      <Block title="Signing in">
+        <div className="app-row flex flex-wrap justify-between">
+          <div className="min-w-0 text-[0.9rem]">
+            <p className="font-semibold [overflow-wrap:anywhere]">{user.email || user.name}</p>
+            <p className="mt-1 text-muted">{via ? `You sign in with ${via}.` : "Signed in."}</p>
+          </div>
+          <form action={doSignOut}>
+            <button type="submit" className="btn-ghost">sign out</button>
+          </form>
         </div>
-        <form action={doSignOut}>
-          <button type="submit" className="btn-ghost">sign out</button>
-        </form>
-      </div>
+      </Block>
 
-      <h3 id="github" className="mt-8 scroll-mt-24 text-[1.1rem] font-semibold tracking-tight">GitHub</h3>
-      <div className="mt-3">
-        {gh.ok ? (
-          <GitHubConnectionCard acct={acct} />
-        ) : (
+      <Block id="github" title="GitHub" className="mt-10">
+        {!gh.ok ? (
           <p role="alert" className="border border-orange/50 px-4 py-3 font-sans text-[0.9rem] text-orange">{gh.error.message}</p>
+        ) : acct ? (
+          <GitHubConnectionRow acct={acct} />
+        ) : (
+          <ConnectGitHubForm viaGitHub={!githubId} canLink={oauthProviders.some((p) => p.id === "github")} error={typeof connectError === "string" ? connectError : undefined} />
         )}
-      </div>
+      </Block>
     </section>
   );
 }
