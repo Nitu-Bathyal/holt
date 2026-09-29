@@ -6,13 +6,13 @@
 // swipe sideways, a column at a time.
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { cells, leaders, ROWS, type Cell, type Lead } from "@/lib/compare";
-import { fullStats } from "@/lib/repo-card";
+import { ABOUT_ROWS, aboutCells, cells, leaders, ROWS, type Cell, type Lead } from "@/lib/compare";
+import { fullStats, langColor } from "@/lib/repo-card";
 import { friendlyStage } from "@/lib/stages";
 import type { Report, StarterIssue } from "@/lib/types";
 import { VerdictPill } from "../report/verdict-pill";
 import { OddsBar } from "../repo-card/odds-bar";
-import { RepoAvatar } from "../repo-card/repo-avatar";
+import { LangDot, RepoAvatar } from "../repo-card/repo-avatar";
 import { useAnalysis } from "../use-analysis";
 
 export type Column = { repo: string; removeHref: string } & (
@@ -23,12 +23,14 @@ export type Column = { repo: string; removeHref: string } & (
   | { kind: "note"; note: React.ReactNode }
 );
 
-export function CompareTable({ columns, issues, label }: { columns: Column[]; issues: React.ReactNode[]; label: string }) {
+/** `now` is the server's clock, so "2 days ago" reads the same before and after hydration. */
+export function CompareTable({ columns, issues, label, now }: { columns: Column[]; issues: React.ReactNode[]; label: string; now: number }) {
   const [landed, setLanded] = useState<Record<string, Report>>({});
   const onLanded = useCallback((repo: string, r: Report) => setLanded((m) => ({ ...m, [repo]: r })), []);
   const reports = columns.map((c) => (c.kind === "report" ? c.report : landed[c.repo] ?? null));
   const lead = leaders(reports.map((r) => r?.stats ?? null));
   const all = reports.map((r) => r && cells(r));
+  const about = reports.map((r) => r && aboutCells(r.about, now));
 
   return (
     <div className="cmp-scroll" data-many={columns.length > 2 || undefined}>
@@ -72,6 +74,30 @@ export function CompareTable({ columns, issues, label }: { columns: Column[]; is
               return (
                 <div role="cell" key={c.repo} className="cmp-cell">
                   {cell ? <Value cell={cell} best={best} code={row.id === "way"} /> : <span className="text-faint">–</span>}
+                </div>
+              );
+            })}
+          </div>
+        ))}
+
+        {ABOUT_ROWS.map((row, n) => (
+          <div role="row" key={row.id} className="cmp-row" data-about={n === 0 ? "first" : undefined}>
+            <div role="rowheader" className="cmp-label"><span>{row.label}</span></div>
+            {columns.map((c, i) => {
+              const cell = about[i]?.[row.id];
+              return (
+                <div role="cell" key={c.repo} className="cmp-cell">
+                  {cell ? (
+                    <span className={`cmp-main ${row.id === "stars" ? "cmp-stars" : ""} ${cell.tone === "bad" ? "text-orange" : cell.tone === "none" ? "text-faint" : "text-ink"}`}>
+                      {cell.lang && <LangDot color={langColor(cell.lang)} />}
+                      {row.id === "stars" && cell.tone !== "none" && <span aria-hidden="true" className="text-amber">★</span>}
+                      {cell.main}
+                      {row.id === "stars" && cell.tone !== "none" && <span className="sr-only"> stars</span>}
+                    </span>
+                  ) : (
+                    <span className="text-faint">–</span>
+                  )}
+                  {cell?.sub && <span className="cmp-sub">{cell.sub}</span>}
                 </div>
               );
             })}

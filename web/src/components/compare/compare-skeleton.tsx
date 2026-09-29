@@ -1,6 +1,6 @@
 "use client";
 // /compare while it loads: the table's shape, one column per repo in the URL.
-import { ROWS } from "@/lib/compare";
+import { ABOUT_ROWS, ROWS } from "@/lib/compare";
 import { useSearchParams } from "next/navigation";
 import { Skeleton } from "../skeleton";
 
@@ -39,8 +39,8 @@ export function CompareColumns({ n }: { n: number }) {
             </div>
           ))}
         </div>
-        {ROWS.map((r) => (
-          <div key={r.id} className="cmp-row">
+        {[...ROWS, ...ABOUT_ROWS].map((r) => (
+          <div key={r.id} className="cmp-row" data-about={r.id === ABOUT_ROWS[0].id ? "first" : undefined}>
             <div className="cmp-label"><span>{r.label}</span></div>
             {cols.map((i) => (
               <div key={i} className="cmp-cell">

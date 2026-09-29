@@ -8,6 +8,7 @@ import { AppPageHeader, EmptyState } from "@/components/shell/app-page";
 import { SignInToCheck } from "@/components/sign-in-to-check";
 import { getReport, starterIssues } from "@/lib/api";
 import { compareHref as href, compareTitle, EXAMPLE_POOL, leaders, MAX, parseList, SUGGESTIONS } from "@/lib/compare";
+import { clock } from "@/lib/home";
 import { caller, currentUser, type SessionUser } from "@/lib/session";
 import type { Report } from "@/lib/types";
 
@@ -106,7 +107,7 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
                 Example: <Link href={href(list)} className="text-link">{short(list)}</Link>
               </p>
             )}
-            <CompareTable columns={columns} issues={issues} label={all.length ? `Comparing ${short(list)}` : `Example: ${short(list)}`} />
+            <CompareTable columns={columns} issues={issues} now={clock()} label={all.length ? `Comparing ${short(list)}` : `Example: ${short(list)}`} />
           </>
         )}
       </div>

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { cells, compareHref, compareTitle, leaders, parseList, ROWS } from "./compare.ts";
+import { ABOUT_ROWS, aboutCells, cells, compareHref, compareTitle, leaders, parseList, ROWS } from "./compare.ts";
 import { humanHours } from "./format.ts";
 import type { Stats } from "./types.ts";
 
@@ -63,4 +63,23 @@ test("cells: a share to scan with what it's out of, and plain words where there'
 test("every row has a cell", () => {
   const c = cells({ stats: st(), landing: [] });
   for (const r of ROWS) assert.ok(c[r.id], r.id);
+});
+
+test("aboutCells: stars lead, counts are compact, and archived shows where the last push goes", () => {
+  const now = Date.parse("2026-09-30T00:00:00Z");
+  const about = {
+    stars: 68400, forks: 16300, open_issues: 12, pushed_at: "2026-09-28T00:00:00Z", archived: false,
+    languages: [{ name: "Python", share: 0.62 }, { name: "HTML", share: 0.2 }],
+  } as never;
+  const c = aboutCells(about, now);
+  assert.equal(c.stars.main, "68k");
+  assert.equal(c.forks.main, "16k");
+  assert.equal(c.issues.main, "12");
+  assert.equal(c.pushed.main, "2 days ago");
+  assert.deepEqual(c.language, { main: "Python", sub: "62%", lang: "Python" });
+  const old = aboutCells({ ...(about as object), archived: true, forks: null, languages: [] } as never, now);
+  assert.deepEqual(old.pushed, { main: "archived", tone: "bad" });
+  assert.equal(old.forks.tone, "none");
+  assert.equal(old.language.main, "–");
+  for (const r of ABOUT_ROWS) assert.equal(aboutCells(null, now)[r.id].main, "–", r.id);
 });
