@@ -37,7 +37,7 @@ from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
 
 from holt_server import budget, entitlements, starter
@@ -483,19 +483,32 @@ class JobRunner:
             await self._queue_found(result)
 
     async def _queue_found(self, result: dict[str, Any]) -> None:
-        """Queue a background rules report for each repository a search found
-        that has none fresh. The search screened them at a lighter depth and
-        stored no report, so without this a repository listed "Worth your
-        time" opened on "not checked yet"."""
-        for r in result.get("results") or []:
-            repo = r.get("repo") if isinstance(r, dict) else None
-            if not repo:
-                continue
+        """Queue a background rules report for the first few repositories a
+        search found that have none fresh. The search screened them at a
+        lighter depth and stored no report, so without this a repository
+        listed "Worth your time" opened on "not checked yet".
+
+        Bounded: `FOUND_PER_SEARCH` per search, nothing while
+        `FOUND_QUEUE_MAX` background jobs already wait or the tokens are
+        below the warm pass's floor, one job per repository, and all of it on
+        the background lane, which a person's own check never waits behind."""
+        svc = self.services
+        left = svc.pool.points_left()
+        if left is not None and left < svc.settings.warm_min_points:
+            log.info("not queueing reports for found repos: %d GitHub points left", left)
+            return
+        found = [r["repo"] for r in result.get("results") or []
+                  if isinstance(r, dict) and r.get("repo")][:FOUND_PER_SEARCH]
+        for repo in found:
             try:
-                if await any_fresh_rules_report(self.services, repo):
+                if await any_fresh_rules_report(svc, repo):
                     continue
                 key = repo.lower()
-                async with self.services.db.session() as s:
+                async with svc.db.session() as s:
+                    waiting = (await s.execute(select(func.count()).select_from(Job).where(
+                        Job.status == "queued", Job.priority >= BADGE_PRIORITY))).scalar_one()
+                    if waiting >= FOUND_QUEUE_MAX:
+                        break
                     if (await s.execute(select(Job.id).where(
                             Job.dedupe_key == dedupe_key(key, "rules", FOUND_DAYS),
                             Job.status.in_(ACTIVE)).limit(1))).first():
@@ -574,6 +587,10 @@ async def fresh_rules_report(svc, repo: str, days: int) -> dict[str, Any] | None
 # The budget a found repository's background report is made for: the default,
 # so the report page, badges and the extension read it directly.
 FOUND_DAYS = 7
+# Background reports one search may queue (its top results; the page shows
+# those first), and the background queue length past which searches queue none.
+FOUND_PER_SEARCH = 5
+FOUND_QUEUE_MAX = 50
 
 
 async def any_fresh_rules_report(svc, repo: str) -> bool:

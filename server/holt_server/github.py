@@ -151,6 +151,16 @@ class TokenPool:
         low = (st.reset_at or 0.0) if (st.remaining or 0) < LOW_POINTS else 0.0
         return max(st.out_until, low)
 
+    def points_left(self) -> int | None:
+        """GraphQL points left across the tokens usable now, as GitHub last
+        reported them (no call); None while any usable token's count is unknown."""
+        with self._lock:
+            now = self._clock()
+            usable = [self._state[i] for i in range(len(self._tokens)) if self._usable(i, now)]
+            if any(st.remaining is None for st in usable):
+                return None
+            return sum(st.remaining or 0 for st in usable)
+
     def all(self) -> list[str]:
         return list(self._tokens)
 
