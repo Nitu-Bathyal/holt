@@ -78,7 +78,7 @@ export function AnalysisProgress({ repo, stage, progress, mode, kicker, note }: 
         </div>
       </div>
       <p className="mt-8 border-t border-dashed border-line pt-4 font-sans text-[0.89rem] text-faint">
-        {note ?? "The first check of a repo takes about a minute. After that it's instant for everyone for a day."}
+        {note ?? "The first check of a repo takes about 20 seconds. After that it's instant for everyone for a day."}
       </p>
     </div>
   );

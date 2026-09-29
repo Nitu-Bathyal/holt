@@ -47,7 +47,7 @@ export function ReportTeaser({ repo, report, back }: { repo: string; report: Rep
               <h1 className="display mt-4 text-[2rem] [overflow-wrap:anywhere] sm:text-[3rem]">Is {repo} worth your time?</h1>
               <p className="mt-4 max-w-2xl font-sans text-[1.05rem] leading-relaxed text-ink sm:text-[1.15rem]">
                 Holt hasn&apos;t checked this repo recently. Sign in and it reads the recent pull requests now: do outsiders
-                get replies, and does their work get merged? It takes about a minute.
+                get replies, and does their work get merged? It takes about 20 seconds.
               </p>
             </>
           )}
