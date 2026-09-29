@@ -1,21 +1,28 @@
+// Your pull requests (docs/design/DASHBOARD.md): is each one going anywhere?
+// Grouped by next move: needs you (waiting longer than the repo usually takes
+// to reply), waiting, merged, closed. Any repo can be left out of your numbers
+// (a friend's project, your team's repo, a hackathon); those collect, undoable,
+// in a folded "Not counted" group.
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CatFace } from "@/components/cat-face";
-import { PrList } from "@/components/contributions/pr-list";
+import { ContributionHistorySlot } from "@/components/contributions/history-slot";
 import { RefreshButton } from "@/components/contributions/refresh-button";
 import { ErrorPanel } from "@/components/error-panel";
-import { AppPageHeader } from "@/components/shell/app-page";
+import { MarkedTitle } from "@/components/home/move-head";
+import { WaitBar } from "@/components/home/wait-bar";
 import { PageTransition } from "@/components/motion/page-transition";
-import { ForYouCard } from "@/components/recommendations/for-you-card";
-import { contributions, recommendations } from "@/lib/api";
-import { foundViaHoltLine, landedLine, landedPct } from "@/lib/contributions";
+import { AppPageHeader, SectionHead } from "@/components/shell/app-page";
+import { contributions, preflightState } from "@/lib/api";
+import { landedLine, prGroups, prsTitle, STATE_LABEL, type PrGroups } from "@/lib/contributions";
 import { timeAgo } from "@/lib/format";
-import { outsidePulls } from "@/lib/home";
-import { currentUser } from "@/lib/session";
-import { refresh } from "./actions";
+import { clock, outsidePulls, type Waiting } from "@/lib/home";
+import { showPreflight } from "@/lib/preflight";
+import { caller, currentUser } from "@/lib/session";
+import type { ContributionPR } from "@/lib/types";
+import { refresh, setCounted } from "./actions";
 
-export const metadata: Metadata = { title: "Your contributions", robots: { index: false } };
+export const metadata: Metadata = { title: "Your pull requests", robots: { index: false } };
 
 const NOTICES: Record<string, { tone: string; text: string }> = {
   done: { tone: "text-green border-green/50 bg-green/10", text: "Updated from GitHub." },
@@ -24,85 +31,151 @@ const NOTICES: Record<string, { tone: string; text: string }> = {
   error: { tone: "text-orange border-orange/50 bg-orange/10", text: "We couldn't reach GitHub just now. Your list below is from the last check; try again in a minute." },
 };
 
-function Tile({ label, value, note }: { label: string; value: string; note?: string | null }) {
+const RULE = { needs: "var(--orange)", waiting: "var(--blue)", merged: "var(--green)", closed: "var(--line-strong)" };
+
+function CountForm({ repo, counted, label, className }: { repo: string; counted: "yes" | "no" | "reset"; label: string; className: string }) {
   return (
-    <div className="bg-panel p-4 sm:p-5">
-      <p className="text-[0.8rem] uppercase tracking-[0.08em] text-faint">{label}</p>
-      <p className="mt-1 text-[1.5rem] font-semibold">{value}</p>
-      {note && <p className="mt-1 text-[0.82rem] text-faint">{note}</p>}
-    </div>
+    <form action={setCounted}>
+      <input type="hidden" name="repo" value={repo} />
+      <input type="hidden" name="counted" value={counted} />
+      <button type="submit" className={className} title={counted === "no" ? `Leave ${repo} out of your numbers` : undefined}>{label}</button>
+    </form>
+  );
+}
+
+function PrRow({ p, w, rule, action }: { p: ContributionPR; w?: Waiting; rule: string; action?: React.ReactNode }) {
+  const [owner, name] = p.repo.split("/");
+  return (
+    <li data-rule className="app-row grid-cols-[minmax(0,1fr)_auto]" style={{ "--rule": rule } as React.CSSProperties}>
+      <div className="min-w-0 pl-2">
+        <p className="flex flex-wrap items-baseline gap-x-2 text-[0.9rem]">
+          <Link href={`/${p.repo}`} className="font-semibold tracking-tight hover:text-blue"><span className="font-normal text-muted">{owner}/</span>{name}</Link>
+          <span className="text-[0.8rem] text-faint">#{p.number}</span>
+          {p.found_via_holt && <span className="border border-blue/40 px-1.5 text-[0.72rem] text-blue">found via Holt</span>}
+        </p>
+        <a href={p.url} className="mt-0.5 block truncate font-sans text-[0.95rem] hover:underline">{p.title}</a>
+        {w ? (
+          <WaitBar w={w} />
+        ) : (
+          <p className="mt-1 text-[0.78rem] text-faint">
+            {STATE_LABEL[p.state]} {timeAgo(p.merged_at ?? p.closed_at ?? p.created_at)}
+            {p.verdict && <> · Holt: {p.verdict.headline.toLowerCase()}</>}
+          </p>
+        )}
+      </div>
+      <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-4">
+        {action}
+        <CountForm repo={p.repo} counted="no" label="don't count" className="min-h-9 text-[0.8rem] text-faint transition-colors hover:text-ink" />
+      </div>
+    </li>
+  );
+}
+
+function Groups({ g, preflight }: { g: PrGroups; preflight: boolean }) {
+  const lateAction = (w: Waiting) =>
+    preflight ? (
+      <Link href={`/preflight?pr=${encodeURIComponent(w.pr.url)}`} className="btn-primary min-h-10 px-4 text-[0.84rem]">pre-flight →</Link>
+    ) : (
+      <a href={w.pr.url} className="text-link text-[0.84rem]">open it ↗</a>
+    );
+  const sections = [
+    { id: "needs", title: "Needs you", n: g.needs.length, rows: g.needs.map((w) => <PrRow key={w.pr.url} p={w.pr} w={w} rule={RULE.needs} action={lateAction(w)} />) },
+    { id: "waiting", title: "Waiting", n: g.waiting.length, rows: g.waiting.map((w) => <PrRow key={w.pr.url} p={w.pr} w={w} rule={RULE.waiting} />) },
+    { id: "merged", title: "Merged", n: g.merged.length, rows: g.merged.map((p) => <PrRow key={p.url} p={p} rule={RULE.merged} />) },
+    { id: "closed", title: "Closed", n: g.closed.length, rows: g.closed.map((p) => <PrRow key={p.url} p={p} rule={RULE.closed} />) },
+  ];
+  return (
+    <>
+      {sections.map((s) =>
+        s.n ? (
+          <section key={s.id} aria-labelledby={`${s.id}-h`}>
+            <SectionHead id={`${s.id}-h`} title={s.title} note={String(s.n)} />
+            <ul>{s.rows}</ul>
+          </section>
+        ) : null,
+      )}
+      {g.notCounted.length > 0 && (
+        <details className="group">
+          <summary className="section-head cursor-pointer list-none">
+            <h2 className="flex items-center gap-2">
+              Not counted <span className="font-normal text-faint">{g.notCounted.reduce((n, r) => n + r.pulls.length, 0)}</span>
+            </h2>
+            <span aria-hidden="true" className="text-faint transition-transform group-open:rotate-180">▾</span>
+          </summary>
+          <ul>
+            {g.notCounted.map((r) => (
+              <li key={r.repo} className="app-row grid-cols-[minmax(0,1fr)_auto]">
+                <div className="min-w-0">
+                  <Link href={`/${r.repo}`} className="font-semibold tracking-tight hover:text-blue">{r.repo}</Link>
+                  <p className="mt-0.5 text-[0.78rem] text-faint">
+                    {r.pulls.length} pull request{r.pulls.length === 1 ? "" : "s"} · {r.because === "own_project" ? "Holt: your own or your team's project" : "left out by you"}
+                  </p>
+                </div>
+                <CountForm repo={r.repo} counted={r.because === "own_project" ? "yes" : "reset"} label="count it" className="text-link text-[0.84rem]" />
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
+    </>
   );
 }
 
 export default async function ContributionsPage({ searchParams }: PageProps<"/me/contributions">) {
   const user = await currentUser();
   if (!user) redirect("/signin?callbackUrl=/me/contributions");
-  const sp = await searchParams;
-  const [r, picks] = await Promise.all([contributions(user.id), recommendations(user.id, 2)]);
+  const [sp, who] = await Promise.all([searchParams, caller(user)]);
+  const [r, pre] = await Promise.all([contributions(user.id), preflightState({}, who)]);
   const notConnected = !r.ok && r.error.code === "not_found";
-  const notice = typeof sp.refresh === "string" ? NOTICES[sp.refresh] : undefined;
+  const notice = sp.count === "error"
+    ? { tone: NOTICES.error.tone, text: "We couldn't save that just now. Try again in a minute." }
+    : typeof sp.refresh === "string" ? NOTICES[sp.refresh] : undefined;
   const d = r.ok ? r.data : null;
-  const pct = d ? landedPct(d.summary) : null;
-  const via = d ? foundViaHoltLine(d.summary.found_via_holt) : null;
+  const g = d ? prGroups(outsidePulls(d.pull_requests, d.login), clock()) : null;
+  const s = d?.summary;
 
   return (
     <PageTransition>
-      <>
       <div className="app-page">
-        <AppPageHeader title="Your pull requests" lead={<>Your public PRs to other people&apos;s repos from the last 12 months, with Holt&apos;s verdict on each repo.{d && <span className="text-faint"> As @{d.login}.</span>}</>} />
-        {notice && d && <p role="status" className={`mt-6 border px-4 py-3 font-sans text-[0.9rem] ${notice.tone}`}>{notice.text}</p>}
-
         {notConnected ? (
-          <div className="mt-8 border border-dashed border-line-strong p-8 text-center">
-            <CatFace mood="thinking" className="text-[1.6rem]" />
-            <p className="prose-sans mx-auto mt-4 max-w-md text-muted">
-              Connect your GitHub account to see your pull requests here, each with Holt&apos;s verdict on the repo.
-            </p>
-            <Link href="/connect" className="btn-primary mt-6 inline-flex">connect GitHub</Link>
-          </div>
-        ) : !r.ok ? (
-          <div className="mt-8"><ErrorPanel error={r.error} retryHref="/me/contributions" /></div>
-        ) : d && (
           <>
-            <section aria-label="Summary" className="mt-8 grid grid-cols-2 gap-px border border-line bg-line shadow-soft sm:grid-cols-4">
-              <Tile label="Opened" value={String(d.summary.opened)} note={d.truncated ? "your latest 200" : "last 12 months"} />
-              <Tile label="Merged" value={String(d.summary.merged)} />
-              <Tile label="Still waiting" value={String(d.summary.waiting)} note="open, no decision yet" />
-              <Tile label="Landed" value={pct == null ? "–" : `${pct}%`} note={landedLine(d.summary) ?? "nothing decided yet"} />
-            </section>
-            {via && <p className="prose-sans mt-4 text-[0.9rem] text-blue">{via}</p>}
-            {picks.ok && <ForYouCard data={picks.data} />}
-
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-3">
-              <p className="text-[0.82rem] text-faint">
-                Checked GitHub <time dateTime={d.fetched_at}>{timeAgo(d.fetched_at)}</time>. We check again every day.
-              </p>
-              <RefreshButton action={refresh} nextRefreshAt={d.next_refresh_at} />
+            <AppPageHeader title="Your pull requests" mood="thinking" />
+            <div className="flex flex-col items-start gap-4">
+              <p className="font-sans text-muted">Connect GitHub to see your pull requests here.</p>
+              <Link href="/connect" className="btn-primary">connect GitHub</Link>
             </div>
-
-            <div className="mt-4">
-              {d.pull_requests.length === 0 ? (
-                <div className="border border-dashed border-line-strong p-8 text-center">
-                  <CatFace mood="startled" className="text-[1.6rem]" />
-                  <p className="prose-sans mx-auto mt-4 max-w-md text-muted">
-                    No public pull requests to other people&apos;s repos in the last 12 months. Holt can help you pick a first one.
-                  </p>
-                  <Link href="/find" className="bracket-link mt-6">[ find a project → ]</Link>
-                </div>
-              ) : (
-                <PrList prs={outsidePulls(d.pull_requests, d.login)} />
-              )}
+          </>
+        ) : !r.ok ? (
+          <>
+            <AppPageHeader title="Your pull requests" />
+            <ErrorPanel error={r.error} retryHref="/me/contributions" />
+          </>
+        ) : d && g && s && (
+          <>
+            <AppPageHeader title={<MarkedTitle title={prsTitle(g)} />} mood={g.needs.length ? "thinking" : g.waiting.length ? "ready" : g.merged.length ? "celebrating" : "ready"}>
+              <div className="mt-5 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 text-[0.84rem] text-muted">
+                <p className="flex flex-wrap gap-x-5 gap-y-1">
+                  <span><b className="text-ink">{s.opened}</b> opened {d.truncated ? "(your latest 200)" : "this year"}</span>
+                  <span><b className="text-green">{s.merged}</b> merged</span>
+                  {s.closed > 0 && <span><b className="text-ink">{s.closed}</b> closed</span>}
+                  {landedLine(s) && <span>{landedLine(s)}</span>}
+                  {s.found_via_holt > 0 && <span><b className="text-blue">{s.found_via_holt}</b> found via Holt</span>}
+                  <span className="text-faint">as @{d.login} · updated <time dateTime={d.fetched_at}>{timeAgo(d.fetched_at)}</time></span>
+                </p>
+                <RefreshButton action={refresh} nextRefreshAt={d.next_refresh_at} />
+              </div>
+            </AppPageHeader>
+            {notice && <p role="status" className={`mb-6 border px-4 py-3 font-sans text-[0.9rem] ${notice.tone}`}>{notice.text}</p>}
+            <ContributionHistorySlot data={d} />
+            <div className="mt-6 space-y-12">
+              <Groups g={g} preflight={pre.ok && showPreflight(pre.data)} />
             </div>
-
-            <p className="mt-6 font-sans text-[0.87rem] text-faint">
-              &ldquo;Found via Holt&rdquo; marks a pull request you opened within 30 days of checking that repo here while connected.
-              The verdict is Holt&apos;s latest check of each repo; no verdict yet means nobody has checked it.
-              Pull requests to your own repos are left out. <Link href="/settings/accounts" className="text-link">GitHub settings</Link>
+            <p className="mt-12 font-sans text-[0.92rem] text-muted">
+              Next one? <Link href="/find" className="text-link font-mono text-[0.88rem]">find a project</Link>
             </p>
           </>
         )}
       </div>
-      </>
     </PageTransition>
   );
 }
