@@ -160,8 +160,10 @@ def test_the_engine_answers_from_the_before_records_only():
 
 def test_the_backtest_recordings_are_the_size_they_should_be():
     """Committed like the golden recordings, and kept small the same way."""
-    paths = list(bt.BACKTESTS.glob("*.json.gz"))
-    assert sum(p.stat().st_size for p in paths) < 16 * 1024 * 1024
-    assert not list(bt.BACKTESTS.glob("*.tmp"))
-    names = {bt.backtest_path(r).name for r in bt.load_repos()}
-    assert {p.name for p in paths} <= names
+    names = {bt.backtest_path(r, bt.BACKTESTS).name for r in bt.load_repos()}
+    for as_of in bt.as_of_dates():
+        root = bt.date_root(as_of)
+        paths = list(root.glob("*.json.gz"))
+        assert sum(p.stat().st_size for p in paths) < 16 * 1024 * 1024, root
+        assert not list(root.glob("*.tmp")), root
+        assert {p.name for p in paths} <= names, root

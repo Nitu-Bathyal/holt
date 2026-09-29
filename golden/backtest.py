@@ -44,6 +44,7 @@ from holt.evidence.fixtures import content_hash, record_from_dict, record_to_dic
 from holt.evidence.provider import EvidenceProvider
 from holt.types import EvidenceRecord, Window
 
+# One folder per as-of date: golden/backtests/2026-06-15/<owner>__<name>.json.gz
 BACKTESTS = HERE / "backtests"
 
 AS_OF = datetime(2026, 6, 15, tzinfo=UTC)
@@ -90,7 +91,18 @@ class Backtest:
     after: list[EvidenceRecord]
 
 
-def backtest_path(repo: str, root: Path = BACKTESTS) -> Path:
+def date_root(as_of: datetime) -> Path:
+    """The folder that holds every recording made for one as-of date."""
+    return BACKTESTS / as_of.date().isoformat()
+
+
+def as_of_dates() -> list[datetime]:
+    """Every as-of date with recordings, oldest first."""
+    return sorted(datetime.fromisoformat(p.name).replace(tzinfo=UTC)
+                  for p in BACKTESTS.glob("????-??-??") if p.is_dir())
+
+
+def backtest_path(repo: str, root: Path) -> Path:
     return root / (repo.replace("/", "__") + ".json.gz")
 
 
@@ -100,7 +112,7 @@ def _part(records: Iterable[EvidenceRecord]) -> tuple[list[dict], str, int]:
     return [record_to_dict(r) for r in records], content_hash(records), removed
 
 
-def write_backtest(bt: Backtest, root: Path = BACKTESTS) -> Path:
+def write_backtest(bt: Backtest, root: Path | None = None) -> Path:
     """Scrubbed of third-party credentials, hashed, gzipped. Deterministic bytes."""
     before, before_hash, removed_b = _part(bt.before)
     after, after_hash, removed_a = _part(bt.after)
@@ -117,7 +129,7 @@ def write_backtest(bt: Backtest, root: Path = BACKTESTS) -> Path:
         "before": before,
         "after": after,
     }
-    path = backtest_path(bt.repo, root)
+    path = backtest_path(bt.repo, root or date_root(bt.as_of))
     path.parent.mkdir(parents=True, exist_ok=True)
     raw = json.dumps(body, sort_keys=True, separators=(",", ":")).encode("utf-8")
     tmp = path.with_suffix(".tmp")
@@ -126,7 +138,7 @@ def write_backtest(bt: Backtest, root: Path = BACKTESTS) -> Path:
     return path
 
 
-def read_backtest(repo: str, root: Path = BACKTESTS) -> Backtest:
+def read_backtest(repo: str, root: Path) -> Backtest:
     path = backtest_path(repo, root)
     data = json.loads(gzip.decompress(path.read_bytes()).decode("utf-8"))
     before = [record_from_dict(r) for r in data["before"]]
@@ -151,9 +163,11 @@ def after_query(home: str, as_of: datetime, window_end: datetime) -> str:
 
 
 def record(repos: list[str], as_of: datetime = AS_OF, window_days: int = WINDOW_DAYS,
-           root: Path = BACKTESTS, force: bool = False, transport=None) -> int:
+           root: Path | None = None, force: bool = False, transport=None) -> int:
     """Capture each repository's before and after. Returns the number that failed."""
     from holt.evidence.github_graphql import GitHubGraphQL, LiveGitHubProvider, project
+
+    root = root or date_root(as_of)
 
     transport = transport or GitHubGraphQL()
     window_end = as_of + timedelta(days=window_days)
@@ -421,6 +435,16 @@ def score_all(backtests: list[Backtest], methods: Iterable[str] = COUNTS) -> lis
     return scores
 
 
+def pooled(runs: dict[str, list[Score]]) -> list[Score]:
+    """Every date's rows in one score per method, each row named with its date."""
+    out = []
+    for i, first in enumerate(next(iter(runs.values()))):
+        rows = [Row(f"{r.repo} ({day})", r.verdict, r.rule, r.outcome)
+                for day, scores in runs.items() for r in scores[i].rows]
+        out.append(Score(first.method, rows))
+    return out
+
+
 # --- the report ------------------------------------------------------------------
 
 
@@ -490,6 +514,7 @@ def main(argv: list[str] | None = None) -> int:
     rec.add_argument("--window", type=int, default=WINDOW_DAYS, help="days after the as-of date")
     rec.add_argument("--force", action="store_true", help="re-record existing recordings")
     run = sub.add_parser("run", help="score every counting method (offline)")
+    run.add_argument("--as-of", help="only this date (default: each recorded date, then pooled)")
     run.add_argument("--json", action="store_true", help="rows as JSON instead of Markdown")
     args = parser.parse_args(argv)
 
@@ -498,20 +523,28 @@ def main(argv: list[str] | None = None) -> int:
         return 1 if record(args.repos or list(load_repos()), as_of, args.window,
                            force=args.force) else 0
 
-    repos = [r for r in load_repos() if backtest_path(r).exists()]
-    if not repos:
+    dates = ([datetime.fromisoformat(args.as_of).replace(tzinfo=UTC)] if args.as_of
+             else as_of_dates())
+    runs: dict[str, list[Score]] = {}
+    for as_of in dates:
+        root = date_root(as_of)
+        repos = [r for r in load_repos() if backtest_path(r, root).exists()]
+        if repos:
+            runs[as_of.date().isoformat()] = score_all([read_backtest(r, root) for r in repos])
+    if not runs:
         print("No backtest recordings yet: run `python -m golden.backtest record`.",
               file=sys.stderr)
         return 1
-    scores = score_all([read_backtest(r) for r in repos])
     if args.json:
-        print(json.dumps({s.method: [{"repo": r.repo, "verdict": r.verdict, "rule": r.rule,
-                                      **dataclasses.asdict(r.outcome)} for r in s.rows]
-                          for s in scores}, indent=1))
-    else:
-        print(report(scores))
+        print(json.dumps({day: {s.method: [{"repo": r.repo, "verdict": r.verdict, "rule": r.rule,
+                                            **dataclasses.asdict(r.outcome)} for r in s.rows]
+                                for s in scores} for day, scores in runs.items()}, indent=1))
+        return 0
+    sections = [f"## As of {day}\n\n{report(scores)}" for day, scores in runs.items()]
+    if len(runs) > 1:
+        sections.append(f"## Every date pooled\n\n{report(pooled(runs))}")
+    print("\n\n".join(sections))
     return 0
-
 
 if __name__ == "__main__":
     sys.exit(main())

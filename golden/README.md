@@ -74,7 +74,7 @@ here once a person agrees.
 ## The backtest
 
 The golden set pins what the engine says; `golden/backtest.py` checks whether
-it was right. `golden/backtests/` holds, per repository, what a report would
+it was right. `golden/backtests/<date>/` holds, per repository, what a report would
 have read on a past date and what happened to the outside pull requests opened
 after it. `uv run python -m golden.backtest run` scores any engine change
 against that, offline. How it works, what counts as right, and the results so

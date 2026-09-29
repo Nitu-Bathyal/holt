@@ -10,8 +10,8 @@ answer on that date and sent a pull request, would the answer have held up?**
 
 ## What is recorded
 
-For each repository (the golden set's list, `golden/repos.json`), one file in
-`golden/backtests/`, with two parts:
+For each repository (the golden set's list, `golden/repos.json`) and each
+as-of date, one file in `golden/backtests/<as-of date>/`, with two parts:
 
 - **before**: exactly what a live report would have read on the *as-of* date
   (`LiveGitHubProvider` with that cutoff: the newest 200 pull requests created
@@ -172,11 +172,52 @@ jesseduffield/lazygit (0 of 22) and oppia/oppia (2 of 28).
    Worth line. The 30% was fixed before the run, but choosing this combination
    was not, so it must be confirmed on a second as-of date before it ships.
 
+## Results: second run (as of 15 April 2026, engine 4)
+
+The same 73 repositories, recorded on 29 Sep 2026 with an as-of date of 15
+April (window 15 April to 30 May), about 2,400 more points. 50 were scored.
+Nothing was tuned between the runs.
+
+| method | scored | false greens | false reds | rank agreement | Worth: merged / replied | Long shot | Not worth |
+|---|---|---|---|---|---|---|---|
+| prs (engine 4) | 50 | 3 | 5 | 0.39 | 49% / 62% (n=27) | 11% / 33% (n=9) | 15% / 14% (n=14) |
+| people | 50 | 7 | 5 | 0.28 | 44% / 50% (n=32) | 22% / 30% (n=4) | 15% / 14% (n=14) |
+| first_pr | 50 | 4 | 5 | 0.38 | 47% / 57% (n=29) | 8% / 30% (n=6) | 14% / 20% (n=15) |
+| baseline | 50 | 0 | 1 | 0.76 | 57% / 75% (n=23) | 15% / 24% (n=12) | 6% / 27% (n=15) |
+
+Without the 8 catalogues: engine 4 0.69, people 0.57, first_pr 0.67,
+baseline 0.79. Engine 4's false greens were semgrep (1 of 13 got in), lazygit
+(1 of 19) and keploy (0 of 9); its false reds were again all catalogues.
+
+**Every finding of the first run holds.** Engine 4's Worth group is too wide
+again. The baseline beats the rules again by the same margin. Counting people
+with engine 4's thresholds is worse again (people 0.28 against 0.39).
+
+**The combination from finding 4, checked on a date it never saw.** Engine 4's
+rules, with Worth also requiring a first-PR merge rate of 30% or more in the
+before sample (otherwise Long shot):
+
+| as of | scored (no catalogues) | false greens | false reds | rank agreement | Worth | Long shot | Not worth |
+|---|---|---|---|---|---|---|---|
+| 15 Jun (where it was found) | 41 | 0 | 0 | 0.83 | 56% (n=19) | 16% (n=14) | 4% (n=8) |
+| 15 Apr (unseen) | 42 | 0 | 0 | **0.86** | 53% (n=20) | 12% (n=16) | 3% (n=6) |
+
+It holds out of sample. Its one clear cost is kubernetes/kubernetes: both
+times its before sample showed under 30% of first PRs merged, so it moves to
+Long shot, yet 49% and 55% of newcomers got in afterwards. Its cold PRs wait
+for `/ok-to-test` and a SIG; the ones from people already in a SIG land. The
+tested repositories it moves to Long shot on both dates are django,
+golang/go, lazygit, bubbletea and kubernetes. It also moves semgrep and keploy
+(April), and vscode, zulip, oppia, CircuitVerse and pdf.js (June). Every one of
+them except kubernetes merged about 1 in 4 newcomers or fewer afterwards (golang/go
+26% in April).
+
 ### Limits of this run
 
-- **One as-of date, 41–49 scored repositories.** One or two repositories
-  moving is inside the noise; the Worth spread (finding 1) and the baseline gap
-  (finding 2) are not.
+- **Two as-of dates, 41–50 scored repositories each**, and the same
+  repositories on both, so the dates are not independent samples. One or two
+  repositories moving is inside the noise; the Worth spread (finding 1) and the
+  baseline gap (finding 2) are not, and both held on both dates.
 - **Busy repositories' windows are short.** The after read stops at 200 pull
   requests, which covers only the first days after 15 June on the busiest
   (nixpkgs, vscode, kubernetes). Their outcome is about those days.
@@ -194,5 +235,5 @@ jesseduffield/lazygit (0 of 22) and oppia/oppia (2 of 28).
   judged by this harness before it ships.
 - Catalogues need their own answer, not "Not worth your time". The critic
   said so (#9), and the backtest agrees: their merge odds are high.
-- Record a second as-of date (15 April 2026, say) before fitting anything, so
-  every threshold is chosen on one date and checked on the other.
+- Done: the second as-of date (15 April) confirms the combination above.
+  The next engine PR is that rule, judged by this harness on both dates.
