@@ -139,7 +139,7 @@ function ExampleReport() {
       <div className="relative border border-line-strong bg-panel shadow-card">
         <div className="flex min-h-10 items-center justify-between border-b border-line px-5 text-[0.8rem] text-faint">
           <span>{r.repo}</span>
-          <span>example AI report</span>
+          <span>example AI report · {exampleRecordedOn()}</span>
         </div>
         <div className="p-7">
           <div className="flex items-center justify-between">

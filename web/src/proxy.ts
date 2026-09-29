@@ -17,8 +17,13 @@ export async function proxy(req: NextRequest) {
 
   const parts = req.nextUrl.pathname.split("/").filter(Boolean);
   if (parts.length === 2 && !isAppRoute(parts[0]) && isValidRepo(parts[0], parts[1])) {
-    if (!(await repoExists(`${parts[0]}/${parts[1]}`))) {
+    const found = await repoExists(`${parts[0]}/${parts[1]}`);
+    if (!found.exists) {
       return NextResponse.rewrite(new URL("/_not-found", req.url), { status: 404 });
+    }
+    // Renamed on GitHub: the report lives under the new name.
+    if (found.renamed && !isAppRoute(found.renamed.split("/")[0])) {
+      return NextResponse.redirect(new URL(`/${found.renamed}${req.nextUrl.search}`, req.url), 308);
     }
   }
   return NextResponse.next();

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { checkOffer, codeSpans, countsLine, parsePrLink, preflightHref, sizeLine } from "./preflight.ts";
+import { checkOffer, codeSpans, countsLine, parsePrLink, preflightHref, showPreflight, sizeLine } from "./preflight.ts";
 import { EXAMPLE_PREFLIGHT } from "./preflight-example.ts";
 
 const access = (over: Record<string, unknown> = {}) => ({
@@ -60,4 +60,13 @@ test("the example is internally consistent", () => {
     worth_fixing: c.filter((x) => x.verdict === "worth_fixing").length,
     unknown: c.filter((x) => x.verdict === "unknown").length,
   });
+});
+
+test("pre-flight links stay hidden while it isn't on sale, unless this person can run one", () => {
+  assert.equal(showPreflight(null), false);
+  assert.equal(showPreflight({ available: false, on_sale: true, access: null }), false);
+  assert.equal(showPreflight({ available: true, on_sale: false, access: null }), false);
+  assert.equal(showPreflight({ available: true, on_sale: false, access: access({ allowed: false }) }), false);
+  assert.equal(showPreflight({ available: true, on_sale: false, access: access() }), true);
+  assert.equal(showPreflight({ available: true, on_sale: true, access: null }), true);
 });
