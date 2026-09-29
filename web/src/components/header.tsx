@@ -58,9 +58,9 @@ export function AccountMenu({ user, credits }: { user: SessionUser; credits: str
           <p className="truncate text-ink">{user.name || user.email}</p>
           {credits && <p className="mt-0.5 text-[0.82rem] text-faint">{credits}</p>}
         </div>
-        <Link href={HOME} className="block px-3 py-2.5 transition-colors hover:bg-panel-2">Home</Link>
-        <Link href="/settings/ai-reports" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">AI reports</Link>
         <Link href="/settings/profile" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">Settings</Link>
+        <Link href="/settings/ai-reports" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">AI reports</Link>
+        <Link href="/how-it-works" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">How Holt works</Link>
         <form action={doSignOut}>
           <button type="submit" className="block w-full px-3 py-2.5 text-left text-muted transition-colors hover:bg-panel-2">Sign out</button>
         </form>

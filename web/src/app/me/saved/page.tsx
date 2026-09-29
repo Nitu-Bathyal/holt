@@ -26,14 +26,13 @@ export default async function SavedPage() {
   return (
     <PageTransition>
       <>
-      <div className="wrap">
+      <div className="app-page">
       <AppPageHeader title="Saved repos" lead="Your shortlist. Each verdict is from the latest free report, not the day you saved it." />
-      </div>
-      <div className="wrap pb-14">
+      <div>
         {!r.ok ? (
           <ErrorPanel error={r.error} retryHref="/me/saved" />
         ) : items.length === 0 ? (
-          <div className="mx-auto max-w-3xl border border-dashed border-line-strong p-8 text-center">
+          <div className="max-w-3xl border border-dashed border-line-strong p-8 text-center">
             <CatFace mood="thinking" className="text-[1.6rem]" />
             <p className="mt-4 font-sans text-muted">
               Nothing saved yet. Press <span className="text-ink">save</span> on any report to keep that repo here.
@@ -72,6 +71,7 @@ export default async function SavedPage() {
             </p>
           </div>
         )}
+      </div>
       </div>
       </>
     </PageTransition>
