@@ -35,6 +35,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from holt.about import about_from_dict, about_to_dict
 from holt.evidence.fixtures import record_from_dict, record_to_dict
 from holt.report import Assessment, Claim, EntryPoint, Verdict
 from holt.tui import events as events_module
@@ -268,6 +269,7 @@ def to_dict(entry: Entry) -> dict[str, Any]:
             "contributor_days": getattr(a, "contributor_days", 7),
             "models": list(getattr(a, "models", []) or []),
             "dropped_claims": getattr(a, "dropped_claims", 0),
+            "about": about_to_dict(a.about) if getattr(a, "about", None) else None,
             "method": a.method,
             "replayed": a.replayed,
             "claims": [
@@ -324,6 +326,7 @@ def from_dict(raw: dict[str, Any], path: Path | None = None) -> Entry | None:
             ("contributor_days", body.get("contributor_days", 7)),
             ("models", list(body.get("models", []) or [])),
             ("dropped_claims", body.get("dropped_claims", 0)),
+            ("about", about_from_dict(body.get("about"))),
         ):
             if hasattr(assessment, name):
                 setattr(assessment, name, value)

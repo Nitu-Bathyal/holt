@@ -314,7 +314,9 @@ def test_details_query_is_one_request_with_one_alias_per_repo():
     assert out["pallets/flask"] == {
         "repo": "Pallets/Flask", "description": "Web", "language": "Python", "stars": 7,
         "topics": ["wsgi"], "pushed_at": "2026-09-01T00:00:00Z", "archived": False,
-        "fork": False}
+        "fork": False, "forks": None, "open_issues": None, "license": None,
+        "homepage": None, "languages": [], "created_at": None, "default_branch": None,
+        "fork_of": None, "readme_line": None}
     assert out["octo/gone"] is None and out["octo/secret"] is None
 
 

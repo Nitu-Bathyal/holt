@@ -303,6 +303,7 @@ async def get_report(owner: str, repo: str, request: Request,
         raise ApiError("not_found", f"There's no report for {name} yet.")
     report = schema.Report.model_validate(latest.report)
     report.holt_users = await repo_stats.for_repo(svc, name)
+    report.about = await discover.about(svc, name)
     report.outdated = latest.outdated
     return report
 

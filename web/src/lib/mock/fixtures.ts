@@ -431,7 +431,33 @@ function fromSeed(seed: Seed, mode: "rules" | "ai", days: number): Report {
     cost: mode === "ai" ? { model: "openai/gpt-5-mini", input_tokens: 9120, output_tokens: 1480, usd: 0.00524, seconds: 41.3 } : null,
     holt_users: HOLT_USERS[seed.repo] ?? null,
     outdated: false,
+    about: mockAbout(seed.repo),
   });
+}
+
+// "About this repo": made up from the name, except where a real-looking one reads better.
+function mockAbout(repo: string): Report["about"] {
+  const r = rng(`${repo}:about`);
+  const stars = Math.floor(r() * 90_000);
+  const main = 0.6 + r() * 0.35;
+  return {
+    description: `${repo.split("/")[1]}: a project for mock mode.`,
+    readme_line: "It does one thing and does it carefully.",
+    homepage: `https://${repo.split("/")[1]}.example.org`,
+    stars,
+    forks: Math.floor(stars / 6),
+    open_issues: Math.floor(r() * 900),
+    license: r() > 0.2 ? "MIT" : null,
+    topics: ["hacktoberfest", "cli", "python"].slice(0, 1 + Math.floor(r() * 3)),
+    languages: [{ name: "Python", share: main }, { name: "Shell", share: (1 - main) * 0.7 }, { name: "HTML", share: (1 - main) * 0.3 }],
+    created_at: "2016-03-01T00:00:00Z",
+    pushed_at: hoursAgo(30),
+    default_branch: "main",
+    archived: repo.toLowerCase().includes("archived"),
+    fork: false,
+    fork_of: null,
+    fetched_at: hoursAgo(3),
+  };
 }
 
 // "Holt users who sent pull requests here": only repos where 5+ people would make it up.

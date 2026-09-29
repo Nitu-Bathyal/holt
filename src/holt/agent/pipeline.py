@@ -15,6 +15,7 @@ from contextlib import contextmanager
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
 
+from holt.about import about_from_records
 from holt.agent import (
     labels, landing, landing_detection, narration, rates, repo_kind_rules, stages,
 )
@@ -228,6 +229,7 @@ def analyze(
         contributor_days=contributor_days,
         as_of=as_of,
         landing=landing.render(landing.compute(threads)),
+        about=about_from_records(records),
         claims=claims,
         method="holt (A classify, B opportunity, C outcomes, D verify, deterministic verdict, E narrate)",
         replayed=model.replayed,
@@ -541,6 +543,7 @@ def analyze_without_model(
         contributor_days=contributor_days,
         as_of=as_of,
         landing=landing.render(landing.compute(threads)),
+        about=about_from_records(records),
         # Rules-only findings (a catalogue detected, archived, inactive): the
         # detector's own sentence says more than "Kind of project: ...".
         claims=[

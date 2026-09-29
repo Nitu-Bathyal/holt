@@ -24,6 +24,7 @@ from urllib.parse import quote
 
 import httpx
 
+from holt.about import language_shares, license_name
 from holt.evidence.errors import AuthError, RateLimited, RepoNotFound, UpstreamError
 from holt.evidence.provider import EvidenceProvider
 from holt.types import EvidenceRecord, Window
@@ -65,6 +66,9 @@ query($owner:String!, $name:String!, $until:GitTimestamp!) {
     createdAt pushedAt isArchived isMirror isFork stargazerCount
     description homepageUrl primaryLanguage { name }
     nameWithOwner mirrorUrl parent { nameWithOwner }
+    forkCount licenseInfo { spdxId name } issues(states:OPEN) { totalCount }
+    repositoryTopics(first:20) { nodes { topic { name } } }
+    languages(first:3, orderBy:{field:SIZE, direction:DESC}) { totalSize edges { size node { name } } }
     releases(first:10, orderBy:{field:CREATED_AT, direction:DESC}) {
       totalCount
       nodes { tagName name createdAt publishedAt isPrerelease }
@@ -771,6 +775,23 @@ def project_repo_meta(repo_slug: str, repo: dict[str, Any]) -> EvidenceRecord:
         payload["mirror_url"] = repo["mirrorUrl"]
     if "releases" in repo:
         payload["release_count"] = (repo["releases"] or {}).get("totalCount", 0)
+    # For the report's header only (holt/about.py); nothing downstream reads
+    # them. Absent from captures made before they were asked for.
+    if "forkCount" in repo:
+        payload["fork_count"] = repo["forkCount"]
+    if "issues" in repo:
+        payload["open_issues"] = (repo["issues"] or {}).get("totalCount")
+    if "licenseInfo" in repo:
+        payload["license"] = license_name(repo["licenseInfo"])
+    if "repositoryTopics" in repo:
+        payload["topics"] = [
+            name for t in _nodes(repo["repositoryTopics"])
+            if (name := ((t or {}).get("topic") or {}).get("name"))
+        ]
+    if "languages" in repo:
+        payload["languages"] = language_shares(repo["languages"])
+    if "defaultBranchRef" in repo:
+        payload["default_branch"] = (repo["defaultBranchRef"] or {}).get("name")
     return EvidenceRecord(
         evidence_id=f"repo:{repo_slug}:meta",
         source="github",

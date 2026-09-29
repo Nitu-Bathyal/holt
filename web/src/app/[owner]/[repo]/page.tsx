@@ -9,6 +9,7 @@ import { AnalysisRunner } from "@/components/report/analysis-runner";
 import { BudgetPicker } from "@/components/report/budget-picker";
 import { ReportTeaser } from "@/components/report/report-teaser";
 import { ReportView } from "@/components/report/report-view";
+import { RepoAbout } from "@/components/report/repo-about";
 import { StarterIssues, StarterIssuesSkeleton } from "@/components/report/starter-issues";
 import { LinkHint } from "@/components/motion/link-hint";
 import { SkeletonReveal } from "@/components/motion/reveal";
@@ -165,6 +166,8 @@ export default async function RepoPage({ params, searchParams }: Props) {
             </Link>
           </nav>
         </div>
+
+        {report.ok && <RepoAbout about={report.data.about} />}
 
         {!signedIn && access === "full" && report.ok && <ExampleNote />}
 

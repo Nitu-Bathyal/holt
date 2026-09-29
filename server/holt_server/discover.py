@@ -34,6 +34,7 @@ import logging
 from collections import Counter
 from datetime import datetime, timedelta
 from typing import Any, Literal
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, Query, Request
 from pydantic import Field
@@ -283,6 +284,24 @@ def _parse_ts(value: Any) -> datetime | None:
         return None
 
 
+def _int(value: Any) -> int | None:
+    try:
+        return int(value) if value is not None else None
+    except (TypeError, ValueError):
+        return None
+
+
+def _homepage(value: Any) -> str | None:
+    """A web address only: the page links to it."""
+    url = str(value or "").strip()
+    if not url or len(url) > 500:
+        return None
+    scheme = urlsplit(url).scheme.lower()
+    if not scheme:
+        url, scheme = f"https://{url}", "https"
+    return url if scheme in ("http", "https") and "://" in url else None
+
+
 async def store_meta(svc: Services, details: dict[str, dict[str, Any] | None]) -> int:
     """Save what `GitHubLookup.details` returned; missing repos are left alone.
     Returns how many rows were written."""
@@ -301,11 +320,41 @@ async def store_meta(svc: Services, details: dict[str, dict[str, Any] | None]) -
             row.pushed_at = _parse_ts(d.get("pushed_at"))
             row.archived = bool(d.get("archived"))
             row.fork = bool(d.get("fork"))
+            row.forks = _int(d.get("forks"))
+            row.open_issues = _int(d.get("open_issues"))
+            row.license = (d.get("license") or "")[:80] or None
+            row.homepage = _homepage(d.get("homepage"))
+            row.languages = list(d.get("languages") or [])[:3]
+            row.created_at = _parse_ts(d.get("created_at"))
+            row.default_branch = (d.get("default_branch") or "")[:200] or None
+            row.fork_of = (d.get("fork_of") or "")[:200] or None
+            row.readme_line = (d.get("readme_line") or "")[:500] or None
             row.fetched_at = now()
             s.add(row)
             written += 1
         await s.commit()
     return written
+
+
+def about_view(meta: RepoMeta) -> schema.RepoAbout:
+    return schema.RepoAbout(
+        description=meta.description, readme_line=meta.readme_line, homepage=meta.homepage,
+        stars=meta.stars, forks=meta.forks, open_issues=meta.open_issues,
+        license=meta.license, topics=list(meta.topics or []),
+        languages=[lang for lang in meta.languages or []
+                   if isinstance(lang, dict) and lang.get("name")],
+        created_at=iso(meta.created_at),
+        pushed_at=iso(meta.pushed_at),
+        default_branch=meta.default_branch, archived=bool(meta.archived),
+        fork=bool(meta.fork), fork_of=meta.fork_of, fetched_at=iso(meta.fetched_at))
+
+
+async def about(svc: Services, repo: str) -> schema.RepoAbout | None:
+    """The report's "About this repo", from `repo_meta` (one database read, no
+    GitHub call). None until the repo's details have been read."""
+    async with svc.db.session() as s:
+        meta = await s.get(RepoMeta, repos.key(repo))
+    return about_view(meta) if meta is not None else None
 
 
 def batches(items: list[str], size: int = DETAILS_BATCH) -> list[list[str]]:

@@ -31,6 +31,7 @@ from textual.containers import Horizontal, VerticalScroll
 from textual.screen import Screen
 from textual.widgets import Footer
 
+from holt.about import about_lines
 from holt.report import VERDICT_HEADLINES
 from holt.tui import animation, clipboard, mascot, store, theme
 from holt.tui.visual import Line
@@ -80,6 +81,14 @@ class AssessmentScreen(Screen):
                 ),
                 id="verdict-budget",
             )
+
+            # What the repository is (holt/about.py): under the answer, quiet.
+            about = getattr(assessment, "about", None)
+            if about is not None:
+                lines = about_lines(about)
+                for i, line in enumerate(lines):
+                    last = " last" if i == len(lines) - 1 else ""
+                    yield Line(Text(line, style=theme.FAINT), classes="about-line" + last)
 
             bottom_line = getattr(assessment, "bottom_line", "")
             if bottom_line:

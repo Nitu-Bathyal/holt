@@ -556,7 +556,8 @@ class Contribution(Base):
 
 class RepoMeta(Base):
     """What GitHub says about a repository Holt has a report for: the details
-    a Discover card shows and filters on (discover.py). Read right after the
+    a Discover card shows and filters on (discover.py), and the report's
+    "About this repo" (`schema.RepoAbout`). Read right after the
     repo's report is stored (meta_refresh.py) and daily by the warm pass,
     many repositories per GraphQL query."""
 
@@ -572,6 +573,20 @@ class RepoMeta(Base):
     pushed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
     fork: Mapped[bool] = mapped_column(Boolean, default=False)
+    # The report's "About this repo" (0018); null until the details are read
+    # again after that migration.
+    forks: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    open_issues: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    license: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    homepage: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # [{"name": "Python", "share": 0.92}, ...], biggest first, at most three.
+    languages: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    default_branch: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # The repository this one is a fork of.
+    fork_of: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # The README's first sentence (holt/about.py), not the README.
+    readme_line: Mapped[str | None] = mapped_column(Text, nullable=True)
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 

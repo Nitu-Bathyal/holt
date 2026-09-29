@@ -11,6 +11,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 
+from holt.about import About, about_lines, about_to_dict
+
 
 class Verdict(str, Enum):
     """Deliberately three-valued.
@@ -140,9 +142,14 @@ class Assessment:
     # reader unable to tell those two halves apart. On a replay these are the ids
     # from the recording.
     models: list[str] = field(default_factory=list)
+    # What the repository is, from GitHub's own fields and its README
+    # (holt/about.py). Printed under the name; it never feeds the verdict.
+    about: About | None = None
 
     def render(self) -> str:
         lines = [f"# {self.repo}", ""]
+        if self.about and (about := about_lines(self.about)):
+            lines += [f"> {line}  " for line in about[:-1]] + [f"> {about[-1]}", ""]
         if self.replayed:
             lines += [
                 "> Replaying recorded model output. No model was called for this run.",
@@ -236,4 +243,5 @@ class Assessment:
             "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
             "models": list(self.models),
             "dropped_claims": self.dropped_claims,
+            "about": about_to_dict(self.about) if self.about else None,
         }

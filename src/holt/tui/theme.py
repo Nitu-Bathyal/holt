@@ -189,6 +189,13 @@ ClaimList > ListItem.-highlight, ClaimList > ListItem.--highlight {{
     height: auto;
     padding: 0 1 1 1;
 }}
+.about-line {{
+    height: auto;
+    padding: 0 1 0 1;
+}}
+.about-line.last {{
+    padding: 0 1 1 1;
+}}
 #bottom-line {{
     height: auto;
     padding: 0 1 1 1;
