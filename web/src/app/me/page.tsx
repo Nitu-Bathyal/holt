@@ -164,17 +164,17 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
           {also.length > 0 && (
             <section aria-labelledby="also-h">
               <SectionHead id="also-h" title="Also for you" />
-              <ul>
+              <ul data-stack>
                 {also.map((a) =>
                   a.kind === "late" ? (
-                    <li key={a.wait.pr.url} data-rule data-stack className="app-row grid-cols-[minmax(0,1fr)_auto]" style={{ "--rule": "var(--orange)" } as React.CSSProperties}>
+                    <li key={a.wait.pr.url} data-rule className="app-row grid-cols-[minmax(0,1fr)_auto]" style={{ "--rule": "var(--orange)" } as React.CSSProperties}>
                       <p className="pl-2 font-sans text-[0.95rem]">
                         Your PR to <span className="font-mono font-semibold">{a.wait.pr.repo}</span> has waited {humanHours(a.wait.hours)}. Replies there usually take {humanHours(a.wait.typical)}.
                       </p>
-                      <a href={a.wait.pr.url} className="text-link tap text-[0.84rem]">open it ↗</a>
+                      <a href={a.wait.pr.url} className="text-link text-[0.84rem]">open it ↗</a>
                     </li>
                   ) : (
-                    <li key={a.repo.repo} data-rule data-stack className="app-row grid-cols-[minmax(0,1fr)_auto]" style={{ "--rule": "var(--orange)" } as React.CSSProperties}>
+                    <li key={a.repo.repo} data-rule className="app-row grid-cols-[minmax(0,1fr)_auto]" style={{ "--rule": "var(--orange)" } as React.CSSProperties}>
                       <p className="pl-2 font-sans text-[0.95rem]">
                         You saved <Link href={`/${a.repo.repo}`} className="font-mono font-semibold hover:text-blue">{a.repo.repo}</Link>. Holt now says <span className="text-orange">{a.repo.headline?.toLowerCase()}</span>.
                       </p>

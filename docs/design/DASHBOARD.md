@@ -172,7 +172,8 @@ Derived from the landing (EXPRESSIVE.md), at working size:
 - **Two card families.** *Rows* for your things (PRs, your repos): a state rule on
   the left, the fact, one action on the right. *Cards* for discovery (picks, boards):
   verdict, odds bar, the reason, one starter issue. Your own work is never a grid of boxes.
-  A row whose actions are wider than a chevron takes `data-stack`: below `sm`
+  A row whose actions are wider than a chevron takes `data-stack` (on the row
+  or on its list): below `sm`
   the actions drop under the fact, so a phone never squeezes the name into a
   sliver. When a row has one main link, it is stretched over the row
   (`after:absolute after:inset-0`), and anything else in the row sits above
