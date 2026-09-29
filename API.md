@@ -205,7 +205,7 @@ they cannot disagree with each other or with the verdict:
   (the verdict and one reason, without the counts), `numbers_line` (the
   counts with the dates they cover, e.g. "Of 120 pull requests from outside
   contributors (3 Jun – 26 Sep 2026), 22 were merged (18%). When a maintainer
-  replied, it was typically within 6 hours. 25% got no reply at all."), and
+  replied, it was typically within 6 hours. 25% sat open with no reply."), and
   `next_step` (where outside work lands, what the project asks, or where to go
   instead). `first_timer_line` is null when nobody outside tried.
 - The rule that decided the verdict is the last `decided_by` line whose code
@@ -966,10 +966,12 @@ Proxies `GET /v1/reports/{owner}/{repo}?mode=rules&days=7`.
   links to the report page, which re-runs it.
 - `404` → `{"error": {"code": "not_found", ...}}` when nothing is cached yet
   (or the repo is missing/private). The extension then shows "Check with Holt"
-  and links to `/{owner}/{repo}`, whose page starts the analysis for a
-  signed-in visitor and asks anyone else to sign in first (then starts it).
-  Signed out, that page shows a cached report as a teaser (verdict and reason)
-  unless it is one of the curated examples; these proxies are unaffected.
+  and links to `/{owner}/{repo}`, whose page starts the rules analysis for
+  any visitor who isn't a bot (signed out: rate-limited per IP by
+  `HOLT_ANON_RATE_PER_HOUR`, and over the limit it asks them to sign in first).
+  Signed out, that page shows a report as a teaser (verdict, reason, odds and
+  one number) unless it is one of the curated examples; these proxies are
+  unaffected.
 - `429` `rate_limited` / `5xx` → shown as "Check with Holt" too.
 
 ### `GET /api/public/starter-issues/{owner}/{repo}`

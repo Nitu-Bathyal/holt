@@ -1,6 +1,6 @@
 // "How to get merged here": the words and small rules the playbook section
 // uses. Pure, so it can be tested without React.
-import type { Access, PlaybookSectionKey, PlaybookSource } from "./types";
+import type { Access, PlaybookSectionKey, PlaybookSource, PlaybookState } from "./types";
 
 export const SECTION_TITLES: Record<PlaybookSectionKey, string> = {
   must_do: "What merged pull requests do",
@@ -11,6 +11,16 @@ export const SECTION_TITLES: Record<PlaybookSectionKey, string> = {
 };
 
 export const SECTION_ORDER = Object.keys(SECTION_TITLES) as PlaybookSectionKey[];
+
+/**
+ * Whether a report page shows the playbook at all. While playbooks aren't on
+ * sale it stays hidden, except for someone who already has one, has one
+ * being written, or can unlock one anyway.
+ */
+export function showPlaybook<T extends Pick<PlaybookState, "available" | "on_sale" | "access" | "playbook" | "job">>(s: T | null): s is T {
+  if (!s?.available) return false;
+  return s.on_sale || Boolean(s.playbook || s.job || s.access?.allowed);
+}
 
 /** "seen in 34 of 44 pull requests", or null for a fact from a document. */
 export function seenLabel(s: Pick<PlaybookSource, "seen" | "of">, what = "pull requests"): string | null {

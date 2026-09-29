@@ -224,7 +224,7 @@ export async function discover(sort: DiscoverSort, language: string | null, topi
     .filter((r) => !hacktoberfest || tagged.has(r.repo))
     .map((r) => ({
       repo: r.repo, verdict: r.verdict, headline: r.headline, tone: r.tone, reason: r.verdict_line, stats: r.stats,
-      description: null, language: null, stars: null, topics: [], pushed_at: null, checked_this_week: null, generated_at: r.generated_at,
+      description: null, language: null, languages: [], stars: null, topics: [], pushed_at: null, checked_this_week: null, generated_at: r.generated_at,
     }));
   const chosen = language || topic || sort === "trending" ? [] : sort === "welcoming" ? cards.filter((c) => c.verdict === "viable") : cards;
   return { ok: true, data: { sort, language, topic, hacktoberfest, repos: chosen.slice(0, limit), languages: [], trending_min: 5 } };
@@ -312,6 +312,7 @@ function findResults(q: FindQuery): FindResult[] {
       verdict: seed.verdict,
       description: seed.description,
       language: seed.language,
+      languages: [seed.language],
       stars: seed.stars,
       stats: {
         outsider_attempts: seed.stats.outsider_attempts,
@@ -540,7 +541,7 @@ function mockPicks(): Recommendation[] {
   });
   const pick = (repo: string, language: string, description: string, stars: number, topics: string[], s: Stats, why: string[], issues: StarterIssue[]): Recommendation => {
     const r = withDerived({ ...mockReport(repo, "rules", 7), stats: s });
-    return { repo, ...verdictView("viable"), verdict: "viable", odds: r.odds, reason: r.verdict_line, numbers_line: r.numbers_line, why, stats: s, description, language, stars, topics, issues, checked_at: at(5) };
+    return { repo, ...verdictView("viable"), verdict: "viable", odds: r.odds, reason: r.verdict_line, numbers_line: r.numbers_line, why, stats: s, description, language, languages: [language], stars, topics, issues, checked_at: at(5) };
   };
   return [
     pick("pallets/click", "Python", "Python composable command line interface toolkit", 16_200, ["cli", "python"], stats(42, 19, 3, 6, 9), [

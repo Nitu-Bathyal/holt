@@ -583,6 +583,9 @@ class RepoMeta(Base):
     repo: Mapped[str] = mapped_column(String(200))
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
     language: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    # GitHub's primary language, then a second one when it is a real share of
+    # the code (github.main_languages). `language` stays the filter.
+    languages: Mapped[list] = mapped_column(JSON, default=list, server_default="[]")
     stars: Mapped[int] = mapped_column(Integer, default=0)
     topics: Mapped[list] = mapped_column(JSON, default=list)
     pushed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
