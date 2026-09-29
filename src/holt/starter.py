@@ -51,6 +51,7 @@ import httpx
 
 from holt.agent import landing as landing_mod
 from holt.agent.landing import Area
+from holt.agent.people import MAINTAINER_ASSOCIATIONS
 from holt.agent.verdict import DEFAULT_CONTRIBUTOR_DAYS, headline
 from holt.evidence.errors import RateLimited, RepoNotFound
 from holt.evidence.github_graphql import GitHubGraphQL
@@ -129,6 +130,9 @@ class RepoScreen:
     verdict: Verdict | str
     stats: dict[str, Any] = field(default_factory=dict)
     landing: list[Area] = field(default_factory=list)
+    # Logins the pull request history shows are on the team, for those whose
+    # association on an issue hides it (private org members read CONTRIBUTOR).
+    team: frozenset[str] = frozenset()
 
 
 # ---------------------------------------------------------------------------
@@ -177,7 +181,7 @@ def _transport(token: str | None, transport: GitHubGraphQL | None) -> GitHubGrap
 ISSUE_FIELDS = """
 fragment StarterFields on Issue {
   number title url createdAt updatedAt body locked
-  author { login }
+  author { login } authorAssociation
   repository { nameWithOwner isArchived }
   labels(first:15) { nodes { name } }
   assignees(first:5) { totalCount nodes { login } }
@@ -527,18 +531,27 @@ def _title_words(title: str) -> list[str]:
             if w not in stop and not w.isdigit()]
 
 
-def farmed_issues(nodes: Iterable[dict[str, Any]], *, bursts: bool = True) -> set[int]:
+def farmed_issues(nodes: Iterable[dict[str, Any]],
+                  team: Iterable[str] = ()) -> set[int]:
     """Numbers of issues that one account filed as a batch: at least
     `FARM_MIN_ISSUES` with near-identical titles ("Add a Japanese idiom", "Add
-    a Korean idiom", ...) or, with `bursts`, created seconds apart by a script.
-    Issues with no known author are never counted."""
+    a Korean idiom", ...) or created seconds apart by a script. Issues with no
+    known author are never counted.
+
+    A maintainer scripting a batch of starter issues is how many projects get
+    ready for Hacktoberfest, so the burst rule skips the repository's own team:
+    an OWNER, MEMBER or COLLABORATOR association, or a login in `team`."""
+    team = {login.lower() for login in team}
     by_author: dict[str, dict[int, dict[str, Any]]] = {}
+    maintainers: set[str] = set()
     for node in nodes:
         login = ((node or {}).get("author") or {}).get("login")
         if login and "number" in node:
             by_author.setdefault(login.lower(), {})[node["number"]] = node
+            if node.get("authorAssociation") in MAINTAINER_ASSOCIATIONS:
+                maintainers.add(login.lower())
     farmed: set[int] = set()
-    for issues in by_author.values():
+    for login, issues in by_author.items():
         if len(issues) < FARM_MIN_ISSUES:
             continue
         nums = sorted(issues)
@@ -558,7 +571,7 @@ def farmed_issues(nodes: Iterable[dict[str, Any]], *, bursts: bool = True) -> se
         for _, members in groups:
             if len(members) >= FARM_MIN_ISSUES:
                 farmed.update(members)
-        if not bursts:
+        if login in maintainers or login in team:
             continue
         # Scripted bursts: a run of issues each filed within seconds of the last.
         timed = sorted(nums, key=lambda n: _ts(issues[n]["createdAt"]))
@@ -751,15 +764,15 @@ def score_issue(node: dict[str, Any], as_of: datetime, *,
 
 def rank(nodes: Iterable[dict[str, Any]], as_of: datetime, *,
          landing: Sequence[Area] = (), hacktoberfest: bool = False,
-         limit: int = 20, bursts: bool = True) -> list[tuple[float, StarterIssue]]:
+         limit: int = 20, team: Iterable[str] = ()) -> list[tuple[float, StarterIssue]]:
     """Deduplicate, drop farmed batches, score and sort: issues nobody is on
-    first, then by score. Ties go to the newer issue, then the number. `nodes` are one repository's issues.
-    `bursts` is passed to `farmed_issues`."""
+    first, then by score. Ties go to the newer issue, then the number. `nodes` are one repository's issues;
+    `team` is passed to `farmed_issues`."""
     unique: dict[int, dict[str, Any]] = {}
     for node in nodes:
         if node and "number" in node:
             unique.setdefault(node["number"], node)
-    farmed = farmed_issues(unique.values(), bursts=bursts)
+    farmed = farmed_issues(unique.values(), team)
     scored: list[tuple[float, StarterIssue]] = []
     for number, node in unique.items():
         if number in farmed:
@@ -776,7 +789,7 @@ def rank(nodes: Iterable[dict[str, Any]], as_of: datetime, *,
 
 
 def _scored_issues(repo: str, transport: GitHubGraphQL, as_of: datetime, limit: int,
-                   landing: Sequence[Area], hacktoberfest: bool, bursts: bool = True
+                   landing: Sequence[Area], hacktoberfest: bool, team: Iterable[str] = ()
                    ) -> list[tuple[float, StarterIssue]]:
     owner, _, name = normalise(repo).partition("/")
     labels = ",".join(SEARCH_LABELS)
@@ -791,7 +804,7 @@ def _scored_issues(repo: str, transport: GitHubGraphQL, as_of: datetime, limit: 
     nodes = [*((data.get("labelled") or {}).get("nodes") or []),
              *((repository.get("issues") or {}).get("nodes") or [])]
     return rank(nodes, as_of, landing=landing, hacktoberfest=hacktoberfest, limit=limit,
-                bursts=bursts)
+                team=team)
 
 
 def starter_issues(repo: str, token: str | None, limit: int = 20,
@@ -802,15 +815,10 @@ def starter_issues(repo: str, token: str | None, limit: int = 20,
 
     One GraphQL call. `landing` (directories where outsider work merged) boosts
     issues that name them; pass it when you already have it.
-
-    A maintainer filing a batch of starter issues at once, by script, is how
-    many projects prepare for Hacktoberfest, so here only templated batches
-    are dropped. `find` also drops scripted bursts: it picks repositories for
-    the reader, and a burst there was an owner's to-do list, not starter work.
     """
     as_of = as_of or datetime.now(UTC)
     scored = _scored_issues(repo, _transport(token, transport), as_of, limit,
-                            landing, hacktoberfest, bursts=False)
+                            landing, hacktoberfest)
     return [issue for _, issue in scored]
 
 
@@ -835,13 +843,14 @@ def rules_screen(transport: GitHubGraphQL, as_of: datetime,
     """`discover`'s free screen as a `find` screen: one page of pull-request
     threads, arithmetic only, plus where outsider work landed in that page."""
     from holt import discover
+    from holt.agent import people
     from holt.agent.signals import build_threads
 
     def screen(repo: str) -> RepoScreen:
         screened, records = discover.screen_slug(repo, transport, as_of, days)
         landing = landing_mod.compute(build_threads(records))
         return RepoScreen(verdict=screened.verdict, stats=_stats_subset(screened.signals),
-                          landing=list(landing.landed))
+                          landing=list(landing.landed), team=people.maintainers(records))
 
     return screen
 
@@ -1001,7 +1010,7 @@ def find(languages: Sequence[str], topics: Sequence[str], hacktoberfest: bool,
         if stop.is_set():
             return None
         scored = _scored_issues(slug, transport, as_of, per_repo, result.landing,
-                                hacktoberfest)
+                                hacktoberfest, result.team)
         if not scored:
             return None
         verdict = Verdict(result.verdict)
