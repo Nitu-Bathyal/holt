@@ -7,12 +7,12 @@ import { CONTRIBUTIONS, LANGS, LEVELS, TIME, topics as topicsOf } from "@/lib/pr
 // Every choice is one tap and applies at once; the rare ones sit behind "More".
 const TIME_SHORT: Record<number, string> = { 1: "evening", 3: "weekend", 7: "week", 30: "month" };
 
-const seg = "flex min-h-10 items-center justify-center border px-3 text-[0.88rem] transition-colors focus-visible:outline-2 focus-visible:outline-blue";
+const seg = "flex min-h-11 items-center sm:min-h-10 justify-center border px-3 text-[0.88rem] transition-colors focus-visible:outline-2 focus-visible:outline-blue";
 const segOn = "border-green bg-green font-semibold text-on-accent";
 const segOff = "border-line-strong text-muted hover:border-blue hover:text-ink";
 const chipOn = "border-blue bg-blue text-on-accent";
 const chipOff = "border-line-strong text-muted hover:border-blue hover:text-ink";
-const chip = "inline-flex min-h-10 shrink-0 select-none items-center border px-3.5 text-[0.88rem] transition-colors focus-visible:outline-2 focus-visible:outline-blue";
+const chip = "inline-flex min-h-11 shrink-0 sm:min-h-10 select-none items-center border px-3.5 text-[0.88rem] transition-colors focus-visible:outline-2 focus-visible:outline-blue";
 
 export function FindFilters({ picks, onChange, hf }: { picks: Picks; onChange: (p: Picks) => void; hf: { note: string } | null }) {
   const extras = extraCount(picks);
@@ -80,7 +80,7 @@ export function FindFilters({ picks, onChange, hf }: { picks: Picks; onChange: (
         </div>
 
         {hf && (
-          <button type="button" role="switch" aria-checked={picks.hf} onClick={() => set({ hf: !picks.hf })} className="group flex min-h-10 items-center gap-2.5 text-left text-[0.88rem]">
+          <button type="button" role="switch" aria-checked={picks.hf} onClick={() => set({ hf: !picks.hf })} className="group flex min-h-11 items-center gap-2.5 text-left text-[0.88rem] sm:min-h-10">
             <span
               aria-hidden="true"
               className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors after:absolute after:left-0.5 after:top-0.5 after:size-4.5 after:rounded-full after:transition-transform group-focus-visible:outline-2 group-focus-visible:outline-blue ${picks.hf ? "border-hf bg-hf-bg after:translate-x-5 after:bg-hf" : "border-line-strong bg-panel-2 after:bg-faint"}`}
@@ -96,7 +96,7 @@ export function FindFilters({ picks, onChange, hf }: { picks: Picks; onChange: (
           aria-expanded={more}
           aria-controls={panelId}
           onClick={() => setMore(!more)}
-          className="ml-auto flex min-h-10 items-center gap-1.5 text-[0.88rem] text-muted hover:text-ink"
+          className="ml-auto flex min-h-11 items-center gap-1.5 sm:min-h-10 text-[0.88rem] text-muted hover:text-ink"
         >
           More filters{extras > 0 && <span className="rounded-full bg-blue px-1.5 text-[0.78rem] text-on-accent">{extras}</span>}
           <span aria-hidden="true" className={`transition-transform ${more ? "rotate-180" : ""}`}>▾</span>
@@ -152,9 +152,9 @@ export function FindFilters({ picks, onChange, hf }: { picks: Picks; onChange: (
                 placeholder="e.g. web, cli, machine-learning"
                 maxLength={300}
                 enterKeyHint="search"
-                className="min-h-10 min-w-0 flex-1 border border-line-strong bg-bg px-3 font-sans text-[0.9rem] outline-none focus-visible:border-blue"
+                className="min-h-11 min-w-0 flex-1 border sm:min-h-10 border-line-strong bg-bg px-3 font-sans text-[0.9rem] outline-none focus-visible:border-blue"
               />
-              <button type="submit" className="btn-ghost min-h-10">apply</button>
+              <button type="submit" className="btn-ghost min-h-11 sm:min-h-10">apply</button>
             </div>
           </form>
         </div>

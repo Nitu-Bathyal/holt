@@ -30,7 +30,7 @@ export async function DiscoverView({ sort, language, topic }: { sort: DiscoverSo
                     href={boardHref({ sort: s.id, language, topic })}
                     scroll={false}
                     aria-current={s.id === sort ? "page" : undefined}
-                    className={`relative flex min-h-10 items-center justify-center border px-2 text-center text-[0.83rem] leading-tight transition-colors sm:px-4 sm:text-[0.88rem] ${s.id === sort ? "z-10 border-green bg-green font-semibold text-on-accent" : "border-line-strong text-muted hover:border-blue hover:text-ink"}`}
+                    className={`relative flex min-h-11 items-center sm:min-h-10 justify-center border px-2 text-center text-[0.83rem] leading-tight transition-colors sm:px-4 sm:text-[0.88rem] ${s.id === sort ? "z-10 border-green bg-green font-semibold text-on-accent" : "border-line-strong text-muted hover:border-blue hover:text-ink"}`}
                   >
                     {s.label}
                   </Link>
@@ -43,7 +43,7 @@ export async function DiscoverView({ sort, language, topic }: { sort: DiscoverSo
               <ul className="flex gap-2 overflow-x-auto p-3 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:p-4">
                 <li className="shrink-0">
                   <Link href={boardHref({ sort, topic })} scroll={false} aria-current={!language ? "page" : undefined}
-                    className={`inline-flex min-h-10 items-center whitespace-nowrap border px-3.5 text-[0.88rem] transition-colors ${!language ? "border-blue bg-blue text-on-accent" : "border-line-strong text-muted hover:border-blue hover:text-ink"}`}>
+                    className={`inline-flex min-h-11 items-center sm:min-h-10 whitespace-nowrap border px-3.5 text-[0.88rem] transition-colors ${!language ? "border-blue bg-blue text-on-accent" : "border-line-strong text-muted hover:border-blue hover:text-ink"}`}>
                     Any language
                   </Link>
                 </li>
@@ -52,7 +52,7 @@ export async function DiscoverView({ sort, language, topic }: { sort: DiscoverSo
                   return (
                     <li key={l.name} className="shrink-0">
                       <Link href={boardHref({ sort, language: l.name, topic })} scroll={false} aria-current={on ? "page" : undefined}
-                        className={`inline-flex min-h-10 items-center gap-2 whitespace-nowrap border px-3.5 text-[0.88rem] transition-colors ${on ? "border-blue bg-blue text-on-accent" : "border-line-strong text-muted hover:border-blue hover:text-ink"}`}>
+                        className={`inline-flex min-h-11 items-center sm:min-h-10 gap-2 whitespace-nowrap border px-3.5 text-[0.88rem] transition-colors ${on ? "border-blue bg-blue text-on-accent" : "border-line-strong text-muted hover:border-blue hover:text-ink"}`}>
                         <LangDot color={langColor(l.name)} />
                         {l.name}
                       </Link>

@@ -24,11 +24,11 @@ export function RepoCard({ r, report, focusHref, onOpen, actions }: { r: CardRep
       <div className="flex items-start gap-3">
         <RepoAvatar repo={r.repo} />
         <div className="min-w-0 flex-1">
-          <h2 className="truncate text-[1rem] font-semibold leading-tight tracking-tight">
+          <h2 className="text-[1rem] font-semibold leading-tight tracking-tight">
             <a
               href={focusHref}
               onClick={open}
-              className="hover:text-blue"
+              className="-my-3 block truncate py-3 hover:text-blue"
             >
               <span className="text-muted">{owner}/</span>
               {name}
@@ -58,9 +58,9 @@ export function RepoCard({ r, report, focusHref, onOpen, actions }: { r: CardRep
       </ul>
 
       {issue ? (
-        <p className="mt-3 border-t border-dashed border-line pt-2.5 font-sans text-[0.88rem] leading-snug">
+        <p className="relative mt-3 border-t border-dashed border-line pt-2.5 font-sans text-[0.88rem] leading-snug">
           <span className="font-mono text-[0.78rem] text-faint">start with </span>
-          <a href={issue.url} target="_blank" rel="noopener noreferrer" data-umami-event="starter-issue-click" className="line-clamp-1 font-semibold text-ink hover:text-blue">
+          <a href={issue.url} target="_blank" rel="noopener noreferrer" data-umami-event="starter-issue-click" className="line-clamp-1 font-semibold text-ink after:absolute after:inset-0 hover:text-blue">
             <span className="font-mono text-[0.85rem] font-normal text-blue">#{issue.number}</span> {issue.title}
             <span className="sr-only"> (opens GitHub)</span>
           </a>
@@ -76,12 +76,12 @@ export function RepoCard({ r, report, focusHref, onOpen, actions }: { r: CardRep
         <a
           href={focusHref}
           onClick={open}
-          className="text-green hover:underline"
+          className="-my-3 py-3 text-green hover:underline"
           aria-label={`More about ${r.repo}`}
         >
           [ more ]
         </a>
-        <Link href={report} className="text-muted hover:text-ink">report →</Link>
+        <Link href={report} className="-my-3 py-3 text-muted hover:text-ink">report →</Link>
         {actions && <span className="ml-auto">{actions}</span>}
       </div>
     </article>

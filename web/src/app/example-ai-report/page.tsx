@@ -26,10 +26,10 @@ export default function ExampleAiReportPage() {
             <p className="mt-2 max-w-3xl font-sans text-[0.95rem] text-ink">
               A recorded example, not a live report, from GitHub activity up to {recorded}.
             </p>
-            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1">
+            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-5 sm:gap-y-1">
               <Link href="/" className="bracket-link">[ get one for your repo → ]</Link>
-              <Link href={`/${report.repo}`} className="text-link font-sans text-[0.89rem]">today&apos;s free report for {report.repo}</Link>
-              <Link href="/signin" className="text-link font-sans text-[0.89rem]">sign in for {WELCOME_AI_CREDITS} free AI reports</Link>
+              <Link href={`/${report.repo}`} className="text-link tap font-sans text-[0.89rem]">today&apos;s free report for {report.repo}</Link>
+              <Link href="/signin" className="text-link tap font-sans text-[0.89rem]">sign in for {WELCOME_AI_CREDITS} free AI reports</Link>
             </div>
           </aside>
 

@@ -136,11 +136,11 @@ function ColumnHead({ repo, removeHref }: { repo: string; removeHref: string }) 
     <div role="columnheader" className="cmp-cell cmp-col-head">
       <div className="flex items-start gap-2.5">
         <span className="hidden sm:block"><RepoAvatar repo={repo} size={28} /></span>
-        <Link href={`/${repo}`} className="min-w-0 flex-1 leading-tight hover:text-blue" title={repo}>
+        <Link href={`/${repo}`} className="-my-1.5 min-w-0 flex-1 py-1.5 leading-tight hover:text-blue" title={repo}>
           <span className="block truncate text-[0.78rem] text-faint">{owner}/</span>
           <span className="block truncate text-[0.98rem] font-semibold tracking-tight">{name}</span>
         </Link>
-        <Link href={removeHref} className="-mr-2 -mt-2 grid size-10 shrink-0 place-items-center text-faint transition-colors hover:text-orange" aria-label={`Remove ${repo}`}>
+        <Link href={removeHref} className="-mr-2.5 -mt-2.5 grid size-11 shrink-0 place-items-center text-faint transition-colors hover:text-orange" aria-label={`Remove ${repo}`}>
           <svg className="size-3.5" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
             <path d="M4 4l8 8M12 4l-8 8" />
           </svg>

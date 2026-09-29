@@ -764,7 +764,7 @@
     top: 12px;
     left: 12px;
     z-index: 100;
-    padding: 9px 12px;
+    padding: 10px 12px;
     color: var(--on-accent);
     background: var(--blue);
     transform: translateY(-160%);
@@ -2479,6 +2479,13 @@
   .drawer[popover]::backdrop {
     background: rgb(0 0 0 / 0.2);
   }
+  /* The page stays put under an open drawer, and its links are thumb-sized. */
+  :root:has(#app-drawer:popover-open) {
+    overflow: hidden;
+  }
+  .drawer .side-subitem {
+    min-height: 44px;
+  }
   .site-header:has(#app-drawer:popover-open) .icon-open {
     display: none;
   }
@@ -2613,7 +2620,8 @@
   }
 
   /* Your things as rows: an optional state colour on the left (--rule),
-     the facts, actions on the right. Discovery uses cards instead. */
+     the facts, actions on the right (under them on a phone with data-stack,
+     further down). Discovery uses cards instead. */
   .app-row {
     position: relative;
     display: grid;
@@ -2965,6 +2973,43 @@
       align-items: flex-end;
       font-size: 0.76rem;
     }
+  }
+}
+
+/* A text link that stands alone gets a 44px tall hit area without moving its
+   text or its underline (.text-link draws the underline as a border). Keep
+   about 10px clear above and below it. */
+@utility tap {
+  position: relative;
+  &::after {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    left: 0;
+    height: 44px;
+    translate: 0 -50%;
+    content: "";
+  }
+}
+
+/* Rows that stack (.app-row[data-stack]): below sm the last child, the
+   actions, drops under the facts, so a phone never squeezes a repo name or a
+   title into a sliver beside a pill and a button. Unlayered, because a row's
+   columns come from a grid-cols utility. A leading checkbox keeps its column. */
+@media (max-width: 639.98px) {
+  .app-row[data-stack] {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 10px;
+  }
+  .app-row[data-stack]:has(> :first-child:is(input, label)) {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .app-row[data-stack] > :last-child {
+    grid-column: -2 / -1;
+    justify-self: start;
+  }
+  .app-row[data-stack][data-rule] > :last-child {
+    margin-left: 8px;
   }
 }
 @keyframes cat-land {
