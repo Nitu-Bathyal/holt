@@ -443,6 +443,7 @@ function fromSeed(seed: Seed, mode: "rules" | "ai", days: number): Report {
 
 // "About this repo": made up from the name, except where a real-looking one reads better.
 function mockAbout(repo: string): Report["about"] {
+  if (repo.toLowerCase().includes("no-about")) return null;
   const r = rng(`${repo}:about`);
   const stars = Math.floor(r() * 90_000);
   const main = 0.6 + r() * 0.35;

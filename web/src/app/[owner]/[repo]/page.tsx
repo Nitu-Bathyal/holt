@@ -145,6 +145,11 @@ export default async function RepoPage({ params, searchParams }: Props) {
             decoding="async"
             className="size-10 rounded-md border border-line-strong bg-panel-2"
           />
+          {report.ok && report.data.about ? (
+            <div className="min-w-0 flex-1">
+              <RepoAbout about={report.data.about} repo={display} />
+            </div>
+          ) : (
           <div className="min-w-0 flex-1">
             <p className="text-[1.05rem] font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-[1.25rem]">
               <span className="text-muted">{dOwner}/</span>
@@ -154,6 +159,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
               github.com/{display} ↗
             </a>
           </div>
+          )}
           {/* A failed lookup shows "save"; saving again is harmless. Keyed so
               moving to another repo's report starts from that repo's state. */}
           <SaveButton key={display} repo={display} saved={user ? Boolean(saved?.ok && saved.data.saved) : null} />
@@ -181,8 +187,6 @@ export default async function RepoPage({ params, searchParams }: Props) {
             </Link>
           </nav>
         </div>
-
-        {report.ok && <RepoAbout about={report.data.about} />}
 
         {!signedIn && access === "full" && report.ok && <ExampleNote />}
 
