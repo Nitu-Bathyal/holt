@@ -160,12 +160,13 @@ Derived from the landing (EXPRESSIVE.md), at working size:
   state. The marker highlight is home-only. No lead line unless it adds a fact.
 - **One frame:** `.app-page` in the column beside the rail. It fills the
   column up to its width, then centres, so a big screen never has a dead band
-  on one side. Two widths: the default (76rem of content) for your things,
-  rows, forms, compare and reading, and `data-frame="wide"` (120rem) for card
+  on one side. Two widths: the default (76rem of content, growing to 90rem
+  past 1920px) for your things, rows, forms, compare and reading, and `data-frame="wide"` (120rem) for card
   grids (Find a project's tabs). Pages on the marketing `.wrap` (a report,
   examples) take the default frame inside the app. From `lg` the start gutter
   is 64px, the rail toggle sits in it, and the top bar's check box starts at
-  the frame's edge (`.app-bar-frame`, which follows the page's width). Card
+  the frame's edge (`.app-bar-frame`, which follows the page's width).
+  Signed out, the marketing header's edges follow the frame too. Card
   grids are `.card-grid`: one column on a phone, then as many 18rem columns
   as fit, up to `--cols` (5; the home's picks use 3). No tinted heads.
 - **Two card families.** *Rows* for your things (PRs, your repos): a state rule on

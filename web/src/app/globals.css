@@ -2089,9 +2089,10 @@
      under the top bar's toggle, so nothing moves sideways but the edge. */
   --rail-w-folded: 3.75rem;
   --rail-bg: color-mix(in srgb, var(--panel-2) 55%, var(--bg));
-  /* The app frame (.app-page). The start gutter clears the top bar's rail
-     toggle (8px + 44px + 12px) from lg. */
-  --frame-max: 76rem;
+  /* The app frame (.app-page). The default grows a little past 1920px so an
+     ultrawide screen isn't mostly margin; the start gutter clears the top
+     bar's rail toggle (8px + 44px + 12px) from lg. */
+  --frame-max: clamp(76rem, 34rem + 35vw, 90rem);
   --frame-max-wide: 120rem;
   --frame-pad: clamp(16px, 4vw, 48px);
   --frame-pad-start: var(--frame-pad);
@@ -2517,6 +2518,16 @@
   /* Signed out (find a project), there's no rail toggle to clear. */
   [data-shell="marketing"] .app-page {
     --frame-pad-start: var(--frame-pad);
+  }
+  /* ...and the marketing header lines up with the page's frame. */
+  :root:has([data-shell="marketing"] .app-page) .site-header .wrap {
+    --frame: var(--frame-max);
+    width: 100%;
+    max-width: calc(var(--frame) + 2 * var(--frame-pad));
+    padding-inline: var(--frame-pad);
+  }
+  :root:has([data-shell="marketing"] .app-page[data-frame="wide"]) .site-header .wrap {
+    --frame: var(--frame-max-wide);
   }
 
   /* The top bar: menu and logo, the check box, then theme and account.
