@@ -755,6 +755,7 @@ def test_issue_areas_from_labels_and_title():
     issue(title="[META] Improve error messages"),
     issue(title="Epic: plugin system"),
     issue(title="Roadmap 2026"),
+    issue(title="Co-maintainers wanted"),
     issue(labels=("good first issue", "meta")),
     issue(labels=("good first issue", "Type: Tracking")),
     issue(labels=("help wanted", "epic")),
@@ -765,6 +766,7 @@ def test_non_tasks_are_dropped(node):
 
 @pytest.mark.parametrize("title,caution", [
     ("Pinyin IME drops characters on Windows 11", "Needs Windows"),
+    ("Windows: paths with spaces break the installer", "Needs Windows"),
     ("Crash when launched from Xcode on macOS", "Needs a Mac"),
     ("S3 object tagging is ignored for backups", "Needs a cloud account"),
     ("CUDA out of memory with batch size 1", "Needs a GPU"),
@@ -787,9 +789,17 @@ def test_setup_the_whole_repository_is_about_is_not_special():
     assert "Needs a Kubernetes cluster" not in result.why
 
 
-def test_a_windows_in_a_gui_is_not_the_os():
-    _, result = score(issue(title="Closing all windows leaves the tray icon"))
+@pytest.mark.parametrize("title", ["Closing all windows leaves the tray icon",
+                                   "Windows are not resizable after a restart"])
+def test_a_windows_in_a_gui_is_not_the_os(title):
+    _, result = score(issue(title=title))
     assert "Needs Windows" not in result.why
+
+
+@pytest.mark.parametrize("title", ["Contributing guide needed for maintainers",
+                                   "Update the roadmap link in the README"])
+def test_tasks_that_mention_maintainers_or_a_roadmap_are_still_tasks(title):
+    assert score(issue(title=title)) is not None
 
 
 def test_labels_name_setup_too():

@@ -315,9 +315,10 @@ _RELEASE = re.compile(r"\b(no longer (working|able|have time)|not working on (th
 
 # Not a task at all: calls for maintainers, tracking and meta issues, epics.
 _NON_TASK_TITLE = re.compile(
-    r"\b(looking for|seeking|searching for|call for|need(s|ed)?|wanted)\b[\w\s-]{0,30}?"
-    r"\b(co-?)?maintainers?\b|\btracking issue\b|\bumbrella issue\b|\bmeta[- ]issue\b|"
-    r"^\W*(meta|epic|tracking|umbrella)\b|\broadmap\b", re.I)
+    r"\b(looking for|seeking|searching for|call for|recruiting|need(ing)?)"
+    r"( a| new| more| additional)* (co-?)?maintainers?\b|"
+    r"\b(co-?)?maintainers? (wanted|needed)\b|\btracking issue\b|\bumbrella issue\b|"
+    r"\bmeta[- ]issue\b|^\W*(meta|epic|tracking|umbrella|roadmap)\b", re.I)
 _NON_TASK_LABEL = re.compile(r"\b(meta|tracking( issue)?|tracker|epic|umbrella|roadmap|"
                              r"announcement)\b")
 # Labels saying it is harder than a first issue.
@@ -327,7 +328,7 @@ _HARD = re.compile(r"\b(hard|difficult|complex|advanced|expert|difficulty (mediu
 # is (the line shown, title pattern, label pattern).
 _SETUP = [
     ("Needs Windows",
-     re.compile(r"\b(on|in|under|for) windows\b|^\W*windows\b|\bwindows[ -]?(1[01]|7|8|xp|"
+     re.compile(r"\b(on|in|under|for) windows\b|^\W*windows\s*[:\]]|\bwindows[ -]?(1[01]|7|8|xp|"
                 r"only|specific|terminal|registry|defender)\b|\bwin(32|64)\b|\bwsl2?\b|"
                 r"\bpowershell\b", re.I),
      re.compile(r"\b(windows|win32|wsl)\b")),
@@ -674,7 +675,7 @@ def score_issue(node: dict[str, Any], as_of: datetime, *,
 
     small_fix = bool(why) and why[0].startswith("Looks like a small fix")
     areas = issue_areas(labels, title)
-    if not small_fix and areas[0] != "code" and areas[0] in ("docs", "tests"):
+    if not small_fix and areas[0] in ("docs", "tests"):
         score += 1
         why.append(f"{areas[0].capitalize()} work")
 
