@@ -123,6 +123,28 @@ def test_language_and_topic_filters_ignore_case(h):
                                                    {"name": "C++", "repos": 1}]
 
 
+def test_a_big_second_language_is_named_beside_the_primary_one():
+    # microsoft/TypeScript: GitHub's primary language is Go since the compiler port.
+    def node(primary, *sizes):
+        return {"primaryLanguage": {"name": primary}, "languages": {
+            "totalSize": sum(n for _, n in sizes),
+            "edges": [{"size": n, "node": {"name": name}} for name, n in sizes]}}
+
+    assert github.main_languages(node("Go", ("Go", 25_086_869), ("TypeScript", 3_606_966),
+                                      ("JavaScript", 116_132))) == ["Go", "TypeScript"]
+    assert github.main_languages(node("Python", ("Python", 95), ("HTML", 5))) == ["Python"]
+    assert github.main_languages({"primaryLanguage": None}) == []
+    assert github._details({"nameWithOwner": "a/b", **node("Go", ("Go", 8), ("C", 2))})[
+        "languages"] == ["Go", "C"]
+
+
+def test_cards_carry_the_main_languages(h):
+    add(h, report("microsoft/TypeScript"),
+        meta("microsoft/TypeScript", "Go", languages=["Go", "TypeScript"]))
+    card = get(h)["repos"][0]
+    assert (card["language"], card["languages"]) == ("Go", ["Go", "TypeScript"])
+
+
 def test_trending_needs_enough_people_this_week(h):
     add(h, report("octo/hot"), report("octo/warm"), report("octo/quiet"),
         report("octo/last-month"),
@@ -312,7 +334,8 @@ def test_details_query_is_one_request_with_one_alias_per_repo():
                          "o2": "octo", "n2": "secret"}
     assert "r2: repository(owner:$o2, name:$n2)" in document and "rateLimit" in document
     assert out["pallets/flask"] == {
-        "repo": "Pallets/Flask", "description": "Web", "language": "Python", "stars": 7,
+        "repo": "Pallets/Flask", "description": "Web", "language": "Python",
+        "languages": ["Python"], "stars": 7,
         "topics": ["wsgi"], "pushed_at": "2026-09-01T00:00:00Z", "archived": False,
         "fork": False}
     assert out["octo/gone"] is None and out["octo/secret"] is None

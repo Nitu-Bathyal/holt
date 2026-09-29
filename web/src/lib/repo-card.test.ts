@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { fromFind, langColor, neighbours, oddsSegments, oddsText, statPills, type CardStats } from "./repo-card.ts";
+import { fromFind, langColor, languageLabel, neighbours, oddsSegments, oddsText, statPills, type CardStats } from "./repo-card.ts";
 
 const stats = (over: Partial<CardStats> = {}): CardStats => ({ attempts: 71, merged: 57, noReply: 5, closedSilently: 8, stillOpen: 95, firstTimers: 3, replyHours: 46.9, ...over });
 
@@ -35,7 +35,7 @@ test("stat pills", () => {
 });
 
 test("fromFind keeps what a find result has and leaves the rest empty", () => {
-  const c = fromFind({ repo: "o/r", headline: "Worth your time", tone: "good", verdict: "viable", description: null, language: "Go", stars: 5, stats: { outsider_attempts: 4, outsider_merged: 3 }, issues: [] });
+  const c = fromFind({ repo: "o/r", headline: "Worth your time", tone: "good", verdict: "viable", description: null, language: "Go", languages: [], stars: 5, stats: { outsider_attempts: 4, outsider_merged: 3 }, issues: [] });
   assert.equal(c.stats.attempts, 4);
   assert.equal(c.stats.noReply, null);
   assert.deepEqual(c.why, []);
@@ -49,4 +49,11 @@ test("language colours and neighbours", () => {
   assert.deepEqual(neighbours(["a/b"], "a/b"), { index: 0, prev: null, next: null });
   assert.equal(neighbours(["a/b"], "x/y"), null);
   assert.equal(neighbours(["a/b"], null), null);
+});
+
+test("a card names a second language when the server gives one", () => {
+  assert.equal(languageLabel("Go", ["Go", "TypeScript"]), "Go · TypeScript");
+  assert.equal(languageLabel("Python", ["Python"]), "Python");
+  assert.equal(languageLabel("Python", undefined), "Python");
+  assert.equal(languageLabel(null, []), null);
 });

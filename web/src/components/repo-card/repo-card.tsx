@@ -41,10 +41,10 @@ export function RepoCard({ r, report, focusHref, onOpen, actions }: { r: CardRep
       <div className="mt-3 flex items-center justify-between gap-3">
         <VerdictPill headline={r.headline} tone={r.tone} className="shrink-0 px-1.5 py-0.5 text-[0.76rem]" />
         <span className="flex min-w-0 items-center gap-1.5 truncate text-[0.8rem] text-faint">
-          {r.language && (
+          {r.language && r.languageLabel && (
             <>
               <LangDot color={langColor(r.language)} />
-              {r.language}
+              {r.languageLabel}
             </>
           )}
           {r.stars != null && <span className="ml-2">★ {compact(r.stars)}<span className="sr-only"> stars</span></span>}

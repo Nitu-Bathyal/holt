@@ -24,6 +24,17 @@ test("flask-like numbers colour the tiles honestly", () => {
   assert.equal(tones.noreply, "bad");
 });
 
+// Flask: 0 left open unanswered, 99 closed without a word. Two tiles that
+// can't be read as opposites.
+test("open with no reply and closed without a word are separate tiles", () => {
+  const lines = statLines({ ...stats(171, 5, 0), closed_silently: 99 });
+  const byKey = Object.fromEntries(lines.map((l) => [l.key, l]));
+  assert.equal(byKey.noreply.label, "of outside PRs sat open with no reply (0)");
+  assert.equal(byKey.closed.big, "58%");
+  assert.equal(byKey.closed.label, "of outside PRs were closed without a word (99)");
+  assert.equal(lines.length, 6);
+});
+
 test("partial stats (find results) only show what they have", () => {
   const keys = statLines({ outsider_merged: 4, outsider_attempts: 10 }).map((l) => l.key);
   assert.deepEqual(keys, ["merged"]);

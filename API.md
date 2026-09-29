@@ -205,7 +205,7 @@ they cannot disagree with each other or with the verdict:
   (the verdict and one reason, without the counts), `numbers_line` (the
   counts with the dates they cover, e.g. "Of 120 pull requests from outside
   contributors (3 Jun – 26 Sep 2026), 22 were merged (18%). When a maintainer
-  replied, it was typically within 6 hours. 25% got no reply at all."), and
+  replied, it was typically within 6 hours. 25% sat open with no reply."), and
   `next_step` (where outside work lands, what the project asks, or where to go
   instead). `first_timer_line` is null when nobody outside tried.
 - The rule that decided the verdict is the last `decided_by` line whose code

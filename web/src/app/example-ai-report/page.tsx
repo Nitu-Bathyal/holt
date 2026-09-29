@@ -22,13 +22,13 @@ export default function ExampleAiReportPage() {
         <div aria-hidden="true" className="hero-backdrop bottom-auto h-[560px] [mask-image:linear-gradient(#000_55%,transparent)]" />
         <div className="wrap relative py-8 sm:py-12">
           <aside className="mb-6 border border-blue/50 bg-blue/[0.06] p-4 sm:p-5" data-example-banner>
-            <p className="text-[0.8rem] uppercase tracking-[0.08em] text-blue">Example AI report (recorded {recorded})</p>
-            <p className="mt-2 max-w-3xl font-sans text-[0.95rem] text-ink">
-              A recorded example, not a live report, from GitHub activity up to {recorded}.
+            <p className="text-[0.8rem] uppercase tracking-[0.08em] text-blue">Example AI report</p>
+            <p className="mt-2 text-[1.35rem] font-semibold tracking-tight text-ink sm:text-[1.6rem]">Recorded {recorded}</p>
+            <p className="mt-1 max-w-3xl font-sans text-[0.95rem] text-muted">
+              The numbers are from then. <Link href={`/${report.repo}`} className="text-link">Today&apos;s report for {report.repo}</Link> has the current ones.
             </p>
             <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1">
               <Link href="/" className="bracket-link">[ get one for your repo → ]</Link>
-              <Link href={`/${report.repo}`} className="text-link font-sans text-[0.89rem]">today&apos;s free report for {report.repo}</Link>
               <Link href="/signin" className="text-link font-sans text-[0.89rem]">sign in for {WELCOME_AI_CREDITS} free AI reports</Link>
             </div>
           </aside>
