@@ -1453,6 +1453,12 @@
   --gut: clamp(16px, 4vw, 80px);
   width: min(calc(100% - 2 * var(--gut)), 1680px);
 }
+/* Report pages (the free report, the AI report and their skeletons): as wide
+   as the landing, without its lane for the walking cat. */
+.report-wide {
+  width: min(calc(100% - 2 * clamp(16px, 4vw, 80px)), 1680px);
+  margin-inline: auto;
+}
 /* Desktop: the gutters are at least 136px wide, a lane where the companion cat,
    which walks to the right edge (motion/cat-companion.tsx: an 84px face,
    22px from the edge), never sits on a section's text, cards or buttons. */

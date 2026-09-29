@@ -21,7 +21,7 @@ const INSIDE = [
 export function ReportTeaser({ repo, report, back }: { repo: string; report: Report | null; back: string }) {
   const t = report ? TONE[report.tone] : TONE.neutral;
   return (
-    <div className="max-w-3xl space-y-6" data-teaser>
+    <div className="max-w-6xl space-y-6" data-teaser>
       <div className="relative overflow-hidden border border-line-strong bg-panel shadow-card" data-verdict-hero>
         <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${t.bg}`} />
         <div className="p-5 pl-6 sm:p-8 sm:pl-10">
@@ -61,7 +61,7 @@ export function ReportTeaser({ repo, report, back }: { repo: string; report: Rep
         <p className="mt-2 max-w-2xl font-sans text-[0.98rem] text-muted">
           {report ? "The full report is free with an account. Inside:" : "You get the verdict and the full report:"}
         </p>
-        <ul className="mt-5 grid gap-px border border-line bg-line sm:grid-cols-2">
+        <ul className="mt-5 grid gap-px border border-line bg-line sm:grid-cols-2 xl:grid-cols-4">
           {INSIDE.map((s) => (
             <li key={s.n} className="bg-panel-2 p-4">
               <p className="text-[0.95rem] font-semibold tracking-tight">
