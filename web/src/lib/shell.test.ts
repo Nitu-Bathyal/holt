@@ -40,7 +40,7 @@ test("the sidebar holds every signed-in page, each once, with a plain label and 
   assert.equal(new Set(items.map((i) => i.id)).size, items.length);
   // Settings' own sections sit under it.
   assert.deepEqual(items.find((i) => i.id === "settings")!.children!.map((c) => c.href),
-    ["/settings/profile", "/settings/ai-reports", "/settings/accounts", "/settings/privacy"]);
+    ["/settings/profile", "/settings/ai-reports", "/settings/accounts", "/settings/privacy", "/settings/display"]);
 });
 
 test("Hacktoberfest shows only in October, Check your PR only where pre-flight runs", () => {

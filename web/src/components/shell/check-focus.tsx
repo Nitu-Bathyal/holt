@@ -5,6 +5,7 @@
 // sight (a phone, or a page without one) it goes to /me#check, and /me does
 // the same on arrival.
 import { useEffect } from "react";
+import { prefersReducedMotion } from "@/lib/motion";
 import { CHECK_HREF } from "@/lib/shell";
 
 function visibleTarget(): HTMLElement | null {
@@ -19,7 +20,7 @@ export function focusCheck(): boolean {
   const box = visibleTarget();
   const input = box?.querySelector<HTMLInputElement>("input");
   if (!box || !input) return false;
-  box.scrollIntoView({ block: "center", behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+  box.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
   input.focus({ preventScroll: true });
   box.classList.remove("check-flash");
   void box.offsetWidth; // restart the animation on a second click
