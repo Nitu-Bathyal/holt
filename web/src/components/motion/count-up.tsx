@@ -9,15 +9,14 @@
 // the final text.
 import { createContext, useContext, useEffect, useMemo, useRef, useState } from "react";
 import { countAt, countParts, settle } from "@/lib/count-up";
+import { prefersReducedMotion } from "@/lib/motion";
 
 type Phase = "wait" | "go" | "done";
 const Group = createContext<Phase>("done");
 
-const reducedMotion = () => typeof matchMedia === "function" && matchMedia("(prefers-reduced-motion: reduce)").matches;
-
 export function CountUpGroup({ children, className }: { children: React.ReactNode; className?: string }) {
   const ref = useRef<HTMLDivElement>(null);
-  const [phase, setPhase] = useState<Phase>(() => (typeof window === "undefined" || reducedMotion() ? "done" : "wait"));
+  const [phase, setPhase] = useState<Phase>(() => (typeof window === "undefined" || prefersReducedMotion() ? "done" : "wait"));
 
   useEffect(() => {
     const el = ref.current;

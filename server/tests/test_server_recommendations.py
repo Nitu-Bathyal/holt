@@ -59,9 +59,10 @@ def pr(repo, number=1, state="merged", user="u1"):
                         state=state, created_at=now())
 
 
-def issue(number, labels=("good first issue",), title="Fix a thing"):
+def issue(number, labels=("good first issue",), title="Fix a thing", people=0):
     return {"number": number, "title": title, "url": f"https://github.com/o/r/issues/{number}",
-            "labels": list(labels), "created_at": None, "comments": 0, "why": []}
+            "labels": list(labels), "created_at": None, "comments": 0, "why": [],
+            "people": people, "open_prs": 0}
 
 
 def starters(repo, *issues, age_hours=0):
@@ -200,6 +201,22 @@ def test_old_starter_issues_are_not_shown(h):
     pro(h)
     add(h, profile(), report("octo/a"), meta("octo/a", "Python"),
         starters("octo/a", issue(1), age_hours=100))
+    assert get(h)["picks"][0]["issues"] == []
+
+
+def test_issues_nobody_is_on_come_first_then_fitting_ones(h):
+    pro(h)
+    add(h, profile(level="experienced", contributions=("docs",)),
+        report("octo/a"), meta("octo/a", "Python"),
+        starters("octo/a", issue(1, title="Fix the docs", people=2), issue(2),
+                 issue(3, title="Fix the docs")))
+    assert [i["number"] for i in get(h)["picks"][0]["issues"]] == [3, 2, 1]
+
+
+def test_issues_cached_before_they_said_who_is_on_them_are_not_shown(h):
+    pro(h)
+    old = {k: v for k, v in issue(1).items() if k not in ("people", "open_prs")}
+    add(h, profile(), report("octo/a"), meta("octo/a", "Python"), starters("octo/a", old))
     assert get(h)["picks"][0]["issues"] == []
 
 

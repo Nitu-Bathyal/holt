@@ -76,8 +76,8 @@ export function fromForm(form: FormData): Omit<ProfilePrefs, "updated_at"> & { a
 /**
  * Applies experience and contribution types to find results. A newcomer keeps
  * only issues labelled for first-timers, and a repo left with none is dropped;
- * issues matching the chosen contribution types come first. Never changes a
- * verdict or which repos passed it.
+ * issues nobody is on come first, then those matching the chosen contribution
+ * types. Never changes a verdict or which repos passed it.
  */
 export function personalise(results: FindResult[], fit: Fit | null): FindResult[] {
   if (!fit) return results;
@@ -86,7 +86,9 @@ export function personalise(results: FindResult[], fit: Fit | null): FindResult[
   const out: FindResult[] = [];
   for (const r of results) {
     let issues = fit.level === "newcomer" ? r.issues.filter((i) => i.beginner !== false) : r.issues;
-    if (wanted.size) issues = [...issues.filter((i) => matches(i.areas)), ...issues.filter((i) => !matches(i.areas))];
+    // Nobody on it first (as the server ranks them), then the wanted kinds of work.
+    const busy = (i: FindResult["issues"][number]) => Boolean(i.people || i.open_prs);
+    if (wanted.size) issues = [false, true].flatMap((b) => [...issues.filter((i) => busy(i) === b && matches(i.areas)), ...issues.filter((i) => busy(i) === b && !matches(i.areas))]);
     if (issues.length) out.push({ ...r, issues });
   }
   // Repos with a matching issue first; otherwise the server's order stands.

@@ -44,7 +44,7 @@ from pathlib import Path
 
 from sqlalchemy import select, text
 
-from holt_server import repos
+from holt_server import repos, starter
 from holt_server.db import (
     ACTIVE,
     BADGE_PRIORITY,
@@ -204,7 +204,8 @@ class Warmer:
         ttl = timedelta(hours=self.svc.settings.starter_cache_hours * REFRESH_AFTER)
         async with self.svc.db.session() as s:
             row = await s.get(StarterCache, repos.key(repo))
-        return row is not None and utc(row.created_at) >= now() - ttl
+        return (row is not None and utc(row.created_at) >= now() - ttl
+                and starter.current(row.issues))
 
     async def find_is_fresh(self, profile: Profile) -> bool:
         ttl = timedelta(hours=self.svc.settings.find_cache_hours * REFRESH_AFTER)
@@ -296,7 +297,6 @@ class Warmer:
                 raise OutOfBudget("GitHub rate limit reached")
 
     async def warm_starter(self, repo: str) -> None:
-        from holt_server import starter
         from holt_server.api import fetch_starter_issues
 
         if await self.starter_is_fresh(repo):
@@ -341,8 +341,6 @@ class Warmer:
             self.result.meta_run += await discover.store_meta(self.svc, details)
 
     async def warm_find(self, profile: Profile) -> None:
-        from holt_server import starter
-
         if await self.find_is_fresh(profile):
             self.result.finds_fresh += 1
             return
