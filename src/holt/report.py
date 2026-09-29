@@ -11,6 +11,8 @@ from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 
+from holt.about import About, about_lines, about_to_dict
+
 
 class Verdict(str, Enum):
     """The answer, in five values.
@@ -148,6 +150,9 @@ class Assessment:
     # every statement was thrown out. `psf/requests` was the second one, and it
     # read like the first.
     dropped_claims: int = 0
+    # What the repository is, from GitHub's own fields and its README
+    # (holt/about.py). Printed under the name; it never feeds the verdict.
+    about: About | None = None
     # The models that actually answered, in first-use order. Printed because the
     # model-written sections degrade with the model behind them while the counts
     # and the verdict do not, and a report that does not name its model leaves a
@@ -157,6 +162,8 @@ class Assessment:
 
     def render(self) -> str:
         lines = [f"# {self.repo}", ""]
+        if self.about and (about := about_lines(self.about)):
+            lines += [f"> {line}  " for line in about[:-1]] + [f"> {about[-1]}", ""]
         if self.replayed:
             lines += [
                 "> Replaying recorded model output. No model was called for this run.",
@@ -254,4 +261,5 @@ class Assessment:
             "generated_at": datetime.now(UTC).isoformat(timespec="seconds"),
             "models": list(self.models),
             "dropped_claims": self.dropped_claims,
+            "about": about_to_dict(self.about) if self.about else None,
         }

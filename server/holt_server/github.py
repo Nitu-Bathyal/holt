@@ -23,6 +23,7 @@ from typing import Any
 
 import httpx
 
+from holt.about import language_shares, license_name, readme_line
 from holt.evidence.errors import AuthError, RateLimited
 from holt.evidence.github_graphql import GitHubGraphQL
 from holt_server.errors import ApiError, github_rate_limited, upstream
@@ -37,6 +38,12 @@ query($owner:String!, $name:String!) {
 
 RATE_LIMIT = "query { rateLimit { remaining resetAt } }"
 
+# Where the details query looks for a README (its first sentence is kept, not
+# the file), first found wins.
+README_PATHS = ("README.md", "README.rst", "readme.md")
+README_FIELDS = "".join(
+    f'  readme{i}: object(expression: "HEAD:{path}") {{ ... on Blob {{ text }} }}\n'
+    for i, path in enumerate(README_PATHS))
 # Repositories per details query. GitHub charges about one point for a query
 # of up to a hundred small lookups.
 DETAILS_BATCH = 100
@@ -45,6 +52,9 @@ DETAILS_FIELDS = """
   primaryLanguage { name }
   languages(first: 3, orderBy: {field: SIZE, direction: DESC}) { totalSize edges { size node { name } } }
   repositoryTopics(first: 20) { nodes { topic { name } } }
+  forkCount createdAt homepageUrl parent { nameWithOwner }
+  licenseInfo { spdxId name } issues(states: OPEN) { totalCount }
+  defaultBranchRef { name }
 """
 
 # A second language is named beside the primary one when it is at least this
@@ -286,6 +296,17 @@ def _details(node: dict[str, Any]) -> dict[str, Any]:
         "pushed_at": node.get("pushedAt"),
         "archived": bool(node.get("isArchived")),
         "fork": bool(node.get("isFork")),
+        "forks": node.get("forkCount"),
+        "open_issues": (node.get("issues") or {}).get("totalCount"),
+        "license": license_name(node.get("licenseInfo")),
+        "homepage": (node.get("homepageUrl") or "").strip() or None,
+        "language_shares": language_shares(node.get("languages")),
+        "created_at": node.get("createdAt"),
+        "default_branch": (node.get("defaultBranchRef") or {}).get("name"),
+        "fork_of": (node.get("parent") or {}).get("nameWithOwner"),
+        "readme_line": next((line for i in range(len(README_PATHS))
+                             if (line := readme_line((node.get(f"readme{i}") or {}).get("text")))),
+                            None),
     }
 
 
@@ -329,7 +350,8 @@ class GitHubLookup:
         return RepoInfo(name_with_owner=found["nameWithOwner"])
 
     async def details(self, repos: list[str]) -> dict[str, dict[str, Any] | None]:
-        """Description, language, stars, topics and last push for up to
+        """Description, language, stars, topics, last push and the rest of the
+        report's "About" (repo_meta) for up to
         `DETAILS_BATCH` repositories, in one GraphQL query. Keyed by the
         requested `owner/repo`; None for one that is missing or private."""
         return await asyncio.to_thread(self._details, repos)
@@ -349,7 +371,7 @@ class GitHubLookup:
             variables[f"o{i}"], variables[f"n{i}"] = owner, name
         document = (f"query({', '.join(params)}) {{\n  " + "\n  ".join(parts)
                     + "\n  rateLimit { cost remaining resetAt }\n}\n"
-                    + f"fragment details on Repository {{{DETAILS_FIELDS}}}")
+                    + f"fragment details on Repository {{{DETAILS_FIELDS}{README_FIELDS}}}")
         from holt_server.engine import translate
 
         transport = self.pool.transport(self.http)
