@@ -190,7 +190,7 @@ settings and pre-flight aren't drawn: they keep their pages and take the new fra
    account menu holds credits, settings, help and sign-out; settings tabs at
    every size; the shared page frame and page head. (`lib/shell.ts`,
    `components/shell/*`) Hacktoberfest keeps a sidebar item in October until 5.
-2. **Your repos:** `/me/repos` merges saved and checked; 308s from the old URLs.
+2. **Your repos:** `/me/repos` merges saved and checked; 308s from the old URLs. *Built.*
 3. **Home:** the loop, needs you, in flight, picks with inline chips, your repos.
    Rules stay pure in `lib/home.ts`. "Since your last visit" is a cookie.
 4. **Server, then PRs page:** each PR's repo carries its typical first reply,

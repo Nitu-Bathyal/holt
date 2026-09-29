@@ -26,7 +26,7 @@ test("jump links glide on the landing page and go to it from anywhere else", () 
 
 test("the sidebar holds five places, each once, with a plain label and an icon", () => {
   const items = sidebarGroups({ hacktoberfest: false }).flatMap((g) => g.items);
-  assert.deepEqual(items.map((i) => i.href), ["/me", "/find", "/me/contributions", "/me/saved", "/compare"]);
+  assert.deepEqual(items.map((i) => i.href), ["/me", "/find", "/me/contributions", "/me/repos", "/compare"]);
   for (const i of items) {
     assert.ok(i.icon, i.id);
     assert.doesNotMatch(i.label, /_|for-you|contributions|history/i, i.label);
@@ -48,8 +48,7 @@ test("one sidebar item lights up per page, the most specific one", () => {
   const g = sidebarGroups({ hacktoberfest: true });
   assert.equal(activeItem(g, "/me"), "home");
   assert.equal(activeItem(g, "/me/"), "home");
-  assert.equal(activeItem(g, "/me/saved"), "repos");
-  assert.equal(activeItem(g, "/me/history"), "repos");
+  assert.equal(activeItem(g, "/me/repos"), "repos");
   assert.equal(activeItem(g, "/me/contributions?refresh=done"), "prs");
   assert.equal(activeItem(g, "/discover/python"), "find");
   assert.equal(activeItem(g, "/hacktoberfest"), "hacktoberfest");
@@ -63,6 +62,9 @@ test("retired addresses go to where their content lives now", () => {
   assert.equal(RETIRED["/for-you"], "/me#picks");
   assert.equal(retiredRedirect("/for-you"), "/me#picks");
   assert.equal(retiredRedirect("/for-you/"), "/me#picks");
+  // Saved and checked are one list now, on the tab you came for.
+  assert.equal(retiredRedirect("/me/saved"), "/me/repos?show=saved");
+  assert.equal(retiredRedirect("/me/history/"), "/me/repos?show=checked");
   for (const p of ["/", "/me", "/constructor", "/__proto__", "/for-you/x"]) assert.equal(retiredRedirect(p), null, p);
 });
 

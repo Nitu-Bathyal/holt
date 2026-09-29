@@ -1,4 +1,4 @@
-// Repos you checked, newest first: the home shows a few, /me/history all.
+// Repos you checked, newest first: the home shows a few; /me/repos has them all.
 import Link from "next/link";
 import { RepoAvatar } from "@/components/repo-card/repo-avatar";
 import { VerdictPill } from "@/components/report/verdict-pill";

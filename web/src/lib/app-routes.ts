@@ -1,4 +1,4 @@
-// First segments of the app's own two-segment routes (/me/history,
+// First segments of the app's own two-segment routes (/me/repos,
 // /discover/python, /settings/profile, /pricing/thanks, and /lab/* for
 // prototypes), which /[owner]/[repo] must never claim: the proxy would probe
 // GitHub for them and answer 404. Add a folder here when you add one under
