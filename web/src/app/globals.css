@@ -2736,6 +2736,129 @@
       translate: 0 -2px;
     }
   }
+
+  /* /compare: one table, a column per repo, a row per number, so the eye runs
+     straight across. Each row is a subgrid of the table, so cells line up
+     however much a column says. Phones: the row's label sits above its
+     numbers, and three or four columns swipe a column at a time. */
+  .cmp-scroll {
+    /* Also the box for the screen-reader-only labels, so they're clipped too. */
+    position: relative;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+  .cmp {
+    --col: 0px;
+    display: grid;
+    grid-template-columns: repeat(var(--n), minmax(max(var(--col), 0px), 1fr));
+    border-top: 1px solid var(--line-strong);
+  }
+  .cmp-scroll[data-many] .cmp {
+    --col: 9.5rem;
+  }
+  .cmp-row {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    border-bottom: 1px solid var(--line);
+    transition: background-color var(--dur-fast) var(--ease-out);
+  }
+  .cmp-row:not(.cmp-head, .cmp-foot):hover {
+    background: color-mix(in srgb, var(--ink) 3%, transparent);
+  }
+  .cmp-head {
+    border-bottom-color: var(--line-strong);
+  }
+  .cmp-foot {
+    border-bottom: 0;
+  }
+  .cmp-cell {
+    min-width: 0;
+    padding: 14px 12px;
+  }
+  .cmp-foot .cmp-cell {
+    padding-block: 4px;
+  }
+  .cmp-label {
+    grid-column: 1 / -1;
+    padding: 12px 12px 0;
+    color: var(--muted);
+    font-family: var(--font-sans);
+    font-size: 0.8rem;
+  }
+  .cmp-label + .cmp-cell {
+    grid-column-start: 1;
+  }
+  .cmp-corner {
+    display: none;
+  }
+  .cmp-main {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 1.02rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  .cmp-sub {
+    display: block;
+    margin-top: 2px;
+    color: var(--faint);
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .cmp-best {
+    color: var(--green);
+    font-size: 0.62rem;
+  }
+  @media (max-width: 639px) {
+    /* Phones: the table runs to the screen's edges, labels stay in view as
+       the columns slide under them. */
+    .cmp-scroll {
+      margin-inline: -16px;
+      padding-inline: 16px;
+      scroll-padding-inline: 16px;
+    }
+    .cmp-scroll[data-many] {
+      scroll-snap-type: x mandatory;
+    }
+    .cmp-col-head {
+      scroll-snap-align: start;
+    }
+    .cmp-label > span {
+      position: sticky;
+      left: 12px; /* the cell's padding: sticky already stops at the scroller's */
+      display: inline-block;
+    }
+    .cmp-cell {
+      padding-top: 6px;
+    }
+    .cmp-head .cmp-cell {
+      padding-top: 14px;
+    }
+  }
+  @media (min-width: 640px) {
+    .cmp {
+      grid-template-columns: 11rem repeat(var(--n), minmax(max(var(--col), 0px), 1fr));
+    }
+    .cmp-scroll:not([data-many]) .cmp {
+      --col: 0px;
+    }
+    .cmp-label {
+      grid-column: 1;
+      padding: 14px 12px;
+    }
+    .cmp-label + .cmp-cell {
+      grid-column-start: 2;
+    }
+    .cmp-corner {
+      display: flex;
+      align-items: flex-end;
+      font-size: 0.76rem;
+    }
+  }
 }
 @keyframes cat-land {
   from {
