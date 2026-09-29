@@ -26,7 +26,7 @@ import { SKIP_COOKIE } from "@/lib/profile";
 import { basisLine, lockedLine } from "@/lib/recommendations";
 import { fromPick } from "@/lib/repo-card";
 import { caller, currentUser } from "@/lib/session";
-import { PROFILE_SETTINGS } from "@/lib/settings";
+import { CONNECT_GITHUB, PROFILE_SETTINGS } from "@/lib/settings";
 import { yourRepos } from "@/lib/your-repos";
 import { dismissNudge } from "./actions";
 
@@ -40,7 +40,7 @@ const NOTICES: Record<string, { tone: string; text: string }> = {
 
 const NUDGES: Record<Nudge, { text: string; href: string; cta: string }> = {
   profile: { text: "Tell Holt your languages and it picks repos for you.", href: PROFILE_SETTINGS, cta: "add your languages" },
-  github: { text: "Connect GitHub to see your pull requests here.", href: "/connect", cta: "connect GitHub" },
+  github: { text: "Connect GitHub to see your pull requests here.", href: CONNECT_GITHUB, cta: "connect GitHub" },
 };
 
 function mood(m: NextMove): CatMood {

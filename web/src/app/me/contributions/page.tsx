@@ -11,6 +11,7 @@ import { RefreshButton } from "@/components/contributions/refresh-button";
 import { ErrorPanel } from "@/components/error-panel";
 import { MarkedTitle } from "@/components/home/move-head";
 import { WaitBar } from "@/components/home/wait-bar";
+import { NewCount } from "@/components/motion/count-up";
 import { PageTransition } from "@/components/motion/page-transition";
 import { AppPageHeader, SectionHead } from "@/components/shell/app-page";
 import { contributions, preflightState } from "@/lib/api";
@@ -19,6 +20,7 @@ import { timeAgo } from "@/lib/format";
 import { clock, outsidePulls, type Waiting } from "@/lib/home";
 import { showPreflight } from "@/lib/preflight";
 import { caller, currentUser } from "@/lib/session";
+import { CONNECT_GITHUB } from "@/lib/settings";
 import type { ContributionPR } from "@/lib/types";
 import { refresh, setCounted } from "./actions";
 
@@ -133,17 +135,19 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
   const d = r.ok ? r.data : null;
   const g = d ? prGroups(outsidePulls(d.pull_requests, d.login), clock()) : null;
   const s = d?.summary;
+  // Nothing to group yet: the head says so, and its one action is finding a repo.
+  const none = !!g && !g.needs.length && !g.waiting.length && !g.merged.length && !g.closed.length;
 
   return (
     <PageTransition>
       <div className="app-page">
         {notConnected ? (
           <>
-            <AppPageHeader title="Your pull requests" mood="thinking" />
-            <div className="flex flex-col items-start gap-4">
-              <p className="font-sans text-muted">Connect GitHub to see your pull requests here.</p>
-              <Link href="/connect" className="btn-primary">connect GitHub</Link>
-            </div>
+            <AppPageHeader title="Your pull requests" mood="thinking">
+              <div className="mt-7">
+                <Link href={CONNECT_GITHUB} className="btn-primary">connect GitHub →</Link>
+              </div>
+            </AppPageHeader>
           </>
         ) : !r.ok ? (
           <>
@@ -155,24 +159,31 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
             <AppPageHeader title={<MarkedTitle title={prsTitle(g)} />} mood={g.needs.length ? "thinking" : g.waiting.length ? "ready" : g.merged.length ? "celebrating" : "ready"}>
               <div className="mt-5 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 text-[0.84rem] text-muted">
                 <p className="flex flex-wrap gap-x-5 gap-y-1">
-                  <span><b className="text-ink">{s.opened}</b> opened {d.truncated ? "(your latest 200)" : "this year"}</span>
-                  <span><b className="text-green">{s.merged}</b> merged</span>
-                  {s.closed > 0 && <span><b className="text-ink">{s.closed}</b> closed</span>}
+                  <span><b className="text-ink"><NewCount id={`prs:${d.login}:opened`} value={s.opened} /></b> opened {d.truncated ? "(your latest 200)" : "this year"}</span>
+                  <span><b className="text-green"><NewCount id={`prs:${d.login}:merged`} value={s.merged} /></b> merged</span>
+                  {s.closed > 0 && <span><b className="text-ink"><NewCount id={`prs:${d.login}:closed`} value={s.closed} /></b> closed</span>}
                   {landedLine(s) && <span>{landedLine(s)}</span>}
-                  {s.found_via_holt > 0 && <span><b className="text-blue">{s.found_via_holt}</b> found via Holt</span>}
+                  {s.found_via_holt > 0 && <span><b className="text-blue"><NewCount id={`prs:${d.login}:holt`} value={s.found_via_holt} /></b> found via Holt</span>}
                   <span className="text-faint">as @{d.login} · updated <time dateTime={d.fetched_at}>{timeAgo(d.fetched_at)}</time></span>
                 </p>
                 <RefreshButton action={refresh} nextRefreshAt={d.next_refresh_at} />
               </div>
+              {none && (
+                <div className="mt-7">
+                  <Link href="/find" className="btn-primary">find a project →</Link>
+                </div>
+              )}
             </AppPageHeader>
             {notice && <p role="status" className={`mb-6 border px-4 py-3 font-sans text-[0.9rem] ${notice.tone}`}>{notice.text}</p>}
             <ContributionHistorySlot data={d} />
             <div className="mt-6 space-y-12">
               <Groups g={g} preflight={pre.ok && showPreflight(pre.data)} />
             </div>
-            <p className="mt-12 font-sans text-[0.92rem] text-muted">
-              Next one? <Link href="/find" className="text-link font-mono text-[0.88rem]">find a project</Link>
-            </p>
+            {none ? null : (
+              <p className="mt-12 font-sans text-[0.92rem] text-muted">
+                Next one? <Link href="/find" className="text-link font-mono text-[0.88rem]">find a project</Link>
+              </p>
+            )}
           </>
         )}
       </div>
