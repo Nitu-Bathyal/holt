@@ -64,6 +64,9 @@ export function RepoCard({ r, report, focusHref, onOpen, actions }: { r: CardRep
             <span className="font-mono text-[0.85rem] font-normal text-blue">#{issue.number}</span> {issue.title}
             <span className="sr-only"> (opens GitHub)</span>
           </a>
+          {issue.on_it && (
+            <span className={`mt-0.5 block text-[0.8rem] ${issue.people || issue.open_prs ? "text-amber" : "text-muted"}`}>{issue.on_it}</span>
+          )}
         </p>
       ) : r.reason ? (
         <p className="mt-3 line-clamp-2 border-t border-dashed border-line pt-2.5 font-sans text-[0.88rem] leading-snug text-muted">{r.reason}</p>

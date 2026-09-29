@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { creditsNote, evidenceLabel, mergeTone, noReplyTone, statLines } from "./format.ts";
+import { creditsNote, evidenceLabel, mergeTone, nextStep, noReplyTone, statLines } from "./format.ts";
 
 const stats = (attempts: number, merged: number, noReply: number) => ({
   outsider_attempts: attempts, outsider_merged: merged, no_reply: noReply,
@@ -43,4 +43,16 @@ test("creditsNote says free only when every credit is free", () => {
   assert.equal(creditsNote(c), "13 AI reports left. This one uses 1. A failed report doesn't count.");
   assert.equal(creditsNote({ ...c, balance: 3, purchased: 0 }), "3 free AI reports left. This one uses 1. A failed report doesn't count.");
   assert.equal(creditsNote({ ...c, balance: 1, free: 1, purchased: 0 }).startsWith("1 free AI report left."), true);
+});
+
+const starter = (people: number | null, open_prs: number | null, comments = 0) => ({
+  number: 1, title: "t", url: "u", labels: [], created_at: null, comments, why: [],
+  people, open_prs, on_it: null, beginner: true, areas: [],
+});
+
+test("the next step for an issue someone is already on", () => {
+  assert.equal(nextStep(starter(1, 1)), "Look at the open pull request first; if it has stalled, ask to take over.");
+  assert.equal(nextStep(starter(2, 0, 4)), "Ask whether it's still free before you start.");
+  assert.equal(nextStep(starter(0, 0)), "Comment on the issue to ask if you can take it.");
+  assert.equal(nextStep(starter(null, null)), "Comment on the issue to ask if you can take it.");
 });

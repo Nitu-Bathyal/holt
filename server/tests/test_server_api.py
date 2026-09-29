@@ -436,10 +436,21 @@ def test_starter_issues(h, fake_starter):
     assert body["issues"] == [{
         "number": 7, "title": "Fix typo", "url": "https://github.com/pallets/flask/issues/7",
         "labels": ["good first issue"], "created_at": "2026-09-01T00:00:00Z", "comments": 1,
-        "why": ["Labelled good first issue"], "beginner": True, "areas": ["docs"],
+        "why": ["Labelled good first issue"], "people": None, "open_prs": None,
+        "beginner": True, "areas": ["docs"], "on_it": None,
     }]
     assert fake_starter["issues"][0] == "pallets/flask"
     assert fake_starter["issues"][2] == 50  # ranked once at the cache size, sliced here
+
+
+def test_starter_issues_say_who_is_already_on_each(h, fake_starter, monkeypatch):
+    mod = sys.modules["holt.starter"]
+    monkeypatch.setattr(mod, "starter_issues", lambda repo, token, limit, as_of=None: [
+        {"number": 1, "title": "a", "people": 0, "open_prs": 0},
+        {"number": 2, "title": "b", "people": 2, "open_prs": 1}])
+    issues = h.get("/v1/repos/pallets/flask/starter-issues").json()["issues"]
+    assert [(i["people"], i["open_prs"], i["on_it"]) for i in issues] == [
+        (0, 0, "Nobody on it yet"), (2, 1, "2 people already on it, 1 open pull request")]
 
 
 def test_find(h, fake_starter):

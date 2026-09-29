@@ -20,7 +20,7 @@ interface Seed {
   landing: Report["landing"];
   never_landed: Report["never_landed"];
   evidence: [kind: string, pr: number, text: string, quote: string | null][];
-  issues: Omit<StarterIssue, "url" | "created_at" | "beginner" | "areas">[];
+  issues: Omit<StarterIssue, "url" | "created_at" | "beginner" | "areas" | "people" | "open_prs" | "on_it">[];
   summary: string;
 }
 
@@ -368,6 +368,10 @@ function toIssues(repo: string, seed: Seed["issues"]): StarterIssue[] {
     areas: ((a) => (a.length ? a : ["code" as const]))(AREAS.filter(([, re]) => i.labels.some((l) => re.test(l)) || re.test(i.title)).map(([k]) => k)),
     url: `https://github.com/${repo}/issues/${i.number}`,
     created_at: hoursAgo(30 + n * 41),
+    // The second issue shows what an issue someone is already on looks like.
+    people: n === 1 ? 1 : 0,
+    open_prs: 0,
+    on_it: n === 1 ? "1 person already on it" : "Nobody on it yet",
   }));
 }
 

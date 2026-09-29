@@ -43,7 +43,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import select
 
-from holt_server import entitlements, repos, schema
+from holt_server import entitlements, repos, schema, starter
 from holt_server.db import (
     Contribution,
     FindCache,
@@ -235,7 +235,7 @@ async def starter_issues(svc: Services, keys: list[str]) -> dict[str, list[dict]
         rows = (await s.execute(select(StarterCache.repo_key, StarterCache.issues)
                                 .where(StarterCache.repo_key.in_(keys),
                                        StarterCache.created_at >= since))).all()
-    return {key: list(issues or []) for key, issues in rows}
+    return {key: list(issues or []) for key, issues in rows if starter.current(issues or [])}
 
 
 # --- the rules ------------------------------------------------------------------------
@@ -259,8 +259,10 @@ def fitting_issues(raw: list[dict], b: Basis) -> list[StarterIssue]:
     if b.level == "newcomer":
         issues = [i for i in issues if i.beginner]
     wanted = set(b.contributions)
-    # Stable: the finder's order within each group.
-    return sorted(issues, key=lambda i: not (wanted & set(i.areas)))
+    # Nobody on it first, then the kind of work they want. Stable: the
+    # finder's order within each group.
+    return sorted(issues, key=lambda i: (bool(i.people or i.open_prs),
+                                         not (wanted & set(i.areas))))
 
 
 def _names(items: list[str]) -> str:
