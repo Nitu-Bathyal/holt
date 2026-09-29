@@ -41,6 +41,20 @@ export function emptyText(sort: DiscoverSort, language: string | null, topic: st
   return `Holt hasn't checked a ${repo} yet.`;
 }
 
+/**
+ * An empty board's ways out, widest-first as the visitor would try them: drop
+ * the topic, then the language, then go back to most welcoming. With nothing
+ * to drop, check a repo (it joins the boards once it has a verdict).
+ */
+export function widenBoard(opts: { sort: DiscoverSort; language: string | null; topic: string | null }): { href: string; label: string }[] {
+  const { sort, language, topic } = opts;
+  const out: { href: string; label: string }[] = [];
+  if (topic) out.push({ href: boardHref({ sort, language }), label: "all topics" });
+  if (language) out.push({ href: boardHref({ sort, topic }), label: "any language" });
+  if (sort !== "welcoming") out.push({ href: boardHref({ language, topic }), label: "most welcoming" });
+  return out.length ? out : [{ href: "/", label: "check a repo" }];
+}
+
 /** The board's path: /discover or /discover/<language>, with sort and topic kept. */
 export function boardHref(opts: { sort?: DiscoverSort; language?: string | null; topic?: string | null }): string {
   const path = opts.language ? `/discover/${languageSlug(opts.language)}` : "/discover";

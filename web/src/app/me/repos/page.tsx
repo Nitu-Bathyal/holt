@@ -4,13 +4,13 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { CatFace } from "@/components/cat-face";
 import { ErrorPanel } from "@/components/error-panel";
 import { PageTransition } from "@/components/motion/page-transition";
-import { AppPageHeader } from "@/components/shell/app-page";
+import { AppPageHeader, EmptyState } from "@/components/shell/app-page";
 import { RepoRows } from "@/components/your-repos/repo-rows";
 import { history, savedRepos } from "@/lib/api";
 import { currentUser } from "@/lib/session";
+import { CHECK_HREF } from "@/lib/shell";
 import { parseShow, reposTitle, shown, yourRepos, type Show } from "@/lib/your-repos";
 
 export const metadata: Metadata = { title: "Your repos", robots: { index: false } };
@@ -21,10 +21,12 @@ const TABS: { show: Show; label: string }[] = [
   { show: "checked", label: "checked" },
 ];
 
-const EMPTY: Record<Show, string> = {
-  all: "Save a repo or check one and it shows up here.",
-  saved: "Nothing saved yet.",
-  checked: "Nothing checked yet.",
+const FIND = <Link href="/find" className="btn-primary">find a project →</Link>;
+
+// One tab empty while the other has repos. With none at all, the head says so.
+const EMPTY: Record<Exclude<Show, "all">, { line: string; action: React.ReactNode }> = {
+  saved: { line: "Nothing saved yet.", action: FIND },
+  checked: { line: "Nothing checked yet.", action: <Link href={CHECK_HREF} className="btn-primary">check a repo →</Link> },
 };
 
 export default async function YourReposPage({ searchParams }: PageProps<"/me/repos">) {
@@ -39,7 +41,9 @@ export default async function YourReposPage({ searchParams }: PageProps<"/me/rep
   return (
     <PageTransition>
       <div className="app-page">
-        <AppPageHeader title={reposTitle(all)} mood={all.length ? "ready" : "thinking"} />
+        <AppPageHeader title={failed ? "Your repos" : reposTitle(all)} mood={failed ? undefined : all.length ? "ready" : "thinking"}>
+          {!all.length && !failed && <div className="mt-7">{FIND}</div>}
+        </AppPageHeader>
         {failed ? (
           <ErrorPanel error={failed} retryHref="/me/repos" />
         ) : (
@@ -56,11 +60,7 @@ export default async function YourReposPage({ searchParams }: PageProps<"/me/rep
             {rows.length ? (
               <RepoRows rows={rows} saved={s.ok ? s.data.saved.map((i) => i.repo) : []} />
             ) : (
-              <div className="flex flex-col items-start gap-4 py-8">
-                <CatFace mood="thinking" className="text-[1.5rem] text-amber" />
-                <p className="font-sans text-muted">{EMPTY[show]}</p>
-                <Link href="/find" className="bracket-link">[ find a project → ]</Link>
-              </div>
+              show !== "all" && all.length > 0 && <EmptyState title={EMPTY[show].line}>{EMPTY[show].action}</EmptyState>
             )}
           </>
         )}

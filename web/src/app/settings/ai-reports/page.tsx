@@ -8,6 +8,7 @@ import { canCancel, creditsLabel, formatPrice, STATUS_LABEL, subscriptionLabel, 
 import { currentUser } from "@/lib/session";
 import { AI_SETTINGS } from "@/lib/settings";
 import { WELCOME_AI_CREDITS } from "@/lib/site";
+import { NewCount } from "@/components/motion/count-up";
 import { Block, Notice, SectionHead } from "@/components/settings/section-head";
 
 export const metadata: Metadata = { title: "AI reports and plan · Settings", robots: { index: false } };
@@ -69,7 +70,7 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
         <div className="grid gap-px border border-line bg-line sm:grid-cols-2">
           <div className="bg-panel p-5">
             <p className="text-[0.87rem] text-faint">{c.purchased > 0 ? "Credits left" : "Free AI reports left"}</p>
-            <p className="mt-1 text-[1.6rem] font-semibold leading-tight">{c.balance}</p>
+            <p className="mt-1 text-[1.6rem] font-semibold leading-tight"><NewCount id={`credits:${user.id}`} value={c.balance} /></p>
             {c.purchased > 0 && <p className="mt-1 text-[0.87rem] text-muted">{c.free} free, {c.purchased} bought</p>}
           </div>
           <div className="bg-panel p-5">

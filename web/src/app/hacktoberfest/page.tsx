@@ -78,6 +78,10 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
   const result = await cachedFind({ languages: [...tab.langs], topics: [], days, hacktoberfest: true, limit: 12 }, await caller(user));
   const here = `/hacktoberfest${tab.id === "all" ? "" : `?lang=${tab.id}`}`;
   const fit = profile ? { level: profile.level, contributions: profile.contributions } : null;
+  // No results on a language tab: widen to every language; on that tab, the find page.
+  const empty = tab.id === "all"
+    ? <Link href="/find" className="btn-primary">find a project →</Link>
+    : <Link href="/hacktoberfest?lang=all" scroll={false} className="btn-primary">all languages →</Link>;
 
   return (
     <PageTransition>
@@ -123,9 +127,9 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
           {!result.ok ? (
             <ErrorPanel error={result.error} retryHref={here} />
           ) : result.data.status === "queued" ? (
-            <FindRunner key={tab.id} jobId={result.data.job_id} days={days} retryHref={here} fit={fit} saved={saved} />
+            <FindRunner key={tab.id} jobId={result.data.job_id} days={days} retryHref={here} fit={fit} saved={saved} empty={empty} />
           ) : (
-            <FindResults results={personalise(result.data.results, fit)} days={days} saved={saved} />
+            <FindResults results={personalise(result.data.results, fit)} days={days} saved={saved} empty={empty} />
           )}
         </section>
 

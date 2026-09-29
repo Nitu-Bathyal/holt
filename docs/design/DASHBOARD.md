@@ -214,7 +214,17 @@ settings and pre-flight aren't drawn: they keep their pages and take the new fra
    over rows) under `.app-tabs`; the lit tab names the section, so its h2 is
    screen-reader only. Connecting GitHub is `ConnectGitHubForm` in Accounts
    (`CONNECT_GITHUB`, `connectFailed` in `lib/settings.ts`); `/connect` 308s there.
-7. **States and motion pass:** empty, loading, the home moment, wait bars.
+7. **States and motion pass:** empty, loading, the home moment, wait bars. *Built.*
+   `EmptyState` (`components/shell/app-page.tsx`: the cat lands once, one
+   sentence, one loud action, quiet ones after) on Your repos' tabs, find,
+   browse and Hacktoberfest; when the page head already says "nothing yet",
+   its one action sits under the head instead. `app/error.tsx` catches what
+   a page throws (the cat, "Something broke on our side.", try again).
+   `NewCount` (`components/motion/count-up.tsx`) counts a number from what
+   this visitor saw last (localStorage `holt-seen`), or from 0 the first
+   time, and leaves unchanged numbers still; on a full page load it only
+   remembers. Used on Your PRs' numbers and AI reports left. Discovery cards
+   lift 2px on hover (`.app-card`).
 
 Before 1 Oct only item 1 is small enough to land; the rest follows through October.
 
@@ -230,8 +240,8 @@ is #156 (`/lab/dashboard`). Close it once the rollout is done.
 - ~~5, Find a project~~: built (see the rollout above).
 - ~~6, the frame for the rest~~: built (see the rollout above), with the
   unreadable hint on the selected "Your experience" card fixed.
-- **7, states and motion:** empty and loading states in the row or card
-  shape on every page above; count-ups; one moment per page.
+- ~~7, states and motion~~: built (see the rollout above). Your PRs'
+  skeleton now has the grouped-rows shape.
 
 **Pieces to reuse:**
 - `.app-page` (the frame).

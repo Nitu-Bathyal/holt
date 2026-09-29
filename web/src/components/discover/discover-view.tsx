@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { discover, savedNames } from "@/lib/api";
-import { boardHref, boardTitle, emptyText, SORTS } from "@/lib/discover";
+import { boardHref, boardTitle, emptyText, SORTS, widenBoard } from "@/lib/discover";
 import { fromDiscover, langColor } from "@/lib/repo-card";
 import { currentUser } from "@/lib/session";
 import type { DiscoverSort } from "@/lib/types";
-import { CatFace } from "../cat-face";
 import { ErrorPanel } from "../error-panel";
+import { EmptyState } from "../shell/app-page";
 import { PageTransition } from "../motion/page-transition";
 import { FindFrame } from "../find/find-frame";
 import { LangDot } from "../repo-card/repo-avatar";
@@ -78,17 +78,11 @@ export async function DiscoverView({ sort, language, topic }: { sort: DiscoverSo
           ) : data!.repos.length ? (
             <RepoGrid repos={data!.repos.map(fromDiscover)} topicBase={boardHref({ sort, language })} saved={saved} />
           ) : (
-            <div className="border border-dashed border-line-strong p-8 text-center">
-              <CatFace mood="thinking" className="text-[1.6rem]" />
-              <p className="mt-4 text-[1.05rem] font-semibold">{emptyText(sort, language, topic, data!.trending_min)}</p>
-              <p className="mt-2 font-sans text-muted">Widen the board, or check a repo you have in mind. It shows up here once Holt has a verdict.</p>
-              <div className="mt-5 flex flex-wrap justify-center gap-2">
-                {topic && <Link href={boardHref({ sort, language })} className="btn-ghost">Show all topics</Link>}
-                {language && <Link href={boardHref({ sort, topic })} className="btn-ghost">Any language</Link>}
-                {sort !== "welcoming" && <Link href={boardHref({ language, topic })} className="btn-ghost">Most welcoming</Link>}
-                <Link href="/" className="btn-ghost">Check a repo</Link>
-              </div>
-            </div>
+            <EmptyState title={emptyText(sort, language, topic, data!.trending_min)}>
+              {widenBoard({ sort, language, topic }).map((w, i) => (
+                <Link key={w.href} href={w.href} className={i ? "text-link text-[0.9rem]" : "btn-primary"}>{i ? w.label : `${w.label} →`}</Link>
+              ))}
+            </EmptyState>
           )}
         </section>
       </FindFrame>
