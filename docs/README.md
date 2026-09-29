@@ -31,6 +31,7 @@ Start with the [README](../README.md). Everything else is here.
 |---|---|
 | [DESIGN.md](DESIGN.md) | Why the verdict is a pipeline of rules and not a prompt |
 | [research/REVIEW-2026-09-30.md](research/REVIEW-2026-09-30.md) | The verdict rules in plain English, the evidence for each threshold, and the 30 Sep go/no-go review |
+| [research/BACKTEST.md](research/BACKTEST.md) | The backtest: the engine's answer on a past date against what happened to the outside PRs that came next, and its first results |
 | [research/EVALUATION.md](research/EVALUATION.md) | How the competition benchmark was built (retired as a gate), the numbers, and what they depend on |
 | [research/REPRODUCTION.md](research/REPRODUCTION.md) | Reproduce every published number from a clone, with no key and no spend |
 | [research/LIVE-AI-TEST-2026-09-28.md](research/LIVE-AI-TEST-2026-09-28.md) | First run of every AI feature on a real model: honesty checks, cost and latency, fixes |

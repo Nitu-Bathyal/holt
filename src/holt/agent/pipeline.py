@@ -472,17 +472,20 @@ def analyze_without_model(
     as_of: datetime | None = None,
     progress: Progress | None = None,
     min_age_hours: float | None = None,
+    count: Callable[..., Signals] = compute,
 ) -> tuple[Assessment, Trace]:
     """The verdict, with no model call anywhere and the cost of that printed.
 
-    `progress` and `min_age_hours` behave as in `analyze`.
+    `progress` and `min_age_hours` behave as in `analyze`. `count` turns the
+    threads into signals; the backtest (golden/backtest.py) passes other ways
+    of counting to compare them under the same rules.
     """
     report = _reporter(progress)
     report("Fetching pull requests", 0.0)
     records = provider.fetch(repo)
     report("Counting replies and merges", 0.6)
     threads = build_threads(records)
-    signals = compute(
+    signals = count(
         threads, as_of or datetime.now(UTC), _min_age(provider, min_age_hours)
     )
 
