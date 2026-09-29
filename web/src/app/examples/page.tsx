@@ -64,7 +64,7 @@ export default async function ExamplesPage() {
               <li key={r.href} className="border-b border-line">
                 <Link
                   href={r.href}
-                  className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 px-2 py-4 transition-colors hover:bg-section-alt sm:px-4 md:grid-cols-[minmax(0,15rem)_12rem_8.5rem_minmax(0,1fr)_1rem] md:gap-x-6"
+                  className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 px-2 py-4 transition-colors hover:bg-section-alt sm:px-4 lg:grid-cols-[minmax(0,15rem)_12rem_10rem_minmax(0,1fr)_1rem] lg:gap-x-6"
                 >
                   <span className="flex min-w-0 items-center gap-2">
                     <span className="truncate font-semibold tracking-tight text-ink" title={r.repo}>
@@ -72,12 +72,12 @@ export default async function ExamplesPage() {
                     </span>
                     {r.ai && <span className="shrink-0 border border-blue/60 px-1.5 text-[0.72rem] leading-5 text-blue">AI</span>}
                   </span>
-                  <span className="justify-self-end md:justify-self-start">
+                  <span className="justify-self-end lg:justify-self-start">
                     {r.verdict && <VerdictPill headline={r.verdict.headline} tone={r.verdict.tone} className="whitespace-nowrap" />}
                   </span>
-                  {/* Phones: language, stars and why share the second line. */}
-                  <span className="col-span-2 flex flex-wrap gap-x-4 gap-y-1 md:contents">
-                    <span className="flex gap-3 text-[0.82rem] text-faint">
+                  {/* Below lg: language, stars and why share the second line. */}
+                  <span className="col-span-2 flex flex-wrap gap-x-4 gap-y-1 lg:contents">
+                    <span className="flex gap-3 whitespace-nowrap text-[0.82rem] text-faint">
                       {r.language && <span>{r.language}</span>}
                       {r.stars != null && (
                         <span>
@@ -88,7 +88,7 @@ export default async function ExamplesPage() {
                     </span>
                     <span className="font-sans text-[0.92rem] text-muted">{r.why}</span>
                   </span>
-                  <span aria-hidden="true" className="hidden text-faint transition-colors group-hover:text-ink md:block">
+                  <span aria-hidden="true" className="hidden text-faint transition-colors group-hover:text-ink lg:block">
                     →
                   </span>
                 </Link>

@@ -43,14 +43,14 @@ function withFocus(repo: string | null): string {
   return `${u.pathname}${u.search}${u.hash}`;
 }
 
-/** A grid of compact repo cards; `?focus=owner/name` opens one in a focus view (back closes it). */
-export function RepoGrid({ repos, ...common }: Common & { repos: CardRepo[] }) {
+/** A grid of compact repo cards (`.card-grid`, at most `cols` across); `?focus=owner/name` opens one in a focus view (back closes it). */
+export function RepoGrid({ repos, cols, ...common }: Common & { repos: CardRepo[]; cols?: number }) {
   return (
     <FocusList
       {...common}
       repos={repos}
       layout={(card) => (
-        <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <ol className="card-grid" style={cols ? ({ "--cols": cols } as React.CSSProperties) : undefined}>
           {repos.map((r, i) => (
             <li key={r.repo} className="reveal min-w-0" style={{ ["--i" as string]: i }}>
               {card(r)}

@@ -31,7 +31,7 @@ export function RepoCardSkeleton() {
 
 export function RepoGridSkeleton({ count = 6 }: { count?: number }) {
   return (
-    <ol className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <ol className="card-grid">
       {Array.from({ length: count }, (_, i) => (
         <RepoCardSkeleton key={i} />
       ))}

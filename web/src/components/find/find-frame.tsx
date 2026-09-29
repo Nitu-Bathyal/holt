@@ -17,7 +17,7 @@ export function FindFrame({ tab, title, mood = "ready", signedIn, children }: {
 }) {
   const tabs = findTabs({ signedIn, season: hacktoberfest() !== null, current: tab });
   return (
-    <div className="app-page">
+    <div className="app-page" data-frame="wide">
       <AppPageHeader title={title} mood={mood} />
       <nav aria-label="Find a project" className="app-tabs">
         {tabs.map((t) => (
@@ -34,7 +34,7 @@ export function FindFrame({ tab, title, mood = "ready", signedIn, children }: {
 /** The frame's skeleton, for each tab's loading.tsx. */
 export function FindFrameSkeleton({ tabs = 3, children }: { tabs?: number; children: React.ReactNode }) {
   return (
-    <div className="app-page">
+    <div className="app-page" data-frame="wide">
       <div className="app-head">
         <span className="flex h-[clamp(2.09rem,3.96vw,3.3rem)] items-center">
           <Skeleton className="h-[62%] w-[min(30rem,90%)]" />

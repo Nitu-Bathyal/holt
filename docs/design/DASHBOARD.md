@@ -158,8 +158,17 @@ Derived from the landing (EXPRESSIVE.md), at working size:
 - **Page head:** one sentence that answers the page, in the landing's mono display
   (`clamp(1.9rem, 3.6vw, 3rem)`), left-aligned, the cat on the right reacting to the
   state. The marker highlight is home-only. No lead line unless it adds a fact.
-- **One frame:** every page shares the same left edge and max width (72rem). No
-  centred narrow columns, no tinted heads.
+- **One frame:** `.app-page` in the column beside the rail. It fills the
+  column up to its width, then centres, so a big screen never has a dead band
+  on one side. Two widths: the default (76rem of content, growing to 90rem
+  past 1920px) for your things, rows, forms, compare and reading, and `data-frame="wide"` (120rem) for card
+  grids (Find a project's tabs). Pages on the marketing `.wrap` (a report,
+  examples) take the default frame inside the app. From `lg` the start gutter
+  is 64px, the rail toggle sits in it, and the top bar's check box starts at
+  the frame's edge (`.app-bar-frame`, which follows the page's width).
+  Signed out, the marketing header's edges follow the frame too. Card
+  grids are `.card-grid`: one column on a phone, then as many 18rem columns
+  as fit, up to `--cols` (5; the home's picks use 3). No tinted heads.
 - **Two card families.** *Rows* for your things (PRs, your repos): a state rule on
   the left, the fact, one action on the right. *Cards* for discovery (picks, boards):
   verdict, odds bar, the reason, one starter issue. Your own work is never a grid of boxes.

@@ -127,17 +127,17 @@ export function MarketingHeader({ user, credits }: { user: SessionUser | null; c
 export function AppTopBar({ user, credits, railCollapsed, drawer }: { user: SessionUser; credits: string | null; railCollapsed: boolean; drawer: React.ReactNode }) {
   return (
     <header className="site-header sticky top-0 z-40 border-b border-line bg-header" style={{ viewTransitionName: "site-header" }}>
-      {/* On desktop the rail carries the logo, and the bar starts with the rail's toggle, on its edge. */}
-      <div className="flex min-h-[60px] items-center gap-3 px-4 lg:pl-2 lg:pr-5">
+      {/* On desktop the rail carries the logo, the bar starts with the rail's toggle, and the check box lines up with the page (.app-bar). */}
+      <div className="app-bar">
         <MenuButton target="app-drawer" label="Menu" />
         <RailToggle initial={railCollapsed} />
         <span className="lg:hidden">
           <Logo href={HOME} />
         </span>
-        <div className="flex flex-1 justify-center px-2">
+        <div className="app-bar-frame">
           <QuickCheck />
         </div>
-        <div className="flex items-center gap-1">
+        <div className="app-bar-end flex items-center gap-1">
           <ThemeToggle />
           <AccountMenu user={user} credits={credits} />
         </div>
