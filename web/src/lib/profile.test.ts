@@ -7,7 +7,7 @@ const issue = (number: number, beginner: boolean, areas: StarterIssue["areas"]):
   number, title: `#${number}`, url: `https://github.com/o/r/issues/${number}`, labels: [], created_at: null, comments: 0, why: [], beginner, areas,
 });
 const repo = (name: string, issues: StarterIssue[]): FindResult => ({
-  repo: name, headline: "Worth your time", tone: "good", verdict: "viable", description: null, language: null, stars: null, stats: {}, issues,
+  repo: name, headline: "Worth your time", tone: "good", verdict: "viable", description: null, language: null, languages: [], stars: null, stats: {}, issues,
 });
 
 const results = [

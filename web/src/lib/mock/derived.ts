@@ -44,7 +44,7 @@ function numbers(s: Stats): string {
   if (!n) return "Nobody outside the project's team opened a pull request.";
   const out = [`Of ${n} pull requests from outside contributors, ${s.outsider_merged} were merged (${Math.round((100 * s.outsider_merged) / n)}%).`];
   if (s.median_first_response_hours != null) out.push(`When a maintainer replied, it was typically within ${hoursPhrase(s.median_first_response_hours)}.`);
-  if (s.no_reply) out.push(`${Math.round((100 * s.no_reply) / n)}% got no reply at all.`);
+  if (s.no_reply) out.push(`${Math.round((100 * s.no_reply) / n)}% sat open with no reply.`);
   return out.join(" ");
 }
 

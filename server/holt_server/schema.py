@@ -381,7 +381,7 @@ def numbers_line(s: Stats, sample: Sample | None) -> str:
     if s.closed_silently:
         out.append(f"{_pct(s.closed_silently, n)}% were closed without a word.")
     if s.no_reply:
-        out.append(f"{_pct(s.no_reply, n)}% got no reply at all.")
+        out.append(f"{_pct(s.no_reply, n)}% sat open with no reply.")
     if s.still_open:
         out.append(f"Another {s.still_open} {'was' if s.still_open == 1 else 'were'} opened "
                    f"in the last {SETTLE_DAYS} days, too recently to count.")
@@ -716,6 +716,8 @@ class FindResult(VerdictView):
     repo: str
     description: str | None = None
     language: str | None = None
+    # As on a Discover card: primary first, a second when it's a real share.
+    languages: list[str] = Field(default_factory=list)
     stars: int | None = None
     stats: PartialStats = Field(default_factory=PartialStats)
     issues: list[StarterIssue] = Field(default_factory=list)
@@ -1474,6 +1476,7 @@ class Recommendation(VerdictView):
     repo: str
     description: str | None = None
     language: str | None = None
+    languages: list[str] = Field(default_factory=list)
     stars: int | None = None
     topics: list[str] = Field(default_factory=list)
     # The report's one-line reason (the same sentence Discover shows).

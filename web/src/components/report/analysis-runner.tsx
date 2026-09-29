@@ -1,32 +1,44 @@
 "use client";
 
 import { useEffect, useState, ViewTransition } from "react";
+import { reportHref } from "@/lib/budget";
+import { checkNeedsSignIn } from "@/lib/gate";
 import type { Mode, Report } from "@/lib/types";
 import { AnalysisProgress } from "../analysis-progress";
 import { ErrorPanel } from "../error-panel";
 import { useAnalysis } from "../use-analysis";
+import { PartialReport } from "./partial-report";
 import { ReportBodySkeleton } from "./report-skeleton";
+import { ReportTeaser } from "./report-teaser";
 import { ReportView } from "./report-view";
 import { StarterIssues, type IssuesState } from "./starter-issues";
 
 /**
  * Runs a check and shows its progress, then the report. `fallback` is a report
  * made by an older version of Holt's rules: shown, with a note, only if the
- * fresh check fails.
+ * fresh check fails. `ticket`: a signed-out check (lib/anon-check.ts), which
+ * ends on the teaser.
  */
-export function AnalysisRunner({ repo, mode, days, signedIn, fallback }: { repo: string; mode: Mode; days: number; signedIn: boolean; fallback?: Report }) {
-  const { state, retry } = useAnalysis(repo, mode, days);
+export function AnalysisRunner({ repo, mode, days, signedIn, fallback, ticket }: { repo: string; mode: Mode; days: number; signedIn: boolean; fallback?: Report; ticket?: string }) {
+  const { state, retry } = useAnalysis(repo, mode, days, true, ticket);
   const [issues, setIssues] = useState<IssuesState>(null);
   const showFallback = state.phase === "error" && fallback !== undefined;
 
   useEffect(() => {
-    if ((state.phase !== "done" && !showFallback) || issues) return;
+    if (ticket || (state.phase !== "done" && !showFallback) || issues) return;
     fetch(`/api/repos/${repo}/starter-issues`)
       .then((r) => (r.ok ? r.json() : null))
       .then((d) => setIssues(d?.issues ?? "unavailable"))
       .catch(() => setIssues("unavailable"));
-  }, [state.phase, showFallback, repo, issues]);
+  }, [state.phase, showFallback, repo, issues, ticket]);
 
+  if (ticket && state.phase === "done")
+    return (
+      <ViewTransition enter="sk-in" default="none">
+        <PartialReport report={state.report} back={reportHref(state.report.repo, days)} land={state.fresh} />
+      </ViewTransition>
+    );
+  if (ticket && state.phase === "error" && checkNeedsSignIn(state.error.code)) return <ReportTeaser repo={repo} report={null} back={reportHref(repo, days)} />;
   if (showFallback)
     return (
       <div>

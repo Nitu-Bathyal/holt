@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { codeSpans, isGitHubLink, linkLabel, seenLabel, unlockOffer } from "./playbook.ts";
+import { codeSpans, isGitHubLink, linkLabel, seenLabel, showPlaybook, unlockOffer } from "./playbook.ts";
 
 const access = { feature: "playbook", name: "Contribution playbook", allowed: true, via: "credits" as const, cost: 1, left_this_month: null, code: null, message: null };
 
@@ -39,4 +39,15 @@ test("the unlock offer follows the server's answer", () => {
   const refused = { ...access, allowed: false, via: null, code: "quota_exceeded", message: "You don't have enough purchased credits." };
   assert.deepEqual(unlockOffer(refused, false), { kind: "coming-soon", note: "Coming soon: playbooks aren't on sale yet. It will cost 1 credit per repository." });
   assert.deepEqual(unlockOffer(refused, true), { kind: "blocked", note: "You don't have enough purchased credits." });
+});
+
+test("the playbook stays hidden while it isn't on sale, unless it's already yours", () => {
+  const base = { available: true, on_sale: false, access: null, playbook: null, job: null };
+  assert.equal(showPlaybook(null), false);
+  assert.equal(showPlaybook({ ...base, available: false, on_sale: true }), false);
+  assert.equal(showPlaybook(base), false);
+  assert.equal(showPlaybook({ ...base, access: { ...access, allowed: false } }), false);
+  assert.equal(showPlaybook({ ...base, on_sale: true }), true);
+  assert.equal(showPlaybook({ ...base, access }), true);
+  assert.equal(showPlaybook({ ...base, job: { job_id: "j", status: "running" } } as never), true);
 });

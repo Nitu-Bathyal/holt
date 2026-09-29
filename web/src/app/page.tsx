@@ -6,15 +6,17 @@ import { CatCompanion } from "@/components/motion/cat-companion";
 import { SwapHost } from "@/components/motion/swap-host";
 import { ScrollMarquee } from "@/components/motion/scroll-marquee";
 import { PasteBox } from "@/components/paste-box";
-import { EXAMPLE_PATH, EXAMPLE_REPORT } from "@/lib/example-report";
+import { EXAMPLE_PATH } from "@/lib/example-report";
 import { humanHours } from "@/lib/format";
 import { buildReplay } from "@/lib/landing-replay";
+import { landingReport } from "@/lib/landing-report";
 import { Answers } from "@/components/landing/answers";
 import { CheckReplay } from "@/components/landing/check-replay";
 import { People, type Person } from "@/components/landing/people";
 import { Receipts } from "@/components/landing/receipts";
 import { Words } from "@/components/landing/words";
 import { currentUser } from "@/lib/session";
+import type { Report } from "@/lib/types";
 import { GITHUB_REPO_URL, WELCOME_AI_CREDITS, hacktoberfest } from "@/lib/site";
 import { PageTransition } from "@/components/motion/page-transition";
 import { ProfileOnboarding } from "@/components/profile-onboarding";
@@ -39,11 +41,8 @@ function Grid({ children }: { children: React.ReactNode }) {
   return <div className="wrap landing-wide">{children}</div>;
 }
 
-const REPLAY = buildReplay(EXAMPLE_REPORT);
-
-// Section 03's people. Their examples are the example report's real numbers.
-function people(): Person[] {
-  const r = EXAMPLE_REPORT;
+// Section 03's people. Their examples are the same report's real numbers.
+function people(r: Report): Person[] {
   const s = r.stats;
   const top = r.landing[0];
   return [
@@ -93,7 +92,9 @@ async function AiReportsCta() {
 export default async function Home() {
   const hf = hacktoberfest();
   // Signed out, the paste boxes go through sign-in (see lib/gate.ts).
-  const signedIn = Boolean(await currentUser());
+  const [user, report] = await Promise.all([currentUser(), landingReport()]);
+  const signedIn = Boolean(user);
+  const replay = buildReplay(report);
   return (
     <PageTransition>
       <>
@@ -161,9 +162,9 @@ export default async function Home() {
                 <Words text="Watch Holt check a repo." />
               </h2>
               <div className="min-w-0" data-reveal>
-                <CheckReplay replay={REPLAY} />
+                <CheckReplay replay={replay} />
                 {/* An example report: open to everyone, signed in or not. */}
-                <Link href={`/${REPLAY.repo}`} className="bracket-link mt-5">
+                <Link href={`/${replay.repo}`} className="bracket-link mt-5">
                   [ read the full report → ]
                 </Link>
               </div>
@@ -178,7 +179,7 @@ export default async function Home() {
             <h2 className="h2 ls-h2-wide mb-[clamp(1.5rem,5svh,3.5rem)]">
               <Words text="Don't write your PR into the void." quiet={["void"]} />
             </h2>
-            <People people={people()} />
+            <People people={people(report)} />
           </Grid>
         </section>
 

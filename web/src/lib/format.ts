@@ -117,9 +117,18 @@ export function statLines(s: Partial<Stats>): StatLine[] {
     out.push({
       key: "noreply",
       big: `${p}%`,
-      label: `of outside PRs never got a reply (${s.no_reply})`,
+      label: `of outside PRs sat open with no reply (${s.no_reply})`,
       tone: noReplyTone(p),
       meter: s.no_reply / s.outsider_attempts,
+    });
+  }
+  if (s.closed_silently != null && s.outsider_attempts) {
+    out.push({
+      key: "closed",
+      big: `${pct(s.closed_silently, s.outsider_attempts)}%`,
+      label: `of outside PRs were closed without a word (${s.closed_silently})`,
+      tone: "neutral",
+      meter: s.closed_silently / s.outsider_attempts,
     });
   }
   if (s.distinct_outsiders != null) {
@@ -130,15 +139,8 @@ export function statLines(s: Partial<Stats>): StatLine[] {
       tone: "neutral",
     });
   }
-  if (s.bot_share != null) {
-    const p = Math.round(s.bot_share * 1000) / 10;
-    out.push({
-      key: "bots",
-      big: `${p}%`,
-      label: "of PR activity came from bots",
-      tone: "neutral",
-    });
-  }
+  // Bots aren't a tile: the six tiles fill the grid, and "how this was
+  // counted" already says how many bot PRs were left out.
   return out;
 }
 

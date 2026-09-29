@@ -199,7 +199,7 @@
   "headline": "Worth your time",
   "tone": "good",
   "verdict_line": "Outside contributors do get merged here, but about half get no reply, so choose your first change carefully.",
-  "numbers_line": "Of 119 pull requests from outside contributors (27 May – 31 May 2026), 28 were merged (24%). When a maintainer replied, it was typically within 2.3 hours. 46% got no reply at all.",
+  "numbers_line": "Of 119 pull requests from outside contributors (27 May – 31 May 2026), 28 were merged (24%). When a maintainer replied, it was typically within 2.3 hours. 46% sat open with no reply.",
   "first_timer_line": "28 people got their first pull request merged here.",
   "next_step": "Best bet: a small change in homeassistant/components, where 26 of 104 outside pull requests were merged.",
   "stat_line": "28 of 119 outside PRs merged",

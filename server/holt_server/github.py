@@ -43,8 +43,15 @@ DETAILS_BATCH = 100
 DETAILS_FIELDS = """
   nameWithOwner description stargazerCount pushedAt isArchived isFork isPrivate
   primaryLanguage { name }
+  languages(first: 3, orderBy: {field: SIZE, direction: DESC}) { totalSize edges { size node { name } } }
   repositoryTopics(first: 20) { nodes { topic { name } } }
 """
+
+# A second language is named beside the primary one when it is at least this
+# share of the code. GitHub's primary language is only the largest by bytes:
+# microsoft/TypeScript is mostly Go since its compiler port, and one tag of
+# "Go" read as a mistake.
+SECOND_LANGUAGE_SHARE = 0.10
 
 LOOKUP_TIMEOUT_S = 15.0
 
@@ -144,6 +151,16 @@ class TokenPool:
         low = (st.reset_at or 0.0) if (st.remaining or 0) < LOW_POINTS else 0.0
         return max(st.out_until, low)
 
+    def points_left(self) -> int | None:
+        """GraphQL points left across the tokens usable now, as GitHub last
+        reported them (no call); None while any usable token's count is unknown."""
+        with self._lock:
+            now = self._clock()
+            usable = [self._state[i] for i in range(len(self._tokens)) if self._usable(i, now)]
+            if any(st.remaining is None for st in usable):
+                return None
+            return sum(st.remaining or 0 for st in usable)
+
     def all(self) -> list[str]:
         return list(self._tokens)
 
@@ -240,6 +257,22 @@ class PooledGraphQL(GitHubGraphQL):
 EMOJI_CODE = re.compile(r":[a-z0-9_+-]+:\s*")
 
 
+def main_languages(node: dict[str, Any]) -> list[str]:
+    """The primary language, then a second one if it's a real share of the code."""
+    primary = (node.get("primaryLanguage") or {}).get("name")
+    langs = node.get("languages") or {}
+    total = langs.get("totalSize") or 0
+    out = [primary] if primary else []
+    for edge in langs.get("edges") or []:
+        name = ((edge or {}).get("node") or {}).get("name")
+        if not name or name in out:
+            continue
+        if total and (edge.get("size") or 0) / total >= SECOND_LANGUAGE_SHARE:
+            out.append(name)
+        break  # only the largest language after the primary one is considered
+    return out[:2]
+
+
 def _details(node: dict[str, Any]) -> dict[str, Any]:
     topics = [((t or {}).get("topic") or {}).get("name")
               for t in ((node.get("repositoryTopics") or {}).get("nodes") or [])]
@@ -247,6 +280,7 @@ def _details(node: dict[str, Any]) -> dict[str, Any]:
         "repo": node.get("nameWithOwner"),
         "description": EMOJI_CODE.sub("", node.get("description") or "").strip() or None,
         "language": (node.get("primaryLanguage") or {}).get("name"),
+        "languages": main_languages(node),
         "stars": int(node.get("stargazerCount") or 0),
         "topics": [t for t in topics if t],
         "pushed_at": node.get("pushedAt"),
