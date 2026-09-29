@@ -284,6 +284,15 @@ export function refreshContributions(userId: string): Promise<Result<Contributio
   return call("/v1/me/contributions/refresh", { method: "POST", caller: { userId }, signal: AbortSignal.timeout(60_000) });
 }
 
+/** Count a repo's pull requests in the numbers (true), leave them out (false), or go back to Holt's default (null). */
+export function setContributionCounted(userId: string, repo: string, counted: boolean | null): Promise<Result<Contributions>> {
+  if (MOCK) return mock.setContributionCounted(userId, repo, counted);
+  const path = `/v1/me/contributions/repos/${repo.split("/").map(encodeURIComponent).join("/")}`;
+  return counted === null
+    ? call(path, { method: "DELETE", caller: { userId } })
+    : call(path, { method: "PUT", body: JSON.stringify({ counted }), caller: { userId } });
+}
+
 /** Recommendations for you (API.md). Ranked by rules from cached data; the server shows 2 picks without a plan. */
 export function recommendations(userId: string, limit = 10): Promise<Result<Recommendations>> {
   if (MOCK) return mock.recommendations(userId, limit);

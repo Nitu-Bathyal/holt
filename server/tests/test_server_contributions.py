@@ -10,7 +10,7 @@ import httpx
 import pytest
 from holt.evidence.github_graphql import GitHubGraphQL
 from holt_server import contributions
-from holt_server.db import Contribution, ContributionSync, RepoView, Report, now
+from holt_server.db import Contribution, ContributionChoice, ContributionSync, RepoView, Report, now
 from sqlalchemy import select, update
 
 from conftest import canned_report
@@ -168,7 +168,7 @@ def test_connect_fetches_public_prs_with_a_pool_token(gh):
     assert body["login"] == "octocat" and body["window_days"] == 365
     assert body["truncated"] is False
     assert body["summary"] == {"opened": 3, "merged": 1, "waiting": 1, "closed": 1,
-                               "landed_share": 0.5, "found_via_holt": 0}
+                               "landed_share": 0.5, "found_via_holt": 0, "not_counted": 0}
     assert [p["number"] for p in body["pull_requests"]] == [3, 1, 2]  # newest first
     first = body["pull_requests"][1]
     assert first["url"] == "https://github.com/pallets/flask/pull/1"
@@ -255,6 +255,69 @@ def test_each_pr_carries_the_latest_cached_rules_verdict(gh):
     assert gh.engine.calls == []  # no analyses started for them
 
 
+def test_each_verdict_carries_the_repos_typical_first_reply(gh):
+    gh.fake.prs["octocat"] = [pr("pallets/flask", 1)]
+    add_report(gh, "pallets/flask", "viable")
+    connect(gh)
+    [p] = mine(gh).json()["pull_requests"]
+    assert p["verdict"]["first_reply_hours"] == 3.0
+
+
+def choose(h, repo, counted, user="u1"):
+    return h.put(f"/v1/me/contributions/repos/{repo}", {"counted": counted}, user=user)
+
+
+def test_a_repo_left_out_of_the_numbers_stays_in_the_list(gh):
+    d = now() - timedelta(days=10)
+    gh.fake.prs["octocat"] = [
+        pr("friend/hack", 1, "MERGED", created=d, merged=d, closed=d),
+        pr("friend/hack", 2, "MERGED", created=d, merged=d, closed=d),
+        pr("pallets/flask", 3, "CLOSED", created=d, closed=d),
+        pr("octo/one", 4),
+    ]
+    connect(gh)
+    assert mine(gh).json()["summary"]["merged"] == 2
+    r = choose(gh, "Friend/Hack", False)
+    assert r.status_code == 200, r.text
+    d = r.json()
+    assert d["summary"] == {"opened": 2, "merged": 0, "waiting": 1, "closed": 1,
+                            "landed_share": 0.0, "found_via_holt": 0, "not_counted": 2}
+    hack = [p for p in d["pull_requests"] if p["repo"] == "friend/hack"]
+    assert [(p["counted"], p["not_counted_because"]) for p in hack] == [(False, "you")] * 2
+    # A refresh replaces the pull requests but keeps the choice.
+    age_sync(gh, 60)
+    assert refresh(gh).json()["summary"]["not_counted"] == 2
+    # Counting it again, or forgetting the choice, puts it back.
+    assert choose(gh, "friend/hack", True).json()["summary"]["merged"] == 2
+    choose(gh, "friend/hack", False)
+    r = gh.delete("/v1/me/contributions/repos/friend/hack", user="u1")
+    assert r.status_code == 200 and r.json()["summary"]["not_counted"] == 0
+    assert call(gh, lambda s: _all(s, ContributionChoice)) == []
+
+
+def test_choices_only_for_your_own_repos_list(gh):
+    gh.fake.prs["octocat"] = [pr("octo/one", 1)]
+    assert choose(gh, "octo/one", False).status_code == 404  # not connected
+    connect(gh)
+    r = choose(gh, "octo/two", False)
+    assert r.status_code == 404 and "None of your pull requests" in r.json()["error"]["message"]
+    assert choose(gh, "not a repo", False).status_code in (400, 404)
+    assert gh.put("/v1/me/contributions/repos/octo/one", {"counted": False}).status_code == 401
+
+
+def test_own_and_team_projects_are_left_out_until_you_count_them(gh, monkeypatch):
+    monkeypatch.setattr(contributions, "NOT_OUTSIDE", frozenset({"insufficient_evidence"}))
+    gh.fake.prs["octocat"] = [pr("team/app", 1), pr("octo/one", 2)]
+    add_report(gh, "team/app", "insufficient_evidence")
+    connect(gh)
+    got = {p["repo"]: p for p in mine(gh).json()["pull_requests"]}
+    assert (got["team/app"]["counted"], got["team/app"]["not_counted_because"]) == (False, "own_project")
+    assert got["octo/one"]["counted"] is True
+    d = choose(gh, "team/app", True).json()
+    assert d["summary"]["not_counted"] == 0
+    assert all(p["counted"] for p in d["pull_requests"])
+
+
 def test_found_via_holt_within_30_days_after_a_view(gh):
     t = now() - timedelta(days=100)
     gh.fake.prs["octocat"] = [
@@ -328,8 +391,11 @@ def test_disconnect_deletes_the_fetched_prs(gh):
     gh.fake.prs["someone"] = [pr("octo/two", 2)]
     connect(gh)
     connect(gh, user="u2", github_id=42)
+    choose(gh, "octo/one", False)
+    choose(gh, "octo/two", False, user="u2")
     assert gh.delete("/v1/me/github", user="u1").status_code == 200
     assert [c.user_id for c in rows(gh)] == ["u2"]
+    assert [c.user_id for c in call(gh, lambda s: _all(s, ContributionChoice))] == ["u2"]
     assert [s.user_id for s in call(gh, lambda s: _all(s, ContributionSync))] == ["u2"]
     assert mine(gh).status_code == 404
 
