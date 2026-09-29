@@ -2486,6 +2486,19 @@
   .drawer .side-subitem {
     min-height: 44px;
   }
+  .drawer .side-legal a {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+  }
+  .drawer .side-credits {
+    position: relative;
+  }
+  .drawer .side-credits::after {
+    position: absolute;
+    inset: -9px -4px;
+    content: "";
+  }
   .site-header:has(#app-drawer:popover-open) .icon-open {
     display: none;
   }

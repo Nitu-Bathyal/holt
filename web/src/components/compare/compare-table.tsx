@@ -217,8 +217,8 @@ export function Issues({ issues }: { issues: StarterIssue[] | null }) {
   return (
     <ul className="space-y-3">
       {issues.slice(0, 2).map((i) => (
-        <li key={i.number} className="font-sans text-[0.86rem] leading-snug">
-          <a href={i.url} target="_blank" rel="noopener noreferrer" data-umami-event="starter-issue-click" className="line-clamp-2 text-ink transition-colors hover:text-blue">
+        <li key={i.number} className="relative font-sans text-[0.86rem] leading-snug">
+          <a href={i.url} target="_blank" rel="noopener noreferrer" data-umami-event="starter-issue-click" className="line-clamp-2 text-ink transition-colors after:absolute after:inset-0 hover:text-blue">
             <span className="font-mono text-[0.8rem] text-blue">#{i.number}</span> {i.title}
             <span className="sr-only"> (opens GitHub)</span>
           </a>

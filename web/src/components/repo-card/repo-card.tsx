@@ -28,7 +28,7 @@ export function RepoCard({ r, report, focusHref, onOpen, actions }: { r: CardRep
             <a
               href={focusHref}
               onClick={open}
-              className="-my-3 block truncate py-3 hover:text-blue"
+              className="-my-3.5 block truncate py-3.5 hover:text-blue"
             >
               <span className="text-muted">{owner}/</span>
               {name}
