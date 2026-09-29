@@ -72,9 +72,9 @@ responses. The server also accepts and normalises full URLs
   "repo": "pallets/flask",
   "mode": "rules" | "ai",            // rules = no model; ai = model-written report
   "days": 7,                          // contributor time budget used
-  "verdict": "viable" | "not_viable" | "insufficient_evidence",
-  "headline": "Worth your time" | "Not worth your time" | "Not enough evidence",
-  "tone": "good" | "bad" | "warn",    // the verdict's colour
+  "verdict": "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal",
+  "headline": "Worth your time" | "Long shot" | "Not worth your time" | "Not enough evidence" | "Personal project",
+  "tone": "good" | "warn" | "bad" | "neutral", // the verdict's colour
   "verdict_line": "string",           // line 1: the reason for the verdict, one sentence
   "numbers_line": "string",           // line 2: what happened to outside contributors, with dates
   "first_timer_line": "string | null", // "9 people got their first pull request merged here."
@@ -89,7 +89,8 @@ responses. The server also accepts and normalises full URLs
     "outsider_attempts": 100, "outsider_merged": 15, "distinct_outsiders": 72,
     "first_time_merged_authors": 15, "no_reply": 63,
     "median_first_response_hours": 0.8, "bot_share": 0.085,
-    "still_open": 12, "closed_silently": 20
+    "still_open": 12, "closed_silently": 20,
+    "too_old": 0                     // opened more than a year ago: read, in no count (default 0)
   },
   "decided_by": ["plain-English rule sentence", "..."],
   "rule_codes": ["merges", "rubber_stamp"], // stable code per decided_by line, same order
@@ -196,11 +197,21 @@ served (so cached reports pick up wording changes). Every surface (web, OG
 images, the extension) shows these fields and never works them out itself, so
 they cannot disagree with each other or with the verdict:
 
-- `tone` follows the verdict: `viable` → `good`, `not_viable` → `bad`,
-  `insufficient_evidence` → `warn`.
-- `verdict_line` never oversells: "Worth your time" with a low merge rate or
-  many unanswered pull requests says so. Under "Not worth your time" it states
-  the rule that decided it.
+- `tone` follows the verdict: `viable` → `good`, `long_shot` → `warn`,
+  `not_viable` → `bad`, `insufficient_evidence` and `personal` → `neutral`.
+  (Before engine 4 `insufficient_evidence` was `warn`; `tone` is derived, so
+  cached reports serve the new one.)
+- `long_shot` ("Long shot"): outside work does get merged, but a given pull
+  request probably won't be: fewer than 1 in 10 merged, more than half never
+  answered, a typical first reply over 3 weeks, or only one person's work
+  merged among 20+ attempts. `personal` ("Personal project"): someone's own
+  project or a small team's (a hackathon entry, coursework), with nothing from
+  outside ever merged; Discover, Find and picks never list it. Both come only
+  from live readings.
+- `verdict_line` never oversells: "Worth your time" with many unanswered pull
+  requests says so. Under every other verdict it is the sentence of the rule
+  that decided it (under "Long shot", the first of its reasons), never a
+  catch-all.
 - The top of a report is three lines, in order: `headline` + `verdict_line`
   (the verdict and one reason, without the counts), `numbers_line` (the
   counts with the dates they cover, e.g. "Of 120 pull requests from outside
@@ -211,7 +222,7 @@ they cannot disagree with each other or with the verdict:
 - The rule that decided the verdict is the last `decided_by` line whose code
   is not informational (`awaiting_reply`, `landed_off_button`,
   `package_updates`, `kind_contested`, `kind_uncited`, `sample_period`,
-  `dormant`, `excluded`, `still_open`, `closed_silently`).
+  `dormant`, `excluded`, `still_open`, `closed_silently`, `too_old`).
 - `counted` is "How this was counted": the sample and its dates, the team and
   how it was worked out, bots, each informational `decided_by` line, the
   rules that decided, and the fixed rule itself. Topics are plain English and
@@ -224,7 +235,10 @@ they cannot disagree with each other or with the verdict:
 - `rule_codes` is `[]` on reports cached before it existed. Codes include
   `archived`, `closed_kind`, `non_software_kind`, `no_attempts`, `ignored`,
   `merges`, `rubber_stamp`, `long_odds` (under 5% of outside pull requests
-  merged), `inactive` (nothing merged or pushed in 90 days; decides alone),
+  merged, from 20 decided), `replies_no_merges` (20+ decided, most answered,
+  none merged), `inactive` (nothing merged or pushed in 90 days; decides alone),
+  `personal` (decides alone), the Long shot reasons `few_merged`,
+  `mostly_silent`, `slow_replies`, `one_merge`, `one_person`,
   `slow`, `too_few_attempts`, `few_merges`, `few_people`,
   `elsewhere` (a mirror or a fork; decides alone, like `archived`),
   `landed_off_button` (says how many merges GitHub shows as closed because
@@ -232,6 +246,7 @@ they cannot disagree with each other or with the verdict:
   decide and come before the deciding rule: `sample_period` (the dates the
   sample's pull requests were opened; first on every live report), `dormant`
   (nothing merged in 90 days), `excluded` (drafts and spam left out),
+  `too_old` (opened more than a year ago, left out),
   `still_open`, `closed_silently`, `slow_note` (under "Worth your time": the
   typical first reply takes longer than `days`; `verdict_line` ends with
   it; comes after the merge count). `awaiting_reply` appears only on reports
@@ -367,7 +382,7 @@ people. Reads only the database: no GitHub call and no rate limit.
   then the share of outside pull requests merged (a small sample is pulled
   toward a typical share, so 6 of 8 doesn't outrank 60 of 105), the median
   reply time and how many outsiders tried.
-- `sort=stars`: GitHub stars, every verdict.
+- `sort=stars`: GitHub stars, every verdict but `personal`.
 - `sort=trending`: people who asked for the repo's report on Holt in the last
   7 days (each person counted once per UTC day), only repos with at least
   `trending_min` (5).
@@ -410,7 +425,8 @@ report:
   "Holt | merges outsiders · replies in ~6h" ("merges outsiders" when
   `outsider_merged` > 0; the reply time when the median first reply is within
   72h; "worth your time" if neither).
-- any other verdict: neutral grey "Holt | see report", never a red verdict.
+- any other verdict (`long_shot` and `personal` included): neutral grey
+  "Holt | see report", never a red or amber verdict.
 - no report yet: neutral grey "Holt | not checked yet".
 - the report is from an older engine version: neutral grey "Holt | updating",
   never its old verdict, sent with `Cache-Control: public, max-age=300` so
@@ -643,6 +659,15 @@ background (`HOLT_CONTRIBUTIONS_REFRESH_HOURS`, 24; 0 = off), and on refresh. St
 `contributions` and `contribution_syncs`; each fetch replaces the user's rows.
 Nothing here starts an analysis.
 
+A person can leave a repository out of their numbers (a friend's project, their
+team's repo, a hackathon): its pull requests stay in the list with `counted:
+false`, and `summary` counts only the rest. The choice is per repository, kept
+in `contribution_choices` across fetches, and deleted on disconnect. Without a
+choice, a repository Holt finds is the person's own or their team's project is
+left out (`not_counted_because: "own_project"`); counting it again overrides
+that. It changes only this page's numbers, not the product metric or any
+repository's statistics.
+
 `Contributions` =
 ```jsonc
 {
@@ -652,15 +677,20 @@ Nothing here starts an analysis.
   "window_days": 365, "truncated": false, // true: GitHub had more than 200
   "summary": { "opened": 12, "merged": 6, "waiting": 3, "closed": 3,
                "landed_share": 0.5,  // merged / (merged + closed); null if none decided
-               "found_via_holt": 2 },
+               "found_via_holt": 2,
+               "not_counted": 1 },   // pull requests left out of the numbers above
   "pull_requests": [
     { "repo": "pallets/flask", "number": 5432, "title": "…",
       "url": "https://github.com/pallets/flask/pull/5432",
       "state": "open" | "merged" | "closed", "draft": false,
       "created_at": "…", "closed_at": "…" | null, "merged_at": "…" | null,
       "verdict": { "verdict": "viable", "headline": "Worth your time", "tone": "good",
-                   "checked_at": "…" } | null,   // latest cached 7-day rules report
-      "found_via_holt": true }
+                   "checked_at": "…",
+                   "first_reply_hours": 15.0 | null  // typical wait for an outside PR's first reply
+                 } | null,   // latest cached 7-day rules report
+      "found_via_holt": true,
+      "counted": true,                  // in `summary`; all of a repo's PRs, or none
+      "not_counted_because": null | "you" | "own_project" }
   ]
 }
 ```
@@ -674,6 +704,11 @@ Nothing here starts an analysis.
   unchanged (200) with `next_refresh_at`. Reads that reach GitHub are also
   limited to 6 per user per hour (429 `rate_limited`), which only matters when
   GitHub keeps failing.
+- `PUT /v1/me/contributions/repos/{owner}/{name}` body `{"counted": bool}` →
+  `Contributions`: count that repository's pull requests, or leave them out.
+  `DELETE` on the same path forgets the choice (back to the default). Only
+  repositories in the person's list; anything else → 404 `not_found`. Not
+  connected → 404.
 - `found_via_holt`: the user opened the pull request within 30 days after
   opening that repository's report page on Holt while connected (`repo_views`
   keeps the first and the last view of each repository; a pull request within

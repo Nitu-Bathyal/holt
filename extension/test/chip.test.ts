@@ -19,8 +19,11 @@ describe("chipView", () => {
     const v = chipView({ state: "found", data: report({ verdict: "not_viable", headline: "Not worth your time", tone: "bad" }) }, flask);
     expect(v.label).toBe("Holt: Not worth your time");
     expect(v.tone).toBe("bad");
-    const w = chipView({ state: "found", data: report({ verdict: "insufficient_evidence", headline: "Not enough evidence", tone: "warn" }) }, flask);
-    expect(w.tone).toBe("warn");
+    const w = chipView({ state: "found", data: report({ verdict: "insufficient_evidence", headline: "Not enough evidence", tone: "neutral" }) }, flask);
+    expect(w.tone).toBe("neutral");
+    const l = chipView({ state: "found", data: report({ verdict: "long_shot", headline: "Long shot", tone: "warn" }) }, flask);
+    expect(l.label).toBe("Holt: Long shot");
+    expect(l.tone).toBe("warn");
   });
 
   it("uses the neutral colour when a cached response has no tone yet", () => {
@@ -118,8 +121,8 @@ describe("ensureChip", () => {
     document.body.innerHTML = repoHeader();
     const chip = ensureChip(document, flask, { state: "loading" })!;
     expect(chip.dataset.holtState).toBe("loading");
-    updateChip(chip, flask, { state: "found", data: report({ verdict: "insufficient_evidence", headline: "Not enough evidence", tone: "warn" }) });
-    expect(chip.dataset.holtTone).toBe("warn");
+    updateChip(chip, flask, { state: "found", data: report({ verdict: "insufficient_evidence", headline: "Not enough evidence", tone: "neutral" }) });
+    expect(chip.dataset.holtTone).toBe("neutral");
     expect(chip.textContent).toContain("Not enough evidence");
   });
 

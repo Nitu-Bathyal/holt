@@ -1,7 +1,7 @@
 "use client";
 
-// Landing section 06, "three possible answers" (docs/design/EXPRESSIVE.md):
-// the three verdicts are the pane, as large as the screen allows, each with
+// Landing section 06, "four possible answers" (docs/design/EXPRESSIVE.md):
+// the four verdicts are the pane, as large as the screen allows, each with
 // what it means for you and what to do next. They slide in one after another
 // as the pane arrives (desktop; transform only, the words are never hidden).
 // Everything reads without pointing: pointing at one only thickens its
@@ -22,6 +22,15 @@ const ANSWERS: { key: string; word: string; mood: CatMood; tone: string; bar: st
     next: "Pick a starter issue from the report and open your PR.",
   },
   {
+    key: "long",
+    word: "Long shot",
+    mood: "thinking",
+    tone: "text-amber",
+    bar: "bg-amber",
+    means: "Some outside PRs get in. Most get silence or a very slow reply.",
+    next: "Ask on an issue first, and start only if a maintainer answers.",
+  },
+  {
     key: "bad",
     word: "Not worth your time",
     mood: "heartbroken",
@@ -35,11 +44,11 @@ const ANSWERS: { key: string; word: string; mood: CatMood; tone: string; bar: st
     ),
   },
   {
-    key: "warn",
+    key: "unknown",
     word: "Not enough evidence",
-    mood: "thinking",
-    tone: "text-amber",
-    bar: "bg-amber",
+    mood: "ready",
+    tone: "text-blue",
+    bar: "bg-blue",
     means: "Too few people tried recently to say. Holt won't guess.",
     next: "Ask the maintainers in an issue before you start, or check back later.",
   },

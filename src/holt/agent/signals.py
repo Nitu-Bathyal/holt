@@ -280,6 +280,14 @@ class Signals:
     outsider_still_open: int = 0
     outsider_closed_silently: int = 0
     outsider_excluded: int = 0
+    # Outsider attempts opened more than rates.MAX_SAMPLE_DAYS ago (live
+    # readings only): in no count, like `outsider_excluded`.
+    outsider_too_old: int = 0
+    # Decided outside merges GitHub shows as closed because they landed some
+    # other way (Gerrit, a merge bot, a maintainer's push): landing_detection.
+    # Where most do, the review happened there too, and silence on GitHub
+    # says nothing (verdict.py).
+    outsider_landed_elsewhere: int = 0
     # The settle window these were counted with, in hours; 0 for the frozen
     # benchmark's arithmetic. Not a count: kept so anything listing the pull
     # requests behind a count (the server's examples) buckets them the same way.
@@ -319,6 +327,8 @@ class Signals:
             "outsider_still_open": self.outsider_still_open,
             "outsider_closed_silently": self.outsider_closed_silently,
             "outsider_excluded": self.outsider_excluded,
+            "outsider_too_old": self.outsider_too_old,
+            "outsider_landed_elsewhere": self.outsider_landed_elsewhere,
             "outsider_reviewed_share": self.outsider_reviewed_share,
             "merged_threads": self.merged_threads,
         }
@@ -387,6 +397,8 @@ def compute(
         outsider_still_open=split.still_open,
         outsider_closed_silently=split.closed_silently,
         outsider_excluded=split.excluded,
+        outsider_too_old=split.too_old,
+        outsider_landed_elsewhere=sum(1 for t in outsider_merges if t.landed_via),
         settle_hours=min_age_hours if rates.judges_time(as_of, min_age_hours) else 0.0,
         outsider_reviewed_share=(
             sum(1 for t in outsider_merges if t.engaged or t.landed_via) / len(outsider_merges)

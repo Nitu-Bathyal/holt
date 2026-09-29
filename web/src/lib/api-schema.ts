@@ -335,6 +335,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/contributions/repos/{owner}/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Put Contribution Choice
+         * @description Count this repository's pull requests in the numbers, or leave them out.
+         */
+        put: operations["put_contribution_choice_v1_me_contributions_repos__owner___name__put"];
+        post?: never;
+        /**
+         * Delete Contribution Choice
+         * @description Forget the choice: the repository goes back to Holt's default.
+         */
+        delete: operations["delete_contribution_choice_v1_me_contributions_repos__owner___name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/credits": {
         parameters: {
             query?: never;
@@ -1168,6 +1192,14 @@ export interface components {
             stats_opt_out: boolean;
         };
         /**
+         * ContributionChoiceBody
+         * @description PUT /v1/me/contributions/repos/{owner}/{name}.
+         */
+        ContributionChoiceBody: {
+            /** Counted */
+            counted: boolean;
+        };
+        /**
          * ContributionMetric
          * @description The product metric: pull requests opened after checking a repo on Holt.
          *     Counts only, no people.
@@ -1192,6 +1224,11 @@ export interface components {
         ContributionPullRequest: {
             /** Closed At */
             closed_at: string | null;
+            /**
+             * Counted
+             * @default true
+             */
+            counted: boolean;
             /** Created At */
             created_at: string;
             /** Draft */
@@ -1200,6 +1237,8 @@ export interface components {
             found_via_holt: boolean;
             /** Merged At */
             merged_at: string | null;
+            /** Not Counted Because */
+            not_counted_because: ("you" | "own_project") | null;
             /** Number */
             number: number;
             /** Repo */
@@ -1225,6 +1264,11 @@ export interface components {
             landed_share: number | null;
             /** Merged */
             merged: number;
+            /**
+             * Not Counted
+             * @default 0
+             */
+            not_counted: number;
             /** Opened */
             opened: number;
             /** Waiting */
@@ -1339,14 +1383,14 @@ export interface components {
              * Tone
              * @enum {string}
              */
-            readonly tone: "good" | "bad" | "warn";
+            readonly tone: "good" | "bad" | "warn" | "neutral";
             /** Topics */
             topics: string[];
             /**
              * Verdict
              * @enum {string}
              */
-            verdict: "viable" | "not_viable" | "insufficient_evidence";
+            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal";
         };
         /**
          * Entitlements
@@ -1518,12 +1562,12 @@ export interface components {
              * Tone
              * @enum {string}
              */
-            readonly tone: "good" | "bad" | "warn";
+            readonly tone: "good" | "bad" | "warn" | "neutral";
             /**
              * Verdict
              * @enum {string}
              */
-            verdict: "viable" | "not_viable" | "insufficient_evidence";
+            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal";
         };
         /** GitHubAccount */
         GitHubAccount: {
@@ -1591,9 +1635,9 @@ export interface components {
              */
             status: "queued" | "running" | "done" | "error";
             /** Tone */
-            readonly tone: ("good" | "bad" | "warn") | null;
+            readonly tone: ("good" | "bad" | "warn" | "neutral") | null;
             /** Verdict */
-            verdict: ("viable" | "not_viable" | "insufficient_evidence") | null;
+            verdict: ("viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal") | null;
         };
         /**
          * HoltUsers
@@ -1684,6 +1728,7 @@ export interface components {
         /**
          * Odds
          * @description A newcomer's chances, for a report whose verdict is `viable` only.
+         *     ("Long shot" is already the odds, so it has none.)
          */
         Odds: {
             /**
@@ -1697,7 +1742,7 @@ export interface components {
              * Tone
              * @enum {string}
              */
-            tone: "good" | "bad" | "warn";
+            tone: "good" | "bad" | "warn" | "neutral";
         };
         /**
          * Order
@@ -2365,14 +2410,14 @@ export interface components {
              * Tone
              * @enum {string}
              */
-            readonly tone: "good" | "bad" | "warn";
+            readonly tone: "good" | "bad" | "warn" | "neutral";
             /** Topics */
             topics: string[];
             /**
              * Verdict
              * @enum {string}
              */
-            verdict: "viable" | "not_viable" | "insufficient_evidence";
+            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal";
             /** Why */
             why: string[];
         };
@@ -2423,18 +2468,20 @@ export interface components {
         RepoVerdict: {
             /** Checked At */
             checked_at: string;
+            /** First Reply Hours */
+            first_reply_hours: number | null;
             /** Headline */
             readonly headline: string;
             /**
              * Tone
              * @enum {string}
              */
-            readonly tone: "good" | "bad" | "warn";
+            readonly tone: "good" | "bad" | "warn" | "neutral";
             /**
              * Verdict
              * @enum {string}
              */
-            verdict: "viable" | "not_viable" | "insufficient_evidence";
+            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal";
         };
         /** Report */
         Report: {
@@ -2498,14 +2545,14 @@ export interface components {
              * Tone
              * @enum {string}
              */
-            readonly tone: "good" | "bad" | "warn";
+            readonly tone: "good" | "bad" | "warn" | "neutral";
             /** Unknowns */
             unknowns: string[];
             /**
              * Verdict
              * @enum {string}
              */
-            verdict: "viable" | "not_viable" | "insufficient_evidence";
+            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal";
             /** Verdict Line */
             readonly verdict_line: string;
         };
@@ -2526,7 +2573,7 @@ export interface components {
             /** Repo */
             repo: string;
             /** Verdict */
-            verdict: ("viable" | "not_viable" | "insufficient_evidence") | null;
+            verdict: ("viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal") | null;
         };
         /**
          * Sample
@@ -2640,6 +2687,11 @@ export interface components {
              * @default 0
              */
             still_open: number;
+            /**
+             * Too Old
+             * @default 0
+             */
+            too_old: number;
         };
         /** SubscribeIn */
         SubscribeIn: {
@@ -2792,6 +2844,7 @@ export type Ask = components['schemas']['Ask'];
 export type Catalogue = components['schemas']['Catalogue'];
 export type Checkout = components['schemas']['Checkout'];
 export type ConnectIn = components['schemas']['ConnectIn'];
+export type ContributionChoiceBody = components['schemas']['ContributionChoiceBody'];
 export type ContributionMetric = components['schemas']['ContributionMetric'];
 export type ContributionPullRequest = components['schemas']['ContributionPullRequest'];
 export type ContributionSummary = components['schemas']['ContributionSummary'];
@@ -3502,6 +3555,82 @@ export interface operations {
                 "x-holt-internal-key"?: string | null;
             };
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Contributions"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    put_contribution_choice_v1_me_contributions_repos__owner___name__put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path: {
+                owner: string;
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ContributionChoiceBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Contributions"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    delete_contribution_choice_v1_me_contributions_repos__owner___name__delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path: {
+                owner: string;
+                name: string;
+            };
             cookie?: never;
         };
         requestBody?: never;

@@ -51,7 +51,7 @@ The cat is a face, not a character. It reacts (happy, sad, thinking) next to ver
 | repo, PR, pull request | repository (in headings), contribution artefact |
 | outsiders, outside PRs, people outside the team | external contributors, non-members, `CONTRIBUTOR` |
 | gets merged, gets a reply | acceptance rate, responsiveness |
-| Worth your time / Not worth your time / Not enough evidence (exactly these) | viable, `not_viable`, score, rating |
+| Worth your time / Long shot / Not worth your time / Not enough evidence / Personal project (exactly these) | viable, `not_viable`, `long_shot`, score, rating |
 | the rules, written rules | algorithm, heuristics, our AI |
 | check, look, find out | leverage, seamless, effortless, powerful, unlock, empower, robust, supercharge |
 | typical (for a median) | median, mean, p-value, MCC |

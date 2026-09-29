@@ -78,12 +78,11 @@ def test_it_says_what_was_lost_and_what_that_cost(
     assessment, _ = analyze(repo, provider, None)
     limits = assessment.limits
     assert "No model ran" in limits
-    # The measured cost, not an adjective. Out of sample it is 8 points,
-    # not the 1 the in-sample ablation suggested, and the report says so --
-    # in words a beginner reads, with the statistic's name left in the docs.
-    assert "0.55" in limits and "0.63" in limits
-    assert "cites no specific threads" in limits
-    assert "MCC" not in limits
+    # What it can't tell you, in words a beginner reads. The benchmark score
+    # it used to quote ("0.55 against 0.63") is research detail, and lives in
+    # docs/research/EVALUATION.md, not in product output.
+    assert "what specific threads said" in limits
+    assert "0.55" not in limits and "MCC" not in limits and "stages" not in limits
 
 
 @pytest.mark.parametrize("repo", REPOS)

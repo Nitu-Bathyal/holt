@@ -256,7 +256,8 @@ def test_the_merge_rate_floor_turns_a_long_shot_down():
                 distinct_outsider_authors=147, merge_rate=5 / 171, settle_hours=LIVE)
     v, trace = classify(findings(), s)
     assert v is Verdict.NOT_VIABLE
-    assert rule_codes(trace)[-2:] == ["merges", "long_odds"]
+    # Decided before the merge count, which it overrules.
+    assert rule_codes(trace)[-1] == "long_odds" and "merges" not in rule_codes(trace)
     assert trace[-1].startswith("Only 5 of 171 pull requests") and "1 in 34" in trace[-1]
 
 
@@ -265,10 +266,12 @@ def test_the_floor_is_not_applied_to_the_frozen_benchmark():
     assert classify(findings(), s)[0] is Verdict.VIABLE
 
 
-def test_five_percent_or_more_passes():
+def test_five_percent_or_more_passes_the_floor():
+    """...into Long shot, which fewer than 1 in 10 merged is."""
     s = signals(outsider_threads=40, outsider_merged=2, distinct_merged_authors=2,
                 merge_rate=0.05, settle_hours=LIVE)
-    assert classify(findings(), s)[0] is Verdict.VIABLE
+    v, trace = classify(findings(), s)
+    assert v is Verdict.LONG_SHOT and rule_codes(trace)[-1] == "few_merged"
 
 
 def test_the_rubber_stamp_reads_outside_merges_only_on_a_live_reading():
@@ -332,3 +335,143 @@ def test_on_a_live_reading_the_budget_never_changes_the_verdict():
         slow_codes = rule_codes(classify(findings(), s, contributor_days=7)[1])
         fast_codes = rule_codes(classify(findings(), s, contributor_days=30)[1])
         assert [c for c in slow_codes if c not in ("slow", "slow_note")] == fast_codes, shape
+
+
+# --- verdict tiers: Long shot, the floor from 20 attempts, reason lines ---------
+
+
+def live(**over) -> Signals:
+    """A live reading that is plainly Worth your time unless told otherwise."""
+    base = dict(outsider_threads=100, outsider_merged=40, distinct_merged_authors=20,
+                distinct_outsider_authors=60, outsider_ignored=10, outsider_answered=80,
+                merge_rate=0.4, median_first_response_hours=20.0, settle_hours=LIVE,
+                outsider_reviewed_share=0.9)
+    base.update(over)
+    return signals(**base)
+
+
+def test_a_live_reading_that_merges_and_answers_is_worth_it():
+    v, trace = classify(findings(), live())
+    assert v is Verdict.VIABLE and rule_codes(trace)[-1] == "merges"
+
+
+def test_most_outside_work_unanswered_is_a_long_shot():
+    """facebook/react: 21 of 151 merged, 107 got no reply at all."""
+    s = live(outsider_threads=151, outsider_merged=21, merge_rate=21 / 151,
+             outsider_ignored=107, outsider_answered=44)
+    v, trace = classify(findings(), s)
+    assert v is Verdict.LONG_SHOT
+    assert rule_codes(trace)[-2:] == ["merges", "mostly_silent"]
+    assert trace[-1].startswith("107 of 151 pull requests from outside contributors got no reply")
+
+
+def test_half_unanswered_is_not_yet_a_long_shot():
+    assert classify(findings(), live(outsider_ignored=50))[0] is Verdict.VIABLE
+    assert classify(findings(), live(outsider_ignored=51))[0] is Verdict.LONG_SHOT
+
+
+def test_fewer_than_one_in_ten_merged_is_a_long_shot():
+    """django: 9 of 110."""
+    s = live(outsider_threads=110, outsider_merged=9, distinct_merged_authors=6, merge_rate=9 / 110)
+    v, trace = classify(findings(), s)
+    assert v is Verdict.LONG_SHOT and rule_codes(trace)[-1] == "few_merged"
+    assert trace[-1] == ("Only 9 of 110 pull requests from outside contributors were merged, "
+                         "fewer than 1 in 10.")
+    assert classify(findings(), live(outsider_merged=10, merge_rate=0.1))[0] is Verdict.VIABLE
+
+
+def test_replies_over_three_weeks_are_a_long_shot_whatever_the_budget():
+    """moment/moment: replies typically took about 100 days."""
+    s = live(median_first_response_hours=99.7 * 24)
+    for days in (1, 7, 30, 90):
+        v, trace = classify(findings(), s, contributor_days=days)
+        assert v is Verdict.LONG_SHOT and rule_codes(trace)[-1] == "slow_replies"
+        assert "99.7 days" in trace[-1] and "slow_note" not in rule_codes(trace)
+    assert classify(findings(), live(median_first_response_hours=20 * 24))[0] is Verdict.VIABLE
+
+
+def test_a_typical_reply_time_needs_five_replies_to_decide():
+    """fresco, over its last 12 months: a 26-day "typical" reply from two replies."""
+    s = live(median_first_response_hours=627.7, outsider_answered=2)
+    assert classify(findings(), s)[0] is Verdict.VIABLE
+
+
+def test_silence_on_github_says_nothing_where_merges_land_through_another_review_site():
+    """golang/go: all 44 outside merges landed through Gerrit; 85 of 152 silent on GitHub."""
+    s = live(outsider_threads=152, outsider_merged=44, merge_rate=44 / 152,
+             outsider_ignored=85, outsider_answered=2, outsider_landed_elsewhere=44)
+    assert classify(findings(), s)[0] is Verdict.VIABLE
+    # Merged the ordinary way, the same silence is a long shot.
+    assert classify(findings(), live(outsider_threads=152, outsider_merged=44,
+                                     merge_rate=44 / 152, outsider_ignored=85))[0] \
+        is Verdict.LONG_SHOT
+
+
+def test_every_long_shot_reason_is_its_own_line():
+    s = live(outsider_threads=100, outsider_merged=7, merge_rate=0.07, outsider_ignored=60,
+             median_first_response_hours=30 * 24)
+    v, trace = classify(findings(), s)
+    assert v is Verdict.LONG_SHOT
+    assert rule_codes(trace)[-3:] == ["few_merged", "mostly_silent", "slow_replies"]
+
+
+def test_the_floor_applies_from_twenty_attempts_whatever_merged():
+    """vercel/next.js: 1 of 30 merged used to read "Not enough evidence"."""
+    s = live(outsider_threads=30, outsider_merged=1, distinct_merged_authors=1,
+             merge_rate=1 / 30, outsider_ignored=23, outsider_answered=7)
+    v, trace = classify(findings(), s)
+    assert v is Verdict.NOT_VIABLE and rule_codes(trace)[-1] == "long_odds"
+    assert trace[-1] == ("Only 1 of 30 pull requests from outside contributors was merged, "
+                         "about 1 in 30. Almost no outside work gets in here.")
+
+
+def test_replying_but_never_merging_is_its_own_finding():
+    """fastapi/fastapi: 0 of 95 merged, most of them answered."""
+    s = live(outsider_threads=95, outsider_merged=0, distinct_merged_authors=0,
+             merge_rate=0.0, outsider_ignored=5, outsider_answered=67)
+    v, trace = classify(findings(), s)
+    assert v is Verdict.NOT_VIABLE and rule_codes(trace)[-1] == "replies_no_merges"
+    assert trace[-1].startswith("67 of 95 pull requests from outside contributors got a reply, "
+                                "but none were merged.")
+
+
+def test_under_twenty_attempts_the_floor_waits():
+    s = live(outsider_threads=19, outsider_merged=0, distinct_merged_authors=0,
+             merge_rate=0.0, outsider_ignored=2, outsider_answered=15)
+    v, trace = classify(findings(), s)
+    assert v is Verdict.INSUFFICIENT_EVIDENCE and rule_codes(trace)[-1] == "few_merges"
+    assert "None of the 19 pull requests" in trace[-1]
+
+
+def test_one_persons_merges_among_many_attempts_is_a_long_shot():
+    s = live(outsider_threads=40, outsider_merged=8, distinct_merged_authors=1,
+             merge_rate=0.2, distinct_outsider_authors=25)
+    v, trace = classify(findings(), s)
+    assert v is Verdict.LONG_SHOT and rule_codes(trace)[-1] == "one_person"
+    thin = live(outsider_threads=10, outsider_merged=3, distinct_merged_authors=1, merge_rate=0.3)
+    assert classify(findings(), thin)[0] is Verdict.INSUFFICIENT_EVIDENCE
+
+
+def test_a_personal_project_gets_no_merge_verdict():
+    line = "This looks like a hackathon project: every pull request here came from one person."
+    v, trace = classify(findings(personal_project=line), live())
+    assert v is Verdict.PERSONAL and rule_codes(trace) == ["personal"] and trace[0] == line
+
+
+def test_the_frozen_benchmark_never_gets_the_new_answers():
+    frozen = signals(outsider_threads=151, outsider_merged=21, merge_rate=21 / 151,
+                     outsider_ignored=107, distinct_merged_authors=10)
+    assert classify(findings(), frozen)[0] is Verdict.VIABLE
+    nothing = signals(outsider_threads=95, outsider_merged=0, merge_rate=0.0, outsider_ignored=5)
+    assert classify(findings(), nothing)[0] is Verdict.INSUFFICIENT_EVIDENCE
+
+
+def test_every_reason_is_plain_english():
+    shapes = [live(), live(outsider_ignored=60), live(outsider_merged=5, merge_rate=0.05),
+              live(median_first_response_hours=600.0),
+              live(outsider_threads=30, outsider_merged=1, distinct_merged_authors=1),
+              live(outsider_threads=95, outsider_merged=0, distinct_merged_authors=0),
+              live(outsider_threads=9, outsider_merged=0, distinct_merged_authors=0)]
+    for s in shapes:
+        for line in classify(findings(), s)[1]:
+            assert "_" not in line and "%" not in line.replace("% of", ""), line

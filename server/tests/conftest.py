@@ -36,8 +36,10 @@ STATS = {"outsider_attempts": 20, "outsider_merged": 8, "distinct_outsiders": 15
 
 def canned_report(repo: str, mode: str = "rules", days: int = 7,
                   verdict: str = "viable") -> dict[str, Any]:
-    headline = {"viable": "Worth your time", "not_viable": "Not worth your time",
-                "insufficient_evidence": "Not enough evidence"}[verdict]
+    headline = {"viable": "Worth your time", "long_shot": "Long shot",
+                "not_viable": "Not worth your time",
+                "insufficient_evidence": "Not enough evidence",
+                "personal": "Personal project"}[verdict]
     return {
         "repo": repo, "mode": mode, "days": days, "verdict": verdict,
         "headline": headline, "summary": "ok" if mode == "ai" else None,

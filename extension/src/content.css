@@ -54,6 +54,7 @@ a.holt-chip[data-holt-tone="bad"] .holt-chip__dot {
 a.holt-chip[data-holt-tone="warn"] .holt-chip__dot {
   background: var(--fgColor-attention, var(--color-attention-fg, #9a6700));
 }
+a.holt-chip[data-holt-tone="neutral"] .holt-chip__dot,
 a.holt-chip[data-holt-tone="unknown"] .holt-chip__dot {
   background: var(--fgColor-accent, var(--color-accent-fg, #0969da));
 }
