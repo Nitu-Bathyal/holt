@@ -539,6 +539,22 @@ class ContributionSync(Base):
     truncated: Mapped[bool] = mapped_column(Boolean, default=False)
 
 
+class ContributionChoice(Base):
+    """Whether a repository's pull requests count in a connected user's
+    contribution numbers (contributions.py). A row is the person's own choice
+    and wins over the default; no row means the default. Kept across fetches,
+    deleted on disconnect."""
+
+    __tablename__ = "contribution_choices"
+
+    user_id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    repo_key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    # owner/name as the pull requests showed it.
+    repo: Mapped[str] = mapped_column(String(200))
+    counted: Mapped[bool] = mapped_column(Boolean)
+    chosen_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
 class Contribution(Base):
     """One public pull request a connected user opened, as GitHub last showed
     it. Replaced wholesale on every fetch; deleted on disconnect."""
