@@ -6,7 +6,7 @@ import { PageHead } from "@/components/page-head";
 import { TONE, TONE_MOOD } from "@/components/report/tone";
 import { VerdictPill } from "@/components/report/verdict-pill";
 import { getReport } from "@/lib/api";
-import { EXAMPLE_PATH, EXAMPLE_REPORT, exampleRecordedOn } from "@/lib/example-report";
+import { EXAMPLE_PATH, EXAMPLE_REPORT } from "@/lib/example-report";
 import { EXAMPLES, EXAMPLES_PATH } from "@/lib/examples";
 import { currentUser } from "@/lib/session";
 
@@ -72,7 +72,7 @@ export default async function ExamplesPage() {
                 </div>
                 <p className="mt-2 font-sans text-[0.95rem] text-muted">
                   The same kind of report, with the evidence explained in plain English and every sentence citing a
-                  GitHub thread. Recorded {exampleRecordedOn(ai)}.
+                  GitHub thread. A recorded example.
                 </p>
                 <p className="mt-3 text-[0.87rem] text-muted group-hover:text-ink">
                   read the AI report <span aria-hidden="true">→</span>
