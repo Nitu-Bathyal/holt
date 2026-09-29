@@ -1,0 +1,523 @@
+/* PROTOTYPE, don't merge. /lab/dashboard only. The prototype draws its own
+   shell over whatever shell the page wears, so it looks the same signed in or out. */
+
+.dl {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg);
+  color: var(--ink);
+}
+
+.dl-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.dl-scroll {
+  flex: 1;
+  min-width: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* The real shell stays mounted underneath; keep it out of sight. */
+body:has(.dl) .site-header {
+  visibility: hidden;
+}
+
+/* ---------- shell ---------- */
+.dl-top {
+  display: flex;
+  height: 56px;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--header);
+  padding: 0 16px;
+}
+
+.dl-check {
+  display: flex;
+  height: 40px;
+  min-width: 0;
+  flex: 1;
+  max-width: 36rem;
+  align-items: center;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  transition: border-color var(--dur-fast) var(--ease-out);
+}
+.dl-check:focus-within {
+  border-color: var(--blue);
+}
+.dl-check input {
+  min-width: 0;
+  flex: 1;
+  height: 100%;
+  background: transparent;
+  outline: none;
+  padding: 0 8px;
+}
+.dl-check input::placeholder {
+  color: var(--faint);
+}
+.dl-kbd {
+  margin-right: 8px;
+  border: 1px solid var(--line-strong);
+  padding: 0 6px;
+  font-size: 0.75rem;
+  line-height: 1.4;
+  color: var(--faint);
+}
+
+.dl-rail {
+  display: none;
+  width: 260px;
+  flex-shrink: 0;
+  flex-direction: column;
+  border-right: 1px solid var(--line);
+  background: var(--header);
+  padding: 16px 10px 12px;
+  overflow-y: auto;
+}
+@media (min-width: 1024px) {
+  .dl-rail {
+    display: flex;
+  }
+}
+
+.dl-item {
+  display: flex;
+  min-height: 44px;
+  width: 100%;
+  align-items: center;
+  gap: 12px;
+  border-left: 2px solid transparent;
+  padding: 0 12px;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  color: var(--muted);
+  text-align: left;
+  white-space: nowrap;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+.dl-item:hover {
+  color: var(--ink);
+  background: color-mix(in srgb, var(--ink) 4%, transparent);
+}
+.dl-item[aria-current="page"] {
+  border-left-color: var(--blue);
+  background: color-mix(in srgb, var(--blue) 8%, transparent);
+  color: var(--ink);
+  font-weight: 600;
+}
+.dl-badge {
+  margin-left: auto;
+  min-width: 22px;
+  border-radius: 11px;
+  background: var(--orange);
+  padding: 1px 7px;
+  text-align: center;
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--on-accent);
+}
+
+.dl-menu {
+  position: absolute;
+  right: 12px;
+  top: 52px;
+  z-index: 5;
+  width: 15rem;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  padding: 6px;
+  animation: dl-pop var(--dur-base) var(--ease-out) both;
+  transform-origin: top right;
+}
+@keyframes dl-pop {
+  from {
+    opacity: 0;
+    scale: var(--pop-scale);
+  }
+}
+
+.dl-drawer {
+  position: absolute;
+  inset: 56px 0 0 0;
+  z-index: 6;
+  display: flex;
+}
+.dl-drawer > nav {
+  display: flex;
+  width: min(300px, 85vw);
+  flex-direction: column;
+  border-right: 1px solid var(--line);
+  background: var(--header);
+  padding: 16px 10px;
+  animation: dl-slide var(--dur-slow) var(--ease-out) both;
+}
+.dl-drawer > button {
+  flex: 1;
+  background: rgb(0 0 0 / 0.3);
+}
+@keyframes dl-slide {
+  from {
+    transform: translateX(-24px);
+    opacity: 0;
+  }
+}
+
+/* ---------- page ---------- */
+.dl-page {
+  max-width: 72rem;
+  padding: clamp(28px, 6svh, 64px) clamp(16px, 4vw, 48px) 140px;
+}
+
+.dl-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+}
+.dl-h1 {
+  max-width: 21ch;
+  font-family: var(--font-mono);
+  font-size: clamp(1.9rem, 3.6vw, 3rem);
+  font-weight: 650;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  text-wrap: balance;
+}
+.dl-word {
+  display: inline-block;
+  animation: dl-land 560ms var(--ease-expressive) both;
+  animation-delay: calc(var(--i) * 55ms);
+}
+@keyframes dl-land {
+  from {
+    opacity: 0;
+    transform: translateY(0.35em);
+  }
+}
+.dl-mark {
+  background-image: linear-gradient(var(--marker), var(--marker));
+  background-repeat: no-repeat;
+  background-position: 0 88%;
+  background-size: 100% 0.42em;
+  animation: dl-mark 600ms var(--ease-out) both;
+  animation-delay: calc(var(--i) * 55ms + 380ms);
+}
+@keyframes dl-mark {
+  from {
+    background-size: 0% 0.42em;
+  }
+}
+.dl-lead {
+  margin-top: 14px;
+  max-width: 44rem;
+  font-family: var(--font-sans);
+  font-size: 1.05rem;
+  color: var(--muted);
+}
+.dl-cat {
+  flex-shrink: 0;
+  font-size: clamp(1.5rem, 2.6vw, 2.3rem);
+  line-height: 1;
+  padding-top: 6px;
+  transition: color var(--dur-base) var(--ease-out);
+}
+
+/* the loop: find a repo → pick an issue → open a PR → merged */
+.dl-loop {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  max-width: 44rem;
+  margin-top: 32px;
+}
+.dl-loop::before,
+.dl-loop-fill {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  height: 2px;
+  background: var(--line-strong);
+  right: calc(25% - 6px);
+}
+.dl-loop-fill {
+  right: auto;
+  width: var(--p);
+  background: var(--green);
+  transform-origin: left;
+  animation: dl-grow 700ms var(--ease-out) 250ms both;
+}
+.dl-step {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-right: 10px;
+  font-family: var(--font-mono);
+  font-size: clamp(0.72rem, 2.6vw, 0.8rem);
+  color: var(--faint);
+}
+.dl-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--line-strong);
+  background: var(--bg);
+}
+.dl-step[data-s="done"] .dl-dot {
+  border-color: var(--green);
+  background: var(--green);
+}
+.dl-step[data-s="done"] {
+  color: var(--muted);
+}
+.dl-step[data-s="now"] .dl-dot {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--blue) 18%, transparent);
+}
+.dl-step[data-s="now"] {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+@keyframes dl-grow {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+.dl-section {
+  margin-top: 56px;
+}
+.dl-sh {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--line-strong);
+  padding-bottom: 10px;
+}
+.dl-sh h2 {
+  font-family: var(--font-mono);
+  font-size: 1.05rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+.dl-quiet {
+  font-family: var(--font-mono);
+  font-size: 0.84rem;
+  color: var(--blue);
+}
+.dl-quiet:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* rows: your things */
+.dl-row {
+  display: grid;
+  grid-template-columns: 3px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  border-bottom: 1px solid var(--line);
+  padding: 14px 12px 14px 0;
+  transition: background-color var(--dur-fast) var(--ease-out);
+}
+.dl-row:hover {
+  background: color-mix(in srgb, var(--ink) 3%, transparent);
+}
+.dl-rule {
+  align-self: stretch;
+  border-radius: 2px;
+  background: var(--rule, var(--line-strong));
+}
+
+/* cards: discovery */
+.dl-card {
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  box-shadow: var(--card-shadow);
+  padding: 18px;
+  transition:
+    transform var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out);
+}
+@media (hover: hover) {
+  .dl-card:hover {
+    transform: translateY(-2px);
+    border-color: color-mix(in srgb, var(--blue) 50%, var(--line-strong));
+  }
+}
+.dl-odds {
+  display: flex;
+  height: 5px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--ink) 9%, transparent);
+}
+.dl-odds > span {
+  background: var(--green);
+  transform-origin: left;
+  animation: dl-grow 700ms var(--ease-out) 150ms both;
+}
+
+/* how long a PR has waited, against this repo's usual first reply */
+.dl-wait {
+  position: relative;
+  height: 6px;
+  width: 100%;
+  max-width: 16rem;
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--ink) 8%, transparent);
+}
+.dl-wait > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 3px;
+  background: var(--c);
+  width: var(--w);
+  transform-origin: left;
+  animation: dl-grow 800ms var(--ease-out) 200ms both;
+}
+.dl-wait > i {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  left: var(--t);
+  width: 2px;
+  background: var(--ink);
+  opacity: 0.55;
+}
+
+.dl-chip {
+  min-height: 40px;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  padding: 0 14px;
+  font-family: var(--font-mono);
+  font-size: 0.86rem;
+  color: var(--muted);
+  transition:
+    border-color var(--dur-fast) var(--ease-out),
+    color var(--dur-fast) var(--ease-out),
+    background-color var(--dur-fast) var(--ease-out);
+}
+.dl-chip:hover {
+  color: var(--ink);
+  border-color: var(--ink);
+}
+.dl-chip[aria-pressed="true"] {
+  border-color: var(--blue);
+  background: var(--blue);
+  color: var(--on-accent);
+}
+
+.dl-tabs {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  border-bottom: 1px solid var(--line-strong);
+  scrollbar-width: none;
+}
+.dl-tab {
+  min-height: 44px;
+  flex-shrink: 0;
+  border-bottom: 2px solid transparent;
+  padding: 0 12px;
+  font-family: var(--font-mono);
+  font-size: 0.88rem;
+  color: var(--muted);
+  margin-bottom: -1px;
+}
+.dl-tab:hover {
+  color: var(--ink);
+}
+.dl-tab[aria-selected="true"] {
+  border-bottom-color: var(--blue);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.dl-appear {
+  animation: dl-appear var(--dur-slow) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * var(--stagger));
+}
+@keyframes dl-appear {
+  from {
+    opacity: 0;
+    transform: translateY(var(--shift));
+  }
+}
+
+/* where picks land, before any are chosen */
+.dl-ghost {
+  min-height: 15rem;
+  border: 1px dashed var(--line-strong);
+  background: repeating-linear-gradient(135deg, transparent 0 10px, color-mix(in srgb, var(--ink) 2.5%, transparent) 10px 11px);
+}
+
+/* ---------- the lab bar ---------- */
+.dl-lab {
+  position: fixed;
+  bottom: 12px;
+  left: 50%;
+  z-index: 90;
+  display: flex;
+  max-width: calc(100vw - 24px);
+  transform: translateX(-50%);
+  align-items: center;
+  gap: 4px;
+  overflow-x: auto;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  box-shadow: var(--shadow);
+  padding: 4px;
+  font-family: var(--font-mono);
+  font-size: 0.78rem;
+  scrollbar-width: none;
+}
+.dl-lab button {
+  min-height: 36px;
+  flex-shrink: 0;
+  padding: 0 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+.dl-lab button:hover {
+  color: var(--ink);
+}
+.dl-lab button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--bg);
+}
+
+/* reduced motion: the finished state, no travel */
+.dl[data-reduced="true"] *,
+.dl[data-reduced="true"] *::before {
+  animation: none !important;
+  transition: none !important;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dl *,
+  .dl *::before {
+    animation: none !important;
+    transition: none !important;
+  }
+}
