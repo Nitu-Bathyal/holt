@@ -9,9 +9,17 @@ import { afterSignIn } from "./home.ts";
 const back = (href: string) => new URL(href, "https://holt.test").searchParams.get("callbackUrl");
 
 test("the curated examples cover each verdict and are real repo names", () => {
-  assert.ok(EXAMPLES.length >= 3 && EXAMPLES.length <= 5);
-  assert.deepEqual(new Set(EXAMPLES.map((e) => e.verdict)), new Set(["viable", "long_shot", "not_viable", "insufficient_evidence"]));
-  for (const e of EXAMPLES) assert.match(e.repo, /^[\w.-]+\/[\w.-]+$/);
+  assert.ok(EXAMPLES.length >= 6 && EXAMPLES.length <= 8);
+  for (const v of ["viable", "long_shot", "not_viable", "insufficient_evidence"]) {
+    assert.ok(EXAMPLES.filter((e) => e.verdict === v).length >= 2, v);
+  }
+  assert.equal(new Set(EXAMPLES.map((e) => e.repo.toLowerCase())).size, EXAMPLES.length);
+  for (const e of EXAMPLES) {
+    assert.match(e.repo, /^[\w.-]+\/[\w.-]+$/);
+    assert.ok(e.language && e.stars > 0, e.repo);
+    // One short line.
+    assert.ok(e.why.length <= 60, e.why);
+  }
 });
 
 test("an example is recognised whatever the casing", () => {

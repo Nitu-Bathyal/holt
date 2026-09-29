@@ -1,96 +1,107 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { CatFace } from "@/components/cat-face";
 import { PageTransition } from "@/components/motion/page-transition";
 import { PageHead } from "@/components/page-head";
-import { TONE, TONE_MOOD } from "@/components/report/tone";
 import { VerdictPill } from "@/components/report/verdict-pill";
 import { getReport } from "@/lib/api";
+import { compact } from "@/lib/discover";
 import { EXAMPLE_PATH, EXAMPLE_REPORT } from "@/lib/example-report";
 import { EXAMPLES, EXAMPLES_PATH } from "@/lib/examples";
+import { HOME } from "@/lib/home";
 import { currentUser } from "@/lib/session";
+import type { Tone } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Example reports",
-  description: "Read a few full Holt reports without an account: one repo that's worth your time, one that isn't, one without enough evidence, and an AI report.",
+  description: "Full Holt reports on real repos, some worth your time, some not, some without enough evidence, plus an AI report.",
   alternates: { canonical: EXAMPLES_PATH },
 };
 
+interface Row {
+  href: string;
+  repo: string;
+  ai?: boolean;
+  /** Today's verdict as the server words it; none when the report isn't cached. */
+  verdict?: { headline: string; tone: Tone };
+  language?: string;
+  stars?: number;
+  why: string;
+}
+
 // The curated examples (lib/examples.ts), each with today's verdict from the
-// cache. Reading the cache starts no checks.
+// cache, as one calm list: a place to pick one and open it. Reading the cache
+// starts no checks.
 export default async function ExamplesPage() {
   const [reports, user] = await Promise.all([Promise.all(EXAMPLES.map((e) => getReport(e.repo))), currentUser()]);
-  const ai = EXAMPLE_REPORT;
+  const aiRepo = EXAMPLES.find((e) => e.repo === EXAMPLE_REPORT.repo);
+  const rows: Row[] = [
+    ...EXAMPLES.map((e, i) => {
+      const r = reports[i];
+      return { href: `/${e.repo}`, repo: e.repo, verdict: r.ok ? r.data : undefined, language: e.language, stars: e.stars, why: e.why };
+    }),
+    {
+      href: EXAMPLE_PATH,
+      repo: EXAMPLE_REPORT.repo,
+      ai: true,
+      verdict: EXAMPLE_REPORT,
+      language: aiRepo?.language,
+      stars: aiRepo?.stars,
+      why: "The evidence in plain English, citing each thread.",
+    },
+  ];
 
   return (
     <PageTransition>
       <>
-        <PageHead narrow>
-          <p className="rail mb-4 flex gap-2">
-            <strong className="m-0">examples</strong>
-            <span>no account needed</span>
-          </p>
-          <h1 className="display max-w-3xl text-[clamp(2rem,6vw,3.2rem)]">
-            See what a report <span className="text-blue">tells you.</span>
-          </h1>
-          <p className="prose-sans mt-5 max-w-2xl text-[1.05rem]">
-            Three real repos, one for each answer Holt can give, and an AI report that explains the evidence in plain
-            English.
-          </p>
+        <PageHead compact>
+          <p className="ls-kicker text-blue">examples</p>
+          <h1 className="display text-[clamp(1.8rem,4vw,2.6rem)]">See what a report tells you.</h1>
         </PageHead>
 
-        <div className="wrap max-w-3xl py-8 sm:py-12">
-          <ul className="space-y-4">
-            {EXAMPLES.map((e, i) => {
-              const r = reports[i];
-              const report = r.ok ? r.data : null;
-              const t = TONE[report?.tone ?? "neutral"];
-              return (
-                <li key={e.repo}>
-                  <Link href={`/${e.repo}`} className="group relative block border border-line-strong bg-panel p-5 pl-6 shadow-card transition-colors hover:border-blue sm:p-6 sm:pl-8">
-                    <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${t.bg}`} />
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <p className="text-[1.05rem] font-semibold tracking-tight [overflow-wrap:anywhere]">{e.repo}</p>
-                      {report && <VerdictPill headline={report.headline} tone={report.tone} />}
-                    </div>
-                    <p className="mt-2 font-sans text-[0.95rem] text-muted">{report?.verdict_line ?? e.why}</p>
-                    <p className="mt-3 text-[0.87rem] text-muted group-hover:text-ink">
-                      read the report <span aria-hidden="true">→</span>
-                    </p>
-                  </Link>
-                </li>
-              );
-            })}
-            <li>
-              <Link href={EXAMPLE_PATH} className="group relative block border border-blue/50 bg-blue/[0.06] p-5 pl-6 transition-colors hover:border-blue sm:p-6 sm:pl-8">
-                <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-blue" />
-                <div className="flex flex-wrap items-center justify-between gap-3">
-                  <p className="text-[1.05rem] font-semibold tracking-tight [overflow-wrap:anywhere]">{ai.repo}</p>
-                  <span className="flex items-center gap-2 text-[0.8rem] uppercase tracking-[0.08em] text-blue">
-                    <CatFace mood={TONE_MOOD[ai.tone]} className="normal-case tracking-normal" /> AI report ✦
+        <div className="wrap py-8 sm:py-10">
+          <ul className="border-t border-line">
+            {rows.map((r) => (
+              <li key={r.href} className="border-b border-line">
+                <Link
+                  href={r.href}
+                  className="group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-1.5 px-2 py-4 transition-colors hover:bg-section-alt sm:px-4 md:grid-cols-[minmax(0,15rem)_12rem_8.5rem_minmax(0,1fr)_1rem] md:gap-x-6"
+                >
+                  <span className="flex min-w-0 items-center gap-2">
+                    <span className="truncate font-semibold tracking-tight text-ink" title={r.repo}>
+                      {r.repo}
+                    </span>
+                    {r.ai && <span className="shrink-0 border border-blue/60 px-1.5 text-[0.72rem] leading-5 text-blue">AI</span>}
                   </span>
-                </div>
-                <p className="mt-2 font-sans text-[0.95rem] text-muted">
-                  The same kind of report, with the evidence explained in plain English and every sentence citing a
-                  GitHub thread. A recorded example.
-                </p>
-                <p className="mt-3 text-[0.87rem] text-muted group-hover:text-ink">
-                  read the AI report <span aria-hidden="true">→</span>
-                </p>
-              </Link>
-            </li>
+                  <span className="justify-self-end md:justify-self-start">
+                    {r.verdict && <VerdictPill headline={r.verdict.headline} tone={r.verdict.tone} className="whitespace-nowrap" />}
+                  </span>
+                  {/* Phones: language, stars and why share the second line. */}
+                  <span className="col-span-2 flex flex-wrap gap-x-4 gap-y-1 md:contents">
+                    <span className="flex gap-3 text-[0.82rem] text-faint">
+                      {r.language && <span>{r.language}</span>}
+                      {r.stars != null && (
+                        <span>
+                          ★ {compact(r.stars)}
+                          <span className="sr-only"> stars</span>
+                        </span>
+                      )}
+                    </span>
+                    <span className="font-sans text-[0.92rem] text-muted">{r.why}</span>
+                  </span>
+                  <span aria-hidden="true" className="hidden text-faint transition-colors group-hover:text-ink md:block">
+                    →
+                  </span>
+                </Link>
+              </li>
+            ))}
           </ul>
 
-          <div className="mt-10 border-t border-line pt-8">
-            <p className="font-sans text-[1rem] text-ink">Got a repo of your own in mind?</p>
-            <div className="mt-4 flex flex-wrap items-center gap-x-6 gap-y-3">
-              {user ? (
-                <Link href="/" className="bracket-link">[ check a repo → ]</Link>
-              ) : (
-                <Link href="/signin" prefetch={false} className="bracket-link">[ sign in to check it, free → ]</Link>
-              )}
-            </div>
-          </div>
+          <p className="mt-10 flex flex-wrap items-center gap-x-5 gap-y-3 font-sans text-muted">
+            Got a repo in mind?
+            <Link href={user ? HOME : "/signin"} prefetch={false} className="bracket-link font-mono">
+              [ check your repo → ]
+            </Link>
+          </p>
         </div>
       </>
     </PageTransition>
