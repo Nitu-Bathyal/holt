@@ -11,14 +11,16 @@
 // lands in its corner; scrolling back up, it fades back in at the side.
 import { useEffect, useRef } from "react";
 import { CAT, type CatMood } from "@/lib/cat";
+import { useReducedMotion } from "./use-seen";
 
 const TONE_VAR = { blue: "var(--blue)", green: "var(--green)", orange: "var(--orange)", amber: "var(--amber)" } as const;
 
 export function CatCompanion() {
   const root = useRef<HTMLButtonElement>(null);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
-    if (matchMedia("(prefers-reduced-motion: reduce)").matches || !matchMedia("(min-width: 1024px)").matches) return;
+    if (reduced || !matchMedia("(min-width: 1024px)").matches) return;
     let cleanup: (() => void) | undefined;
     let cancelled = false;
     const idle = (cb: () => void) =>
@@ -32,7 +34,7 @@ export function CatCompanion() {
       cancelled = true;
       cleanup?.();
     };
-  }, []);
+  }, [reduced]);
 
   const c = CAT.ready;
   return (
