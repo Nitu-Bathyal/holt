@@ -202,7 +202,11 @@ settings and pre-flight aren't drawn: they keep their pages and take the new fra
    move, with pre-flight per PR, the toggle, and a collapsed "not counted"
    group. It leaves a slot for the contribution-history view another worker is
    exploring. Later: "a maintainer replied" (needs new GitHub fields). *Built.*
-5. **Find a project:** tabs over `/find`, `/discover`, `/hacktoberfest`; one profile prompt.
+5. **Find a project:** tabs over `/find`, `/discover`, `/hacktoberfest`; one profile prompt. *Built.*
+   Each URL renders `FindFrame` (`components/find/find-frame.tsx`) with its
+   tab; tabs come from `lib/find-tabs.ts` (Hacktoberfest from mid-August to
+   October, and always on its own page). Signed out, `.app-page` centres
+   itself (`[data-shell="marketing"]`).
 6. **Compare, settings, AI reports, pre-flight:** the new frame; `/connect` into Accounts.
 7. **States and motion pass:** empty, loading, the home moment, wait bars.
 
@@ -217,12 +221,7 @@ Step 3, the home (#170). Step 4, Your pull requests (this PR). The prototype
 is #156 (`/lab/dashboard`). Close it once the rollout is done.
 
 **Left:**
-- **5, Find a project:** tabs over `/find`, `/discover` and `/hacktoberfest`.
-  The URLs stay; they're public and indexed. When Hacktoberfest becomes a tab,
-  drop its sidebar item from `sidebarGroups` in `lib/shell.ts` and the shell
-  test. Keep one profile prompt (on the *for you* tab), and retire "What are
-  you after?" (`ProfileOnboarding`) on `/find` and `/hacktoberfest`. These
-  pages still use `PageHead`, not `AppPageHeader` and `.app-page`.
+- ~~5, Find a project~~: built (see the rollout above).
 - **6, the frame for the rest:** `/compare`, `/settings/*` (including AI
   reports and Display), `/preflight` and `/connect`. `/connect` folds into
   Settings → Accounts (same consent), with a redirect in `RETIRED`. There's a
