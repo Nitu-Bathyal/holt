@@ -527,11 +527,11 @@ def _title_words(title: str) -> list[str]:
             if w not in stop and not w.isdigit()]
 
 
-def farmed_issues(nodes: Iterable[dict[str, Any]]) -> set[int]:
+def farmed_issues(nodes: Iterable[dict[str, Any]], *, bursts: bool = True) -> set[int]:
     """Numbers of issues that one account filed as a batch: at least
     `FARM_MIN_ISSUES` with near-identical titles ("Add a Japanese idiom", "Add
-    a Korean idiom", ...) or created seconds apart by a script. Issues with no
-    known author are never counted."""
+    a Korean idiom", ...) or, with `bursts`, created seconds apart by a script.
+    Issues with no known author are never counted."""
     by_author: dict[str, dict[int, dict[str, Any]]] = {}
     for node in nodes:
         login = ((node or {}).get("author") or {}).get("login")
@@ -558,6 +558,8 @@ def farmed_issues(nodes: Iterable[dict[str, Any]]) -> set[int]:
         for _, members in groups:
             if len(members) >= FARM_MIN_ISSUES:
                 farmed.update(members)
+        if not bursts:
+            continue
         # Scripted bursts: a run of issues each filed within seconds of the last.
         timed = sorted(nums, key=lambda n: _ts(issues[n]["createdAt"]))
         run = [timed[0]]
@@ -749,14 +751,15 @@ def score_issue(node: dict[str, Any], as_of: datetime, *,
 
 def rank(nodes: Iterable[dict[str, Any]], as_of: datetime, *,
          landing: Sequence[Area] = (), hacktoberfest: bool = False,
-         limit: int = 20) -> list[tuple[float, StarterIssue]]:
+         limit: int = 20, bursts: bool = True) -> list[tuple[float, StarterIssue]]:
     """Deduplicate, drop farmed batches, score and sort: issues nobody is on
-    first, then by score. Ties go to the newer issue, then the number. `nodes` are one repository's issues."""
+    first, then by score. Ties go to the newer issue, then the number. `nodes` are one repository's issues.
+    `bursts` is passed to `farmed_issues`."""
     unique: dict[int, dict[str, Any]] = {}
     for node in nodes:
         if node and "number" in node:
             unique.setdefault(node["number"], node)
-    farmed = farmed_issues(unique.values())
+    farmed = farmed_issues(unique.values(), bursts=bursts)
     scored: list[tuple[float, StarterIssue]] = []
     for number, node in unique.items():
         if number in farmed:
@@ -773,7 +776,7 @@ def rank(nodes: Iterable[dict[str, Any]], as_of: datetime, *,
 
 
 def _scored_issues(repo: str, transport: GitHubGraphQL, as_of: datetime, limit: int,
-                   landing: Sequence[Area], hacktoberfest: bool
+                   landing: Sequence[Area], hacktoberfest: bool, bursts: bool = True
                    ) -> list[tuple[float, StarterIssue]]:
     owner, _, name = normalise(repo).partition("/")
     labels = ",".join(SEARCH_LABELS)
@@ -787,7 +790,8 @@ def _scored_issues(repo: str, transport: GitHubGraphQL, as_of: datetime, limit: 
         return []
     nodes = [*((data.get("labelled") or {}).get("nodes") or []),
              *((repository.get("issues") or {}).get("nodes") or [])]
-    return rank(nodes, as_of, landing=landing, hacktoberfest=hacktoberfest, limit=limit)
+    return rank(nodes, as_of, landing=landing, hacktoberfest=hacktoberfest, limit=limit,
+                bursts=bursts)
 
 
 def starter_issues(repo: str, token: str | None, limit: int = 20,
@@ -798,10 +802,15 @@ def starter_issues(repo: str, token: str | None, limit: int = 20,
 
     One GraphQL call. `landing` (directories where outsider work merged) boosts
     issues that name them; pass it when you already have it.
+
+    A maintainer filing a batch of starter issues at once, by script, is how
+    many projects prepare for Hacktoberfest, so here only templated batches
+    are dropped. `find` also drops scripted bursts: it picks repositories for
+    the reader, and a burst there was an owner's to-do list, not starter work.
     """
     as_of = as_of or datetime.now(UTC)
     scored = _scored_issues(repo, _transport(token, transport), as_of, limit,
-                            landing, hacktoberfest)
+                            landing, hacktoberfest, bursts=False)
     return [issue for _, issue in scored]
 
 

@@ -379,6 +379,38 @@ def test_farm_detection_leaves_ordinary_issues_alone(nodes):
     assert starter.farmed_issues(nodes) == set()
 
 
+def _repo_answer(nodes):
+    return scripted([httpx.Response(200, json={"data": {
+        "repository": {"nameWithOwner": "o/r", "isArchived": False,
+                       "issues": {"nodes": []}},
+        "labelled": {"nodes": nodes}}})])
+
+
+def test_one_repo_keeps_a_maintainers_scripted_batch():
+    # holt-oss/holt: ten distinct starter issues one maintainer filed two seconds
+    # apart for Hacktoberfest, all dropped as a farm before.
+    titles = ["Document `holt start`", "Hide `ctrl+t mode` when there is nothing to switch to",
+              "`holt profile` writes broken TOML if a value contains a quote",
+              "Recognise good first task labels", "Show examples in `holt start --help`"]
+    batch = [issue(16 + i, title=t, author="maintainer", created=4 + i * 2 / 86400,
+                   labels=("good first issue", "hacktoberfest"))
+             for i, t in enumerate(titles)]
+    assert starter.farmed_issues(batch) == {16, 17, 18, 19, 20}  # find still drops it
+    issues = starter.starter_issues("o/r", None, as_of=AS_OF, transport=_repo_answer(batch))
+    assert sorted(i.number for i in issues) == [16, 17, 18, 19, 20]
+
+
+def test_one_repo_still_drops_a_templated_batch():
+    langs = ["Japanese", "Korean", "Italian", "Spanish"]
+    farm = [issue(10 + i, title=f"Add a {lang} idiom", author="farmer",
+                  labels=("hacktoberfest",), created=5 + i * 3)
+            for i, lang in enumerate(langs)]
+    real = issue(1, title="Fix crash when the config file is empty")
+    issues = starter.starter_issues("o/r", None, as_of=AS_OF,
+                                    transport=_repo_answer([*farm, real]))
+    assert [i.number for i in issues] == [1]
+
+
 LANDING = [Area("docs", 8, 10), Area("src/widgets", 4, 6), Area("src", 9, 20),
            Area("r", 5, 5), Area("tests", 1, 9)]
 
