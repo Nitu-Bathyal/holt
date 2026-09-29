@@ -48,7 +48,7 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
   return (
     <PageTransition>
       <>
-      <div className="wrap max-w-3xl pb-14 sm:pb-16">
+      <div className="app-page">
         <AppPageHeader title="Your pull requests" lead={<>Your public PRs to other people&apos;s repos from the last 12 months, with Holt&apos;s verdict on each repo.{d && <span className="text-faint"> As @{d.login}.</span>}</>} />
         {notice && d && <p role="status" className={`mt-6 border px-4 py-3 font-sans text-[0.9rem] ${notice.tone}`}>{notice.text}</p>}
 

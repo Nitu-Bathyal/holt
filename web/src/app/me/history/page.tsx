@@ -19,7 +19,7 @@ export default async function HistoryPage() {
 
   return (
     <PageTransition>
-      <div className="wrap max-w-3xl pb-14">
+      <div className="app-page">
         <AppPageHeader title="Repos you checked" lead="Every report you ran while signed in, AI reports included." />
         {!r.ok ? (
           <ErrorPanel error={r.error} retryHref="/me/history" />

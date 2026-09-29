@@ -78,7 +78,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
 
   return (
     <PageTransition>
-      <div className="wrap max-w-6xl">
+      <div className="app-page">
         <FocusOnHash />
         <AppPageHeader
           title={`${kind === "new" ? "Welcome" : "Welcome back"}${first ? `, ${first}` : ""}`}

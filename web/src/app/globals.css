@@ -2085,7 +2085,6 @@
 :root {
   --topbar-h: 61px; /* 60px bar + its 1px rule */
   --rail-w: 15rem;
-  --rail-w-folded: 3.75rem;
 }
 
 @layer components {
@@ -2101,29 +2100,11 @@
     border-right: 1px solid var(--line);
     background: var(--header);
     padding: 20px 10px 14px;
-    transition: width var(--dur-base) var(--ease-move);
   }
   @media (min-width: 1024px) {
     .app-rail {
       display: flex;
     }
-  }
-  .app-rail[data-folded] {
-    width: var(--rail-w-folded);
-  }
-  .app-rail[data-folded] .side-label,
-  .app-rail[data-folded] .side-group-label,
-  .app-rail[data-folded] .side-foot {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip-path: inset(50%);
-    white-space: nowrap;
-  }
-  .app-rail[data-folded] .side-item {
-    justify-content: center;
-    padding-inline: 0;
   }
 
   /* A sidebar item: icon and label, 44px tall to tap. */
@@ -2231,6 +2212,40 @@
   }
 
   /* A section on an app page: heading left, one quiet link right. */
+  /* One frame for every app page: the same left edge and width, so content
+     never jumps sideways between pages (docs/design/DASHBOARD.md). */
+  .app-page {
+    width: 100%;
+    max-width: 72rem;
+    padding: 0 clamp(16px, 4vw, 48px) 72px;
+  }
+  .app-head {
+    padding: clamp(28px, 6svh, 64px) 0 28px;
+  }
+  /* The page's one sentence, in the landing's display type at working size. */
+  .app-h1 {
+    max-width: 24ch;
+    font-size: clamp(1.9rem, 3.6vw, 3rem);
+    font-weight: 650;
+    line-height: 1.1;
+    letter-spacing: -0.025em;
+    text-wrap: balance;
+    overflow-wrap: anywhere;
+  }
+  .app-lead {
+    margin-top: 12px;
+    max-width: 44rem;
+    font-family: var(--font-sans);
+    font-size: 1.05rem;
+    color: var(--muted);
+  }
+  .app-head-cat {
+    flex-shrink: 0;
+    padding-top: 6px;
+    font-size: clamp(1.5rem, 2.6vw, 2.3rem);
+    line-height: 1;
+  }
+
   .section-head {
     display: flex;
     flex-wrap: wrap;
@@ -2238,9 +2253,11 @@
     justify-content: space-between;
     gap: 4px 16px;
     margin-bottom: 14px;
+    border-bottom: 1px solid var(--line-strong);
+    padding-bottom: 10px;
   }
   .section-head h2 {
-    font-size: 1.08rem;
+    font-size: 1.05rem;
     font-weight: 600;
     letter-spacing: -0.01em;
   }
