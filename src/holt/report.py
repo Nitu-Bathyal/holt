@@ -136,6 +136,9 @@ class Assessment:
     # Rendered markdown lines from `holt.agent.landing`. Arithmetic over the file
     # lists we already crawl; the model never sees or writes this section.
     landing: list[str] = field(default_factory=list)
+    # Rules mode: the outside pull requests behind the counts, as API.md
+    # evidence items (agent/examples.py), so the numbers can be checked.
+    examples: list[dict] = field(default_factory=list)
     # The date evidence was cut at. Stated in the output because a reader cannot
     # otherwise tell a quiet repository from one whose recent months were excluded.
     as_of: datetime | None = None
@@ -151,9 +154,6 @@ class Assessment:
     # reader unable to tell those two halves apart. On a replay these are the ids
     # from the recording.
     models: list[str] = field(default_factory=list)
-    # Rules mode: the outside pull requests behind the counts, as API.md
-    # evidence items (agent/examples.py), so the numbers can be checked.
-    examples: list[dict] = field(default_factory=list)
 
     def render(self) -> str:
         lines = [f"# {self.repo}", ""]
