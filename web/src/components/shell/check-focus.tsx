@@ -27,8 +27,18 @@ export function focusCheck(): boolean {
   return true;
 }
 
-/** Catches clicks on "Check a repo" links anywhere in the shell. */
+/** Catches clicks on "Check a repo" links anywhere in the shell, and "/" from anywhere focuses the box. */
 export function CheckLinks() {
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== "/" || e.metaKey || e.ctrlKey || e.altKey || e.defaultPrevented) return;
+      const t = e.target as HTMLElement | null;
+      if (t?.closest("input, textarea, select, [contenteditable]")) return;
+      if (focusCheck()) e.preventDefault();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, []);
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
       if (e.defaultPrevented || e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;

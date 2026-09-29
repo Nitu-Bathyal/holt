@@ -1,13 +1,21 @@
-// The app shell's page parts, so every signed-in page reads as one product:
-// a page header (the /discover title size, no backdrop) and a section
-// heading with one quiet link.
+// The app shell's page parts, so every signed-in page reads as one product
+// (docs/design/DASHBOARD.md): one frame (`.app-page`: same left edge and
+// width everywhere), a page head in the landing's display type with the cat
+// reacting on the right, and a section heading with one quiet link.
 import Link from "next/link";
+import { CatFace } from "@/components/cat-face";
+import { CAT, TONE_TEXT, type CatMood } from "@/lib/cat";
 
-export function AppPageHeader({ title, lead, children }: { title: React.ReactNode; lead?: React.ReactNode; children?: React.ReactNode }) {
+export function AppPageHeader({ title, lead, mood, children }: { title: React.ReactNode; lead?: React.ReactNode; mood?: CatMood; children?: React.ReactNode }) {
   return (
-    <header className="pb-6 pt-8 sm:pt-10">
-      <h1 className="text-[clamp(1.45rem,3.4vw,2.1rem)] font-semibold leading-tight tracking-tight [overflow-wrap:anywhere]">{title}</h1>
-      {lead && <p className="mt-2 max-w-2xl font-sans text-[0.95rem] text-muted">{lead}</p>}
+    <header className="app-head">
+      <div className="flex items-start justify-between gap-6">
+        <div className="min-w-0">
+          <h1 className="app-h1">{title}</h1>
+          {lead && <p className="app-lead">{lead}</p>}
+        </div>
+        {mood && <CatFace mood={mood} className={`app-head-cat hidden sm:block ${TONE_TEXT[CAT[mood].tone]}`} />}
+      </div>
       {children}
     </header>
   );

@@ -1,7 +1,7 @@
 "use client";
-// The app shell's sidebar: every signed-in page in three groups. A rail on
-// desktop that folds to icons (remembered in a cookie), and the same list in
-// a drawer on phones and tablets.
+// The app shell's sidebar: the five places a signed-in person goes
+// (docs/design/DASHBOARD.md). A rail on desktop that folds to icons
+// (remembered in a cookie), and the same list in a drawer on phones and tablets.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -11,9 +11,6 @@ import { Icon } from "./icons";
 
 export interface SidebarProps {
   groups: NavGroup[];
-  /** "3 AI reports left", or null when AI reports are off. */
-  credits: string | null;
-  signOut: () => Promise<void>;
 }
 
 function Item({ item, on, folded, path }: { item: NavItem; on: boolean; folded: boolean; path: string }) {
@@ -39,7 +36,7 @@ function Item({ item, on, folded, path }: { item: NavItem; on: boolean; folded: 
   );
 }
 
-function Nav({ groups, credits, signOut, folded }: SidebarProps & { folded: boolean }) {
+function Nav({ groups, folded }: SidebarProps & { folded: boolean }) {
   const path = usePathname();
   const active = activeItem(groups, path);
   return (
@@ -50,25 +47,12 @@ function Nav({ groups, credits, signOut, folded }: SidebarProps & { folded: bool
             {g.label && <p className="side-group-label">{g.label}</p>}
             <ul className="flex flex-col gap-0.5">
               {g.items.map((item) => <Item key={item.id} item={item} on={item.id === active} folded={folded} path={path} />)}
-              {g.label === "Account" && (
-                <li>
-                  <form action={signOut}>
-                    <button type="submit" title={folded ? "Sign out" : undefined} className="side-item w-full text-left">
-                      <Icon name="signout" />
-                      <span className="side-label">Sign out</span>
-                    </button>
-                  </form>
-                </li>
-              )}
             </ul>
           </div>
         ))}
       </nav>
       <div className="side-foot mt-auto pt-6">
-        {credits && (
-          <Link href="/settings/ai-reports" className="block text-[0.82rem] text-muted hover:text-ink">{credits}</Link>
-        )}
-        <p className="mt-2 flex flex-wrap gap-x-3 text-[0.78rem] text-faint">
+        <p className="flex flex-wrap gap-x-3 text-[0.78rem] text-faint">
           <Link href="/privacy" className="hover:text-ink">Privacy</Link>
           <Link href="/terms" className="hover:text-ink">Terms</Link>
           <a href={GITHUB_REPO_URL} className="hover:text-ink">GitHub ↗</a>

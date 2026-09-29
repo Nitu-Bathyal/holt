@@ -24,45 +24,38 @@ test("jump links glide on the landing page and go to it from anywhere else", () 
   assert.deepEqual(LANDING_SECTIONS.map((s) => s.id), ["answer", "what-it-checks", "verdicts", "open-source"]);
 });
 
-test("the sidebar holds every signed-in page, each once, with a plain label and an icon", () => {
-  const groups = sidebarGroups({ hacktoberfest: true, preflight: true });
-  assert.deepEqual(groups.map((g) => g.label), [null, "Yours", "Account"]);
-  const items = groups.flatMap((g) => g.items);
-  assert.deepEqual(items.map((i) => i.href), [
-    "/me", CHECK_HREF, "/find", "/discover", "/compare", "/hacktoberfest",
-    "/me/contributions", "/me/saved", "/me/history", "/preflight",
-    "/settings/profile", "/how-it-works",
-  ]);
+test("the sidebar holds five places, each once, with a plain label and an icon", () => {
+  const items = sidebarGroups({ hacktoberfest: false }).flatMap((g) => g.items);
+  assert.deepEqual(items.map((i) => i.href), ["/me", "/find", "/me/contributions", "/me/saved", "/compare"]);
   for (const i of items) {
     assert.ok(i.icon, i.id);
     assert.doesNotMatch(i.label, /_|for-you|contributions|history/i, i.label);
   }
   assert.equal(new Set(items.map((i) => i.id)).size, items.length);
-  // Settings' own sections sit under it.
-  assert.deepEqual(items.find((i) => i.id === "settings")!.children!.map((c) => c.href),
-    ["/settings/profile", "/settings/ai-reports", "/settings/accounts", "/settings/privacy"]);
+  // Checking a repo is the top bar's box; settings, help and sign-out live in the account menu.
+  for (const href of [CHECK_HREF, "/settings/profile", "/how-it-works", "/preflight", "/discover"]) {
+    assert.ok(!items.some((i) => i.href === href), href);
+  }
 });
 
-test("Hacktoberfest shows only in October, Check your PR only where pre-flight runs", () => {
-  const ids = (o: { hacktoberfest: boolean; preflight: boolean }) => sidebarGroups(o).flatMap((g) => g.items).map((i) => i.id);
-  assert.ok(!ids({ hacktoberfest: false, preflight: false }).includes("hacktoberfest"));
-  assert.ok(!ids({ hacktoberfest: false, preflight: false }).includes("preflight"));
-  assert.ok(ids({ hacktoberfest: true, preflight: false }).includes("hacktoberfest"));
-  assert.ok(ids({ hacktoberfest: false, preflight: true }).includes("preflight"));
+test("Hacktoberfest shows only in October, after Find a project", () => {
+  const ids = (hacktoberfest: boolean) => sidebarGroups({ hacktoberfest }).flatMap((g) => g.items).map((i) => i.id);
+  assert.ok(!ids(false).includes("hacktoberfest"));
+  assert.deepEqual(ids(true).slice(0, 3), ["home", "find", "hacktoberfest"]);
 });
 
 test("one sidebar item lights up per page, the most specific one", () => {
-  const g = sidebarGroups({ hacktoberfest: true, preflight: true });
+  const g = sidebarGroups({ hacktoberfest: true });
   assert.equal(activeItem(g, "/me"), "home");
   assert.equal(activeItem(g, "/me/"), "home");
-  assert.equal(activeItem(g, "/me/saved"), "saved");
+  assert.equal(activeItem(g, "/me/saved"), "repos");
+  assert.equal(activeItem(g, "/me/history"), "repos");
   assert.equal(activeItem(g, "/me/contributions?refresh=done"), "prs");
-  assert.equal(activeItem(g, "/discover/python"), "browse");
-  assert.equal(activeItem(g, "/settings"), "settings");
-  assert.equal(activeItem(g, "/settings/privacy"), "settings");
-  assert.equal(activeItem(g, "/connect"), "settings");
-  assert.equal(activeItem(g, "/preflight"), "preflight");
-  // A report page isn't any of them. "Check a repo" is an action, never lit.
+  assert.equal(activeItem(g, "/discover/python"), "find");
+  assert.equal(activeItem(g, "/hacktoberfest"), "hacktoberfest");
+  assert.equal(activeItem(g, "/compare"), "compare");
+  // Settings has its own tabs; a report page isn't any of them.
+  assert.equal(activeItem(g, "/settings/privacy"), null);
   assert.equal(activeItem(g, "/pallets/flask"), null);
 });
 

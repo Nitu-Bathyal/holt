@@ -2,7 +2,6 @@
 // nav that jumps between the landing page's sections) and the app shell (a
 // sidebar with everything a signed-in person can do). Pure, so it runs under
 // `node --test`.
-import { SECTIONS } from "./settings.ts";
 
 export type ShellKind = "marketing" | "app";
 
@@ -74,40 +73,20 @@ export interface NavGroup {
 export const CHECK_HREF = "/me#check";
 
 /**
- * Everything a signed-in person can do, grouped: doing things with repos, the
- * things that are yours, your account. Hacktoberfest shows in October;
- * "Check your PR" only when this server runs pre-flight.
+ * The five places a signed-in person goes (docs/design/DASHBOARD.md). The
+ * check box lives in the top bar, account things in the avatar menu.
+ * Hacktoberfest shows in October until it becomes a tab of Find a project.
  */
-export function sidebarGroups(opts: { hacktoberfest: boolean; preflight: boolean }): NavGroup[] {
-  const tools: NavItem[] = [
+export function sidebarGroups(opts: { hacktoberfest: boolean }): NavGroup[] {
+  const items: NavItem[] = [
     { id: "home", label: "Home", href: "/me", icon: "home" },
-    { id: "check", label: "Check a repo", href: CHECK_HREF, icon: "check" },
-    { id: "find", label: "Find a project", href: "/find", icon: "find" },
-    { id: "browse", label: "Browse repos", href: "/discover", icon: "browse" },
-    { id: "compare", label: "Compare repos", href: "/compare", icon: "compare" },
-  ];
-  if (opts.hacktoberfest) tools.push({ id: "hacktoberfest", label: "Hacktoberfest", href: "/hacktoberfest", icon: "leaf" });
-  const yours: NavItem[] = [
+    { id: "find", label: "Find a project", href: "/find", icon: "find", also: ["/discover"] },
     { id: "prs", label: "Your pull requests", href: "/me/contributions", icon: "pr" },
-    { id: "saved", label: "Saved repos", href: "/me/saved", icon: "saved" },
-    { id: "checked", label: "Repos you checked", href: "/me/history", icon: "history" },
+    { id: "repos", label: "Your repos", href: "/me/saved", icon: "saved", also: ["/me/history"] },
+    { id: "compare", label: "Compare", href: "/compare", icon: "compare" },
   ];
-  if (opts.preflight) yours.push({ id: "preflight", label: "Check your PR", href: "/preflight", icon: "pr-check" });
-  return [
-    { label: null, items: tools },
-    { label: "Yours", items: yours },
-    {
-      label: "Account",
-      items: [
-        {
-          id: "settings", label: "Settings", href: SECTIONS[0].href, icon: "settings",
-          children: SECTIONS.map((s) => ({ id: s.id, label: s.label, href: s.href })),
-          also: ["/connect"],
-        },
-        { id: "help", label: "How Holt works", href: "/how-it-works", icon: "help" },
-      ],
-    },
-  ];
+  if (opts.hacktoberfest) items.splice(2, 0, { id: "hacktoberfest", label: "Hacktoberfest", href: "/hacktoberfest", icon: "leaf" });
+  return [{ label: null, items }];
 }
 
 const clean = (p: string) => p.split(/[?#]/)[0].replace(/\/+$/, "") || "/";
