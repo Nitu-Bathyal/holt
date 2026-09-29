@@ -94,15 +94,17 @@ Every error is one sentence plus the command that fixes it. The common ones:
 
 ## Reading the answer
 
-The report opens with one of three headlines:
+The report opens with one of five headlines:
 
 | | |
 |---|---|
 | **Worth your time** | outsiders get in here, and there is a route for you |
+| **Long shot** | some outside work gets in, but most gets silence or a very slow reply |
 | **Not worth your time** | the record says a stranger's week goes nowhere here |
 | **Not enough evidence to say** | too little outsider activity to call it either way |
+| **Personal project** | someone's own project or a small team's, not set up for outside contributions |
 
-The third is a real answer, not a failure. Then:
+Not enough evidence is a real answer, not a failure. Then:
 
 - **What the evidence shows** — what happened to people who tried before you.
   "Outside contributors" are everyone who isn't part of the project: not its
