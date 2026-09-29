@@ -459,7 +459,7 @@ function mockContributions(userId: string, login: string): Contributions {
   const verdict = (v: "viable" | "not_viable" | "insufficient_evidence") => ({
     verdict: v,
     headline: { viable: "Worth your time", not_viable: "Not worth your time", insufficient_evidence: "Not enough evidence" }[v],
-    tone: ({ viable: "good", not_viable: "bad", insufficient_evidence: "warn" } as const)[v],
+    tone: ({ viable: "good", not_viable: "bad", insufficient_evidence: "neutral" } as const)[v],
     checked_at: at(1),
   });
   const pr = (repo: string, number: number, title: string, state: "open" | "merged" | "closed", daysAgo: number,
@@ -503,7 +503,7 @@ function mockPicks(): Recommendation[] {
   const at = (hoursAgo: number) => new Date(Date.now() - hoursAgo * 3_600_000).toISOString();
   const stats = (attempts: number, merged: number, noReply: number, reply: number, firstTimers: number): Stats => ({
     outsider_attempts: attempts, outsider_merged: merged, distinct_outsiders: Math.round(attempts * 0.8),
-    first_time_merged_authors: firstTimers, no_reply: noReply, median_first_response_hours: reply, bot_share: 0.05, still_open: 3, closed_silently: 1,
+    first_time_merged_authors: firstTimers, no_reply: noReply, median_first_response_hours: reply, bot_share: 0.05, still_open: 3, closed_silently: 1, too_old: 0,
   });
   const issue = (repo: string, number: number, title: string, labels: string[], areas: ContributionType[], daysAgo: number): StarterIssue => ({
     number, title, url: `https://github.com/${repo}/issues/${number}`, labels, created_at: at(daysAgo * 24), comments: 1,

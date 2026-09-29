@@ -1976,7 +1976,7 @@
   }
 }
 
-/* 06: three answers (landing/answers.tsx). */
+/* 06: four answers (landing/answers.tsx). */
 .ls-answers {
   display: grid;
   gap: clamp(0.5rem, 2svh, 1.5rem);
@@ -2002,7 +2002,8 @@
   }
 }
 .ls-answer-word {
-  font-size: clamp(1.7rem, min(5.4vw, 8svh), 6.4rem);
+  /* Four answers share one screen. */
+  font-size: clamp(1.6rem, min(5vw, 6.4svh), 5.6rem);
   line-height: 1;
 }
 .ls-answer-cat {

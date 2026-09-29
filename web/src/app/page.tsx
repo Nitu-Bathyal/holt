@@ -209,12 +209,12 @@ export default async function Home() {
           </Grid>
         </section>
 
-        {/* 06 — three answers */}
+        {/* 06 — four answers */}
         <section id="verdicts" data-cat-section="celebrating" className="pane scroll-mt-[61px] border-t border-line">
           <Grid>
-            <Kicker n="06" label="three answers" />
+            <Kicker n="06" label="four answers" />
             <h2 className="h2 mb-4">
-              <Words text="Three possible answers. No hedging." />
+              <Words text="Four possible answers. No hedging." />
             </h2>
             <Answers />
             <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3" data-reveal>

@@ -10,7 +10,7 @@ const back = (href: string) => new URL(href, "https://holt.test").searchParams.g
 
 test("the curated examples cover each verdict and are real repo names", () => {
   assert.ok(EXAMPLES.length >= 3 && EXAMPLES.length <= 5);
-  assert.deepEqual(new Set(EXAMPLES.map((e) => e.verdict)), new Set(["viable", "not_viable", "insufficient_evidence"]));
+  assert.deepEqual(new Set(EXAMPLES.map((e) => e.verdict)), new Set(["viable", "long_shot", "not_viable", "insufficient_evidence"]));
   for (const e of EXAMPLES) assert.match(e.repo, /^[\w.-]+\/[\w.-]+$/);
 });
 

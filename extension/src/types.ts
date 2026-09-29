@@ -1,10 +1,11 @@
 // Shapes the extension reads from the Holt public API. They are a subset of the
 // Report and StarterIssue objects in API.md; everything else is ignored.
 
-export type Verdict = "viable" | "not_viable" | "insufficient_evidence";
+export type Verdict = "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal";
 
-/** The verdict's colour, chosen by the server. */
-export type Tone = "good" | "bad" | "warn";
+/** The verdict's colour, chosen by the server: `warn` is a Long shot,
+ * `neutral` is Not enough evidence or a Personal project. */
+export type Tone = "good" | "bad" | "warn" | "neutral";
 
 export interface Report {
   repo: string;

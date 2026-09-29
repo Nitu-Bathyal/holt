@@ -45,6 +45,25 @@ const ADVICE: Record<string, string[]> = {
     "Close PRs you won't take with a short reason, so newcomers learn what would land.",
   ],
   rubber_stamp: ["Merged PRs rarely get a review comment. Leave a short review on newcomer PRs so they learn something."],
+  replies_no_merges: [
+    "You answer outside PRs but haven't merged any. If you'd take some kinds of change, say which in CONTRIBUTING and label issues you'd welcome help with.",
+  ],
+  mostly_silent: [
+    "Most outside PRs get no reply at all. A short \"thanks, we'll look at this soon\" counts, even before a full review.",
+    "Close PRs you won't take with a sentence on why, so newcomers know where they stand.",
+  ],
+  slow_replies: [
+    "The typical first reply takes over three weeks. A quick acknowledgement counts, even before a full review.",
+    "A CODEOWNERS file or a triage rota makes sure new PRs get seen.",
+  ],
+  few_merged: [
+    "Fewer than 1 in 10 outside PRs get merged. Say in CONTRIBUTING what kind of change you'd accept, and label issues you'd welcome help with.",
+  ],
+  one_merge: ["Very few outside PRs get merged. Label issues you'd welcome help with, and merge the small ones that are ready."],
+  one_person: ["Only one outside contributor's work gets merged. Label issues you'd welcome help with, and review newcomers' PRs too."],
+  personal: [
+    "This looks like a personal or team project. If you want outside help, add a CONTRIBUTING file and label a few starter issues, then check again once people have tried.",
+  ],
 };
 
 const GENERIC = [

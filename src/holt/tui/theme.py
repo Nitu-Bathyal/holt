@@ -15,7 +15,8 @@ reason it reads correctly on a light and a dark profile without a theme switch.
 `not_viable` is clay rather than red on purpose. It is a finding about a
 repository, not a failure of the tool, and colouring it like an error would
 misreport it. `insufficient_evidence` is grey on purpose too: an absence of
-evidence has not earned a colour.
+evidence has not earned a colour, and neither has a personal project. A long
+shot is amber: a caution between the two.
 
 The one consequence of having no background colour: **a list cannot show where
 the keyboard is by lighting a row.** Textual's own idiom for that is a `$boost`
@@ -42,6 +43,7 @@ RULE = "#444444"  # hairlines
 RAIL = "#767676"  # the measured-result rail: quiet, but meant to be seen
 
 VIABLE = "#5faf87"
+LONG_SHOT = "#d7af5f"
 NOT_VIABLE = "#d7875f"
 INSUFFICIENT = "#8a8a8a"
 DROP = "#af5f5f"
@@ -52,8 +54,10 @@ CITE = "#5fafaf"
 #: raising, so the TUI never has to be edited in lockstep with the engine.
 VERDICT_COLOURS: dict[str, str] = {
     "viable": VIABLE,
+    "long_shot": LONG_SHOT,
     "not_viable": NOT_VIABLE,
     "insufficient_evidence": INSUFFICIENT,
+    "personal": INSUFFICIENT,
 }
 VERDICT_FALLBACK = DIM
 

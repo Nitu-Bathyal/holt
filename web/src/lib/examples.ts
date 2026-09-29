@@ -1,6 +1,7 @@
 // The curated example reports: the few reports anyone can read in full
 // without signing in (every other report shows signed-out visitors a teaser;
-// see gate.ts). One of each verdict, picked from repos with a current report,
+// see gate.ts). One of each answer a checked repo commonly gets, picked from
+// repos with a current report,
 // plus the recorded AI report at /example-ai-report. The verdict here only
 // orders and labels the list; the page always shows what the rules say today.
 // No runtime imports, so it runs under `node --test` and in the browser.
@@ -16,8 +17,9 @@ export interface Example {
 
 export const EXAMPLES: Example[] = [
   { repo: "home-assistant/core", verdict: "viable", why: "A huge project that still replies to and merges outsiders." },
+  { repo: "react/react", verdict: "long_shot", why: "Outsiders do get merged, but most outside pull requests never get a reply." },
   { repo: "pallets/flask", verdict: "not_viable", why: "Famous and loved, but most outside pull requests don't get merged." },
-  { repo: "vercel/next.js", verdict: "insufficient_evidence", why: "Busy, yet too few outside pull requests finished recently to say." },
+  { repo: "tldraw/tldraw", verdict: "insufficient_evidence", why: "Busy, but nearly every pull request comes from its own team." },
 ];
 
 export const EXAMPLES_PATH = "/examples";

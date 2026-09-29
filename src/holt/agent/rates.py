@@ -52,9 +52,12 @@ SETTLE_HOURS = SETTLE_DAYS * 24.0
 
 # No merge in this long, and the repository reads as dormant.
 DORMANT_DAYS = 90
-# A sample whose oldest pull request is older than this reaches back far enough
-# that the reader should know.
-OLD_SAMPLE_DAYS = 365
+# Pull requests opened longer ago than this leave every count (live readings
+# only). A quiet project's newest 200 pull requests can reach back years, and
+# moment/moment read "Worth your time" on merges from 2021 while it sat in
+# maintenance mode. How a project treats outside work today is what the reader
+# is asking about. docs/research/EVALUATION.md, "Verdict tiers".
+MAX_SAMPLE_DAYS = 365
 
 # What happened to one pull request.
 MERGED = "merged"
@@ -67,12 +70,13 @@ STILL_OPEN = "still_open"
 # Rule codes this module's lines carry. They inform; they never decide, so
 # anything looking for the deciding rule skips them (`first_deciding`).
 INFO_CODES = frozenset({"sample_period", "dormant", "excluded", "still_open", "closed_silently",
-                        "slow_note"})
+                        "slow_note", "too_old"})
 
 
 # Rules that come after the merge count and overrule it (verdict.py): when
 # one is there, it is the reason, not the count before it.
-OVERRULING_CODES = frozenset({"rubber_stamp", "long_odds"})
+OVERRULING_CODES = frozenset({"rubber_stamp", "long_odds", "replies_no_merges", "few_merged",
+                              "mostly_silent", "slow_replies", "one_merge", "one_person"})
 
 
 def first_deciding(rules: list[str], skip: frozenset[str] = frozenset()) -> str | None:
@@ -148,14 +152,19 @@ class Split:
     closed_silently: int = 0
     ignored: int = 0
     excluded: int = 0
+    too_old: int = 0
 
 
 def split(attempts: Iterable[Thread], as_of: datetime | None,
           settle_hours: float = SETTLE_HOURS) -> Split:
     out = Split()
+    honest = judges_time(as_of, settle_hours)
     for t in attempts:
         if excluded(t):
             out.excluded += 1
+            continue
+        if honest and as_of - t.opened_at > timedelta(days=MAX_SAMPLE_DAYS):
+            out.too_old += 1
             continue
         how = outcome(t, as_of, settle_hours)
         if how == STILL_OPEN:
@@ -212,11 +221,8 @@ def period_sentence(threads: Mapping[str, Thread], as_of: datetime) -> str | Non
     when = (f"opened on {_date(first)}" if first.date() == last.date()
             else f"opened between {_date(first)} and {_date(last)}")
     # Not "the newest": a busy repository's sample has an older part too.
-    text = f"These numbers come from {what}, {when}."
-    if (as_of - first).days > OLD_SAMPLE_DAYS:
-        text += (" That reaches back more than a year, so older history counts as "
-                 "much as how the project works today.")
-    return text
+    # What was left out for being over a year old is said by count_sentences.
+    return f"These numbers come from {what}, {when}."
 
 
 def dormant_sentence(records: Iterable[EvidenceRecord], threads: Mapping[str, Thread],
@@ -278,8 +284,15 @@ def _pr(n: int) -> str:
 
 
 def count_sentences(still_open: int, closed_silently: int, excluded_: int,
-                    settle_days: int = SETTLE_DAYS) -> list[tuple[str, str]]:
+                    settle_days: int = SETTLE_DAYS, too_old: int = 0) -> list[tuple[str, str]]:
     out = []
+    if too_old:
+        out.append((
+            f"{_pr(too_old)} {'was' if too_old == 1 else 'were'} opened more than a "
+            f"year ago, so {'it isn' if too_old == 1 else 'they aren'}'t counted: "
+            "only the last 12 months show how the project works today.",
+            "too_old",
+        ))
     if excluded_:
         out.append((
             f"{_pr(excluded_)} {'was a draft or was' if excluded_ == 1 else 'were drafts or were'} "

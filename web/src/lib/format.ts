@@ -162,6 +162,7 @@ const FIELD_LABELS: Record<string, string> = {
   governance_flags: "Before you contribute",
   is_archived: "Archived",
   inactive: "Activity",
+  personal_project: "Whose project this is",
   contribute_elsewhere: "Where to contribute",
 };
 

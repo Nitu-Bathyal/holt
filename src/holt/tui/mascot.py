@@ -60,8 +60,10 @@ MOODS: dict[str, tuple[str, ...]] = {
 #: `holt.report.Verdict` owns the enum and may grow a fourth member.
 VERDICT_MOODS: dict[str, str] = {
     "viable": "worth_time",
+    "long_shot": "not_enough_evidence",
     "not_viable": "not_worth_time",
     "insufficient_evidence": "not_enough_evidence",
+    "personal": "idle",
 }
 
 

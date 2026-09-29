@@ -27,7 +27,39 @@ def test_headline_and_tone_follow_the_verdict():
     assert report("viable", stats(10, 5, 1)).headline == "Worth your time"
     assert report("viable", stats(10, 5, 1)).tone == "good"
     assert report("not_viable", stats(10, 0, 9)).tone == "bad"
-    assert report("insufficient_evidence", stats(0, 0, 0)).tone == "warn"
+    assert report("insufficient_evidence", stats(0, 0, 0)).tone == "neutral"
+    assert report("long_shot", stats(100, 20, 60)).headline == "Long shot"
+    assert report("long_shot", stats(100, 20, 60)).tone == "warn"
+    assert report("personal", stats(0, 0, 0)).headline == "Personal project"
+    assert report("personal", stats(0, 0, 0)).tone == "neutral"
+
+
+def test_every_verdict_gives_the_reason_of_the_rule_that_decided_it():
+    """No catch-all: vercel/next.js read "Too few outside contributors have
+    tried" beside 1 of 30 merged (schema.py, engine 3)."""
+    few = "None of the 12 pull requests from outside contributors were merged, but..."
+    r = report("insufficient_evidence", stats(12, 0, 2), ["These numbers...", few],
+               ["sample_period", "few_merges"])
+    assert r.verdict_line == few
+    silent = "65 of 100 pull requests from outside contributors got no reply at all."
+    slow = "When a maintainer did reply, it typically took 30 days: more than 3 weeks."
+    r = report("long_shot", stats(100, 14, 65), ["14 merged...", silent, slow],
+               ["merges", "mostly_silent", "slow_replies"])
+    assert r.verdict_line == silent  # the first reason, not the last
+    assert r.next_step.startswith("Before you write code, ask on an issue")
+    assert r.odds is None
+    mine = "This looks like a hackathon project: every pull request here came from one person."
+    r = report("personal", stats(0, 0, 0), [mine], ["personal"])
+    assert r.verdict_line == mine and r.next_step == schema.PERSONAL_STEP
+    answered = "67 of 95 pull requests from outside contributors got a reply, but none were merged."
+    r = report("not_viable", stats(95, 0, 5), [answered], ["replies_no_merges"])
+    assert r.verdict_line == answered and "merges outside work" in r.next_step
+
+
+def test_the_rule_text_is_written_from_the_engines_thresholds():
+    text = schema.verdict_rule_text(7)
+    assert "budget" not in text and "Long shot" in text and "Personal project" in text
+    assert "1 in 10" in text and "3 weeks" in text and "a year ago" in text
 
 
 def test_a_stored_headline_is_ignored():

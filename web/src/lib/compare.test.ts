@@ -3,7 +3,7 @@ import { test } from "node:test";
 import { compareHref, leaders, parseList } from "./compare.ts";
 import type { Stats } from "./types.ts";
 
-const st = (over: Partial<Stats> = {}): Stats => ({ outsider_attempts: 10, outsider_merged: 5, distinct_outsiders: 8, first_time_merged_authors: 2, no_reply: 1, median_first_response_hours: 10, bot_share: 0, still_open: 0, closed_silently: 0, ...over });
+const st = (over: Partial<Stats> = {}): Stats => ({ outsider_attempts: 10, outsider_merged: 5, distinct_outsiders: 8, first_time_merged_authors: 2, no_reply: 1, median_first_response_hours: 10, bot_share: 0, still_open: 0, closed_silently: 0, too_old: 0, ...over });
 
 test("parseList takes names and URLs, split by commas or spaces, without duplicates", () => {
   assert.deepEqual(parseList("pallets/flask https://github.com/psf/requests, Pallets/Flask"), ["pallets/flask", "psf/requests"]);

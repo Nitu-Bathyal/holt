@@ -1061,9 +1061,8 @@ def test_what_next_never_shows_an_order_without_its_measurement(tmp_path):
         await workers_done(app, pilot)
         flat = " ".join(screen_text(app).split())
         assert "merged" in flat, flat[:400]
-        # The measured claim, in the words the harness measured it in.
-        assert "hit@10 0.234" in flat
-        assert "spans zero" in flat
+        # The measured claim, in plain words.
+        assert "rough guide" in flat and "hit@10" not in flat
 
     drive(body, tmp_path, size=(120, 60))
 

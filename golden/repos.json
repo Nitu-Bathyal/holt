@@ -293,6 +293,50 @@
   "public-apis/public-apis": {
    "shape": "student favourite (ticket 08)",
    "note": "a list students add entries to during Hacktoberfest"
+  },
+  "react/react": {
+   "shape": "field test (29 Sep)",
+   "note": "facebook/react: 71% of outside PRs got no reply, yet read Worth next to red odds"
+  },
+  "simonw/llm": {
+   "shape": "field test (29 Sep)",
+   "note": "solo maintainer: 63% of outside PRs got no reply, read Worth"
+  },
+  "moment/moment": {
+   "shape": "field test (29 Sep)",
+   "note": "maintenance mode: sample reached back to 2021, replies ~100 days, read Worth"
+  },
+  "aahil-khan/SOP-Opera": {
+   "shape": "personal project",
+   "note": "a 4-person team project built in one burst (Jul-Aug 2026), no outside PRs"
+  },
+  "Le-n-n-ox/AI_powered_event_management_system": {
+   "shape": "personal project",
+   "note": "a hackathon entry (description says so), two people"
+  },
+  "angelraph/gloaming": {
+   "shape": "personal project",
+   "note": "a hackathon entry with no pull requests at all"
+  },
+  "Limcyy/smichovsky-hackathon-site": {
+   "shape": "personal project",
+   "note": "a hackathon site, three people, no pull requests"
+  },
+  "mainak55512/flint": {
+   "shape": "small open project",
+   "note": "one maintainer, 27 stars, outside PRs just arriving: must stay out of Personal project"
+  },
+  "regnull/openbot": {
+   "shape": "small open project",
+   "note": "two-week-old open-source project, outside PRs still open: must stay out of Personal project"
+  },
+  "sauravsingla/VeloGraphX": {
+   "shape": "small open project",
+   "note": "a solo library with no outside PRs yet: Not enough evidence, not Personal project"
+  },
+  "ldbumble/taskuary": {
+   "shape": "small open project",
+   "note": "tiny and new, but merges outside contributors"
   }
  }
 }

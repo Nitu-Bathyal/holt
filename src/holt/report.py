@@ -13,24 +13,35 @@ from enum import Enum
 
 
 class Verdict(str, Enum):
-    """Deliberately three-valued.
+    """The answer, in five values.
 
     A repository nobody has tried to contribute to is not the same as one that
     turns contributors away, and flattening them would hide the distinction the
     whole project is about. Saying so is a valid answer, not a failure.
+
+    `LONG_SHOT` sits between the first two: outside work does get in, but most
+    of it meets silence, very slow replies or a closed door. `PERSONAL` is not
+    a judgement of the project at all: it is someone's own project (or a small
+    team's, like a hackathon entry), not one run for outside contributors.
+    Both only come from live readings; the frozen benchmark was scored on the
+    first three.
     """
 
     VIABLE = "viable"
+    LONG_SHOT = "long_shot"
     NOT_VIABLE = "not_viable"
     INSUFFICIENT_EVIDENCE = "insufficient_evidence"
+    PERSONAL = "personal"
 
 
 # The verdict word alone tells a reader almost nothing. These say what it means
 # for the decision they are actually making.
 VERDICT_HEADLINES = {
     Verdict.VIABLE: "Worth your time",
+    Verdict.LONG_SHOT: "Long shot",
     Verdict.NOT_VIABLE: "Not worth your time",
     Verdict.INSUFFICIENT_EVIDENCE: "Not enough evidence to say",
+    Verdict.PERSONAL: "Personal project",
 }
 
 
@@ -140,6 +151,9 @@ class Assessment:
     # reader unable to tell those two halves apart. On a replay these are the ids
     # from the recording.
     models: list[str] = field(default_factory=list)
+    # Rules mode: the outside pull requests behind the counts, as API.md
+    # evidence items (agent/examples.py), so the numbers can be checked.
+    examples: list[dict] = field(default_factory=list)
 
     def render(self) -> str:
         lines = [f"# {self.repo}", ""]
@@ -148,9 +162,7 @@ class Assessment:
                 "> Replaying recorded model output. No model was called for this run.",
                 "",
             ]
-        budget = f"for a contributor with {self.contributor_days} day"
-        budget += "" if self.contributor_days == 1 else "s"
-        lines += [f"**{VERDICT_HEADLINES[self.verdict]}** — {budget}.", ""]
+        lines += [f"**{VERDICT_HEADLINES[self.verdict]}**", ""]
         if self.as_of:
             lines += [f"*Evidence up to {self.as_of.date().isoformat()}.*", ""]
         if not self.claims and self.dropped_claims:
@@ -184,6 +196,12 @@ class Assessment:
             for claim in self.claims:
                 where = f" — {cite(claim.evidence_id)}" if claim.evidence_id else ""
                 lines.append(f"- {claim.text}{where}")
+        if self.examples:
+            if not self.claims:
+                lines += ["## Evidence", ""]
+            elif lines[-1]:
+                lines.append("")
+            lines += [f"- [{e['text']}]({e['url']})" for e in self.examples]
         if self.entry_points:
             # The disclaimer is emitted by the renderer, not by the caller, so
             # there is no code path that prints a ranking without the number that
@@ -226,7 +244,7 @@ class Assessment:
                 {"id": c.evidence_id, "url": evidence_url(c.evidence_id or ""),
                  "text": c.text}
                 for c in self.claims
-            ],
+            ] + [{"id": e["id"], "url": e["url"], "text": e["text"]} for e in self.examples],
             "entry_points": [
                 {"id": p.evidence_id, "url": evidence_url(p.evidence_id),
                  "first_step": p.first_step, "why": p.why}
