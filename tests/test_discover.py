@@ -170,6 +170,7 @@ def test_the_merge_rate_floor_has_its_own_bucket():
 
 def test_long_shots_and_personal_projects_have_their_own_buckets():
     from holt.discover import CAT_LONG_SHOT, CAT_PERSONAL, _categorise
+    from holt.report import Verdict
     from holt.agent.verdict import Rule
 
     assert _categorise(Verdict.LONG_SHOT, [Rule("x", code="merges"),
