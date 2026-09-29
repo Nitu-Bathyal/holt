@@ -596,7 +596,7 @@ class RepoMeta(Base):
     pushed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
     fork: Mapped[bool] = mapped_column(Boolean, default=False)
-    # The report's "About this repo" (0020); null until the details are read
+    # The report's "About this repo" (0021); null until the details are read
     # again after that migration.
     forks: Mapped[int | None] = mapped_column(Integer, nullable=True)
     open_issues: Mapped[int | None] = mapped_column(Integer, nullable=True)
