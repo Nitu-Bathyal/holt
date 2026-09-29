@@ -48,3 +48,4 @@ Start with the [README](../README.md). Everything else is here.
 | [design/VOICE.md](design/VOICE.md) | How the site sounds: voice, do/don't lines, words we use and avoid |
 | [design/SIGNED-IN-HOME.md](design/SIGNED-IN-HOME.md) | Where sign-in lands and what the signed-in home (`/me`) shows |
 | [strategy/BUSINESS.md](strategy/BUSINESS.md) | Costs, pricing and the break-even plan |
+| [strategy/LANDSCAPE.md](strategy/LANDSCAPE.md) | Is Holt new? Competitors, overlap and positioning lines |
