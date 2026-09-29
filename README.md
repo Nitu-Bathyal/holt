@@ -9,8 +9,9 @@
 
 Paste a GitHub repository. Holt reads its recent pull requests and tells you,
 in plain English, whether newcomers get replies, get merged, and where their
-work lands. The answer is one of **Worth your time**, **Not worth your time**
-or **Not enough evidence**, with links to the pull requests behind it.
+work lands. The answer is one of **Worth your time**, **Long shot**, **Not
+worth your time** or **Not enough evidence** (or **Personal project** for
+someone's own repo), with links to the pull requests behind it.
 
 ![Holt answering for pallets/flask, then finding starter issues](https://raw.githubusercontent.com/holt-oss/holt/main/assets/demo.gif)
 
@@ -136,9 +137,11 @@ report. It updates when the report does; you never have to touch it again.
 
 | Answer | Meaning |
 |---|---|
-| **Worth your time** | Outsiders get replies and land real work here, fast enough for the time you have. |
+| **Worth your time** | Outsiders get replies and land real work here. |
+| **Long shot** | Some outside work gets in, but most gets silence or a very slow reply. |
 | **Not worth your time** | The record says a newcomer's week is unlikely to go anywhere here. |
 | **Not enough evidence** | Too little outside activity to call it either way. That is an answer, not an error. |
+| **Personal project** | Someone's own project or a small team's, like a hackathon entry: not set up for outside contributions. |
 
 **Rules decide. AI only explains.** The answer comes from fixed rules applied
 to counted evidence: who tried, who got merged, how fast the first reply came,

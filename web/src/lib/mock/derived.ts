@@ -5,10 +5,14 @@ import type { Odds, Report, Stats, Tone, Verdict } from "../types";
 
 const HEADLINE: Record<Verdict, string> = {
   viable: "Worth your time",
+  long_shot: "Long shot",
   not_viable: "Not worth your time",
   insufficient_evidence: "Not enough evidence",
+  personal: "Personal project",
 };
-const TONE: Record<Verdict, Tone> = { viable: "good", not_viable: "bad", insufficient_evidence: "warn" };
+const TONE: Record<Verdict, Tone> = {
+  viable: "good", long_shot: "warn", not_viable: "bad", insufficient_evidence: "neutral", personal: "neutral",
+};
 
 export function verdictView(verdict: Verdict): { headline: string; tone: Tone } {
   return { headline: HEADLINE[verdict], tone: TONE[verdict] };

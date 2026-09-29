@@ -1383,14 +1383,14 @@ export interface components {
              * Tone
              * @enum {string}
              */
-            readonly tone: "good" | "bad" | "warn";
+            readonly tone: "good" | "bad" | "warn" | "neutral";
             /** Topics */
             topics: string[];
             /**
              * Verdict
              * @enum {string}
              */
-            verdict: "viable" | "not_viable" | "insufficient_evidence";
+            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal";
         };
         /**
          * Entitlements
@@ -1562,12 +1562,12 @@ export interface components {
              * Tone
              * @enum {string}
              */
-            readonly tone: "good" | "bad" | "warn";
+            readonly tone: "good" | "bad" | "warn" | "neutral";
             /**
              * Verdict
              * @enum {string}
              */
-            verdict: "viable" | "not_viable" | "insufficient_evidence";
+            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal";
         };
         /** GitHubAccount */
         GitHubAccount: {
@@ -1635,9 +1635,9 @@ export interface components {
              */
             status: "queued" | "running" | "done" | "error";
             /** Tone */
-            readonly tone: ("good" | "bad" | "warn") | null;
+            readonly tone: ("good" | "bad" | "warn" | "neutral") | null;
             /** Verdict */
-            verdict: ("viable" | "not_viable" | "insufficient_evidence") | null;
+            verdict: ("viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal") | null;
         };
         /**
          * HoltUsers
@@ -1728,6 +1728,7 @@ export interface components {
         /**
          * Odds
          * @description A newcomer's chances, for a report whose verdict is `viable` only.
+         *     ("Long shot" is already the odds, so it has none.)
          */
         Odds: {
             /**
@@ -1741,7 +1742,7 @@ export interface components {
              * Tone
              * @enum {string}
              */
-            tone: "good" | "bad" | "warn";
+            tone: "good" | "bad" | "warn" | "neutral";
         };
         /**
          * Order
@@ -2409,14 +2410,14 @@ export interface components {
              * Tone
              * @enum {string}
              */
-            readonly tone: "good" | "bad" | "warn";
+            readonly tone: "good" | "bad" | "warn" | "neutral";
             /** Topics */
             topics: string[];
             /**
              * Verdict
              * @enum {string}
              */
-            verdict: "viable" | "not_viable" | "insufficient_evidence";
+            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal";
             /** Why */
             why: string[];
         };
@@ -2475,12 +2476,12 @@ export interface components {
              * Tone
              * @enum {string}
              */
-            readonly tone: "good" | "bad" | "warn";
+            readonly tone: "good" | "bad" | "warn" | "neutral";
             /**
              * Verdict
              * @enum {string}
              */
-            verdict: "viable" | "not_viable" | "insufficient_evidence";
+            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal";
         };
         /** Report */
         Report: {
@@ -2544,14 +2545,14 @@ export interface components {
              * Tone
              * @enum {string}
              */
-            readonly tone: "good" | "bad" | "warn";
+            readonly tone: "good" | "bad" | "warn" | "neutral";
             /** Unknowns */
             unknowns: string[];
             /**
              * Verdict
              * @enum {string}
              */
-            verdict: "viable" | "not_viable" | "insufficient_evidence";
+            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal";
             /** Verdict Line */
             readonly verdict_line: string;
         };
@@ -2572,7 +2573,7 @@ export interface components {
             /** Repo */
             repo: string;
             /** Verdict */
-            verdict: ("viable" | "not_viable" | "insufficient_evidence") | null;
+            verdict: ("viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal") | null;
         };
         /**
          * Sample
@@ -2686,6 +2687,11 @@ export interface components {
              * @default 0
              */
             still_open: number;
+            /**
+             * Too Old
+             * @default 0
+             */
+            too_old: number;
         };
         /** SubscribeIn */
         SubscribeIn: {
