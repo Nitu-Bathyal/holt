@@ -28,9 +28,17 @@ def iso(days_ago: float) -> str:
     return (AS_OF - timedelta(days=days_ago)).isoformat().replace("+00:00", "Z")
 
 
+def _pr(entry):
+    """A linked pull request: a state, or (state, author login)."""
+    state, author = (entry, "prauthor") if isinstance(entry, str) else entry
+    return {"state": state, "author": {"login": author}}
+
+
 def issue(number=1, *, title="Fix crash", body="x" * 300, labels=("good first issue",),
           updated=3, created=40, comments=2, assignees=0, closing=(), xref=(),
-          recent=(), repo="o/r", archived=False, author=""):
+          recent=(), repo="o/r", archived=False, author="", assigned=()):
+    """A GraphQL issue node. `recent` comments are (days ago, body) or (days ago,
+    body, login); `assigned` is (login, days ago) for each current assignee."""
     return {
         "number": number, "title": title, "body": body, "locked": False,
         # By default each issue has its own author, so helpers never form a farm.
@@ -39,12 +47,18 @@ def issue(number=1, *, title="Fix crash", body="x" * 300, labels=("good first is
         "createdAt": iso(created), "updatedAt": iso(updated),
         "repository": {"nameWithOwner": repo, "isArchived": archived},
         "labels": {"nodes": [{"name": n} for n in labels]},
-        "assignees": {"totalCount": assignees},
+        "assignees": ({"totalCount": len(assigned),
+                       "nodes": [{"login": login} for login, _ in assigned]}
+                      if assigned else {"totalCount": assignees}),
         "comments": {"totalCount": comments},
-        "recent": {"nodes": [{"createdAt": iso(d), "body": b, "author": {"login": "u"}}
-                             for d, b in recent]},
-        "closedByPullRequestsReferences": {"nodes": [{"state": s} for s in closing]},
-        "timelineItems": {"nodes": [{"source": {"state": s}} for s in xref]},
+        "recent": {"nodes": [{"createdAt": iso(c[0]), "body": c[1],
+                              "author": {"login": c[2] if len(c) > 2 else "u"}}
+                             for c in recent]},
+        "closedByPullRequestsReferences": {"nodes": [_pr(e) for e in closing]},
+        "timelineItems": {"nodes": [
+            *({"source": _pr(e)} for e in xref),
+            *({"createdAt": iso(days), "assignee": {"login": login}}
+              for login, days in assigned)]},
     }
 
 
@@ -91,12 +105,35 @@ query($q:String!, $cursor:String) {
 }
 """
 
+# The issue fields before linked pull requests carried their author and merged
+# ones were fetched. Recorded issues lack those fields: an assignee with no
+# login reads as taken, as it did then.
+V1_ISSUE_FIELDS = """
+fragment StarterFields on Issue {
+  number title url createdAt updatedAt body locked
+  author { login }
+  repository { nameWithOwner isArchived }
+  labels(first:15) { nodes { name } }
+  assignees { totalCount }
+  comments { totalCount }
+  recent: comments(last:10) { nodes { createdAt body author { login } } }
+  closedByPullRequestsReferences(first:5, includeClosedPrs:false) { nodes { state } }
+  timelineItems(last:10, itemTypes:[CROSS_REFERENCED_EVENT, CONNECTED_EVENT]) {
+    nodes {
+      ... on CrossReferencedEvent { source { ... on PullRequest { state } } }
+      ... on ConnectedEvent { subject { ... on PullRequest { state } } }
+    }
+  }
+}
+"""
+V1_REPO_ISSUES = V1_ISSUE_FIELDS + starter.REPO_ISSUES[len(starter.ISSUE_FIELDS):]
+
 
 def as_recorded(document: str) -> str:
     from holt.evidence import github_graphql as gql
 
     v1 = {gql.REPO_META: V1_REPO_META, gql.PR_SEARCH: V1_PR_SEARCH,
-          gql.PR_SEARCH_SCREEN: V1_PR_SEARCH}
+          gql.PR_SEARCH_SCREEN: V1_PR_SEARCH, starter.REPO_ISSUES: V1_REPO_ISSUES}
     return v1.get(document) or document.replace(
         "rateLimit { cost remaining resetAt }", "rateLimit { remaining resetAt }"
     )
@@ -170,8 +207,6 @@ def test_labelled_issue_scores_with_reasons():
 
 @pytest.mark.parametrize("node", [
     issue(assignees=1),
-    issue(closing=("OPEN",)),
-    issue(xref=("OPEN",)),
     issue(updated=starter.ACTIVE_DAYS + 1),
     issue(labels=("good first issue", "needs design")),
     issue(labels=(), title="Refactor the scheduler"),
@@ -186,8 +221,18 @@ def test_excluded(node):
     assert score(node) is None
 
 
-def test_closed_or_merged_linked_prs_do_not_exclude():
-    assert score(issue(closing=("MERGED",), xref=("CLOSED",))) is not None
+def test_closed_unmerged_linked_prs_do_not_exclude():
+    assert score(issue(closing=("CLOSED",), xref=("CLOSED",))) is not None
+
+
+@pytest.mark.parametrize("node", [
+    # nushell #19003: three merged PRs referenced it, one as its closing PR,
+    # and the issue was still open and still served.
+    issue(closing=("MERGED",)),
+    issue(xref=("MERGED", "MERGED", "MERGED")),
+])
+def test_an_issue_with_a_merged_pull_request_is_solved(node):
+    assert score(node) is None
 
 
 def test_unlabelled_small_fix_qualifies():
@@ -213,8 +258,57 @@ def test_a_year_old_issue_is_still_listed():
     "I'm working on it, PR soon", "I would like to work on this issue",
     "I’ll pick this up",
 ])
-def test_a_fresh_claim_means_taken(comment):
-    assert score(issue(recent=[(10, "Looks right to me"), (3, comment)])) is None
+def test_a_fresh_claim_puts_someone_on_it(comment):
+    _, result = score(issue(recent=[(10, "Looks right to me", "a"), (3, comment, "b")]))
+    assert (result.people, result.open_prs) == (1, 0)
+    assert result.on_it == "1 person already on it"
+
+
+def test_nobody_on_it():
+    _, result = score(issue())
+    assert (result.people, result.open_prs, result.on_it) == (0, 0, "Nobody on it yet")
+
+
+def test_open_pull_requests_and_claims_count_distinct_people():
+    node = issue(closing=(("OPEN", "ann"),), xref=(("OPEN", "ann"), ("OPEN", "bob")),
+                 recent=[(9, "can I work on this?", "cat"), (4, "assign me please", "cat"),
+                         (2, "I'd like to take this", "bob")])
+    _, result = score(node)
+    assert (result.people, result.open_prs) == (3, 2)
+    assert result.on_it == "3 people already on it, 2 open pull requests"
+
+
+def test_one_open_pull_request_alone():
+    _, result = score(issue(xref=("OPEN",)))
+    assert result.on_it == "1 open pull request"
+
+
+def test_a_pull_request_in_another_repository_is_not_work_on_this_issue():
+    node = issue()
+    node["timelineItems"]["nodes"].append({"source": {
+        "state": "MERGED", "author": {"login": "x"},
+        "repository": {"nameWithOwner": "someone/fork-tool"}}})
+    assert score(node)[1].on_it == "Nobody on it yet"
+
+
+def test_an_assignee_who_went_quiet_counts_but_does_not_hide_the_issue():
+    _, result = score(issue(assigned=[("old", 120)]))
+    assert result.people == 1
+
+
+@pytest.mark.parametrize("node", [
+    issue(assigned=[("new", 5)]),                                   # just assigned
+    issue(assigned=[("old", 120)], recent=[(3, "on it, PR soon", "old")]),  # talking
+    issue(assigned=[("old", 120)], xref=(("OPEN", "old"),)),        # has a PR up
+])
+def test_an_active_assignee_means_taken(node):
+    assert score(node) is None
+
+
+def test_nobody_on_it_ranks_first():
+    busy = issue(1, labels=("good first issue", "easy"), xref=("OPEN",))
+    free = issue(2, labels=("help wanted",))
+    assert [i.number for _, i in starter.rank([busy, free], AS_OF)] == [2, 1]
 
 
 def test_taking_another_look_is_not_a_claim():
@@ -222,9 +316,9 @@ def test_taking_another_look_is_not_a_claim():
 
 
 def test_a_claim_handed_back_is_free_again():
-    node = issue(recent=[(20, "can I take this?"),
-                         (5, "Sorry, I'm no longer working on this. Feel free to take it")])
-    assert score(node) is not None
+    node = issue(recent=[(20, "can I take this?", "a"),
+                         (5, "Sorry, I'm no longer working on this. Feel free to take it", "a")])
+    assert score(node)[1].people == 0
 
 
 def test_an_old_claim_is_a_caution_not_a_penalty():
@@ -323,7 +417,7 @@ def test_starter_issues_from_recording():
         assert i.url.startswith("https://github.com/beetbox/beets/issues/")
         assert i.why
         assert set(i.as_dict()) == {"number", "title", "url", "labels", "created_at",
-                                    "comments", "why"}
+                                    "comments", "why", "people", "open_prs", "on_it"}
     # Everything listed is labelled for newcomers or a small unlabelled fix.
     assert all(starter.label_kinds(i.labels) or i.why[0].startswith("Looks like")
                for i in issues)
@@ -643,3 +737,84 @@ def test_issue_areas_from_labels_and_title():
     assert starter.issue_areas(["bug", "docs"], "x") == ["code", "docs"]
     # A language label is not a translation.
     assert starter.issue_areas(["language: python"], "x") == ["code"]
+
+
+# --- what a beginner can actually do --------------------------------------
+
+
+@pytest.mark.parametrize("node", [
+    issue(title="Looking for co-maintainers"),           # spotatui #340
+    issue(title="Seeking new maintainers for the Windows port"),
+    issue(title="Tracking issue for the 2.0 migration"),
+    issue(title="[META] Improve error messages"),
+    issue(title="Epic: plugin system"),
+    issue(title="Roadmap 2026"),
+    issue(labels=("good first issue", "meta")),
+    issue(labels=("good first issue", "Type: Tracking")),
+    issue(labels=("help wanted", "epic")),
+])
+def test_non_tasks_are_dropped(node):
+    assert score(node) is None
+
+
+@pytest.mark.parametrize("title,caution", [
+    ("Pinyin IME drops characters on Windows 11", "Needs Windows"),
+    ("Crash when launched from Xcode on macOS", "Needs a Mac"),
+    ("S3 object tagging is ignored for backups", "Needs a cloud account"),
+    ("CUDA out of memory with batch size 1", "Needs a GPU"),
+    ("Bluetooth firmware update hangs", "Needs special hardware"),
+    ("Regression in ambient declaration emit", "Deep compiler work"),
+    ("Pods restart in a kubernetes cluster with sidecars", "Needs a Kubernetes cluster"),
+])
+def test_special_setup_is_named_and_ranked_down(title, caution):
+    plain = score(issue(title="Error message is unclear"))[0]
+    points, result = score(issue(title=title))
+    assert caution in result.why
+    assert points < plain
+
+
+def test_setup_the_whole_repository_is_about_is_not_special():
+    # In a Kubernetes project every issue needs a cluster; that says nothing.
+    _, result = score(issue(title="Pods restart in a kubernetes cluster",
+                            repo="kubernetes/kubernetes"))
+    assert "Needs a Kubernetes cluster" not in result.why
+
+
+def test_a_windows_in_a_gui_is_not_the_os():
+    _, result = score(issue(title="Closing all windows leaves the tray icon"))
+    assert "Needs Windows" not in result.why
+
+
+def test_labels_name_setup_too():
+    _, result = score(issue(labels=("good first issue", "platform: windows")))
+    assert "Needs Windows" in result.why
+
+
+def test_harder_labels_cost_points():
+    plain = score(issue())[0]
+    points, result = score(issue(labels=("good first issue", "difficulty: hard")))
+    assert points < plain
+    assert "Marked as harder (“difficulty: hard”)" in result.why
+
+
+@pytest.mark.parametrize("title,line", [
+    ("Document the --verbose flag", "Docs work"),
+    ("Add unit tests for the parser", "Tests work"),
+])
+def test_docs_and_tests_work_ranks_up(title, line):
+    points, result = score(issue(title=title))
+    assert line in result.why
+    assert points > score(issue(title="Fix crash in the parser"))[0]
+
+
+def test_a_freshly_opened_issue_ranks_up():
+    points, result = score(issue(created=5, updated=5))
+    assert "Opened 5 days ago" in result.why
+    assert points > score(issue(created=200, updated=5))[0]
+
+
+def test_the_cli_shows_who_is_on_each_issue():
+    free = score(issue(1))[1]
+    busy = score(issue(2, xref=("OPEN",)))[1]
+    text = starter.render_repo("o/r", [free, busy])
+    assert "  Nobody on it yet\n" in text and "  1 open pull request\n" in text
