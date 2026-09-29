@@ -129,7 +129,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
 
           {savedCards.length > 0 && (
             <section aria-labelledby="saved-h">
-              <SectionHead id="saved-h" title="Saved" more={{ href: "/me/saved", label: `all saved (${savedItems.length})` }} />
+              <SectionHead id="saved-h" title="Saved" more={{ href: "/me/repos?show=saved", label: `all saved (${savedItems.length})` }} />
               <RepoGrid repos={savedCards} saved={savedNames} topicBase="/discover" />
             </section>
           )}
@@ -150,7 +150,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
 
           {recent.length > 0 && (
             <section aria-labelledby="checked-h">
-              <SectionHead id="checked-h" title="Recently checked" more={{ href: "/me/history", label: "all checks" }} />
+              <SectionHead id="checked-h" title="Recently checked" more={{ href: "/me/repos?show=checked", label: "all checks" }} />
               <CheckedList items={recent} />
             </section>
           )}

@@ -50,7 +50,7 @@ export default function PrivacyPage() {
         <li><strong>The sign-in library&rsquo;s records:</strong> the provider&rsquo;s ID for your account, so it can recognise you next time. The access tokens GitHub or Google return at sign-in are thrown away, not stored.</li>
         <li><strong>Your analyses and history:</strong> which repositories you checked, when, in which mode, and the resulting reports, so your history page works.</li>
         <li id="profile"><strong>Your profile, if you fill one in:</strong> the languages, topics, time, kinds of contribution and experience you choose, and when you confirmed you&rsquo;re 18 or older, used only to pre-fill your searches; delete it any time in <Link href="/settings/privacy" className="text-link">settings</Link>.</li>
-        <li id="saved"><strong>Repos you save:</strong> which repositories you saved and when, so your <Link href="/me/saved" className="text-link">saved list</Link> works. Unsave one any time; deleting your account deletes the list.</li>
+        <li id="saved"><strong>Repos you save:</strong> which repositories you saved and when, so your <Link href="/me/repos?show=saved" className="text-link">saved list</Link> works. Unsave one any time; deleting your account deletes the list.</li>
         <li><strong>Your free AI reports:</strong> how many you have left, when you last claimed one, a record of each one given, used or given back, and your plan.</li>
       </ul>
 

@@ -22,9 +22,8 @@ import FindLoading from "@/app/find/loading";
 import HacktoberfestLoading from "@/app/hacktoberfest/loading";
 import HowItWorksLoading from "@/app/how-it-works/loading";
 import ContributionsLoading from "@/app/me/contributions/loading";
-import HistoryLoading from "@/app/me/history/loading";
 import HomeLoading from "@/app/me/loading";
-import SavedLoading from "@/app/me/saved/loading";
+import ReposLoading from "@/app/me/repos/loading";
 import PricingLoading from "@/app/pricing/loading";
 import SettingsLoading from "@/app/settings/loading";
 import SigninLoading from "@/app/signin/loading";
@@ -45,8 +44,7 @@ const ROUTES: Record<string, React.ReactElement> = {
   "/how-it-works": <HowItWorksLoading />,
   "/me": <HomeLoading />,
   "/me/contributions": <ContributionsLoading />,
-  "/me/history": <HistoryLoading />,
-  "/me/saved": <SavedLoading />,
+  "/me/repos": <ReposLoading />,
   "/pricing": <PricingLoading />,
   "/signin": <SigninLoading />,
 };

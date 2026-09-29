@@ -82,7 +82,7 @@ export function sidebarGroups(opts: { hacktoberfest: boolean }): NavGroup[] {
     { id: "home", label: "Home", href: "/me", icon: "home" },
     { id: "find", label: "Find a project", href: "/find", icon: "find", also: ["/discover"] },
     { id: "prs", label: "Your pull requests", href: "/me/contributions", icon: "pr" },
-    { id: "repos", label: "Your repos", href: "/me/saved", icon: "saved", also: ["/me/history"] },
+    { id: "repos", label: "Your repos", href: "/me/repos", icon: "saved" },
     { id: "compare", label: "Compare", href: "/compare", icon: "compare" },
   ];
   if (opts.hacktoberfest) items.splice(2, 0, { id: "hacktoberfest", label: "Hacktoberfest", href: "/hacktoberfest", icon: "leaf" });
@@ -111,6 +111,8 @@ export function activeItem(groups: NavGroup[], pathname: string): string | null 
 /** Old addresses and where they went. */
 export const RETIRED: Record<string, string> = {
   "/for-you": "/me#picks",
+  "/me/saved": "/me/repos?show=saved",
+  "/me/history": "/me/repos?show=checked",
 };
 
 /** Where an old address now lives, or null. A trailing slash doesn't matter. */

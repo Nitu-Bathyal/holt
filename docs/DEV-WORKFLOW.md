@@ -41,7 +41,7 @@ the live site; the rest of each page is illustrative. Which URL shows which stat
 | `/mock/outdated` | The "we couldn't refresh this" fallback (an old report whose fresh check fails). |
 | `/doesnotexist/x`, `/private/x` | The repository-not-found page. |
 | `/discover`, `/find`, `/hacktoberfest`, `/compare?repos=home-assistant/core,pallets/flask` | The list pages, filled from the mock repos. |
-| `/signin`, `/settings`, `/me/history`, `/for-you` | Signed-out versions until you sign in (below). |
+| `/signin`, `/settings`, `/me/repos`, `/for-you` | Signed-out versions until you sign in (below). |
 
 Other switches: `MOCK_PLAN=pro` (every pick on `/for-you`), `MOCK_PRO=0` (hide
 the playbook), `MOCK_PRO_OFF=1` (pre-flight "coming soon"). The full list is
@@ -52,7 +52,7 @@ toggle.
 
 ### Signed-in screens
 
-Pages that need an account (`/settings`, `/me/history`, AI reports) need the
+Pages that need an account (`/settings`, `/me/repos`, AI reports) need the
 dev sign-in, which needs Postgres for the session. From `web/`:
 
 ```sh
