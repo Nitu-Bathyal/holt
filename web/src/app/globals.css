@@ -2026,6 +2026,29 @@
   }
 }
 
+/* /examples: the example reports as landing cards (examples/example-cards.tsx).
+   The whole card is the link, so the padding moves onto it; the verdict's
+   colour bar sits in the first 4px. Pointing at a card lifts it 2px (.ls-person)
+   and lights its border in the verdict's colour. */
+.ex-card {
+  padding: 0;
+}
+.ex-card > a {
+  padding: clamp(1.1rem, 1.6vw, 1.6rem);
+  padding-left: calc(clamp(1.1rem, 1.6vw, 1.6rem) + 4px);
+}
+@media (hover: hover) {
+  .ex-card[data-tone="good"]:hover {
+    border-color: var(--green);
+  }
+  .ex-card[data-tone="bad"]:hover {
+    border-color: var(--orange);
+  }
+  .ex-card[data-tone="warn"]:hover {
+    border-color: var(--amber);
+  }
+}
+
 /* Hacktoberfest pill: hidden once dismissed (the head script sets the
    attribute before paint). Deliberately outside @layer: unlayered rules beat
    layered ones, so the pill's own `inline-flex` utility can't override it. */
