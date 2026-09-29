@@ -128,7 +128,20 @@ fragment StarterFields on Issue {
   }
 }
 """
-V1_REPO_ISSUES = V1_ISSUE_FIELDS + starter.REPO_ISSUES[len(starter.ISSUE_FIELDS):]
+V1_REPO_ISSUES = V1_ISSUE_FIELDS + """
+query($owner:String!, $name:String!, $q:String!) {
+  rateLimit { remaining resetAt }
+  repository(owner:$owner, name:$name) {
+    nameWithOwner isArchived
+    issues(states:OPEN, first:40, orderBy:{field:UPDATED_AT, direction:DESC}) {
+      nodes { ...StarterFields }
+    }
+  }
+  labelled: search(query:$q, type:ISSUE, first:50) {
+    nodes { ...StarterFields }
+  }
+}
+"""
 
 
 def as_recorded(document: str) -> str:
@@ -422,13 +435,33 @@ def test_a_maintainers_templated_batch_is_still_dropped():
     assert starter.farmed_issues(farm) == {10, 11, 12, 13}
 
 
-def test_starter_issues_keeps_a_maintainers_batch_end_to_end():
-    transport = scripted([httpx.Response(200, json={"data": {
+def _one_repo(nodes, merged_by=()):
+    return scripted([httpx.Response(200, json={"data": {
         "repository": {"nameWithOwner": "o/r", "isArchived": False,
-                       "issues": {"nodes": []}},
-        "labelled": {"nodes": _batch(association="MEMBER")}}})])
+                       "issues": {"nodes": []},
+                       "mergers": {"nodes": [{"mergedBy": m} for m in merged_by]}},
+        "labelled": {"nodes": nodes}}})])
+
+
+def test_starter_issues_keeps_a_maintainers_batch_end_to_end():
+    transport = _one_repo(_batch(association="MEMBER"))
     issues = starter.starter_issues("o/r", None, as_of=AS_OF, transport=transport)
     assert sorted(i.number for i in issues) == [16, 17, 18, 19, 20]
+
+
+def test_starter_issues_counts_whoever_merges_pull_requests_as_team():
+    # Staging's token reads holt's private org owner as CONTRIBUTOR; they merge
+    # every pull request, which needs write access.
+    merged_by = [{"login": "aahil-khan", "__typename": "User"}, None]
+    transport = _one_repo(_batch(association="CONTRIBUTOR"), merged_by)
+    issues = starter.starter_issues("o/r", None, as_of=AS_OF, transport=transport)
+    assert sorted(i.number for i in issues) == [16, 17, 18, 19, 20]
+
+
+def test_a_bot_merging_pull_requests_is_not_team():
+    merged_by = [{"login": "aahil-khan", "__typename": "Bot"}]
+    transport = _one_repo(_batch(association="CONTRIBUTOR"), merged_by)
+    assert starter.starter_issues("o/r", None, as_of=AS_OF, transport=transport) == []
 
 
 LANDING = [Area("docs", 8, 10), Area("src/widgets", 4, 6), Area("src", 9, 20),

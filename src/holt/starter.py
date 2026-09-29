@@ -204,6 +204,8 @@ fragment LinkedPR on PullRequest {
 # Two views of one repository in one call: issues carrying a beginner label
 # (search, so label spelling is case-insensitive), and the most recently active
 # open issues, where unlabelled small fixes and odd label spellings turn up.
+# `mergers` is who merged recent pull requests: the team, even members whose
+# association reads CONTRIBUTOR to a token outside a private org.
 REPO_ISSUES = ISSUE_FIELDS + """
 query($owner:String!, $name:String!, $q:String!) {
   rateLimit { remaining resetAt }
@@ -211,6 +213,9 @@ query($owner:String!, $name:String!, $q:String!) {
     nameWithOwner isArchived
     issues(states:OPEN, first:40, orderBy:{field:UPDATED_AT, direction:DESC}) {
       nodes { ...StarterFields }
+    }
+    mergers: pullRequests(states:MERGED, last:30) {
+      nodes { mergedBy { login __typename } }
     }
   }
   labelled: search(query:$q, type:ISSUE, first:50) {
@@ -263,7 +268,7 @@ SOURCE_LABELS = ('"good first issue"', '"good-first-issue"', '"first-timers-only
 # Bump when a change alters which issues are listed, or their order, for the
 # same GitHub answer. The server stores it with every cached list and fetches
 # lists from older rules again instead of serving them.
-RULES_VERSION = 1
+RULES_VERSION = 2
 
 # Only issues touched this recently count as alive.
 ACTIVE_DAYS = 180
@@ -809,7 +814,15 @@ def _scored_issues(repo: str, transport: GitHubGraphQL, as_of: datetime, limit: 
     nodes = [*((data.get("labelled") or {}).get("nodes") or []),
              *((repository.get("issues") or {}).get("nodes") or [])]
     return rank(nodes, as_of, landing=landing, hacktoberfest=hacktoberfest, limit=limit,
-                team=team)
+                team={*team, *mergers(repository)})
+
+
+def mergers(repository: dict[str, Any]) -> set[str]:
+    """People who merged the repository's recent pull requests (bots aside):
+    merging needs write access."""
+    return {m["login"] for pr in (repository.get("mergers") or {}).get("nodes") or []
+            if (m := (pr or {}).get("mergedBy")) and m.get("login")
+            and m.get("__typename") == "User"}
 
 
 def starter_issues(repo: str, token: str | None, limit: int = 20,
