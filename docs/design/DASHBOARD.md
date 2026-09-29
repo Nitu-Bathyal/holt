@@ -1,8 +1,8 @@
 # The signed-in app
 
-Status: **proposal** (29 Sep 2026). Prototype at `/lab/dashboard` (throwaway, never
-merged). Nothing real changes until the user picks a direction. Replaces the
-`/me` and navigation parts of [SIGNED-IN-HOME.md](SIGNED-IN-HOME.md) once built.
+Status: **approved, rolling out** (29 Sep 2026). The user approved the prototype
+(#156, `/lab/dashboard`, never merged) and asked for the rollout below. This
+replaces the `/me` and navigation parts of [SIGNED-IN-HOME.md](SIGNED-IN-HOME.md).
 The report page isn't covered here: its redesign is #144. Only the shell around it is.
 
 Skills used: `mattpocock-skills:research` (the product study below),
@@ -51,14 +51,14 @@ Ranked:
    and the cat. The app is a small grey admin: every section is the same h2 plus a
    grid of the same boxed card with the same shadow. Page widths change between pages
    (`/me` wide, PRs narrow and centred, `/find` with its own tinted head), so content
-   jumps sideways. The sidebar's background stops at the first screen on long pages.
+   jumps sideways.
 7. **Over-explaining, against VOICE.md.** Footnotes on PRs and saved ("Found via
    Holt marks…", "Press saved on a card to remove it…"), a lead line on every page
    restating its title, and "Rather browse?" as the last thing on home.
 
 | View | What's wrong |
 |---|---|
-| Sidebar + top bar | 12 items, synonyms, credits and sign-out twice, "Check a repo" is an action pretending to be a place, rail background stops short, all-mono labels at one weight |
+| Sidebar + top bar | 12 items, synonyms, credits and sign-out twice, "Check a repo" is an action pretending to be a place, all-mono labels at one weight |
 | `/me` | An index of other pages. Two "hello" lines (welcome + status). Nudge contradicts picks. Ends on "Rather browse?" |
 | `/me/contributions` | Stats tiles first, then a picks card, then the list. Merged, closed and waiting in one flat list with the repo verdict as the loudest thing. A paragraph of footnote. Narrow centred column |
 | `/me/saved`, `/me/history` | The same repo list twice: repos with a verdict, one sorted by save, one by check. Different card shapes (grid vs rows). "Not checked recently" block explains itself |
@@ -176,7 +176,7 @@ Derived from the landing (EXPRESSIVE.md), at working size:
 
 ## The prototype
 
-`/lab/dashboard` draws the proposed shell over whatever the page wears, on
+`/lab/dashboard` (#156, not on main) draws the proposed shell over whatever the page wears, on
 made-up data. The bar at the bottom switches views: home in its four states
 (new, pick an issue, PR waiting, just merged), your PRs, find a project, your
 repos, and a reduced-motion preview. Things to try: pick languages on *home: new*,
@@ -187,15 +187,19 @@ settings and pre-flight aren't drawn: they keep their pages and take the new fra
 ## Rollout (page-sized PRs, each on staging first)
 
 1. **Shell:** five-item sidebar, the check box in the top bar on every page with `/`,
-   account menu holds credits, settings, help and sign-out; full-height rail; the
-   shared page frame and page head. (`lib/shell.ts`, `components/shell/*`)
+   account menu holds credits, settings, help and sign-out; settings tabs at
+   every size; the shared page frame and page head. (`lib/shell.ts`,
+   `components/shell/*`) Hacktoberfest keeps a sidebar item in October until 5.
 2. **Your repos:** `/me/repos` merges saved and checked; 308s from the old URLs.
 3. **Home:** the loop, needs you, in flight, picks with inline chips, your repos.
    Rules stay pure in `lib/home.ts`. "Since your last visit" is a cookie.
-4. **Server, then PRs page:** each PR's repo carries its typical first reply
-   (`API.md` change in the same PR), so wait bars and "longer than usual" are real;
-   then `/me/contributions` grouped by next move, with pre-flight per PR. Later:
-   "a maintainer replied" (needs new GitHub fields).
+4. **Server, then PRs page:** each PR's repo carries its typical first reply,
+   and a per-repo "don't count this" choice (a friend's project, your team's
+   repo, a hackathon; engine 4's personal projects are left out by default)
+   (#160, `API.md` in the same PR). Then `/me/contributions` grouped by next
+   move, with pre-flight per PR, the toggle, and a collapsed "not counted"
+   group. It leaves a slot for the contribution-history view another worker is
+   exploring. Later: "a maintainer replied" (needs new GitHub fields).
 5. **Find a project:** tabs over `/find`, `/discover`, `/hacktoberfest`; one profile prompt.
 6. **Compare, settings, AI reports, pre-flight:** the new frame; `/connect` into Accounts.
 7. **States and motion pass:** empty, loading, the home moment, wait bars.
