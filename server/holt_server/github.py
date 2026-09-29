@@ -41,21 +41,21 @@ RATE_LIMIT = "query { rateLimit { remaining resetAt } }"
 # Where the details query looks for a README (its first sentence is kept, not
 # the file), first found wins.
 README_PATHS = ("README.md", "README.rst", "readme.md")
+README_FIELDS = "".join(
+    f'  readme{i}: object(expression: "HEAD:{path}") {{ ... on Blob {{ text }} }}\n'
+    for i, path in enumerate(README_PATHS))
 # Repositories per details query. GitHub charges about one point for a query
 # of up to a hundred small lookups.
 DETAILS_BATCH = 100
 DETAILS_FIELDS = """
   nameWithOwner description stargazerCount pushedAt isArchived isFork isPrivate
   primaryLanguage { name }
+  languages(first: 3, orderBy: {field: SIZE, direction: DESC}) { totalSize edges { size node { name } } }
   repositoryTopics(first: 20) { nodes { topic { name } } }
   forkCount createdAt homepageUrl parent { nameWithOwner }
   licenseInfo { spdxId name } issues(states: OPEN) { totalCount }
   defaultBranchRef { name }
-  languages(first: 3, orderBy: {field: SIZE, direction: DESC}) {
-    totalSize edges { size node { name } } }
-""" + "".join(
-    f'  readme{i}: object(expression: "HEAD:{path}") {{ ... on Blob {{ text }} }}\n'
-    for i, path in enumerate(README_PATHS))
+"""
 
 LOOKUP_TIMEOUT_S = 15.0
 
@@ -267,7 +267,7 @@ def _details(node: dict[str, Any]) -> dict[str, Any]:
         "open_issues": (node.get("issues") or {}).get("totalCount"),
         "license": license_name(node.get("licenseInfo")),
         "homepage": (node.get("homepageUrl") or "").strip() or None,
-        "languages": language_shares(node.get("languages")),
+        "language_shares": language_shares(node.get("languages")),
         "created_at": node.get("createdAt"),
         "default_branch": (node.get("defaultBranchRef") or {}).get("name"),
         "fork_of": (node.get("parent") or {}).get("nameWithOwner"),
@@ -338,7 +338,7 @@ class GitHubLookup:
             variables[f"o{i}"], variables[f"n{i}"] = owner, name
         document = (f"query({', '.join(params)}) {{\n  " + "\n  ".join(parts)
                     + "\n  rateLimit { cost remaining resetAt }\n}\n"
-                    + f"fragment details on Repository {{{DETAILS_FIELDS}}}")
+                    + f"fragment details on Repository {{{DETAILS_FIELDS}{README_FIELDS}}}")
         from holt_server.engine import translate
 
         transport = self.pool.transport(self.http)

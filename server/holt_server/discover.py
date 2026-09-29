@@ -324,7 +324,7 @@ async def store_meta(svc: Services, details: dict[str, dict[str, Any] | None]) -
             row.open_issues = _int(d.get("open_issues"))
             row.license = (d.get("license") or "")[:80] or None
             row.homepage = _homepage(d.get("homepage"))
-            row.languages = list(d.get("languages") or [])[:3]
+            row.language_shares = list(d.get("language_shares") or [])[:3]
             row.created_at = _parse_ts(d.get("created_at"))
             row.default_branch = (d.get("default_branch") or "")[:200] or None
             row.fork_of = (d.get("fork_of") or "")[:200] or None
@@ -341,7 +341,7 @@ def about_view(meta: RepoMeta) -> schema.RepoAbout:
         description=meta.description, readme_line=meta.readme_line, homepage=meta.homepage,
         stars=meta.stars, forks=meta.forks, open_issues=meta.open_issues,
         license=meta.license, topics=list(meta.topics or []),
-        languages=[lang for lang in meta.languages or []
+        languages=[lang for lang in meta.language_shares or []
                    if isinstance(lang, dict) and lang.get("name")],
         created_at=iso(meta.created_at),
         pushed_at=iso(meta.pushed_at),

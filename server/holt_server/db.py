@@ -573,14 +573,14 @@ class RepoMeta(Base):
     pushed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
     fork: Mapped[bool] = mapped_column(Boolean, default=False)
-    # The report's "About this repo" (0018); null until the details are read
+    # The report's "About this repo" (0020); null until the details are read
     # again after that migration.
     forks: Mapped[int | None] = mapped_column(Integer, nullable=True)
     open_issues: Mapped[int | None] = mapped_column(Integer, nullable=True)
     license: Mapped[str | None] = mapped_column(String(80), nullable=True)
     homepage: Mapped[str | None] = mapped_column(String(500), nullable=True)
     # [{"name": "Python", "share": 0.92}, ...], biggest first, at most three.
-    languages: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    language_shares: Mapped[list | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     default_branch: Mapped[str | None] = mapped_column(String(200), nullable=True)
     # The repository this one is a fork of.

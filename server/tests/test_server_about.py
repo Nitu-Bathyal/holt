@@ -37,7 +37,7 @@ def test_details_query_reads_the_about_fields_in_the_same_request():
         assert field in document
     assert out["forks"] == 16_300 and out["open_issues"] == 5
     assert out["license"] == "BSD-3-Clause" and out["default_branch"] == "main"
-    assert out["languages"] == [{"name": "Python", "share": 0.95}, {"name": "HTML", "share": 0.05}]
+    assert out["language_shares"] == [{"name": "Python", "share": 0.95}, {"name": "HTML", "share": 0.05}]
     assert out["fork_of"] == "orig/flask" and out["homepage"] == "flask.palletsprojects.com"
     # The README's first sentence, never the README.
     assert out["readme_line"] == "Flask is a lightweight WSGI web application framework."
@@ -101,4 +101,5 @@ def test_only_web_addresses_are_kept_as_the_homepage():
 
 def test_details_fields_are_one_query_per_hundred(h):
     # No extra per-repo call: the README is an alias inside the same query.
-    assert github.DETAILS_FIELDS.count("object(expression:") == len(github.README_PATHS)
+    assert github.README_FIELDS.count("object(expression:") == len(github.README_PATHS)
+    assert "languages(first: 3" in github.DETAILS_FIELDS
