@@ -1,5 +1,6 @@
 "use client";
 // Your repos as rows: tick two to four to compare them; save or unsave in place.
+// `compact` (the home) leaves out the ticks.
 import Link from "next/link";
 import { useState } from "react";
 import { RepoAvatar } from "@/components/repo-card/repo-avatar";
@@ -21,7 +22,7 @@ function Meta({ r }: { r: YourRepo }) {
   );
 }
 
-export function RepoRows({ rows, saved }: { rows: YourRepo[]; saved: string[] }) {
+export function RepoRows({ rows, saved, compact = false }: { rows: YourRepo[]; saved: string[]; compact?: boolean }) {
   const [picked, setPicked] = useState<string[]>([]);
   const href = compareHref(picked);
   const savedSet = new Set(saved.map((s) => s.toLowerCase()));
@@ -32,14 +33,14 @@ export function RepoRows({ rows, saved }: { rows: YourRepo[]; saved: string[] })
           const on = picked.includes(r.repo);
           const [owner, name] = r.repo.split("/");
           return (
-            <li key={r.repo} className="app-row grid-cols-[auto_minmax(0,1fr)_auto]">
-              <input
+            <li key={r.repo} className={`app-row ${compact ? "grid-cols-[minmax(0,1fr)_auto]" : "grid-cols-[auto_minmax(0,1fr)_auto]"}`}>
+              {!compact && <input
                 type="checkbox"
                 aria-label={`Compare ${r.repo}`}
                 checked={on}
                 onChange={() => setPicked(on ? picked.filter((x) => x !== r.repo) : [...picked, r.repo].slice(-4))}
                 className="size-4 accent-blue"
-              />
+              />}
               <div className="flex min-w-0 items-center gap-3">
                 <RepoAvatar repo={r.repo} size={32} />
                 <div className="min-w-0">

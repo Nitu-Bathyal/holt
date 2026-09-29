@@ -2295,6 +2295,117 @@
     color: var(--ink);
     font-weight: 600;
   }
+  /* The home's headline: the words that matter get the landing's marker. */
+  .move-word {
+    display: inline-block;
+  }
+  .move-mark {
+    background-image: linear-gradient(var(--marker), var(--marker));
+    background-repeat: no-repeat;
+    background-position: 0 88%;
+    background-size: 100% 0.42em;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .move-word {
+      animation: move-land 560ms var(--ease-expressive) both;
+      animation-delay: calc(var(--i) * 55ms);
+    }
+    .move-mark {
+      animation:
+        move-land 560ms var(--ease-expressive) both,
+        move-mark 600ms var(--ease-out) both;
+      animation-delay: calc(var(--i) * 55ms), calc(var(--i) * 55ms + 380ms);
+    }
+    .loop-fill,
+    .wait-bar > span {
+      animation: grow-x 700ms var(--ease-out) 250ms both;
+    }
+  }
+
+  /* The loop: find a repo → pick an issue → open a PR → get it merged. */
+  .loop {
+    position: relative;
+    display: grid;
+    max-width: 44rem;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    margin-top: 32px;
+  }
+  .loop::before,
+  .loop-fill {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    height: 2px;
+    background: var(--line-strong);
+    content: "";
+  }
+  .loop::before {
+    right: calc(25% - 6px);
+  }
+  .loop-fill {
+    z-index: 0;
+    width: var(--p);
+    background: var(--green);
+    transform-origin: left;
+  }
+  .loop-step {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    padding-right: 10px;
+    font-size: clamp(0.72rem, 2.6vw, 0.8rem);
+    color: var(--faint);
+  }
+  .loop-dot {
+    width: 14px;
+    height: 14px;
+    border: 2px solid var(--line-strong);
+    border-radius: 50%;
+    background: var(--bg);
+  }
+  .loop-step[data-s="done"] {
+    color: var(--muted);
+  }
+  .loop-step[data-s="done"] .loop-dot {
+    border-color: var(--green);
+    background: var(--green);
+  }
+  .loop-step[data-s="now"] {
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .loop-step[data-s="now"] .loop-dot {
+    border-color: var(--blue);
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--blue) 18%, transparent);
+  }
+
+  .wait-bar {
+    position: relative;
+    height: 6px;
+    width: 100%;
+    max-width: 16rem;
+    border-radius: 3px;
+    background: color-mix(in srgb, var(--ink) 8%, transparent);
+  }
+  .wait-bar > span {
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--w);
+    border-radius: 3px;
+    background: var(--c);
+    transform-origin: left;
+  }
+  .wait-bar > i {
+    position: absolute;
+    top: -4px;
+    bottom: -4px;
+    left: var(--t);
+    width: 2px;
+    background: var(--ink);
+    opacity: 0.55;
+  }
+
   .app-appear {
     animation: app-appear var(--dur-slow) var(--ease-out) both;
   }
@@ -2318,6 +2429,22 @@
   /* "Check a repo": the box it lands on flashes once. */
   .check-flash {
     animation: check-flash 1.1s var(--ease-out);
+  }
+}
+@keyframes move-land {
+  from {
+    opacity: 0;
+    transform: translateY(0.35em);
+  }
+}
+@keyframes move-mark {
+  from {
+    background-size: 0% 0.42em;
+  }
+}
+@keyframes grow-x {
+  from {
+    transform: scaleX(0);
   }
 }
 @keyframes app-appear {
