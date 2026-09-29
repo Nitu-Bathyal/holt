@@ -270,12 +270,18 @@ def test_nobody_on_it():
 
 
 def test_open_pull_requests_and_claims_count_distinct_people():
-    node = issue(closing=(("OPEN", "ann"),), xref=(("OPEN", "ann"), ("OPEN", "bob")),
+    node = issue(closing=(("OPEN", "ann"),), xref=(("OPEN", "ann"),),
                  recent=[(9, "can I work on this?", "cat"), (4, "assign me please", "cat"),
-                         (2, "I'd like to take this", "bob")])
+                         (2, "I'd like to take this", "ann")])
     _, result = score(node)
-    assert (result.people, result.open_prs) == (3, 2)
-    assert result.on_it == "3 people already on it, 2 open pull requests"
+    assert (result.people, result.open_prs) == (2, 1)
+    assert result.on_it == "2 people already on it, 1 open pull request"
+
+
+def test_a_crowded_issue_is_not_listed():
+    node = issue(recent=[(5, "can I work on this?", "a"), (4, "assign me", "b"),
+                         (3, "I'd like to take this", "c")])
+    assert score(node) is None
 
 
 def test_one_open_pull_request_alone():
@@ -763,6 +769,7 @@ def test_non_tasks_are_dropped(node):
     ("S3 object tagging is ignored for backups", "Needs a cloud account"),
     ("CUDA out of memory with batch size 1", "Needs a GPU"),
     ("Bluetooth firmware update hangs", "Needs special hardware"),
+    ("Sonos integration", "Needs special hardware"),
     ("Regression in ambient declaration emit", "Deep compiler work"),
     ("Pods restart in a kubernetes cluster with sidecars", "Needs a Kubernetes cluster"),
 ])

@@ -20,7 +20,8 @@ module does two things and keeps them apart:
   skips repositories that are both brand new and tiny.
 * **Every listed issue says who is already on it**: distinct people with an
   open pull request, a recent "can I work on this?", or an assignment that
-  went quiet (`on_it_text`). Issues nobody is on come first.
+  went quiet (`on_it_text`). Issues nobody is on come first; an issue with
+  `CROWDED` people on it is not listed.
 * **The issue score only orders.** It is a transparent sum over labels,
   recency, docs or tests work, special setup (Windows, a GPU, a cloud
   account, compiler internals), discussion size and where outsider work has
@@ -263,6 +264,9 @@ LONG_DISCUSSION = 12
 # A claim ("can I work on this?") younger than this means the issue is taken;
 # older, it is probably abandoned.
 CLAIM_FRESH_DAYS = 45
+# This many people already on an issue is a stampede: another newcomer joining
+# it will likely waste their time, so it is not listed.
+CROWDED = 3
 # An issue opened longer ago than this has usually been passed over for a
 # reason, whatever its label says.
 MAX_ISSUE_AGE_DAYS = 365
@@ -335,7 +339,7 @@ _SETUP = [
      re.compile(r"\b(gpu|cuda|rocm|nvidia)\b")),
     ("Needs special hardware",
      re.compile(r"\b(hardware|firmware|bluetooth|usb|serial port|raspberry pi|arduino|"
-                r"printers?|microcontrollers?|fpga)\b", re.I),
+                r"printers?|microcontrollers?|fpga|sonos|chromecast|zigbee|z-wave)\b", re.I),
      re.compile(r"\b(hardware|firmware|bluetooth|usb)\b")),
     ("Needs a cloud account",
      re.compile(r"\b(aws|s3|gcp|google cloud|azure|ec2|bigquery|dynamodb)\b", re.I),
@@ -621,7 +625,7 @@ def score_issue(node: dict[str, Any], as_of: datetime, *,
     if any(pr.get("state") == "MERGED" for pr in prs):
         return None  # solved, even if nobody closed the issue
     busy = on_it(node, prs, as_of)
-    if busy is None:
+    if busy is None or busy.people >= CROWDED:
         return None
     if (as_of - _ts(node["createdAt"])).days > MAX_ISSUE_AGE_DAYS:
         return None
