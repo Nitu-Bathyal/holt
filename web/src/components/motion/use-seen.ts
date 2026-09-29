@@ -2,17 +2,15 @@
 
 // The hooks the expressive patterns share (docs/design/EXPRESSIVE.md).
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { onMotionChange, prefersReducedMotion } from "@/lib/motion";
 
-const REDUCE = "(prefers-reduced-motion: reduce)";
-const onReduceChange = (cb: () => void) => {
-  const mq = matchMedia(REDUCE);
-  mq.addEventListener("change", cb);
-  return () => mq.removeEventListener("change", cb);
-};
-
-/** The visitor prefers reduced motion. False on the server: its HTML is the finished state either way. */
+/**
+ * Motion should stay still: the site's setting, else the device's
+ * (lib/motion.ts). Updates when either changes. False on the server: its HTML
+ * is the finished state either way.
+ */
 export function useReducedMotion() {
-  return useSyncExternalStore(onReduceChange, () => matchMedia(REDUCE).matches, () => false);
+  return useSyncExternalStore(onMotionChange, prefersReducedMotion, () => false);
 }
 
 /**

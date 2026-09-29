@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { JetBrains_Mono } from "next/font/google";
+import { cookies } from "next/headers";
 import { Footer } from "@/components/footer";
 import { MarketingHeader } from "@/components/header";
 import { MenuAutoClose } from "@/components/motion/menu-autoclose";
@@ -10,6 +11,7 @@ import { CheckLinks } from "@/components/shell/check-focus";
 import { ShellFrame } from "@/components/shell/shell-frame";
 import { themeScript } from "@/components/theme-toggle";
 import { ANALYTICS } from "@/lib/analytics";
+import { motionAttr, motionFromCookies } from "@/lib/motion";
 import { currentUser } from "@/lib/session";
 import { SITE_URL } from "@/lib/site";
 import "lenis/dist/lenis.css";
@@ -54,8 +56,10 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   const user = await currentUser();
   const credits = await creditsLine(user);
   const app = user ? await appShell(user, credits) : null;
+  // The motion setting, on <html> before the first paint (lib/motion.ts).
+  const motion = motionAttr(motionFromCookies(await cookies()));
   return (
-    <html lang="en" className={mono.variable} suppressHydrationWarning>
+    <html lang="en" className={mono.variable} data-motion={motion} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         {ANALYTICS && <script defer src={ANALYTICS.src} data-website-id={ANALYTICS.websiteId} />}

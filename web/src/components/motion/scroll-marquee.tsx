@@ -8,18 +8,25 @@
 // Reduced motion: static. The band is clipped by its own wrapper
 // (overflow: clip), so it can never widen the page.
 import { useEffect, useRef } from "react";
+import { useReducedMotion } from "./use-seen";
 
 const SHIFT = 18; // percent of the band's width, as on the original site
 
 export function ScrollMarquee({ text }: { text: string }) {
   const band = useRef<HTMLDivElement>(null);
+  const reduced = useReducedMotion();
 
   useEffect(() => {
     const el = band.current;
-    if (!el || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!el || reduced) return;
+    // Reduced motion switched on later: back to the still band.
+    const still = () => {
+      delete el.dataset.engine;
+      el.style.transform = "";
+    };
     if (typeof CSS !== "undefined" && CSS.supports("animation-timeline: view()")) {
       el.dataset.engine = "css";
-      return;
+      return still;
     }
     const wrap = el.parentElement!;
     let cleanup: (() => void) | undefined;
@@ -71,8 +78,9 @@ export function ScrollMarquee({ text }: { text: string }) {
     return () => {
       cancelled = true;
       cleanup?.();
+      still();
     };
-  }, []);
+  }, [reduced]);
 
   return (
     // overflow: clip, not hidden: hidden would make this a scroll container, and

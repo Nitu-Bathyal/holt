@@ -411,9 +411,13 @@ class FindCache(Base):
     @property
     def outdated(self) -> bool:
         """Screened by an older engine (`params.engine_version`, missing on
-        results stored before it was recorded): not served, searched again."""
+        results stored before it was recorded), or listing starter issues from
+        before they said who is on them: not served, searched again."""
+        from holt_server.starter import current
+
         version = (self.params or {}).get("engine_version")
-        return not isinstance(version, int) or version < ENGINE_VERSION
+        return (not isinstance(version, int) or version < ENGINE_VERSION
+                or not all(current(r.get("issues") or []) for r in self.results or []))
 
 
 def find_key(languages: list[str], topics: list[str], hacktoberfest: bool, days: int) -> str:
