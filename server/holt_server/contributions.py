@@ -298,9 +298,9 @@ async def verdicts(s, keys: set[str]) -> dict[str, schema.RepoVerdict]:
 # --- what counts ------------------------------------------------------------------------
 
 # Verdicts that mean a repository is the person's own or their team's project,
-# so their pull requests there aren't outside contributions. Empty until the
-# engine can tell (its personal/team outcome); the person can always override.
-NOT_OUTSIDE: frozenset[str] = frozenset()
+# so their pull requests there aren't outside contributions. "personal" comes
+# with engine 4; until then no report carries it. The person can always override.
+NOT_OUTSIDE: frozenset[str] = frozenset({"personal"})
 
 
 def not_counted_because(verdict: schema.RepoVerdict | None,
