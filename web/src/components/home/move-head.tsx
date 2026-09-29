@@ -27,6 +27,16 @@ function Words({ title }: { title: string }) {
   );
 }
 
+/** A page sentence whose *starred* words get the marker; screen readers get it plain. */
+export function MarkedTitle({ title }: { title: string }) {
+  return (
+    <>
+      <span className="sr-only">{title.replaceAll("*", "")}</span>
+      <span aria-hidden="true"><Words title={title} /></span>
+    </>
+  );
+}
+
 /** Where you are in the loop. Step 4 means just merged: every step is done. */
 export function Loop({ step }: { step: NextMove["step"] }) {
   return (
@@ -47,9 +57,7 @@ export function MoveHead({ title, lead, mood, step, children }: { title: string;
     <header className="app-head">
       <div className="flex items-start justify-between gap-6">
         <div className="min-w-0">
-          <h1 className="app-h1" aria-label={title.replaceAll("*", "")}>
-            <span aria-hidden="true"><Words title={title} /></span>
-          </h1>
+          <h1 className="app-h1"><MarkedTitle title={title} /></h1>
           {lead && <p className="app-lead">{lead}</p>}
         </div>
         <CatFace mood={mood} className={`app-head-cat hidden sm:block ${TONE_TEXT[CAT[mood].tone]}`} />

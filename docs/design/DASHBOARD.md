@@ -201,12 +201,65 @@ settings and pre-flight aren't drawn: they keep their pages and take the new fra
    (#160, `API.md` in the same PR). Then `/me/contributions` grouped by next
    move, with pre-flight per PR, the toggle, and a collapsed "not counted"
    group. It leaves a slot for the contribution-history view another worker is
-   exploring. Later: "a maintainer replied" (needs new GitHub fields).
+   exploring. Later: "a maintainer replied" (needs new GitHub fields). *Built.*
 5. **Find a project:** tabs over `/find`, `/discover`, `/hacktoberfest`; one profile prompt.
 6. **Compare, settings, AI reports, pre-flight:** the new frame; `/connect` into Accounts.
 7. **States and motion pass:** empty, loading, the home moment, wait bars.
 
 Before 1 Oct only item 1 is small enough to land; the rest follows through October.
+
+## Handover (29 Sep 2026, after step 4)
+
+**Built:** the server half, #160 (each PR's `first_reply_hours`, the per-repo
+counted choice, migration 0019, `NOT_OUTSIDE = {"personal"}`). Then step 1, the
+shell (#164; the sidebar doesn't fold, by design). Step 2, Your repos (#169).
+Step 3, the home (#170). Step 4, Your pull requests (this PR). The prototype
+is #156 (`/lab/dashboard`). Close it once the rollout is done.
+
+**Left:**
+- **5, Find a project:** tabs over `/find`, `/discover` and `/hacktoberfest`.
+  The URLs stay; they're public and indexed. When Hacktoberfest becomes a tab,
+  drop its sidebar item from `sidebarGroups` in `lib/shell.ts` and the shell
+  test. Keep one profile prompt (on the *for you* tab), and retire "What are
+  you after?" (`ProfileOnboarding`) on `/find` and `/hacktoberfest`. These
+  pages still use `PageHead`, not `AppPageHeader` and `.app-page`.
+- **6, the frame for the rest:** `/compare`, `/settings/*` (including AI
+  reports and Display), `/preflight` and `/connect`. `/connect` folds into
+  Settings → Accounts (same consent), with a redirect in `RETIRED`. There's a
+  known bug to fix there: the selected card in Settings → Profile → "Your
+  experience" has an unreadable second line.
+- **7, states and motion:** empty and loading states in the row or card
+  shape on every page above; count-ups; one moment per page.
+
+**Pieces to reuse:**
+- `.app-page` (the frame).
+- `AppPageHeader` (`mood` for the cat).
+- `MarkedTitle` and `MoveHead` (`components/home/move-head.tsx`): `*starred*`
+  words get the marker and land word by word.
+- `.app-row` with `data-rule` and `--rule`: rows for your things.
+- `.app-tabs` / `.app-tab`.
+- `WaitBar`.
+- `SectionHead`.
+- `RepoRows` (with `compact` on the home).
+- Rules: `lib/home.ts` (`nextMove`, `inFlight`, `alsoForYou`),
+  `lib/your-repos.ts`, `lib/contributions.ts` (`prGroups`, `prsTitle`).
+
+**Gotchas:**
+- Put motion CSS inside `@media (prefers-reduced-motion: no-preference)`.
+  `postcss-motion.mjs` maps those blocks onto the site's Motion setting.
+- The React compiler's lint rejects `Date.now()` during render. Use
+  `clock()` from `lib/home.ts`.
+- Web typecheck and build need `HOLT_ALLOW_PLACEHOLDER_CONTACT=1`. After
+  deleting a route, `rm -rf web/.next/dev/types`, or `tsc` trips on stale
+  validators.
+- The mock seeds every dev user with two checks, so a new user lands on "pick
+  an issue", not "first repo".
+- Connecting GitHub under the mock needs a `github` row in the local `account`
+  table for that user; the `/connect` form works after that.
+- Verdicts now include *Long shot* (tone `warn`) and *Personal project* (tone
+  `neutral`). `VerdictPill` handles both.
+- Several workers ship at once. Before each PR, run `git merge-tree` against
+  every `staging`-labelled branch, and chain migrations on main's head.
 
 ## Sources
 
