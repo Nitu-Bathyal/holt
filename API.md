@@ -389,12 +389,17 @@ a cache hit costs no GitHub call and no rate limit. A miss counts against the
 Body: `{"languages": ["python"], "topics": [], "days": 7, "hacktoberfest": true, "limit": 20}`
 Returns `{"results": [ { "repo": "owner/repo", "headline": "…", "tone": "good", "verdict": "…",
 "description": "string | null", "language": "string | null", "stars": 123 | null,
-"stats": {…subset}, "issues": [StarterIssue] } ]}` (`description`, `language`
-and `stars` come from `repo_meta`, the same details Discover shows, read when
+"open_issues": 57 | null, "pull_requests": 4100 | null,
+"open_pull_requests": 12 | null, "contributors": 812 | null,
+"stats": {…subset}, "issues": [StarterIssue] } ]}` (`description`, `language`,
+`stars` and the four counts (as on Discover) come from `repo_meta`, the same details Discover shows, read when
 the search finishes and again each time a cached search is served; no GitHub
 call. They are null for a repo the warm pass hasn't read yet, and the warm
 pass reads every repo in a search from the last day. `stats` leaves out
-counts it doesn't have rather than sending null), only repos whose rules
+counts it doesn't have rather than sending null; when a fresh 7-day report
+counted the same pull requests, `closed_silently`, `closed_by_bot`,
+`withdrawn` and `still_open` come from it, so the odds bar is drawn as on
+Discover, and without them the bar has one "weren't merged" segment), only repos whose rules
 verdict is `viable`, ordered by starter-issue quality.
 
 - **Cached** (same search, finished within 6 hours): `200
