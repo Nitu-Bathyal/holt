@@ -16,7 +16,6 @@ import { LandingMap } from "./landing-map";
 import { PlaybookSection } from "./playbook-section";
 import { ProjectSection } from "./project-section";
 import { ShareBar } from "./share-bar";
-import { StatsGrid } from "./stats-grid";
 import { TONE, TONE_MOOD } from "./tone";
 import { UpgradeCard } from "./upgrade-card";
 import { VerdictCat } from "./verdict-cat";
@@ -245,10 +244,7 @@ export function ReportView({
 
         {!example && <PreflightLink repo={repo} />}
 
-        <Section id="numbers" title="What happened to outsiders">
-          <StatsGrid stats={report.stats} reveal={reveal} land={land} />
-          <HoltUsersLine stats={report.holt_users} />
-        </Section>
+        <HoltUsersLine stats={report.holt_users} />
 
         <Section id="landing" title="Where newcomer work lands" reveal={reveal ? 230 : undefined}>
           <LandingMap landing={report.landing} neverLanded={report.never_landed} />
