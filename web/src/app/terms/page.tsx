@@ -18,8 +18,8 @@ export default function TermsPage() {
     >
       <h2>1. Who we are</h2>
       <p>
-        Holt is run by an individual based in {CONTACT_CITY}, India, as a sole proprietorship. It is not a registered company.
-        &ldquo;Holt&rdquo;, &ldquo;we&rdquo; and &ldquo;us&rdquo; in these terms mean that person. On card statements and payment receipts the
+        Holt is operated by {PAYMENT_BRAND}, a sole proprietorship of Aahil Khan, based in {CONTACT_CITY}, India. It is not a registered company.
+        &ldquo;Holt&rdquo;, &ldquo;we&rdquo; and &ldquo;us&rdquo; in these terms mean {PAYMENT_BRAND}. On card statements and payment receipts the
         service appears as <strong>{PAYMENT_BRAND}</strong>.
       </p>
       <p>

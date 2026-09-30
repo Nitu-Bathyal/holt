@@ -242,6 +242,7 @@ export function Footer({ signedIn = false }: { signedIn?: boolean }) {
             {LEGAL_PAGES.map((p) => (
               <FLink key={p.href} href={p.href}>{p.label}</FLink>
             ))}
+            <FLink href="/contact#team">team</FLink>
             {/* Signed in, it's under Settings → Display. */}
             {!signedIn && <MotionSwitch />}
           </Group>

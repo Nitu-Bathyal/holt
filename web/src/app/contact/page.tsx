@@ -5,7 +5,7 @@ import { CONTACT_CITY, CONTACT_EMAIL, GITHUB_REPO_URL, PAYMENT_BRAND } from "@/l
 
 export const metadata: Metadata = {
   title: "Contact",
-  description: "How to reach the person who runs Holt: refunds, account deletion, privacy questions, problems with a report, and security issues.",
+  description: "How to reach the people who run Holt: refunds, account deletion, privacy questions, problems with a report, and security issues.",
   alternates: { canonical: "/contact" },
 };
 
@@ -17,12 +17,18 @@ const REASONS = [
   { what: "A security problem", how: "Email before posting it publicly. We'll confirm we got it and fix it as fast as we can." },
 ];
 
+const TEAM = [
+  { name: "Aahil Khan", github: "aahil-khan" },
+  { name: "Ishpuneet Singh", github: "ips610" },
+  { name: "Anoushka Awasthi", github: "anoushkawasthi" },
+];
+
 export default function ContactPage() {
   return (
     <LegalPage
       rail="contact"
       title={<>Contact</>}
-      lede="One person runs Holt. Email is the fastest way in, and every message gets a reply."
+      lede="Email is the fastest way in, and every message gets a reply."
     >
       <h2>Email</h2>
       <p className="text-[1.15rem]">
@@ -53,10 +59,19 @@ export default function ContactPage() {
       <h2>Who you&rsquo;re writing to</h2>
       <ul>
         <li><strong>Business name:</strong> Holt. Payments appear as <strong>{PAYMENT_BRAND}</strong> on statements and receipts.</li>
-        <li><strong>Run by:</strong> an individual in {CONTACT_CITY}, India, as a sole proprietorship.</li>
+        <li><strong>Based in:</strong> {CONTACT_CITY}, India.</li>
         <li><strong>Email:</strong> {CONTACT_EMAIL}</li>
         <li><strong>Website:</strong> githolt.com</li>
       </ul>
+      <h2 id="team">Team</h2>
+      <ul>
+        {TEAM.map((p) => (
+          <li key={p.github}>
+            {p.name} &middot; <a href={`https://github.com/${p.github}`} className="text-link">@{p.github}</a>
+          </li>
+        ))}
+      </ul>
+
       <p>
         Holt is not affiliated with GitHub. Questions about a GitHub account or repository itself should go to GitHub or the project&rsquo;s maintainers.
       </p>
