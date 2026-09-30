@@ -224,7 +224,7 @@ async def order_by_provider_id(svc: Services, provider_order_id: str | None) -> 
             Order.provider_order_id == provider_order_id))).scalar_one_or_none()
 
 
-def pass_ends(user: User | None, days: int, at) -> datetime | None:
+def pass_ends(user: User | None, days: int, at: datetime) -> datetime | None:
     """When Pro ends after adding a pass of `days`: from the end of the Pro
     the user has now if it hasn't lapsed, else from `at`. None: they already
     have Pro with no end (an admin grant), which a pass doesn't shorten."""
