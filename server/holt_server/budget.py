@@ -9,7 +9,8 @@ default, turns AI off.
 How it holds:
 
 * **Queueing** a job that may call a model holds its most expensive possible
-  run (`HOLT_AI_RUN_MAX_USD`, or `HOLT_AI_PRO_RUN_MAX_USD` for the service)
+  run (`HOLT_AI_RUN_MAX_USD`, or `HOLT_AI_PRO_RUN_MAX_USD` for the service;
+  a merge plan, which may run an AI report's stages before the service, both)
   from the budget, in the transaction that charges the user's credit, with a
   guarded `UPDATE` on the one `ai_budget` row. If that would pass the budget
   the request is refused, rolled back and nothing is charged. So runs racing
@@ -77,7 +78,12 @@ def refused_in_production(settings: Settings) -> bool:
 
 
 def run_max_usd(settings: Settings, kind: str) -> float:
-    return settings.ai_run_max_usd if kind == ANALYSIS else settings.ai_pro_run_max_usd
+    if kind == ANALYSIS:
+        return settings.ai_run_max_usd
+    if kind == MERGE_PLAN:
+        # It may run an AI report's stages first (merge_plan.py), then the service.
+        return settings.ai_run_max_usd + settings.ai_pro_run_max_usd
+    return settings.ai_pro_run_max_usd
 
 
 def kind_of(job: Job) -> str | None:
@@ -209,19 +215,22 @@ def pro_model(body: dict[str, Any]) -> str | None:
 PRO_BEFORE_MODEL = frozenset({400, 401, 404, 405, 503})
 
 
-def note_pro_error(svc: Services, job_id: str, err: Exception) -> None:
-    """A service error that came before any model call cost nothing: the
-    job's `settle` gives its whole hold back. A timeout, a lost connection, a
-    500 or a 502 (the model may have run) keeps the hold."""
+def note_pro_error(svc: Services, job_id: str, err: Exception, spent: float = 0.0) -> None:
+    """A service error that came before any model call cost nothing more
+    than `spent` (the job's own model work before it): the job's `settle`
+    gives the rest of its hold back. A timeout, a lost connection, a 500 or
+    a 502 (the model may have run) keeps the hold."""
     if getattr(err, "pro_status", None) in PRO_BEFORE_MODEL:
-        svc.ai_costs[job_id] = 0.0
+        svc.ai_costs[job_id] = spent
 
 
-def note_pro(svc: Services, job_id: str, body: dict[str, Any]) -> None:
-    """Keep what a service answer cost and which model wrote it, for the
-    job's `settle`."""
-    svc.ai_costs[job_id] = pro_cost(body)
-    svc.ai_models[job_id] = pro_model(body)
+def note_pro(svc: Services, job_id: str, body: dict[str, Any], spent: float = 0.0) -> None:
+    """Keep what a service answer cost, plus `spent` (the job's own model
+    work before it), and which models did the work, for the job's `settle`."""
+    cost = pro_cost(body)
+    svc.ai_costs[job_id] = None if cost is None else cost + spent
+    models = [m for m in (svc.ai_models.get(job_id), pro_model(body)) if m]
+    svc.ai_models[job_id] = ", ".join(dict.fromkeys(models)) or None
 
 
 # --- one AI report's model calls ----------------------------------------------------------

@@ -918,11 +918,18 @@ The paid AI report for one repository: the call (one sentence on what to do
 here, next to the report's verdict and its numbers), your first pull request
 as numbered steps, what gets merged, why outside pull requests get closed (in
 the maintainers' words) and who reviews, plus what the AI found reading the
-pull request threads when the repository has an AI report. It is written from
-this server's latest report for the repository and its starter issues: rules
-build it, a model words the call and the steps, and every claim is checked
-against its sources before it is kept. The verdict is the report's, computed
-by rules; the model never picks it, and no field names the model.
+pull request threads. It is written from the repository's AI report and its
+starter issues: rules build it, a model words the call and the steps, and
+every claim is checked against its sources before it is kept. The verdict is
+the report's, computed by rules; the model never picks it, and no field names
+the model.
+
+The AI report is a fresh one if there is one (made for anyone, by the current
+engine, within `HOLT_CACHE_HOURS`); otherwise the job reads the threads
+itself, as an AI report does, and keeps that report for the next plan. Either
+way the plan costs one merge plan, never an AI report credit. If reading the
+threads fails, the plan is still made, from the rules report: `ai` is null
+and `note` says so.
 
 Merge plans can be made only when the server runs with its paid features
 (`HOLT_PRO_URL`) **and** AI is on (an AI budget, `HOLT_AI_BUDGET_USD`);
@@ -942,14 +949,18 @@ nothing charged.
     (`{"job_id", "status", "stage", "progress"}`), so a reloaded page can
     follow it again.
 - `POST /v1/me/merge-plan/{owner}/{repo}` (signed in; no body) →
-  `202 {"status": "queued", "job_id"}`: a job makes a new plan (usually under
-  a minute, up to a few; stopped after `HOLT_JOB_TIMEOUT_AI`). Asking again
-  while one is being made returns that job, charged once.
+  `202 {"status": "queued", "job_id"}`: a job makes a new plan (usually two to
+  four minutes when it reads the threads itself, about one when a fresh AI
+  report exists; stopped after `HOLT_JOB_TIMEOUT_AI` plus 330 s). Its `stage`
+  says what it is doing in plain words ("Reading the pull request threads").
+  Asking again while one is being made returns that job, charged once.
   - One use of `merge_plan` is taken before anything runs (402
     `quota_exceeded` otherwise, and nothing is queued). An unknown or private
     repository is 404 `not_found`, and one with no report yet 404 `not_found`
     ("Check the repository first"), both before any charge.
-  - A job that fails gives the use back; its error message says so.
+  - A job that fails gives the use back; its error message says so. A plan
+    made without "what the AI found" (reading the threads failed) is not a
+    failure.
   - Asking again when nothing has changed returns the same plan (same
     `generated_at`) and gives the use back. A plan that changed, or that was
     made earlier for someone else, costs a use.
@@ -997,7 +1008,8 @@ nothing charged.
   first quote (`who` is the project member who wrote it) and up to 5
   examples. `reviewers.people`: the 3 most active reviewers and the folders
   each reviews most.
-- `ai` is null unless the plan was written from an AI report. `signals` (`kind`
+- `ai` is null when the plan was written without an AI report (reading the
+  threads failed; `note` then ends with a sentence saying so). `signals` (`kind`
   one of `outsider_posture`, `onboarding`, `repo_kind`; `tone` one of `good`,
   `warn`, `bad`, `neutral`), `outcomes` (the engine's values, most common
   first, for the web to word) and up to 3 `quotes` from the threads.

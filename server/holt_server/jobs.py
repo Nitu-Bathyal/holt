@@ -294,9 +294,14 @@ class JobRunner:
     # --- running --------------------------------------------------------------
 
     def timeout_for(self, job: Job) -> float:
+        # Here, not at the top: it imports the API module, which imports this one.
+        from holt_server import merge_plan
+
         s = self.services.settings
         if job.kind == "find":
             return s.job_timeout_find
+        if job.kind == "merge_plan":
+            return merge_plan.time_limit(s)
         # Playbook jobs are AI work too (mode "ai"): the service may read
         # GitHub and then wait on a model for up to 300 s.
         return s.job_timeout_ai if job.mode == "ai" else s.job_timeout_rules
@@ -331,7 +336,7 @@ class JobRunner:
                 # AI work claims its hold on the budget, or fails (refunded) without one.
                 await budget.start(self.services, job)
                 if job.kind == "find":
-                    result = await self._in_thread(stop, limit, self._find_sync, job, emit, loop)
+                    result = await self.in_thread(stop, limit, self._find_sync, job, emit, loop)
                 elif job.kind == "playbook":
                     # An HTTP call to the paid-features service: no thread needed.
                     result = await self._in_loop(stop, limit, playbook.write(
@@ -341,19 +346,22 @@ class JobRunner:
                     result = await self._in_loop(stop, limit, preflight.run(
                         self.services, job, emit))
                 elif job.kind == "merge_plan":
-                    # An HTTP call to the paid-features service: no thread needed.
+                    # The AI stages, when it runs them, get a thread of their own
+                    # (`in_thread`); the rest is an HTTP call to the service.
                     result = await self._in_loop(stop, limit, merge_plan.run(
                         self.services, job, emit))
                 else:
                     # The key is only ever held in memory: the jobs table records
                     # where it came from, not what it is.
                     spec = await self.services.model_spec_for(job) if job.mode == "ai" else None
-                    result, evidence = await self._in_thread(stop, limit, self._analysis_sync,
+                    result, evidence = await self.in_thread(stop, limit, self._analysis_sync,
                                                              job, spec, emit)
             finally:
                 # Steps emitted so far are written before the job ends, so
-                # `done` or `error` is the last event a subscriber hears.
-                steps.put_nowait(None)
+                # `done` or `error` is the last event a subscriber hears. The
+                # end goes through `call_soon` as they do, so it can't overtake
+                # one emitted just before a job returned without yielding.
+                loop.call_soon(steps.put_nowait, None)
                 await writer
         except JobTimedOut:
             log.warning("job %s timed out after %.0fs (%s %s)", job.id, limit, what,
@@ -373,7 +381,7 @@ class JobRunner:
             log.info("job %s done in %.1fs", job.id, time.monotonic() - started)
             await self._finish(job, result, evidence)
 
-    async def _in_thread(self, stop: threading.Event, limit: float, fn, *args) -> Any:
+    async def in_thread(self, stop: threading.Event, limit: float, fn, *args) -> Any:
         """`fn(*args)` on the runner's executor, for at most `limit` seconds.
 
         On timeout `stop` is set, which the thread notices at its next GitHub
@@ -407,20 +415,13 @@ class JobRunner:
     def _analysis_sync(self, job: Job, spec, emit) -> tuple[dict[str, Any], Evidence]:
         """The report, and the evidence it read (for the evidence store)."""
         svc = self.services
-        as_of = datetime.now(UTC)
-        provider = svc.provider_factory(job.repo, as_of)
-        cutoff = getattr(provider, "cutoff", as_of)
-        recorder = RecordingProvider(provider)
         model = None
         if job.mode == "ai":
             model = budget.Capped(svc.model_factory(spec), spec.model,
                                   budget.run_max_usd(svc.settings, budget.ANALYSIS))
             # What it has spent so far, for `_fail` if the run stops early.
             self._models[job.id] = model
-        result = svc.analysis_fn(repo=job.repo, mode=job.mode, days=job.days,
-                                 provider=recorder, model=model, emit=emit, as_of=cutoff)
-        return result, Evidence(recorder.records, cutoff,
-                                getattr(provider, "judges_recency", True))
+        return read_repo(svc, job.repo, job.mode, job.days, model, emit)
 
     def _find_sync(self, job: Job, emit, loop) -> dict[str, Any]:
         p = job.params
@@ -497,11 +498,11 @@ class JobRunner:
         if job.kind == "analysis" and job.repo:
             self.meta.note(job.repo)
             if evidence is not None and evidence.records:
-                await self._keep_evidence(job.repo, evidence)
+                await self.keep_evidence(job.repo, evidence)
         if job.kind == "find":
             await self._queue_found(result)
 
-    async def _keep_evidence(self, repo: str, evidence: Evidence) -> None:
+    async def keep_evidence(self, repo: str, evidence: Evidence) -> None:
         """Write the report's evidence to the store, after the report itself.
         Never fails the job: the store logs its own errors."""
         try:
@@ -610,6 +611,19 @@ class Evidence:
     records: list[EvidenceRecord]
     cutoff: datetime
     judges_recency: bool = True
+
+
+def read_repo(svc: Services, repo: str, mode: str, days: int, model, emit
+              ) -> tuple[dict[str, Any], Evidence]:
+    """One report on `repo` (synchronous: a job thread runs it), and the
+    evidence it read."""
+    as_of = datetime.now(UTC)
+    provider = svc.provider_factory(repo, as_of)
+    cutoff = getattr(provider, "cutoff", as_of)
+    recorder = RecordingProvider(provider)
+    result = svc.analysis_fn(repo=repo, mode=mode, days=days, provider=recorder, model=model,
+                             emit=emit, as_of=cutoff)
+    return result, Evidence(recorder.records, cutoff, getattr(provider, "judges_recency", True))
 
 
 def _aware(when: datetime) -> datetime:
