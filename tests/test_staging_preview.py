@@ -498,6 +498,21 @@ def test_a_dry_run_says_what_it_would_build_and_changes_nothing(sandbox: Sandbox
     assert sandbox.stub_lines("built") == ["web"]
 
 
+def test_run_dirs_left_by_killed_runs_are_swept_after_a_day(sandbox: Sandbox) -> None:
+    old, recent = sandbox.state / "run.killed", sandbox.state / "run.recent"
+    for d in (old, recent):
+        d.mkdir()
+        (d / "included.tsv").touch()
+    day_and_a_bit = 25 * 3600
+    stamp = old.stat().st_mtime - day_and_a_bit
+    os.utime(old, (stamp, stamp))
+
+    assert sandbox.run(**QUIET).returncode == 0
+    assert not old.exists()
+    assert recent.exists()   # it may belong to a run still going
+    assert sorted(p.name for p in sandbox.state.glob("run.*")) == ["run.recent"]
+
+
 def test_build_says_what_it_is_doing_now(sandbox: Sandbox) -> None:
     done = sandbox.run(**QUIET)
     assert done.returncode == 0, done.stdout + done.stderr

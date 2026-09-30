@@ -108,6 +108,9 @@ export HOLT_STAGE_EDGE_DIR="$EDGE_DIR"
 
 RUN="$(mktemp -d "$STATE/run.XXXXXX")"
 trap 'rm -rf "$RUN"' EXIT
+# A run that was killed (a stopped unit, a reboot) skips the trap and leaves its
+# run dir behind. Sweep those once they are a day old: no run lasts that long.
+find "$STATE" -maxdepth 1 -type d -name 'run.*' -mmin +1440 -exec rm -rf {} + 2>/dev/null || true
 : > "$RUN/included.tsv"   # kind  name  branch  sha  title  url
 : > "$RUN/skipped.tsv"    # kind  name  branch  sha  title  url  reason
 main_sha="" preview_sha="" fingerprint=""
