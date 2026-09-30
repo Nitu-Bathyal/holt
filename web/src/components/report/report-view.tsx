@@ -16,7 +16,6 @@ import { LandingMap } from "./landing-map";
 import { PlaybookSection } from "./playbook-section";
 import { ProjectSection } from "./project-section";
 import { ShareBar } from "./share-bar";
-import { StatsGrid } from "./stats-grid";
 import { TONE, TONE_MOOD } from "./tone";
 import { UpgradeCard } from "./upgrade-card";
 import { VerdictCat } from "./verdict-cat";
@@ -245,10 +244,7 @@ export function ReportView({
 
         {!example && <PreflightLink repo={repo} />}
 
-        <Section id="numbers" title="What happened to outsiders">
-          <StatsGrid stats={report.stats} reveal={reveal} land={land} />
-          <HoltUsersLine stats={report.holt_users} />
-        </Section>
+        <HoltUsersLine stats={report.holt_users} />
 
         <Section id="landing" title="Where newcomer work lands" reveal={reveal ? 230 : undefined}>
           <LandingMap landing={report.landing} neverLanded={report.never_landed} />
@@ -256,14 +252,20 @@ export function ReportView({
 
         {!example && <VerdictFeedback report={report} />}
 
-        <Section id="evidence" title="The evidence" note="every claim links to GitHub" reveal={reveal ? 280 : undefined}>
-          <EvidenceList evidence={report.evidence} />
-        </Section>
+        {report.evidence.length > 0 && (
+          <Section id="evidence" title="The evidence" note="every claim links to GitHub" reveal={reveal ? 280 : undefined}>
+            <EvidenceList evidence={report.evidence} />
+          </Section>
+        )}
 
-        <div className="lg:hidden space-y-4">
-          {report.mode === "rules" && <UpgradeCard repo={repo} signedIn={signedIn} />}
-          {!example && <BadgeSnippet repo={repo} offered={badgeOffered(report)} />}
-        </div>
+        {/* The report's footer: for the maintainer who reads it to the end. */}
+        {!example && <BadgeSnippet repo={repo} offered={badgeOffered(report)} />}
+
+        {report.mode === "rules" && (
+          <div className="lg:hidden">
+            <UpgradeCard repo={repo} signedIn={signedIn} />
+          </div>
+        )}
       </div>
 
       <aside className="hidden lg:block" aria-label="Share and more">
@@ -273,7 +275,6 @@ export function ReportView({
             <ShareBar url={url} text={shareText} />
           </div>
           {report.mode === "rules" && <UpgradeCard repo={repo} signedIn={signedIn} />}
-          {!example && <BadgeSnippet repo={repo} offered={badgeOffered(report)} />}
           {!example && (
             <Link href={`/compare?repos=${repo}`} className="block text-[0.87rem] text-muted hover:text-ink">
               [ compare with another repo → ]

@@ -1,4 +1,4 @@
-// Under a report's numbers: what Holt users' own pull requests here came to.
+// On a report, under where newcomer work lands: what Holt users' own pull requests here came to.
 // Rendered only when the server sends the numbers (5+ people make them up).
 import Link from "next/link";
 import { holtUsersLine, windowLabel, type HoltUsers } from "@/lib/holt-users";
@@ -6,7 +6,7 @@ import { holtUsersLine, windowLabel, type HoltUsers } from "@/lib/holt-users";
 export function HoltUsersLine({ stats }: { stats: HoltUsers | null }) {
   if (!stats) return null;
   return (
-    <div className="mt-4 border-l-2 border-line-strong pl-4">
+    <div className="border-l-2 border-line-strong pl-4">
       <p className="font-sans text-[0.95rem] text-ink">
         <span className="text-muted">Holt users who sent PRs here: </span>
         {holtUsersLine(stats)}
