@@ -17,6 +17,7 @@ without it), add it to API.md, and regenerate the TypeScript types.
 
 from __future__ import annotations
 
+import math
 from datetime import datetime
 from typing import Literal
 
@@ -89,6 +90,45 @@ class ErrorBody(Model):
 # --- the report --------------------------------------------------------------------
 
 
+class Timing(Model):
+    """How long it takes here (engine 7, agent/timing.py). Facts, never read
+    by the verdict. Each is null under its minimum."""
+
+    # The waits by which half, and 8 in 10, of settled outside pull requests
+    # had an answer: a reply from the team, or a merge. Null when fewer than
+    # that ever get one (a pull request closed unanswered stopped waiting and
+    # isn't counted past its close).
+    first_reply_half_hours: float | None = None
+    first_reply_slow_hours: float | None = None
+    # Share of outside pull requests opened 60-240 days before the report
+    # that were merged within 3, 7, 14, 30 and 60 days of opening.
+    merged_within_3_days: float | None = None
+    merged_within_7_days: float | None = None
+    merged_within_14_days: float | None = None
+    merged_within_30_days: float | None = None
+    merged_within_60_days: float | None = None
+    # Days to merge among those merged: the median, and the 90th percentile.
+    merge_typical_days: float | None = None
+    merge_slow_days: float | None = None
+    # The wait by which half of them were merged (null when fewer were).
+    merge_half_days: float | None = None
+    # The outside pull requests those are over, and when the first and last
+    # were opened (dates).
+    merge_cohort_prs: int | None = None
+    merge_cohort_merged: int | None = None
+    merge_cohort_from: str | None = None
+    merge_cohort_to: str | None = None
+    # Outside merges came in bursts over the last 26 weeks; null when that
+    # can't be read (a short sample, too few merges, work landed elsewhere).
+    merges_in_bursts: bool | None = None
+    # When the newest outside pull request was merged (a date).
+    last_outside_merge: str | None = None
+    # A bot closes quiet pull requests, and after how many quiet days (null
+    # when only its closes were seen, not its config).
+    stale_bot: bool | None = None
+    stale_close_days: int | None = None
+
+
 class Stats(Model):
     # Decided attempts only (opened more than the 14-day settle window ago):
     # the denominator of every rate here. `still_open` were opened within the
@@ -110,6 +150,9 @@ class Stats(Model):
     withdrawn: int = 0
     # Opened more than a year ago: read, and in no count.
     too_old: int = 0
+    # How long it takes here (engine 7): null on reports from before it, and
+    # on readings of the frozen benchmark.
+    timing: Timing | None = None
 
 
 class PartialStats(Model):
@@ -179,7 +222,7 @@ class Odds(Model):
 
 
 AskCode = Literal["ticket_first", "no_ai_prs", "ok_to_test", "sig_team", "cla", "dco",
-                  "issue_first", "ai_disclosure", "duplicates"]
+                  "issue_first", "ai_disclosure", "duplicates", "stale_bot"]
 
 
 class Ask(Model):
@@ -191,6 +234,9 @@ class Ask(Model):
     code: AskCode
     url: str
     link: str | None = None
+    # `stale_bot` only: quiet days before the bot closes a pull request, when
+    # its config says (null when only its closes were seen).
+    days: int | None = None
 
 
 class Sample(Model):
@@ -434,6 +480,70 @@ def first_timer_line(s: Stats) -> str | None:
             "merged here.")
 
 
+# --- how long it takes here (engine 7) ------------------------------------------
+
+
+def wait_phrase(hours: float) -> str:
+    """A wait in plain words, rounded up so "within" stays true: "6 hours",
+    "a day", "3 days", "2 weeks", "2 months"."""
+    days = hours / 24
+    if hours <= 1:
+        return "an hour"
+    if hours < 22:
+        return f"{math.ceil(hours)} hours"
+    if days <= 1:
+        return "a day"
+    if days <= 13:
+        return f"{math.ceil(days)} days"
+    if days <= 7 * 8:
+        weeks = math.ceil(days / 7)
+        return f"{weeks} weeks"
+    return f"{math.ceil(days / 30)} months"
+
+
+def share_phrase(share: float) -> str:
+    """0.83 -> "most", 0.5 -> "about half", 0.27 -> "about 3 in 10"."""
+    if share >= 0.95:
+        return "nearly all"
+    if share >= 0.75:
+        return "most"
+    if 0.45 <= share <= 0.55:
+        return "about half"
+    if share < 0.05:
+        return "hardly any"
+    return f"about {max(1, round(share * 10))} in 10"
+
+
+def how_long(s: Stats) -> list[Counted]:
+    """ "How long it takes here": first reply, merged within a week and a
+    month, bursts, and the stale bot. Only what cleared its minimum."""
+    t = s.timing
+    if t is None:
+        return []
+    out: list[Counted] = []
+    if t.first_reply_slow_hours is not None:
+        typical = s.median_first_response_hours
+        out.append(Counted(topic="first reply", text=(
+            (f"Typically {wait_phrase(typical)}. " if typical is not None else "")
+            + f"Most get one within {wait_phrase(t.first_reply_slow_hours)}.")))
+    elif t.first_reply_half_hours is not None:
+        out.append(Counted(topic="first reply", text=(
+            f"About half get one within {wait_phrase(t.first_reply_half_hours)}.")))
+    if t.merged_within_7_days is not None and t.merged_within_30_days is not None:
+        week, month = share_phrase(t.merged_within_7_days), share_phrase(t.merged_within_30_days)
+        text = (f"{week} within a week." if week == month
+                else f"{week} within a week, {month} within a month.")
+        out.append(Counted(topic="merged", text=text[:1].upper() + text[1:]))
+    if t.merges_in_bursts and t.last_outside_merge and (d := _date(t.last_outside_merge)):
+        out.append(Counted(topic="rhythm", text=(
+            f"In bursts. The last outside merge was on {d[0]} {d[1]} {d[2]}.")))
+    if t.stale_bot:
+        out.append(Counted(topic="closed if quiet", text=(
+            f"A bot closes pull requests after {t.stale_close_days} quiet days."
+            if t.stale_close_days else "A bot closes quiet pull requests.")))
+    return out
+
+
 # The best place to start needs this many merged outside pull requests in it;
 # fewer is luck, not a pattern. A folder where this many tried and none landed
 # is worth a warning.
@@ -450,14 +560,18 @@ ASK_STEP: dict[str, str] = {
     "issue_first": "Open an issue before you write code: CONTRIBUTING asks for that.",
     "ai_disclosure": "Say whether you used AI: the project asks for that.",
     "duplicates": "Search open pull requests first: duplicates get closed.",
+    "stale_bot": "Keep yours active: a bot closes quiet pull requests.",
 }
 
 
-def ask_text(code: str, link: str | None = None) -> str:
-    """The sentence for one ask. A ticket names the tracker the bot linked."""
+def ask_text(code: str, link: str | None = None, days: int | None = None) -> str:
+    """The sentence for one ask. A ticket names the tracker the bot linked;
+    the stale bot, its quiet days."""
     if code == "ticket_first" and link:
         host = link.split("://", 1)[-1].split("/", 1)[0]
         return f"Get an accepted ticket at {host} first."
+    if code == "stale_bot" and days:
+        return f"Keep yours active: a bot closes pull requests after {days} quiet days."
     return ASK_STEP[code]
 NOT_VIABLE_STEP: dict[str, str] = {
     "archived": "Don't send a pull request here. Look for an active fork or a similar "
@@ -513,9 +627,9 @@ def next_step(verdict: str, decided_by: list[str], rule_codes: list[str],
         return CATALOGUE_STEP
     if verdict == "long_shot":
         first = next((c for c in rule_codes if c in LONG_SHOT_CODES), "few_merged")
-        return " ".join([LONG_SHOT_STEP[first]] + [ask_text(a.code, a.link) for a in asks])
+        return " ".join([LONG_SHOT_STEP[first]] + [ask_text(a.code, a.link, a.days) for a in asks])
     if verdict != "viable":
-        return " ".join([INSUFFICIENT_STEP] + [ask_text(a.code, a.link) for a in asks])
+        return " ".join([INSUFFICIENT_STEP] + [ask_text(a.code, a.link, a.days) for a in asks])
     areas = [a for a in landing if a.path != "(root)" and a.merged >= BEST_AREA_MIN_MERGED]
     best = max(areas, key=lambda a: (a.merged, a.merged / a.attempted), default=None)
     if best is not None:
@@ -526,7 +640,7 @@ def next_step(verdict: str, decided_by: list[str], rule_codes: list[str],
     avoid = next((a for a in never_landed if a.attempted >= AVOID_AREA_MIN_TRIED), None)
     if avoid is not None:
         out.append(f"Nothing from outside landed in {avoid.path} ({avoid.attempted} tried).")
-    out += [ask_text(a.code, a.link) for a in asks]
+    out += [ask_text(a.code, a.link, a.days) for a in asks]
     return " ".join(out)
 
 
@@ -798,6 +912,11 @@ class Report(VerdictView):
     @property
     def odds(self) -> Odds | None:
         return odds_for(self.verdict, self.stats)
+
+    @computed_field
+    @property
+    def how_long(self) -> list[Counted]:
+        return how_long(self.stats)
 
 
 # --- starter issues and find ------------------------------------------------------
@@ -1099,6 +1218,9 @@ class Access(Model):
     # When not allowed: the error the request would get.
     code: str | None
     message: str | None
+    # The plan's allowance left, monthly or in all (the free merge plans);
+    # null when unlimited or the plan has none.
+    left: int | None = None
 
 
 class Entitlements(Model):
@@ -1538,6 +1660,201 @@ class PlaybookJobStatus(Model):
     stage: str | None = None
     progress: float
     playbook: Playbook | None
+    error: Error | None
+
+
+# --- Merge plan (merge_plan.py) -----------------------------------------------------
+#
+# The paid AI report: what to do in one repository, written by the
+# paid-features service from this server's report and starter issues. Rules
+# build it; a model words the call and the steps, and every claim it makes is
+# checked against its sources. The verdict is the report's, never the model's,
+# and no field names the model.
+
+
+class PlanNumber(Model):
+    value: str  # "5 of 8", "4.4 h"
+    label: str
+
+
+class PlanVerdict(Model):
+    """The report's verdict, with its numbers."""
+
+    verdict: Verdict
+    headline: str
+    tone: Tone
+    line: str
+    numbers: list[PlanNumber] = Field(default_factory=list)
+
+
+class PlanCall(Model):
+    """What to do here, in one sentence (may contain Markdown code spans)."""
+
+    text: str
+    sources: list[PlaybookSource] = Field(default_factory=list)
+
+
+class PlanLink(Model):
+    label: str
+    url: str
+
+
+class PlanCopy(Model):
+    """A comment to post on GitHub, as written."""
+
+    label: str
+    text: str
+
+
+class PlanStep(Model):
+    title: str  # may contain Markdown code spans
+    detail: str | None = None
+    link: PlanLink | None = None
+    copy_: PlanCopy | None = Field(None, alias="copy")
+    sources: list[PlaybookSource] = Field(default_factory=list)
+
+    model_config = ConfigDict(extra="ignore", json_schema_serialization_defaults_required=True,
+                              populate_by_name=True, serialize_by_alias=True)
+
+
+class PlanFact(Model):
+    """One thing merged pull requests have in common ("72 lines")."""
+
+    value: str
+    unit: str
+    label: str  # may contain Markdown code spans
+    seen: int | None = None
+    of: int | None = None
+    sources: list[PlaybookSource] = Field(default_factory=list)
+
+
+class PlanQuote(Model):
+    text: str
+    # The project member who wrote it.
+    who: str
+    url: str
+    number: int
+
+
+class PlanExample(Model):
+    number: int
+    url: str
+
+
+class PlanClosing(Model):
+    """Why outside pull requests get closed, in the maintainers' words."""
+
+    reason: str
+    seen: int
+    of: int
+    quote: PlanQuote | None = None
+    examples: list[PlanExample] = Field(default_factory=list)
+
+
+class PlanReviewer(Model):
+    login: str
+    reviewed: int
+    of: int
+    # The folders they review most.
+    areas: list[str] = Field(default_factory=list)
+
+
+class PlanReviewers(Model):
+    people: list[PlanReviewer] = Field(default_factory=list)
+    sources: list[PlaybookSource] = Field(default_factory=list)
+
+
+class PlanSignal(Model):
+    kind: str  # outsider_posture | onboarding | repo_kind
+    value: str
+    headline: str
+    text: str
+    tone: Tone
+    url: str | None = None
+
+
+class PlanOutcome(Model):
+    value: str  # the engine's outcome value, for the web to word
+    count: int
+
+
+class PlanThreadQuote(Model):
+    text: str
+    url: str
+    number: int
+    outcome: str
+
+
+class PlanAi(Model):
+    """What the AI found reading the pull request threads (from an AI report)."""
+
+    read_on: str
+    threads: int
+    signals: list[PlanSignal] = Field(default_factory=list)
+    outcomes: list[PlanOutcome] = Field(default_factory=list)
+    quotes: list[PlanThreadQuote] = Field(default_factory=list)
+
+
+class PlanWindow(Model):
+    # The window asked for, and the day the oldest pull request the counts
+    # read was opened (say "since" with this date, never with `days`).
+    days: int
+    since: str
+
+
+class PlanSample(Model):
+    merged: int
+    closed: int
+    merged_outside: int
+    closed_outside: int
+
+
+class MergePlan(Model):
+    repo: str
+    # When the pull requests were read from GitHub, and when the plan was written.
+    recorded_on: str
+    generated_at: str
+    window: PlanWindow
+    sample: PlanSample
+    # Say once, near the top, when present.
+    note: str | None = None
+    verdict: PlanVerdict
+    call: PlanCall
+    steps: list[PlanStep] = Field(default_factory=list)
+    merged: list[PlanFact] = Field(default_factory=list)
+    closed: list[PlanClosing] = Field(default_factory=list)
+    reviewers: PlanReviewers = Field(default_factory=PlanReviewers)
+    # Null unless the plan was written from an AI report.
+    ai: PlanAi | None = None
+
+
+class MergePlanJob(Model):
+    job_id: str
+    status: JobState
+    stage: str
+    progress: float
+
+
+class MergePlanState(Model):
+    """GET /v1/merge-plan/{owner}/{repo}."""
+
+    repo: str
+    # False when merge plans can't be made here (no paid-features service, or
+    # AI switched off): hide them.
+    available: bool
+    # Signed in: whether this user can have a plan made now, and how it's paid.
+    access: Access | None
+    # Signed in: this user's latest plan for this repository.
+    plan: MergePlan | None
+    # Signed in: a plan for this repository still being made for this user.
+    job: MergePlanJob | None
+
+
+class MergePlanJobStatus(Model):
+    status: JobState
+    stage: str | None = None
+    progress: float
+    plan: MergePlan | None
     error: Error | None
 
 

@@ -5,6 +5,7 @@ import { HacktoberfestPill } from "@/components/hacktoberfest-pill";
 import { CatCompanion } from "@/components/motion/cat-companion";
 import { SwapHost } from "@/components/motion/swap-host";
 import { ScrollMarquee } from "@/components/motion/scroll-marquee";
+import { FocusOnHash } from "@/components/shell/check-focus";
 import { PasteBox } from "@/components/paste-box";
 import { EXAMPLE_PATH } from "@/lib/example-report";
 import { humanHours } from "@/lib/format";
@@ -98,6 +99,7 @@ export default async function Home() {
   return (
     <PageTransition>
       <>
+        <FocusOnHash />
         {/* 01 — start here */}
         <section data-hero data-cat-section="ready" className="pane relative overflow-hidden border-b border-line low:pt-5 short:pt-3">
           <div aria-hidden="true" className="hero-backdrop" />
@@ -125,7 +127,7 @@ export default async function Home() {
                     did anything get merged?
                   </p>
                 </div>
-                <div className="fade-up hero-act" style={{ ["--d" as string]: ".38s" }}>
+                <div id="check" data-check-target="page" className="fade-up hero-act scroll-mt-24" style={{ ["--d" as string]: ".38s" }}>
                   <PasteBox signedIn={signedIn} />
                 </div>
                 <div className="fade-up hero-foot" style={{ ["--d" as string]: ".42s" }}>

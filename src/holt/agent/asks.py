@@ -19,7 +19,9 @@ Read from evidence Holt already has, and only where it is unambiguous:
   and a ban outranks it;
 - tests approved first, and a team to find: most outside pull requests carry
   `needs-ok-to-test` / `ok-to-test`, or a `sig/<area>` label (kubernetes);
-- search for duplicates: several outside pull requests closed as a duplicate.
+- search for duplicates: several outside pull requests closed as a duplicate;
+- keep it active: a stale bot closes quiet pull requests (agent/stale.py: its
+  config, or its closes).
 
 These never touch the verdict. They are advice for the next step, and each
 one links to where it was read so the reader can check it. Where nothing is
@@ -33,6 +35,7 @@ import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 
+from holt.agent import stale
 from holt.agent.signals import build_threads
 from holt.types import EvidenceRecord
 
@@ -106,7 +109,7 @@ MOST = 0.5
 
 # Blocking asks first: what gets a pull request closed before anyone reads it.
 ORDER = ("ticket_first", "no_ai_prs", "ok_to_test", "sig_team", "cla", "dco", "issue_first",
-         "ai_disclosure", "duplicates")
+         "ai_disclosure", "duplicates", "stale_bot")
 
 
 @dataclass(frozen=True, slots=True)
@@ -115,6 +118,8 @@ class Ask:
     url: str  # where it was read: a bot's comment, a pull request, or a document
     # A link the source itself gives (the tracker a bot names), when there is one.
     link: str | None = None
+    # The stale bot's quiet days before a close, when its config says.
+    days: int | None = None
 
 
 def is_cla_bot(login: str | None) -> bool:
@@ -165,7 +170,8 @@ def read(records: Iterable[EvidenceRecord], outsider_keys: set[str] | None = Non
             found.setdefault("cla", Ask("cla", cla.url))
             break
 
-    threads = [t for t in build_threads(records).values()
+    everything = build_threads(records)
+    threads = [t for t in everything.values()
                if outside(t.key) and not t.author_is_bot and not t.draft]
     newest_first = sorted(threads, key=lambda t: t.opened_at, reverse=True)
     url = {r.evidence_id: r.url for r in records if r.evidence_id.endswith(":opened")}
@@ -231,4 +237,8 @@ def read(records: Iterable[EvidenceRecord], outsider_keys: set[str] | None = Non
         found.setdefault("ai_disclosure", Ask("ai_disclosure", ai_disclosure_closes[0]))
     if "no_ai_prs" in found:
         found.pop("ai_disclosure", None)
+    rule = stale.read(records, [t for t in everything.values() if outside(t.key)
+                                and not t.author_is_bot])
+    if rule is not None and rule.url:
+        found["stale_bot"] = Ask("stale_bot", rule.url, days=rule.days)
     return [found[c] for c in ORDER if c in found]

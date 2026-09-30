@@ -7,16 +7,17 @@ How the engineering skills should consume this repo's domain documentation when 
 ```
 /
 ├── CONTEXT.md        ← glossary: outsider, first-timer, attempt, reply, decided PR, verdict, ...
-├── docs/adr/         ← architecture decisions, e.g. 0001-private-paid-service-over-http.md
 ├── src/holt/         ← engine + CLI
 ├── server/
 └── web/
 ```
 
+Architecture decision records (ADRs) are private. They live in `docs/adr/` of the private repo (`holt-oss/holt-pro`, usually cloned at `~/projects/holt-pro`), e.g. `0001-read-github-as-a-github-app.md`. Write new ones there, never in this repo.
+
 ## Before exploring, read these
 
 - **`CONTEXT.md`** at the repo root.
-- **`docs/adr/`**: read ADRs that touch the area you're about to work in.
+- **`docs/adr/` in the private repo** (`holt-oss/holt-pro`): read ADRs that touch the area you're about to work in.
 
 If any of these files don't exist, **proceed silently**. Don't flag their absence; don't suggest creating them upfront. The `/domain-modeling` skill (reached via `/grill-with-docs` and `/improve-codebase-architecture`) creates them lazily when terms or decisions actually get resolved.
 

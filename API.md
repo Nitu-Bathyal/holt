@@ -80,6 +80,7 @@ responses. The server also accepts and normalises full URLs
   "next_step": "string",              // line 3: what to do next
   "stat_line": "string | null",       // short count for the extension chip: "22 of 120 outside PRs merged"
   "counted": [ { "topic": "What we read", "text": "The newest 200 pull requests on GitHub, opened 3 Jun – 26 Sep 2026." } ],
+  "how_long": [ { "topic": "first reply", "text": "Typically 14 hours. Most get one within 3 days." } ],
   "odds": { "level": "good" | "fair" | "long", "tone": "good" | "warn" | "bad",
             "text": "most outside pull requests get a reply, and plenty get merged" } | null,
   "bottom_line": "string | null",     // ai mode: at most two model-written sentences, the lead of the AI explanation
@@ -89,7 +90,17 @@ responses. The server also accepts and normalises full URLs
     "first_time_merged_authors": 15, "no_reply": 63,
     "median_first_response_hours": 0.8, "bot_share": 0.085,
     "still_open": 12, "closed_silently": 20, "closed_by_bot": 31, "withdrawn": 4,
-    "too_old": 0                     // opened more than a year ago: read, in no count (default 0)
+    "too_old": 0,                    // opened more than a year ago: read, in no count (default 0)
+    "timing": {                      // how long it takes here (engine 7); null before it
+      "first_reply_half_hours": 5.0, "first_reply_slow_hours": 70.2,
+      "merged_within_3_days": 0.41, "merged_within_7_days": 0.52, "merged_within_14_days": 0.6,
+      "merged_within_30_days": 0.68, "merged_within_60_days": 0.72,
+      "merge_typical_days": 4.1, "merge_slow_days": 38.0, "merge_half_days": 6.2,
+      "merge_cohort_prs": 180, "merge_cohort_merged": 130,
+      "merge_cohort_from": "2026-02-10", "merge_cohort_to": "2026-07-28",
+      "merges_in_bursts": false, "last_outside_merge": "2026-09-27",
+      "stale_bot": true, "stale_close_days": 37
+    } | null
   },
   "decided_by": ["plain-English rule sentence", "..."],
   "rule_codes": ["merges", "rubber_stamp"], // stable code per decided_by line, same order
@@ -107,8 +118,9 @@ responses. The server also accepts and normalises full URLs
               "last_opened": "2026-09-26T09:00:00Z", "team_pull_requests": 40,
               "team_people": 9, "bot_pull_requests": 12 } | null,
   "asks": [ { "code": "ticket_first" | "no_ai_prs" | "ok_to_test" | "sig_team" | "cla" | "dco"
-              | "issue_first" | "ai_disclosure" | "duplicates",
-              "url": "https://github.com/…", "link": "https://code.djangoproject.com" | null } ],
+              | "issue_first" | "ai_disclosure" | "duplicates" | "stale_bot",
+              "url": "https://github.com/…", "link": "https://code.djangoproject.com" | null,
+              "days": 37 | null } ],
   "budget_independent": true,         // the verdict is the same for any `days` (see below)
   "cost": { "input_tokens": 9000, "output_tokens": 6000,
             "usd": 0.0123, "seconds": 48.2 }, // ai only, else null
@@ -236,13 +248,66 @@ label), `cla` (a CLA bot commented on outside pull requests), `dco` or
 `issue_first` (CONTRIBUTING says so in as many words), `ai_disclosure` (a
 written rule, or a closing bot, asks you to say whether you used AI; never
 beside `no_ai_prs`), `duplicates` (5+ outside pull requests closed as
-duplicates). `url` is where it was read; `link` is null except on
-`ticket_first`. An empty list means nothing was found, not that nothing is
+duplicates), `stale_bot` (a bot closes quiet pull requests: read from
+actions/stale or probot's `.github/stale.yml` at the commit the report read,
+`url` the config file and `days` its quiet days before a close; or, with no
+config found, 2+ outside pull requests closed later by a bot with no reply,
+`url` the newest and `days` null). `url` is where it was read; `link` is null except on
+`ticket_first`; `days` is null except on `stale_bot`. An empty list means nothing was found, not that nothing is
 asked. Neither affects the verdict. `next_step` carries one sentence per ask
 under Worth your time, Long shot and Not enough evidence.
 
+**`stats.timing`: how long it takes here (engine 7).** Facts for the reader and for My PRs, never read by the verdict. Null on
+reports from before engine 7 (and on readings of the frozen benchmark); each
+field is null under its minimum. All waits are measured from when a pull
+request was opened.
+
+- **First reply**: `first_reply_half_hours` and `first_reply_slow_hours` are
+  the waits by which half, and 8 in 10, of the settled outside pull requests
+  (opened 14+ days before the report, the ones `stats` counts) had an answer:
+  a reply from the team, or a merge. One still open with no answer counts as
+  not answered; one closed with no answer stopped waiting and leaves every
+  longer wait. Null when fewer than 8 were answered, or when fewer than half
+  (8 in 10) ever were. `stats.median_first_response_hours` (the typical wait,
+  over the ones that got a reply) is unchanged.
+- **Merges** come from a cohort nobody is still waiting on: outside pull
+  requests opened 60 to 240 days before the report, so each had at least 60
+  days to land. `merged_within_{3,7,14,30,60}_days` are the shares merged
+  within that many days (open and closed-unmerged ones count as not merged);
+  `merge_half_days` is the wait by which half were merged;
+  `merge_typical_days` and `merge_slow_days` are the median and the 90th
+  percentile among the merged ones. `merge_cohort_prs` and
+  `merge_cohort_merged` are how many they are over, and `merge_cohort_from` /
+  `merge_cohort_to` (dates) when the first and last were opened. On a busy
+  repository the cohort is the newest 100 of the window plus the newest 100 of
+  each older third of it (one light search, up to 3 GitHub points); a quieter
+  one's own sample covers it. Outside means not on the team the sample shows,
+and not anyone who merged a pull request in the cohort (merging takes write
+access; staff often read as CONTRIBUTOR). Minimums: 8 outside pull requests for any
+  merge number, 8 merges for `merge_slow_days`. All null when most outside
+  work lands off GitHub's merge button (Gerrit, a merge bot, an internal
+  sync): GitHub's merge time isn't the project's.
+- **Rhythm**: `merges_in_bursts` is true when, over the last 26 weeks, there
+  were 8+ outside merges, under 30% of weeks had one, and the busiest 4 weeks
+  held 60%+ of them; false for a steadier flow; null when the sample doesn't
+  reach back 26 weeks or has fewer merges. `last_outside_merge` is the date of
+  the newest outside merge in the sample.
+- **Stale bot**: `stale_bot` and `stale_close_days` as in the `stale_bot` ask
+  (null days when only its closes were seen).
+
+`how_long` is the block the report shows for it, derived from `stats` like
+`counted`: up to four `{topic, text}` lines, in order `first reply`
+("Typically 14 hours. Most get one within 3 days.", or "About half get one
+within 2 days."), `merged` ("About half within a week, most within a month."),
+`rhythm` (only when `merges_in_bursts`), and `closed if quiet` (the stale
+bot). Empty when nothing cleared its minimum. Render the lines as given.
+
+My PRs (PR 2 of engine 6b) reads `stats.timing` through the report join, so it
+can say "Day 9, no reply yet. Most get one within 3 days here." without
+another GitHub read.
+
 `headline`, `tone`, `verdict_line`, `numbers_line`, `first_timer_line`,
-`next_step`, `stat_line`, `counted` and `odds` are derived by the server from
+`next_step`, `stat_line`, `counted`, `how_long` and `odds` are derived by the server from
 `verdict`, `stats`, `sample`, `landing`, `asks` and
 `decided_by`/`rule_codes`, every time a report is
 served (so cached reports pick up wording changes). Every surface (web, OG
@@ -523,10 +588,12 @@ one at a time, and wait behind every user request.
   the server has no model key.
 - `GET /v1/me/entitlements` → `{"plan": "free", "plan_expires_at": null, "features": [Access]}`,
   one `Access` per paid feature in the pricing catalogue:
-  `{"feature": "playbook", "name": "Contribution playbook", "allowed": false, "via": null, "cost": 1, "left_this_month": null, "code": "quota_exceeded", "message": "…"}`.
+  `{"feature": "playbook", "name": "Contribution playbook", "allowed": false, "via": null, "cost": 1, "left_this_month": null, "code": "quota_exceeded", "message": "…", "left": null}`.
   `via` is how a use would be paid for now (`plan` or `credits`), `cost` the
   credits one use takes (0 when the plan covers it), `left_this_month` the
-  plan's monthly allowance left (null when unlimited or none). When
+  plan's monthly allowance left (null when unlimited or none), `left` the
+  plan's allowance left whether monthly or in all (the free merge plans; null
+  when unlimited or none). When
   `allowed` is false, `code`/`message` are the error the paid request would get
   (`quota_exceeded` or `needs_plan`). Informational: the paid route decides
   again, atomically, when it charges.
@@ -537,11 +604,14 @@ one at a time, and wait behind every user request.
   (`verdict`/`headline`/`tone` are null until the job is done).
 
 `/v1/me*` without `X-Holt-User` → 401 `unauthorized`. Free AI credits: every
-signed-in user gets `HOLT_SIGNUP_AI_CREDITS` (3) once, the first time the server
+signed-in user gets `HOLT_SIGNUP_AI_CREDITS` once, the first time the server
 sees them (users from before credits get them on their next request), then can
 claim one more whenever `HOLT_CLAIM_EVERY_DAYS` (7) have passed since the last
 claim; the welcome grant starts that clock. Claims don't accumulate: at most one
 is ever due. Spending, claiming and refunds are atomic on the server.
+`HOLT_SIGNUP_AI_CREDITS` is 0 now that the free merge plans replace them: a new
+account gets no AI credits and nothing to claim (`next_claim_at` null), and
+accounts welcomed before keep their credits and their weekly claim.
 
 #### Credits, plans and passes
 
@@ -552,9 +622,12 @@ passes that stays switched off (below):
 - **Features** (`ai_report`, `playbook`, `preflight`, `guidance`,
   `recommendations`, `merge_plan`, `pr_watch`, `repo_watch`, `issue_watch`)
   and what one use costs in credits, **plans** (`free`, `pro`: what each
-  covers, unlimited or N uses per UTC month) and **passes** (days of Pro for
+  covers, unlimited, N uses per UTC month, or N uses in all) and **passes** (days of Pro for
   one payment, with INR and USD prices) are defined in a JSON catalogue
   (`server/holt_server/pricing.json`, or `HOLT_PRICING_FILE`).
+- The free plan covers 3 merge plans in all (every account, new or old);
+  Pro covers 30 a month while a pass is active. Pro's uses don't touch the
+  free three.
 - A use is paid for by the plan when it covers the feature (free), else with
   the feature's credits: free credits first when the feature accepts them,
   then purchased credits, soonest-expiring first. A feature with no credit
@@ -867,6 +940,102 @@ one:
   most common first: `seen` of the `of` closed outside pull requests read
   showed it, each example a closed pull request with the exact words `who`
   (someone in the project) wrote on it.
+
+### Merge plan (paid)
+
+The paid AI report for one repository: the call (one sentence on what to do
+here, next to the report's verdict and its numbers), your first pull request
+as numbered steps, what gets merged, why outside pull requests get closed (in
+the maintainers' words) and who reviews, plus what the AI found reading the
+pull request threads when the repository has an AI report. It is written from
+this server's latest report for the repository and its starter issues: rules
+build it, a model words the call and the steps, and every claim is checked
+against its sources before it is kept. The verdict is the report's, computed
+by rules; the model never picks it, and no field names the model.
+
+Merge plans can be made only when the server runs with its paid features
+(`HOLT_PRO_URL`) **and** AI is on (an AI budget, `HOLT_AI_BUDGET_USD`);
+otherwise the GET says `available: false`, and the POST is 501
+`not_implemented` (no paid features) or 503 `ai_unavailable` (AI off), with
+nothing charged.
+
+- `GET /v1/merge-plan/{owner}/{repo}` (anonymous or signed in; reads only the
+  database) → `MergePlanState`:
+  `{"repo", "available": true, "access": Access|null, "plan": MergePlan|null, "job": MergePlanJob|null}`.
+  - `access` (signed in, when `available`) is the `merge_plan` feature's
+    `Access` (see Account): whether one can be made now; `left` is how many
+    are left (the free three, or this month's thirty on Pro).
+  - `plan` (signed in) is this user's latest plan for this repository. It is
+    theirs and kept, so it is returned even while `available` is false.
+  - `job` (signed in) is the job making one for this user while it runs
+    (`{"job_id", "status", "stage", "progress"}`), so a reloaded page can
+    follow it again.
+- `POST /v1/me/merge-plan/{owner}/{repo}` (signed in; no body) →
+  `202 {"status": "queued", "job_id"}`: a job makes a new plan (usually under
+  a minute, up to a few; stopped after `HOLT_JOB_TIMEOUT_AI`). Asking again
+  while one is being made returns that job, charged once.
+  - One use of `merge_plan` is taken before anything runs (402
+    `quota_exceeded` otherwise, and nothing is queued). An unknown or private
+    repository is 404 `not_found`, and one with no report yet 404 `not_found`
+    ("Check the repository first"), both before any charge.
+  - A job that fails gives the use back; its error message says so.
+  - Asking again when nothing has changed returns the same plan (same
+    `generated_at`) and gives the use back. A plan that changed, or that was
+    made earlier for someone else, costs a use.
+- `GET /v1/merge-plan-jobs/{job_id}` → `{"status", "stage", "progress", "plan": MergePlan|null, "error": Error|null}`,
+  and `GET /v1/merge-plan-jobs/{job_id}/events` (SSE, as for analyses; `done`
+  carries `{"plan": MergePlan}`).
+
+`MergePlan`:
+
+```json
+{"repo": "pallets/click",
+ "recorded_on": "2026-09-27T20:04:55+00:00", "generated_at": "2026-09-30T12:00:00+00:00",
+ "window": {"days": 365, "since": "2025-09-27"},
+ "sample": {"merged": 50, "closed": 25, "merged_outside": 5, "closed_outside": 25},
+ "note": "Only 5 merged pull requests from people outside the project turned up …",
+ "verdict": {"verdict": "viable", "headline": "Worth your time", "tone": "good", "line": "…",
+             "numbers": [{"value": "5 of 8", "label": "outside PRs merged"}]},
+ "call": {"text": "Pick a small change in `tests/` …", "sources": [Source]},
+ "steps": [{"title": "Pick #3696, or a small fix in `tests/`", "detail": "…"|null,
+            "link": {"label": "#3696 on GitHub", "url": "https://github.com/…"}|null,
+            "copy": {"label": "Comment to post", "text": "Hi! …"}|null,
+            "sources": [Source]}],
+ "merged": [{"value": "72", "unit": "lines", "label": "typical merged pull request, in about 3 files",
+             "seen": 38, "of": 50, "sources": [Source]}],
+ "closed": [{"reason": "Written with AI tools", "seen": 8, "of": 25,
+             "quote": {"text": "…", "who": "davidism", "url": "https://github.com/…", "number": 3874}|null,
+             "examples": [{"number": 3874, "url": "https://github.com/…"}]}],
+ "reviewers": {"people": [{"login": "Rowlando13", "reviewed": 27, "of": 50, "areas": ["tests/", "src/"]}],
+               "sources": [Source]},
+ "ai": {"read_on": "…", "threads": 12,
+        "signals": [{"kind": "outsider_posture", "value": "welcoming", "headline": "Welcoming",
+                     "text": "…", "tone": "good", "url": "https://github.com/…"|null}],
+        "outcomes": [{"value": "merged_after_review", "count": 9}],
+        "quotes": [{"text": "…", "url": "https://github.com/…", "number": 3701,
+                    "outcome": "closed_with_guidance"}]}|null}
+```
+
+- A `Source` is the playbook's: `{"statement", "seen", "of", "links"}`.
+- `verdict` is the report's (`line` is its `verdict_line`), with up to three
+  numbers from its stats; a number with nothing to count is left out.
+- `steps`: at most 6, in order. `detail`, `link` and `copy` may each be null;
+  `copy` is a comment the person may post themselves (Holt never posts).
+- `merged`: at most 6 figures (`value` and `unit` read together: "72 lines",
+  "50 of 50"). `closed`: at most 5 reasons, most `seen` first, each with its
+  first quote (`who` is the project member who wrote it) and up to 5
+  examples. `reviewers.people`: the 3 most active reviewers and the folders
+  each reviews most.
+- `ai` is null unless the plan was written from an AI report. `signals` (`kind`
+  one of `outsider_posture`, `onboarding`, `repo_kind`; `tone` one of `good`,
+  `warn`, `bad`, `neutral`), `outcomes` (the engine's values, most common
+  first, for the web to word) and up to 3 `quotes` from the threads.
+- `call.text`, step titles and details, `merged[].label` and `closed[].reason`
+  are plain English and may contain Markdown code spans, never HTML.
+  `recorded_on` is when the pull requests were read from GitHub.
+- `window.days` is the window asked for; `window.since` is the date the oldest
+  pull request the counts read was opened (on a busy repository, well inside
+  the window). Say "since" with this date, never with `days`.
 
 ### Recommendations for you
 

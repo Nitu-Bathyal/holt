@@ -6,6 +6,11 @@ After that they can claim one more whenever `HOLT_CLAIM_EVERY_DAYS` have
 passed since the last claim; the welcome grant starts that clock. Claims do
 not pile up while someone is away: there is only ever one to claim.
 
+The welcome grant is 0 by default now: new accounts get the free merge plans
+(pricing.json, the free plan's `merge_plan` allowance) instead, and a welcome
+of 0 starts no claim clock, so they have no weekly claim either. Accounts that
+already had the welcome grant keep their credits and their weekly claim.
+
 Two pools. Free credits are `users.ai_credits`. Purchased credits are
 `credit_lots`, one per admin grant (or credit pack bought before passes
 replaced packs), which never expire or expire when the grant says. A spend takes free credits first
@@ -139,9 +144,10 @@ async def grant_welcome(svc: Services, user_id: str) -> None:
     async with svc.db.session() as s:
         took = await s.execute(
             update(User).where(User.id == user_id, User.credits_granted_at.is_(None))
+            # No welcome, no weekly claim: `claim` needs the clock started.
             .values(ai_credits=User.ai_credits + amount, credits_granted_at=at,
-                    last_claim_at=at))
-        if took.rowcount == 1:
+                    last_claim_at=at if amount > 0 else None))
+        if took.rowcount == 1 and amount > 0:
             s.add(CreditEvent(user_id=user_id, kind="grant", source="free", amount=amount,
                               created_at=at))
         await s.commit()

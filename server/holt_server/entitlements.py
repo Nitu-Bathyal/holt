@@ -9,7 +9,9 @@ client's word: the plan, the allowance and the balances are all read here.
 The order, per feature (the catalogue is pricing.py):
 
 1. The user's plan (lapsed back to free at `plan_expires_at`) covers it:
-   unlimited, or a monthly allowance with uses left this UTC month. Free.
+   unlimited, a monthly allowance with uses left this UTC month, or an
+   allowance in all with uses left (the free plan's taste of a feature: its
+   uses are counted under the period `total`). Free.
 2. Otherwise it costs the feature's `credits`: free credits first when the
    feature takes them, then purchased ones (credits.py).
 3. A feature with no credit price needs a plan that covers it.
@@ -40,8 +42,16 @@ def catalogue(svc: Services) -> pricing.Catalogue:
     return pricing.cached(svc.settings.pricing_file)
 
 
+# The `plan_usage` period an allowance in all (`total`) is counted under.
+TOTAL = "total"
+
+
 def period(at: datetime) -> str:
     return f"{at:%Y-%m}"
+
+
+def period_of(allowance: pricing.PlanFeature, at: datetime) -> str:
+    return TOTAL if allowance.total is not None else period(at)
 
 
 def effective_plan(cat: pricing.Catalogue, user: User | None,
@@ -75,6 +85,9 @@ class Access:
     # When not allowed: the error code and the message a person reads.
     code: str | None = None
     message: str | None = None
+    # Uses of the plan's allowance left, monthly or in all; None when
+    # unlimited or none.
+    left: int | None = None
 
     def error(self) -> ApiError:
         return ApiError(self.code or "quota_exceeded", self.message or "")
@@ -84,6 +97,8 @@ def refusal(feature: str, spec: pricing.Feature, allowance: pricing.PlanFeature 
             ) -> tuple[str, str]:
     """(code, message) for a use that can't be paid for."""
     if spec.credits is None:
+        if allowance is not None and allowance.total is not None:
+            return "quota_exceeded", f"You've used your free {spec.name.lower()}s."
         if allowance is not None:
             return ("quota_exceeded", f"You've used this month's {spec.name.lower()} "
                     "allowance on your plan. It resets on the 1st.")
@@ -98,10 +113,10 @@ def refusal(feature: str, spec: pricing.Feature, allowance: pricing.PlanFeature 
     return "quota_exceeded", f"{spec.name} costs {each}, and you don't have enough credits."
 
 
-async def _used(s: AsyncSession, user_id: str, feature: str, at: datetime) -> int:
+async def _used(s: AsyncSession, user_id: str, feature: str, when: str) -> int:
     got = (await s.execute(select(PlanUsage.used).where(
         PlanUsage.user_id == user_id, PlanUsage.feature == feature,
-        PlanUsage.period == period(at)))).scalar()
+        PlanUsage.period == when))).scalar()
     return got or 0
 
 
@@ -119,16 +134,25 @@ async def check(svc: Services, user_id: str, feature: str) -> Access:
         if allowance is not None:
             if allowance.unlimited:
                 return Access(feature, spec.name, True, "plan", 0, None)
-            left = max(allowance.per_month - await _used(s, user_id, feature, at), 0)
+            used = await _used(s, user_id, feature, period_of(allowance, at))
+            left = max((allowance.limit or 0) - used, 0)
             if left > 0:
-                return Access(feature, spec.name, True, "plan", 0, left)
+                return Access(feature, spec.name, True, "plan", 0, monthly(allowance, left),
+                              left=left)
         if spec.credits is not None:
             have = await credits.balances(s, user_id, at)
             usable = have.total if spec.free_credits else have.purchased
             if usable >= spec.credits:
-                return Access(feature, spec.name, True, "credits", spec.credits, left)
+                return Access(feature, spec.name, True, "credits", spec.credits,
+                              monthly(allowance, left), left=left)
     code, message = refusal(feature, spec, allowance)
-    return Access(feature, spec.name, False, None, spec.credits or 0, left, code, message)
+    return Access(feature, spec.name, False, None, spec.credits or 0,
+                  monthly(allowance, left), code, message, left=left)
+
+
+def monthly(allowance: pricing.PlanFeature | None, left: int | None) -> int | None:
+    """`left` when it is a monthly allowance's (`Access.left_this_month`)."""
+    return left if allowance is not None and allowance.per_month is not None else None
 
 
 def _insert(s: AsyncSession):
@@ -150,13 +174,13 @@ async def charge(s: AsyncSession, svc: Services, user_id: str, feature: str, *,
     if allowance is not None:
         if allowance.unlimited:
             return {"feature": feature, "via": "plan", "plan": plan_name}
-        month = period(at)
+        month = period_of(allowance, at)
         await s.execute(_insert(s)(PlanUsage).values(
             user_id=user_id, feature=feature, period=month, used=0).on_conflict_do_nothing())
         took = await s.execute(
             update(PlanUsage).where(PlanUsage.user_id == user_id, PlanUsage.feature == feature,
                                     PlanUsage.period == month,
-                                    PlanUsage.used < allowance.per_month)
+                                    PlanUsage.used < (allowance.limit or 0))
             .values(used=PlanUsage.used + 1))
         if took.rowcount == 1:
             return {"feature": feature, "via": "plan", "plan": plan_name, "period": month}

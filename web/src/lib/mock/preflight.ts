@@ -47,8 +47,8 @@ const keyOf = (userId: string, t: PreflightFor) => `${userId}|${t.repo.toLowerCa
 function access(userId: string): Access {
   const left = state().left.get(userId) ?? CREDITS;
   return left > 0
-    ? { feature: "preflight", name: "PR pre-flight check", allowed: true, via: "credits", cost: 1, left_this_month: null, code: null, message: null }
-    : { feature: "preflight", name: "PR pre-flight check", allowed: false, via: null, cost: 1, left_this_month: null, code: "quota_exceeded", message: "PR pre-flight check costs 1 credit, and you don't have enough purchased credits." };
+    ? { feature: "preflight", name: "PR pre-flight check", allowed: true, via: "credits", cost: 1, left_this_month: null, left: null, code: null, message: null }
+    : { feature: "preflight", name: "PR pre-flight check", allowed: false, via: null, cost: 1, left_this_month: null, left: null, code: "quota_exceeded", message: "PR pre-flight check costs 1 credit, and you don't have enough purchased credits." };
 }
 
 function resultFor(t: PreflightFor): Preflight {

@@ -37,6 +37,11 @@ PLAYBOOK_DAYS = 365
 PREFLIGHT_TIMEOUT_S = 300.0
 # The evidence window pre-flight compares with (the service's default).
 PREFLIGHT_DAYS = 365
+# POST /v1/merge-plan may read GitHub and then wait on a model (CONTRACT.md).
+MERGE_PLAN_TIMEOUT_S = 300.0
+# The evidence window a merge plan reads (the service's default, shared with
+# the playbook's evidence cache).
+MERGE_PLAN_DAYS = 365
 RETRY_DELAY_S = 0.5
 
 UNAVAILABLE = "This feature is unavailable right now. Please try again later."
@@ -46,12 +51,15 @@ NOT_YET = "This feature isn't available yet."
 class ProError(ApiError):
     """A paid-feature call that failed. `pro_code` is what the service said
     (or `unavailable` when it could not be reached); `code` and `message`
-    are what this API returns to the web app."""
+    are what this API returns to the web app. `pro_status` is the HTTP
+    status the service answered with; None when it didn't answer (a lost
+    connection, a timeout) or answered with something unreadable."""
 
     def __init__(self, pro_code: str, code: str, message: str,
-                 status: int | None = None) -> None:
+                 status: int | None = None, pro_status: int | None = None) -> None:
         super().__init__(code, message, status=status)
         self.pro_code = pro_code
+        self.pro_status = pro_status
 
 
 def not_available() -> ApiError:
@@ -122,6 +130,18 @@ class ProClient:
                                       "refresh": False},
                                 user_id=user_id, request_id=request_id,
                                 timeout=PREFLIGHT_TIMEOUT_S)
+
+    async def merge_plan(self, repo: str, report: dict[str, Any], issues: list[dict[str, Any]],
+                         days: int = MERGE_PLAN_DAYS, *, user_id: str | None = None,
+                         request_id: str | None = None) -> dict[str, Any]:
+        """The merge plan for `repo`, written from this server's latest
+        `report` and starter `issues` (API.md's shapes), as the service sends
+        it. Slow on a cache miss: call it from a job."""
+        return await self._call("POST", "/v1/merge-plan",
+                                json={"repo": repo, "days": days, "refresh": False,
+                                      "report": report, "issues": issues},
+                                user_id=user_id, request_id=request_id,
+                                timeout=MERGE_PLAN_TIMEOUT_S)
 
     async def ready(self) -> Readiness:
         """The service's own health check. Never raises."""
@@ -194,16 +214,17 @@ class ProClient:
         where = f"holt-pro {method} {path}: {status} {code}"
         if status == 401:
             log.error("%s (HOLT_PRO_KEY does not match the service's key) %s", where, message)
-            return ProError(code, "upstream", UNAVAILABLE)
+            return ProError(code, "upstream", UNAVAILABLE, pro_status=status)
         if status in (400, 405):
             log.error("%s (a bug in the client) %s", where, message)
             return ProError(code, "internal",
-                            "Something went wrong on our side. Please try again in a minute.")
+                            "Something went wrong on our side. Please try again in a minute.",
+                            pro_status=status)
         if status == 404:
             log.warning("%s %s", where, message)
-            return ProError(code, "not_found", "There is nothing here.")
+            return ProError(code, "not_found", "There is nothing here.", pro_status=status)
         log.warning("%s %s", where, message)
-        return ProError(code, "upstream", UNAVAILABLE)
+        return ProError(code, "upstream", UNAVAILABLE, pro_status=status)
 
 
 def build(settings: Settings) -> ProClient | None:

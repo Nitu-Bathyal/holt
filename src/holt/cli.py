@@ -252,8 +252,11 @@ def cmd_analyze(args: argparse.Namespace) -> int:
     if args.entry_points:
         add_entry_points(assessment, repo, provider, args)
     if args.json:
+        stats = stats_from(trace.signals)
+        if stats is not None and trace.timing is not None and trace.signals.settle_hours:
+            stats["timing"] = trace.timing.as_dict()  # API.md, stats.timing
         emit_json(assessment.to_dict(
-            stats=stats_from(trace.signals),
+            stats=stats,
             mode="ai" if client is not None else "rules",
         ))
     else:

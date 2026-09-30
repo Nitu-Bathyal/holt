@@ -387,3 +387,16 @@ def test_events_end_with_the_checks(hp):
     assert r.status_code == 200
     assert "event: done" in r.text and '"preflight"' in r.text
     assert hp.get(f"/v1/analyses/{job_id}").status_code == 404
+
+
+@pytest.mark.parametrize("status, code, held", [
+    (503, "unavailable", 0), (400, "invalid_request", 0), (500, "internal", 50_000)])
+def test_a_summarys_budget_hold_comes_back_only_before_a_model_call(hp, fake, status, code, held):
+    from holt_server.db import AiBudget
+
+    fake.answer = httpx.Response(status, json={"error": {"code": code, "message": "m"}})
+    gift(hp, "u")
+    r = start(hp, "u", pr_url=PR, summary=True)
+    assert r.status_code == 202, r.text
+    assert wait(hp, r.json()["job_id"])["status"] == "error"
+    assert rows(hp, AiBudget)[0].committed_micros == held

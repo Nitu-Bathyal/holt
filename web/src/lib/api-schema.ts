@@ -450,6 +450,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/merge-plan/{owner}/{repo}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start Merge Plan */
+        post: operations["start_merge_plan_v1_me_merge_plan__owner___repo__post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/orders": {
         parameters: {
             query?: never;
@@ -593,6 +610,57 @@ export interface paths {
         post?: never;
         /** Delete Saved Repo */
         delete: operations["delete_saved_repo_v1_me_saved__owner___name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merge-plan-jobs/{job_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Merge Plan Job */
+        get: operations["get_merge_plan_job_v1_merge_plan_jobs__job_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merge-plan-jobs/{job_id}/events": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Merge Plan Job Events */
+        get: operations["merge_plan_job_events_v1_merge_plan_jobs__job_id__events_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/merge-plan/{owner}/{repo}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Merge Plan */
+        get: operations["get_merge_plan_v1_merge_plan__owner___repo__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -830,6 +898,8 @@ export interface components {
             cost: number;
             /** Feature */
             feature: string;
+            /** Left */
+            left: number | null;
             /** Left This Month */
             left_this_month: number | null;
             /** Message */
@@ -1043,7 +1113,9 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "ticket_first" | "no_ai_prs" | "ok_to_test" | "sig_team" | "cla" | "dco" | "issue_first" | "ai_disclosure" | "duplicates";
+            code: "ticket_first" | "no_ai_prs" | "ok_to_test" | "sig_team" | "cla" | "dco" | "issue_first" | "ai_disclosure" | "duplicates" | "stale_bot";
+            /** Days */
+            days: number | null;
             /** Link */
             link: string | null;
             /** Url */
@@ -1666,6 +1738,70 @@ export interface components {
             /** Plan Expires At */
             plan_expires_at: string | null;
         };
+        /** MergePlan */
+        MergePlan: {
+            ai: components["schemas"]["PlanAi"] | null;
+            call: components["schemas"]["PlanCall"];
+            /** Closed */
+            closed: components["schemas"]["PlanClosing"][];
+            /** Generated At */
+            generated_at: string;
+            /** Merged */
+            merged: components["schemas"]["PlanFact"][];
+            /** Note */
+            note: string | null;
+            /** Recorded On */
+            recorded_on: string;
+            /** Repo */
+            repo: string;
+            reviewers: components["schemas"]["PlanReviewers"];
+            sample: components["schemas"]["PlanSample"];
+            /** Steps */
+            steps: components["schemas"]["PlanStep"][];
+            verdict: components["schemas"]["PlanVerdict"];
+            window: components["schemas"]["PlanWindow"];
+        };
+        /** MergePlanJob */
+        MergePlanJob: {
+            /** Job Id */
+            job_id: string;
+            /** Progress */
+            progress: number;
+            /** Stage */
+            stage: string;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "done" | "error";
+        };
+        /** MergePlanJobStatus */
+        MergePlanJobStatus: {
+            error: components["schemas"]["Error"] | null;
+            plan: components["schemas"]["MergePlan"] | null;
+            /** Progress */
+            progress: number;
+            /** Stage */
+            stage: string | null;
+            /**
+             * Status
+             * @enum {string}
+             */
+            status: "queued" | "running" | "done" | "error";
+        };
+        /**
+         * MergePlanState
+         * @description GET /v1/merge-plan/{owner}/{repo}.
+         */
+        MergePlanState: {
+            access: components["schemas"]["Access"] | null;
+            /** Available */
+            available: boolean;
+            job: components["schemas"]["MergePlanJob"] | null;
+            plan: components["schemas"]["MergePlan"] | null;
+            /** Repo */
+            repo: string;
+        };
         /** NeverLanded */
         NeverLanded: {
             /** Attempted */
@@ -1836,15 +1972,223 @@ export interface components {
             /** Name */
             name: string;
         };
+        /**
+         * PlanAi
+         * @description What the AI found reading the pull request threads (from an AI report).
+         */
+        PlanAi: {
+            /** Outcomes */
+            outcomes: components["schemas"]["PlanOutcome"][];
+            /** Quotes */
+            quotes: components["schemas"]["PlanThreadQuote"][];
+            /** Read On */
+            read_on: string;
+            /** Signals */
+            signals: components["schemas"]["PlanSignal"][];
+            /** Threads */
+            threads: number;
+        };
+        /**
+         * PlanCall
+         * @description What to do here, in one sentence (may contain Markdown code spans).
+         */
+        PlanCall: {
+            /** Sources */
+            sources: components["schemas"]["PlaybookSource"][];
+            /** Text */
+            text: string;
+        };
+        /**
+         * PlanClosing
+         * @description Why outside pull requests get closed, in the maintainers' words.
+         */
+        PlanClosing: {
+            /** Examples */
+            examples: components["schemas"]["PlanExample"][];
+            /** Of */
+            of: number;
+            quote: components["schemas"]["PlanQuote"] | null;
+            /** Reason */
+            reason: string;
+            /** Seen */
+            seen: number;
+        };
+        /**
+         * PlanCopy
+         * @description A comment to post on GitHub, as written.
+         */
+        PlanCopy: {
+            /** Label */
+            label: string;
+            /** Text */
+            text: string;
+        };
+        /** PlanExample */
+        PlanExample: {
+            /** Number */
+            number: number;
+            /** Url */
+            url: string;
+        };
+        /**
+         * PlanFact
+         * @description One thing merged pull requests have in common ("72 lines").
+         */
+        PlanFact: {
+            /** Label */
+            label: string;
+            /** Of */
+            of: number | null;
+            /** Seen */
+            seen: number | null;
+            /** Sources */
+            sources: components["schemas"]["PlaybookSource"][];
+            /** Unit */
+            unit: string;
+            /** Value */
+            value: string;
+        };
         /** PlanFeature */
         PlanFeature: {
             /** Per Month */
             per_month?: number | null;
+            /** Total */
+            total?: number | null;
             /**
              * Unlimited
              * @default false
              */
             unlimited: boolean;
+        };
+        /** PlanLink */
+        PlanLink: {
+            /** Label */
+            label: string;
+            /** Url */
+            url: string;
+        };
+        /** PlanNumber */
+        PlanNumber: {
+            /** Label */
+            label: string;
+            /** Value */
+            value: string;
+        };
+        /** PlanOutcome */
+        PlanOutcome: {
+            /** Count */
+            count: number;
+            /** Value */
+            value: string;
+        };
+        /** PlanQuote */
+        PlanQuote: {
+            /** Number */
+            number: number;
+            /** Text */
+            text: string;
+            /** Url */
+            url: string;
+            /** Who */
+            who: string;
+        };
+        /** PlanReviewer */
+        PlanReviewer: {
+            /** Areas */
+            areas: string[];
+            /** Login */
+            login: string;
+            /** Of */
+            of: number;
+            /** Reviewed */
+            reviewed: number;
+        };
+        /** PlanReviewers */
+        PlanReviewers: {
+            /** People */
+            people: components["schemas"]["PlanReviewer"][];
+            /** Sources */
+            sources: components["schemas"]["PlaybookSource"][];
+        };
+        /** PlanSample */
+        PlanSample: {
+            /** Closed */
+            closed: number;
+            /** Closed Outside */
+            closed_outside: number;
+            /** Merged */
+            merged: number;
+            /** Merged Outside */
+            merged_outside: number;
+        };
+        /** PlanSignal */
+        PlanSignal: {
+            /** Headline */
+            headline: string;
+            /** Kind */
+            kind: string;
+            /** Text */
+            text: string;
+            /**
+             * Tone
+             * @enum {string}
+             */
+            tone: "good" | "bad" | "warn" | "neutral";
+            /** Url */
+            url: string | null;
+            /** Value */
+            value: string;
+        };
+        /** PlanStep */
+        PlanStep: {
+            copy: components["schemas"]["PlanCopy"] | null;
+            /** Detail */
+            detail: string | null;
+            link: components["schemas"]["PlanLink"] | null;
+            /** Sources */
+            sources: components["schemas"]["PlaybookSource"][];
+            /** Title */
+            title: string;
+        };
+        /** PlanThreadQuote */
+        PlanThreadQuote: {
+            /** Number */
+            number: number;
+            /** Outcome */
+            outcome: string;
+            /** Text */
+            text: string;
+            /** Url */
+            url: string;
+        };
+        /**
+         * PlanVerdict
+         * @description The report's verdict, with its numbers.
+         */
+        PlanVerdict: {
+            /** Headline */
+            headline: string;
+            /** Line */
+            line: string;
+            /** Numbers */
+            numbers: components["schemas"]["PlanNumber"][];
+            /**
+             * Tone
+             * @enum {string}
+             */
+            tone: "good" | "bad" | "warn" | "neutral";
+            /**
+             * Verdict
+             * @enum {string}
+             */
+            verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal" | "catalogue";
+        };
+        /** PlanWindow */
+        PlanWindow: {
+            /** Days */
+            days: number;
+            /** Since */
+            since: string;
         };
         /** Playbook */
         Playbook: {
@@ -2523,6 +2867,8 @@ export interface components {
             /** Headline */
             readonly headline: string;
             holt_users: components["schemas"]["HoltUsers"] | null;
+            /** How Long */
+            readonly how_long: components["schemas"]["Counted"][];
             /** Landing */
             landing: components["schemas"]["LandingPath"][];
             /**
@@ -2703,6 +3049,7 @@ export interface components {
              * @default 0
              */
             still_open: number;
+            timing: components["schemas"]["Timing"] | null;
             /**
              * Too Old
              * @default 0
@@ -2713,6 +3060,49 @@ export interface components {
              * @default 0
              */
             withdrawn: number;
+        };
+        /**
+         * Timing
+         * @description How long it takes here (engine 7, agent/timing.py). Facts, never read
+         *     by the verdict. Each is null under its minimum.
+         */
+        Timing: {
+            /** First Reply Half Hours */
+            first_reply_half_hours: number | null;
+            /** First Reply Slow Hours */
+            first_reply_slow_hours: number | null;
+            /** Last Outside Merge */
+            last_outside_merge: string | null;
+            /** Merge Cohort From */
+            merge_cohort_from: string | null;
+            /** Merge Cohort Merged */
+            merge_cohort_merged: number | null;
+            /** Merge Cohort Prs */
+            merge_cohort_prs: number | null;
+            /** Merge Cohort To */
+            merge_cohort_to: string | null;
+            /** Merge Half Days */
+            merge_half_days: number | null;
+            /** Merge Slow Days */
+            merge_slow_days: number | null;
+            /** Merge Typical Days */
+            merge_typical_days: number | null;
+            /** Merged Within 14 Days */
+            merged_within_14_days: number | null;
+            /** Merged Within 30 Days */
+            merged_within_30_days: number | null;
+            /** Merged Within 3 Days */
+            merged_within_3_days: number | null;
+            /** Merged Within 60 Days */
+            merged_within_60_days: number | null;
+            /** Merged Within 7 Days */
+            merged_within_7_days: number | null;
+            /** Merges In Bursts */
+            merges_in_bursts: boolean | null;
+            /** Stale Bot */
+            stale_bot: boolean | null;
+            /** Stale Close Days */
+            stale_close_days: number | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -2785,6 +3175,10 @@ export type LandingPath = components['schemas']['LandingPath'];
 export type Language = components['schemas']['Language'];
 export type LanguageCount = components['schemas']['LanguageCount'];
 export type Me = components['schemas']['Me'];
+export type MergePlan = components['schemas']['MergePlan'];
+export type MergePlanJob = components['schemas']['MergePlanJob'];
+export type MergePlanJobStatus = components['schemas']['MergePlanJobStatus'];
+export type MergePlanState = components['schemas']['MergePlanState'];
 export type NeverLanded = components['schemas']['NeverLanded'];
 export type Odds = components['schemas']['Odds'];
 export type Order = components['schemas']['Order'];
@@ -2797,7 +3191,25 @@ export type PassFeature = components['schemas']['PassFeature'];
 export type PassOffer = components['schemas']['PassOffer'];
 export type Passes = components['schemas']['Passes'];
 export type Plan = components['schemas']['Plan'];
+export type PlanAi = components['schemas']['PlanAi'];
+export type PlanCall = components['schemas']['PlanCall'];
+export type PlanClosing = components['schemas']['PlanClosing'];
+export type PlanCopy = components['schemas']['PlanCopy'];
+export type PlanExample = components['schemas']['PlanExample'];
+export type PlanFact = components['schemas']['PlanFact'];
 export type PlanFeature = components['schemas']['PlanFeature'];
+export type PlanLink = components['schemas']['PlanLink'];
+export type PlanNumber = components['schemas']['PlanNumber'];
+export type PlanOutcome = components['schemas']['PlanOutcome'];
+export type PlanQuote = components['schemas']['PlanQuote'];
+export type PlanReviewer = components['schemas']['PlanReviewer'];
+export type PlanReviewers = components['schemas']['PlanReviewers'];
+export type PlanSample = components['schemas']['PlanSample'];
+export type PlanSignal = components['schemas']['PlanSignal'];
+export type PlanStep = components['schemas']['PlanStep'];
+export type PlanThreadQuote = components['schemas']['PlanThreadQuote'];
+export type PlanVerdict = components['schemas']['PlanVerdict'];
+export type PlanWindow = components['schemas']['PlanWindow'];
 export type Playbook = components['schemas']['Playbook'];
 export type PlaybookClosingReason = components['schemas']['PlaybookClosingReason'];
 export type PlaybookDone = components['schemas']['PlaybookDone'];
@@ -2845,6 +3257,7 @@ export type SavedState = components['schemas']['SavedState'];
 export type StarterIssue = components['schemas']['StarterIssue'];
 export type StarterIssues = components['schemas']['StarterIssues'];
 export type Stats = components['schemas']['Stats'];
+export type Timing = components['schemas']['Timing'];
 export type ValidationError = components['schemas']['ValidationError'];
 export type $defs = Record<string, never>;
 export interface operations {
@@ -3830,6 +4243,42 @@ export interface operations {
             };
         };
     };
+    start_merge_plan_v1_me_merge_plan__owner___repo__post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path: {
+                owner: string;
+                repo: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Queued"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     list_orders_v1_me_orders_get: {
         parameters: {
             query?: {
@@ -4320,6 +4769,108 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["SavedState"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_merge_plan_job_v1_merge_plan_jobs__job_id__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-internal-key"?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MergePlanJobStatus"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    merge_plan_job_events_v1_merge_plan_jobs__job_id__events_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-internal-key"?: string | null;
+            };
+            path: {
+                job_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_merge_plan_v1_merge_plan__owner___repo__get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path: {
+                owner: string;
+                repo: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MergePlanState"];
                 };
             };
             /** @description Default Response */

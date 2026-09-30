@@ -59,7 +59,7 @@ function nextStep(r: Stored): string {
     : "Best bet: a small, focused change; a starter issue is a good place to find one.";
 }
 
-type Derived = "headline" | "tone" | "verdict_line" | "odds" | "rule_codes" | "numbers_line" | "first_timer_line" | "next_step" | "stat_line" | "counted" | "sample" | "asks" | "budget_independent";
+type Derived = "headline" | "tone" | "verdict_line" | "odds" | "rule_codes" | "numbers_line" | "first_timer_line" | "next_step" | "stat_line" | "counted" | "sample" | "asks" | "budget_independent" | "how_long";
 type Stored = Omit<Report, Derived>;
 
 export function withDerived(r: Stored): Report {
@@ -82,7 +82,26 @@ export function withDerived(r: Stored): Report {
       { topic: "The rule", text: "These rules are fixed; no AI chooses the verdict." },
     ],
     odds: odds(r.verdict, s),
+    how_long: howLong(s),
   };
+}
+
+// A rough copy of schema.how_long: the lines only, rounded loosely.
+function howLong(s: Stats): Report["how_long"] {
+  const t = s.timing;
+  if (!t) return [];
+  const days = (h: number) => (h < 22 ? `${Math.ceil(h)} hours` : h <= 24 ? "a day" : `${Math.ceil(h / 24)} days`);
+  const share = (x: number) => (x >= 0.75 ? "most" : x >= 0.45 && x <= 0.55 ? "about half" : `about ${Math.max(1, Math.round(x * 10))} in 10`);
+  const out: Report["how_long"] = [];
+  if (s.median_first_response_hours != null && t.first_reply_slow_hours != null)
+    out.push({ topic: "first reply", text: `Typically ${days(s.median_first_response_hours)}. Most get one within ${days(t.first_reply_slow_hours)}.` });
+  if (t.merged_within_7_days != null && t.merged_within_30_days != null) {
+    const text = `${share(t.merged_within_7_days)} within a week, ${share(t.merged_within_30_days)} within a month.`;
+    out.push({ topic: "merged", text: text[0].toUpperCase() + text.slice(1) });
+  }
+  if (t.stale_bot)
+    out.push({ topic: "closed if quiet", text: t.stale_close_days ? `A bot closes pull requests after ${t.stale_close_days} quiet days.` : "A bot closes quiet pull requests." });
+  return out;
 }
 
 // The engine's wording for a reply time (holt.agent.verdict.hours_phrase).

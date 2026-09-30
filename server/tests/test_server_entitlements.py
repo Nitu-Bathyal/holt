@@ -300,7 +300,8 @@ def test_free_plan_entitlements(hp):
     got = features(hp, "f")
     assert got["ai_report"] == {
         "feature": "ai_report", "name": "AI-written report", "allowed": True,
-        "via": "credits", "cost": 1, "left_this_month": None, "code": None, "message": None}
+        "via": "credits", "cost": 1, "left_this_month": None, "code": None, "message": None,
+        "left": None}
     assert got["playbook"]["allowed"] is False and got["playbook"]["cost"] == 2
     rec = got["recommendations"]
     assert rec["allowed"] is False and rec["code"] == "needs_plan"

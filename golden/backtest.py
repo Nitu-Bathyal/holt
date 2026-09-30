@@ -28,8 +28,8 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
-from golden.golden import HERE, PAGES, load_repos
-from holt.agent import rates
+from golden.golden import HERE, PAGES, load_repos, timing_records, without_timing
+from holt.agent import rates, timing
 from holt.agent.pipeline import analyze_without_model
 from holt.agent.signals import (
     MIN_AGE_HOURS,
@@ -445,6 +445,105 @@ def pooled(runs: dict[str, list[Score]]) -> list[Score]:
     return out
 
 
+# --- how long it takes here (engine 7): does the line hold? ----------------------
+
+
+def record_timing(repos: list[str], root: Path, transport=None) -> int:
+    """Add (or redo) engine 7's timing cohort in each recording's before part,
+    as of its as-of date. Returns the number that failed."""
+    from holt.evidence.github_graphql import GitHubGraphQL
+
+    transport = transport or GitHubGraphQL()
+    failed = 0
+    for i, repo in enumerate(repos, 1):
+        if not backtest_path(repo, root).exists():
+            continue
+        bt = read_backtest(repo, root)
+        try:
+            added, points = timing_records(transport, repo, bt.as_of, bt.before, stale=False)
+        except Exception as exc:  # noqa: BLE001 -- reported, and the rest still run
+            failed += 1
+            print(f"[{i}/{len(repos)}] {repo}: FAILED {type(exc).__name__}: {exc}")
+            continue
+        bt.before = without_timing(bt.before) + added
+        write_backtest(bt, root)
+        print(f"[{i}/{len(repos)}] {repo}: {added[0].payload}, {points} points "
+              f"(rate {transport.remaining})", flush=True)
+    return failed
+
+
+@dataclass(slots=True)
+class Held:
+    """One timing line said on the as-of date, and what happened next: the
+    share of the window's outside pull requests it held for."""
+
+    repo: str
+    claim: str  # "reply_most", "reply_half", "merged_7", "merged_30", "merge_half"
+    said: float  # the wait said (hours or days), or the share said
+    target: float  # the share the line promises
+    held: float  # the share it held for
+    n: int
+
+
+def calibrate(bt: Backtest) -> list[Held]:
+    """Each line the before part supports, checked on the window after it."""
+    said = timing.read(bt.before, build_threads(bt.before), bt.as_of, rates.SETTLE_HOURS)
+    both = build_threads(bt.before + bt.after)
+    window = [t for t in _outside(both) if bt.as_of < t.opened_at <= bt.window_end]
+    answers = [timing.answer(t, bt.captured_at) for t in window]
+    merges = [timing.Waited((bt.captured_at - t.opened_at) / timing.HOUR,
+                            (t.merged_at - t.opened_at) / timing.HOUR
+                            if t.merged and t.merged_at and t.merged_at <= bt.captured_at
+                            else None) for t in window]
+    out: list[Held] = []
+
+    def check(claim: str, items: list, hours: float, target: float, stated: float) -> None:
+        eligible = [w for w in items if w.counts_at(hours)]
+        held = timing.share_within(items, hours, timing.MIN_PRS)
+        if held is not None:
+            out.append(Held(bt.repo, claim, stated, target, held, len(eligible)))
+
+    if (h := said.first_reply_slow_hours) is not None:
+        check("reply_most", answers, h, timing.REPLY_MOST, h)
+    if (h := said.first_reply_half_hours) is not None:
+        check("reply_half", answers, h, 0.5, h)
+    if said.merged_within:
+        for d in (7, 30):
+            check(f"merged_{d}", merges, d * 24.0, said.merged_within[d], said.merged_within[d])
+    if (d := said.merge_half_days) is not None:
+        check("merge_half", merges, d * 24.0, 0.5, d)
+    return out
+
+
+def calibration_report(runs: dict[str, list[Held]]) -> str:
+    """Per claim and date: how many repositories, the median share the line
+    held for against what it promised, and how many landed within 15 points."""
+    names = {"reply_most": "most get a first reply within N",
+             "reply_half": "about half get a first reply within N",
+             "merged_7": "the share merged within a week",
+             "merged_30": "the share merged within a month",
+             "merge_half": "about half are merged within X"}
+    out = ["| line | date | repos | promised (median) | held (median) | "
+           "within ±15 points |", "|---|---|---|---|---|---|"]
+    for claim, name in names.items():
+        for day, rows in runs.items():
+            rs = [r for r in rows if r.claim == claim]
+            if not rs:
+                continue
+            close = sum(1 for r in rs if abs(r.held - r.target) <= 0.15)
+            out.append(f"| {name} | {day} | {len(rs)} | "
+                       f"{statistics.median(r.target for r in rs):.0%} | "
+                       f"{statistics.median(r.held for r in rs):.0%} | {close}/{len(rs)} |")
+    out += ["", "| repo | date | line | said | promised | held | PRs |", "|---|---|---|---|---|---|---|"]
+    for day, rows in runs.items():
+        for r in rows:
+            said = (f"{r.said / 24:.1f} d" if r.claim.startswith("reply")
+                    else f"{r.said:.1f} d" if r.claim == "merge_half" else f"{r.said:.0%}")
+            out.append(f"| {r.repo} | {day} | {r.claim} | {said} | {r.target:.0%} | "
+                       f"{r.held:.0%} | {r.n} |")
+    return "\n".join(out)
+
+
 # --- the report ------------------------------------------------------------------
 
 
@@ -513,6 +612,13 @@ def main(argv: list[str] | None = None) -> int:
     rec.add_argument("--as-of", default=AS_OF.date().isoformat(), help="YYYY-MM-DD, midnight UTC")
     rec.add_argument("--window", type=int, default=WINDOW_DAYS, help="days after the as-of date")
     rec.add_argument("--force", action="store_true", help="re-record existing recordings")
+    tim = sub.add_parser("record-timing", help="add engine 7's timing cohort to the before "
+                         "parts, as of their as-of date (needs GITHUB_TOKEN)")
+    tim.add_argument("repos", nargs="*", help="default: every repository in golden/repos.json")
+    tim.add_argument("--as-of", help="only this date (default: each recorded date)")
+    cal = sub.add_parser("calibrate", help="do the timing lines hold for the next pull "
+                         "requests? (offline)")
+    cal.add_argument("--as-of", help="only this date (default: each recorded date)")
     run = sub.add_parser("run", help="score every counting method (offline)")
     run.add_argument("--as-of", help="only this date (default: each recorded date, then pooled)")
     run.add_argument("--json", action="store_true", help="rows as JSON instead of Markdown")
@@ -525,6 +631,17 @@ def main(argv: list[str] | None = None) -> int:
 
     dates = ([datetime.fromisoformat(args.as_of).replace(tzinfo=UTC)] if args.as_of
              else as_of_dates())
+    if args.cmd == "record-timing":
+        return 1 if any([record_timing(args.repos or list(load_repos()), date_root(d))
+                         for d in dates]) else 0
+    if args.cmd == "calibrate":
+        held = {}
+        for d in dates:
+            root = date_root(d)
+            held[d.date().isoformat()] = [h for r in load_repos() if backtest_path(r, root).exists()
+                                          for h in calibrate(read_backtest(r, root))]
+        print(calibration_report(held))
+        return 0
     runs: dict[str, list[Score]] = {}
     for as_of in dates:
         root = date_root(as_of)

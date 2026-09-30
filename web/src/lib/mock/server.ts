@@ -8,9 +8,11 @@ import type {
 import type { FeedbackInput } from "../feedback";
 import { verdictView, withDerived } from "./derived";
 import { canonicalName, isMockNotFound, mockAbout, mockFindPool, mockIssues, mockReport, PRECACHED } from "./fixtures";
+import { mergePlanEvents } from "./merge-plan";
 import { playbookEvents } from "./playbook";
 import { preflightEvents } from "./preflight";
 
+export { mergePlanState, startMergePlan } from "./merge-plan";
 export { playbookState, unlockPlaybook } from "./playbook";
 export { preflightState, startPreflight } from "./preflight";
 
@@ -173,8 +175,9 @@ function sse(event: string, data: unknown) {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
-export function jobEvents(kind: "analyses" | "find" | "playbook-jobs" | "preflight-jobs", id: string, signal: AbortSignal): Response {
+export function jobEvents(kind: "analyses" | "find" | "playbook-jobs" | "preflight-jobs" | "merge-plan-jobs", id: string, signal: AbortSignal): Response {
   if (kind === "find") return findEvents(id, signal);
+  if (kind === "merge-plan-jobs") return mergePlanEvents(id, signal);
   if (kind === "playbook-jobs") return playbookEvents(id, signal);
   if (kind === "preflight-jobs") return preflightEvents(id, signal);
   const job = state().jobs.get(id);
@@ -532,7 +535,7 @@ function mockPicks(): Recommendation[] {
   const at = (hoursAgo: number) => new Date(Date.now() - hoursAgo * 3_600_000).toISOString();
   const stats = (attempts: number, merged: number, noReply: number, reply: number, firstTimers: number): Stats => ({
     outsider_attempts: attempts, outsider_merged: merged, distinct_outsiders: Math.round(attempts * 0.8),
-    first_time_merged_authors: firstTimers, no_reply: noReply, median_first_response_hours: reply, bot_share: 0.05, still_open: 3, closed_silently: 1, closed_by_bot: 0, withdrawn: 0, too_old: 0,
+    first_time_merged_authors: firstTimers, no_reply: noReply, median_first_response_hours: reply, bot_share: 0.05, still_open: 3, closed_silently: 1, closed_by_bot: 0, withdrawn: 0, too_old: 0, timing: null,
   });
   const issue = (repo: string, number: number, title: string, labels: string[], areas: ContributionType[], daysAgo: number): StarterIssue => ({
     number, title, url: `https://github.com/${repo}/issues/${number}`, labels, created_at: at(daysAgo * 24), comments: 1,

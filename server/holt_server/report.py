@@ -19,6 +19,7 @@ from holt.agent import examples
 from holt.agent import labels
 from holt.agent import landing as landing_mod
 from holt.agent import rates
+from holt.agent import timing as timing_mod
 from holt.agent.signals import Signals, Thread, Threads, build_threads, outsider_threads
 from holt.agent.verdict import rule_codes, slow_note, slow_sentence
 from holt.report import Assessment, Claim
@@ -109,7 +110,7 @@ def split_limits(limits: str) -> list[str]:
     return out
 
 
-def stats(signals: Signals) -> dict[str, Any]:
+def stats(signals: Signals, timing: timing_mod.Timing | None = None) -> dict[str, Any]:
     # Attempts are the decided ones, the engine's denominator for every rate, so
     # a percentage on a page is the one the verdict was computed from.
     return {
@@ -125,6 +126,7 @@ def stats(signals: Signals) -> dict[str, Any]:
         "closed_by_bot": signals.outsider_closed_by_bot + signals.outsider_closed_stale,
         "withdrawn": signals.outsider_withdrawn,
         "too_old": signals.outsider_too_old,
+        "timing": timing.as_dict() if timing is not None and signals.settle_hours else None,
     }
 
 
@@ -203,7 +205,8 @@ def build(
         # the verdict block already says exactly that, so only AI mode sends it.
         "bottom_line": (assessment.bottom_line or None) if mode == "ai" else None,
         "summary": (assessment.summary or None) if mode == "ai" else None,
-        "stats": stats(signals),
+        "stats": stats(signals, timing_mod.read(by_id.values(), threads, as_of,
+                                                signals.settle_hours)),
         "decided_by": [str(r) for r in assessment.rules],
         "rule_codes": [c or "" for c in rule_codes(assessment.rules)],
         "unknowns": unknowns,
@@ -219,7 +222,8 @@ def build(
         # Rules reports from a live reading: every budget gets the same verdict
         # (verdict.py), so another `days` is this report with its note redone.
         "budget_independent": mode == "rules" and signals.settle_hours > 0,
-        "asks": [{"code": a.code, "url": a.url, "link": a.link} for a in asks_mod.read(
+        "asks": [{"code": a.code, "url": a.url, "link": a.link, "days": a.days}
+                 for a in asks_mod.read(
             by_id.values(), {t.key for t in outsider_threads(threads)})],
     }).model_dump(mode="json")
 
