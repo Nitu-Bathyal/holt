@@ -99,7 +99,7 @@ export function ReportBodySkeleton() {
 export function ReportHeaderSkeleton() {
   return (
     <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3">
-      <span aria-hidden="true" className="size-10 rounded-md border border-line-strong bg-panel-2" />
+      <span aria-hidden="true" className="size-10 self-start rounded-md border border-line-strong bg-panel-2" />
       <div className="min-w-0 flex-1">
         <span className="flex h-[1.7325rem] items-center sm:h-[2.0625rem]">
           <Skeleton className="h-4 w-44 sm:h-5" />

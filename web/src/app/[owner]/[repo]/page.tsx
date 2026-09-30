@@ -138,7 +138,8 @@ export default async function RepoPage({ params, searchParams }: Props) {
             // Decorative and small: don't compete with the CSS and fonts the verdict needs.
             fetchPriority="low"
             decoding="async"
-            className="size-10 rounded-md border border-line-strong bg-panel-2"
+            // Level with the name, not the middle of a tall details block.
+            className="size-10 self-start rounded-md border border-line-strong bg-panel-2"
           />
           {report.ok && report.data.about ? (
             <div className="min-w-0 flex-1">
