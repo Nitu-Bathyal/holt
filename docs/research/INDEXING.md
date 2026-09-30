@@ -10,9 +10,11 @@ set) or quoted from GitHub's docs, and it says which.
 **Recommendation: keep full reports as the only thing Holt shows, and stop
 paying for reads that can't change the answer.** In order:
 
-1. **Keep each report's evidence and re-derive from it** (ticket A1, already
-   planned). An `ENGINE_VERSION` bump then costs 0 points instead of a full
-   re-read of the index. This is the biggest saving by far.
+1. **Keep each report's evidence and re-derive from it** (ticket A1, PR #192).
+   An `ENGINE_VERSION` bump then costs 0 points instead of a full re-read of
+   the index. This is the biggest saving by far. One addition: #192 reuses
+   snapshots up to a week old, and it should reuse them up to the age of
+   their refresh tier.
 2. **Read the same evidence in fewer queries.** Fold the repository facts,
    docs and first page of PRs into one query, and use 29 PRs a page instead
    of 25. The data is identical and the cost drops from about 12 points to
@@ -24,8 +26,8 @@ paying for reads that can't change the answer.** In order:
    expected, because 82% of the seed list has PR activity in any given week.
 
 **Don't do these:**
-- Publish a verdict from a cheap screen. The best cheap screen agreed with
-  the full verdict on 44 of 73 golden repos.
+- Publish a verdict from a cheap screen. Screens costing 2 points a repo or
+  less agreed with the full verdict on at most 47 of 73 golden repos.
 - Take verdict inputs from ecosyste.ms or OSS Insight. Their data comes
   from GH Archive, which has lost `author_association` since October 2025,
   and the ecosyste.ms licence restricts commercial use.
@@ -215,8 +217,8 @@ A screen can't see four things the verdict turns on:
 - how a PR landed (timeline and comment text).
 
 **Holt shouldn't show a screen's answer as a verdict,** not even labelled
-"provisional". A beginner can't weigh "provisional", and "Worth your time"
-from a screen would be wrong about a third of the time.
+"provisional". A beginner can't weigh "provisional", and even the best
+cheap screen disagrees with the full answer on more than a third of repos.
 
 What a screen *is* good for:
 
@@ -311,7 +313,7 @@ engine pick the sample exactly as today.
 Estimated cost per repo per week on the seed list:
 
 - 18% of repos changed nothing: 0 points.
-- 48% touched 1–29 PRs: 1 point (with facts and docs in the same query).
+- 48% touched 1–29 PRs: 1 point, 2 for 29 (facts and docs in the same query).
 - 34% touched 30 or more, where the change-only read is no cheaper than a
   full one: about 7 points.
 
@@ -345,7 +347,7 @@ read.
 |---|---|---|---|
 | [issues.ecosyste.ms](https://issues.ecosyste.ms) | Per repo: PR and merged counts, past-year counts, time to close, authors, bot counts, association totals, maintainers. Per PR (`…/issues?pull_request=true`): `author_association`, `merged_at`, `comments_count`, `closed_at`. No reviews, reply times or `merged_by`. | Fed from GH Archive hourly; a lookup re-syncs if the last sync is more than a day old. Flask was synced 2026-09-30 02:33. | **No, not for verdicts.** Its importer notes that GitHub's PR event "only includes: id, number, url, base, head" since October 2025, so association and merge fields go missing on recent PRs. Flask shows 12 merged in the past year against 193 closed, 718 PRs in total, and one foreign PR in its list. |
 | [repos.ecosyste.ms](https://repos.ecosyste.ms) | Archived, fork, stars, `pushed_at`, previous names, scorecard | Re-synced about weekly | Only for discovering repos. Holt reads these facts itself for about 0.025 points each (the seed scan). |
-| GH Archive / BigQuery | Every public event since 2011 | Hourly | Covered by the other worker's note (`docs/research/GH-ARCHIVE.md`). The October 2025 payload trimming ([GitHub changelog](https://github.blog/changelog/2025-08-08-upcoming-changes-to-github-events-api-payloads/): "The `author_association` field will be removed") takes away the field Holt's outsider count starts from. |
+| GH Archive / BigQuery | Every public event since 2011 | Hourly | See [GH-ARCHIVE.md](GH-ARCHIVE.md): usable before May 2025, not since October 2025, when GitHub trimmed PR events ([changelog](https://github.blog/changelog/2025-08-08-upcoming-changes-to-github-events-api-payloads/): "The `author_association` field will be removed"). Good for the backtest's past, not for a fresh index. Its OpenDigger mirror could say which PRs moved, but the change check below already costs only ~30 points a sweep. |
 | [OSS Insight API](https://ossinsight.io/docs/api) | Per-repo PR *creators* (first PR opened and merged). No merge rates or reply times. | GH Archive + Events API; says PR events "since mid-2025 were badly under-captured", fixed 1 Sep 2026 | No: 600 requests/hour per IP, beta, no data licence found |
 
 **Licence:**
@@ -428,11 +430,10 @@ most seeds are rarely opened:
 
 Each is one small PR. None changes a verdict rule.
 
-1. **A1: keep evidence, re-derive on engine bumps** (already written, in
-   TICKET-index-history).
-   - **Add:** `warm --stale-only` re-derives at the snapshot's read time,
-     whatever its age within the tier, and reads GitHub only when no
-     snapshot exists or the bump needs new evidence.
+1. **A1: keep evidence, re-derive on engine bumps** (PR #192, open).
+   - **Add:** `warm --stale-only` re-derives from any snapshot younger than
+     its repo's refresh tier (7 or 30 days), not just 168 hours. It reads
+     GitHub only when no snapshot exists or the bump needs new evidence.
    - **Proof:** a re-derived report is identical to the live one on a
      fixture; a dry run on prod lists the points a bump would have cost
      (should be ~0).
@@ -486,7 +487,7 @@ and backtest review.
     those; the amount isn't reported.
   - Cost comparisons used `rateLimit(dryRun: true)`, which the schema
     describes as "calculate the cost for the query without evaluating it".
-  - Three REST calls returned 200 (1 request each); four returned 304 (free,
+  - Two REST calls returned 200 (1 request each); four returned 304 (free,
     as shown).
 - **Offline:** the golden recordings (73 in `golden/expected.json`), replayed
   through `analyze_without_model` with parts of the evidence removed. The full
