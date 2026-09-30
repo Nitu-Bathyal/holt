@@ -21,7 +21,7 @@ export default function RefundsPage() {
         <ul>
           <li>Cancel a subscription anytime, from your account settings or by email. You keep access until the end of the period you paid for.</li>
           <li>No refunds for the unused part of a month you&rsquo;ve started, except where the law requires it or a charge was failed or duplicated.</li>
-          <li>Credit packs: full refund within 7 days if you haven&rsquo;t used any credit. Non-refundable once used.</li>
+          <li>Credit packs: full refund within 3 days if you haven&rsquo;t used any credit. Non-refundable once used.</li>
           <li>Approved refunds go back to the original payment method within 5 to 7 business days.</li>
         </ul>
       </div>
@@ -44,7 +44,7 @@ export default function RefundsPage() {
 
       <h2>3. Credit packs</h2>
       <ul>
-        <li><strong>Refundable within 7 days if unused.</strong> If you bought a pack of report credits by mistake or changed your mind, email us within 7 days of the purchase. As long as none of the credits has been used, we&rsquo;ll refund the full amount.</li>
+        <li><strong>Refundable within 3 days if unused.</strong> If you bought a pack of report credits by mistake or changed your mind, email us within 3 days of the purchase. As long as none of the credits has been used, we&rsquo;ll refund the full amount.</li>
         <li><strong>Non-refundable once used.</strong> Once any credit from a pack has been spent, the pack can&rsquo;t be refunded, in whole or in part.</li>
         <li>Credits don&rsquo;t have a cash value and can&rsquo;t be transferred to another account.</li>
       </ul>
