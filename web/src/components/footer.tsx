@@ -142,7 +142,7 @@ export function Footer({ signedIn = false }: { signedIn?: boolean }) {
           <ReactiveCat mood={mood} look={gaze} />
         </button>
         <p
-          className="ft-signoff text-[clamp(1.5rem,4.4vw,3.6rem)] font-semibold tracking-[-0.03em] text-ink"
+          className="ft-signoff font-semibold tracking-[-0.03em] text-ink"
           data-waving={seen || waves > 0}
           onPointerEnter={() => setWaves((n) => n + 1)}
         >

@@ -907,7 +907,10 @@
       animation: rcat-land 460ms var(--ease-expressive);
     }
   }
+  /* About 2/3 of a landing section heading and 2.5x the line under it: one
+     line across the footer's 1120px measure. */
   .ft-signoff {
+    font-size: clamp(1.3rem, 3.4vw, 2.6rem);
     line-height: 1.15;
   }
   .ft-caret {
@@ -1504,7 +1507,11 @@
 }
 .landing-wide .h2.ls-h2-wide {
   max-width: none;
-  font-size: clamp(2rem, min(6.4vw, 10.5svh), 7rem);
+}
+/* The quieter heading size: landing sections 03 to 07. */
+.ls-h2-sm,
+.landing-wide .h2.ls-h2-sm {
+  font-size: clamp(1.6rem, min(3.9vw, 6.5svh), 3.9rem);
 }
 .landing-wide .prose-sans {
   font-size: clamp(1rem, min(1.25vw, 2.3svh), 1.3rem);

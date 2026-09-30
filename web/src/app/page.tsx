@@ -179,7 +179,7 @@ export default async function Home() {
         <section data-cat-section="thinking" className="pane border-t border-line bg-section-alt">
           <Grid>
             <Kicker n="03" label="who it's for" />
-            <h2 className="h2 ls-h2-wide mb-[clamp(1.5rem,5svh,3.5rem)]">
+            <h2 className="h2 ls-h2-wide ls-h2-sm mb-[clamp(2.5rem,8svh,5.5rem)]">
               <Words text="Don't write your PR into the void." quiet={["void"]} />
             </h2>
             <People people={people(report)} />
@@ -203,7 +203,7 @@ export default async function Home() {
         <section id="what-it-checks" data-cat-section="heartbroken" className="pane scroll-mt-[61px] border-t border-line bg-section-alt">
           <Grid>
             <Kicker n="05" label="what it checks" />
-            <h2 className="h2 mb-12">
+            <h2 className="h2 ls-h2-sm mb-12">
               <Words text="Stars won't tell you who gets merged." />
             </h2>
             <Receipts />
@@ -217,7 +217,7 @@ export default async function Home() {
         <section id="verdicts" data-cat-section="celebrating" className="pane scroll-mt-[61px] border-t border-line">
           <Grid>
             <Kicker n="06" label="four answers" />
-            <h2 className="h2 mb-4">
+            <h2 className="h2 ls-h2-sm mb-4">
               <Words text="Four possible answers. No hedging." />
             </h2>
             <Answers />
@@ -236,7 +236,7 @@ export default async function Home() {
           <div className="relative">
             <Grid>
               <Kicker n="07" label="open source" />
-              <h2 className="h2 mb-8">
+              <h2 className="h2 ls-h2-sm mb-8">
                 <Words text="Open source. We merge outsiders too." />
               </h2>
               <div className="ls-install grid max-w-[760px] grid-cols-[auto_1fr_auto] items-center border border-line-strong bg-bg" data-reveal>
