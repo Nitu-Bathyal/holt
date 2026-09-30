@@ -70,3 +70,12 @@ p5.js, oppia, Hacktoberfest and GSSoC regulars) have no `expected` block: they
 were checked by the ticket 08 engine worker, not yet by a person. Their
 checks and reasons are in `docs/research/REVIEW-2026-09-30.md`; promote them
 here once a person agrees.
+
+## The backtest
+
+The golden set pins what the engine says; `golden/backtest.py` checks whether
+it was right. `golden/backtests/<date>/` holds, per repository, what a report would
+have read on a past date and what happened to the outside pull requests opened
+after it. `uv run python -m golden.backtest run` scores any engine change
+against that, offline. How it works, what counts as right, and the results so
+far: `docs/research/BACKTEST.md`.
