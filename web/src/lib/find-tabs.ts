@@ -14,8 +14,8 @@ export interface FindTabLink {
 /** The tabs, in order. Hacktoberfest shows around October, and always on its own page. */
 export function findTabs(opts: { signedIn: boolean; season: boolean; current: FindTab }): FindTabLink[] {
   const tabs: FindTabLink[] = [
-    { id: "find", label: opts.signedIn ? "For you" : "Starter issues", href: "/find" },
-    { id: "browse", label: "Browse", href: "/discover" },
+    { id: "find", label: "Find a project", href: "/find" },
+    { id: "browse", label: "Browse projects", href: "/discover" },
   ];
   if (opts.season || opts.current === "hacktoberfest") tabs.push({ id: "hacktoberfest", label: "Hacktoberfest", href: "/hacktoberfest" });
   return tabs;

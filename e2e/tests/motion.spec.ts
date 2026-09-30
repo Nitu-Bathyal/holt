@@ -178,7 +178,7 @@ test.describe("menus", () => {
 
     await button.click();
     await expect.poll(open).toBe(true);
-    await expect(menu.getByRole("link", { name: "the verdicts" })).toBeVisible();
+    await expect(menu.getByRole("link", { name: "Find a project" })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect.poll(open).toBe(false);
 
@@ -190,8 +190,8 @@ test.describe("menus", () => {
 
     // Picking a link closes it too (the header stays mounted across pages).
     await button.click();
-    await menu.getByRole("link", { name: "compare" }).click();
-    await expect(page).toHaveURL(/\/compare$/);
+    await menu.getByRole("link", { name: "Find a project", exact: true }).click();
+    await expect(page).toHaveURL(/\/find$/);
     await expect.poll(open).toBe(false);
   });
 });
@@ -249,9 +249,9 @@ test("reduced motion: nothing moves", async ({ browser, baseURL }, testInfo) => 
   if (testInfo.project.name === "phone") {
     await page.getByRole("button", { name: "Menu" }).click();
     await page.waitForTimeout(400);
-    await page.locator("#mobile-nav").getByRole("link", { name: "pricing" }).click();
+    await page.locator("#mobile-nav").getByRole("link", { name: "Pricing" }).click();
   } else {
-    await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "pricing" }).click();
+    await page.getByRole("navigation", { name: "Main" }).getByRole("link", { name: "Pricing" }).click();
   }
   await expect(page).toHaveURL(/\/pricing$/);
   await page.waitForTimeout(800);
