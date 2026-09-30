@@ -15,7 +15,8 @@ pause it, and `deploy.sh` still works by hand.
 | `follow.sh` | The auto-deploy: one tick checks origin/main against CI and staging and runs `deploy.sh` for it. `--status`, `--pause`, `--resume`, `--retry`. See [Auto-deploy](#auto-deploy). |
 | `install-follow.sh` | One-time: the timer that runs `follow.sh` every 2 minutes (`--remove` takes it out). |
 | `deploy.sh` | One deploy: build main's images, migrate, swap, health-check, roll back on failure, prune only this stack's images, stop the builder container. |
-| `env.sh` | Sourced by `deploy.sh` and `warm.sh`: state paths, `secrets.env` and the GitHub token fallback (`load_prod_env`). |
+| `env.sh` | Sourced by `deploy.sh` and `warm.sh`: state paths, `secrets.env`, the GitHub App's settings and the GitHub token fallback (`load_prod_env`). |
+| `github-app.sh` | Who production reads GitHub as (the GitHub App or `GITHUB_TOKENS`), its points left, and a test read of a public repository. Prints no secret. See [docs/ops/github-app.md](../../docs/ops/github-app.md). |
 | `make-env.sh` | Writes `~/.local/share/holt-prod/.env` once: fresh `AUTH_SECRET`, `HOLT_INTERNAL_KEY`, `HOLT_SECRET_KEY`, db password. Nothing shared with staging. |
 | `install.sh` | One-time: the env file plus the nightly backup timer and the daily repo-details timer. The deploy timer is `install-follow.sh`. |
 | `backup.sh` | `pg_dump` of both databases to `~/backups/holt/<stamp>/`, keeps 14 days. |
@@ -54,7 +55,8 @@ lines, `chmod 600`), read by `deploy.sh` and `warm.sh` on every run (`env.sh`) a
 | `GOOGLE_OAUTH_ID`, `GOOGLE_OAUTH_SECRET` | `AUTH_GOOGLE_ID/SECRET` | Google sign-in shows "isn't set up here" |
 | `OPENROUTER_API_KEY` | the same | AI reports answer `needs_key`; BYOK still works |
 | `HOLT_PROD_AI_BUDGET_USD`, `HOLT_PROD_AI_BUDGET_OWNER_OK` | `HOLT_AI_BUDGET_USD`, `HOLT_AI_BUDGET_OWNER_OK` | AI is off (budget 0), whatever key is set. A budget without `HOLT_PROD_AI_BUDGET_OWNER_OK=1` stops the deploy, and the server ignores one without `HOLT_AI_BUDGET_OWNER_OK`. `HOLT_AI_BUDGET_USD` itself (staging's) is never read here. See `server/README.md`, "AI budget" |
-| `GITHUB_TOKENS` | the same | falls back to `gh auth token`; with neither, the run stops (the server would have no API budget and a warm pass would end at "points left 0") |
+| `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID`, `GITHUB_APP_PRIVATE_KEY_FILE` | the same; the key file (a host path, `chmod 640`) is mounted read-only at `/run/secrets/github_app_key` | the server reads with `GITHUB_TOKENS`. With all three set, it reads as the GitHub App and `GITHUB_TOKENS` is not used; with only some, the run stops. Setup and rollback: [docs/ops/github-app.md](../../docs/ops/github-app.md) |
+| `GITHUB_TOKENS` | the same | falls back to `gh auth token`; with neither (and no GitHub App), the run stops (the server would have no API budget and a warm pass would end at "points left 0") |
 | `CONTACT_EMAIL`, `CONTACT_CITY` | `NEXT_PUBLIC_CONTACT_EMAIL/CITY` (build arg and env) | **the deploy stops**: the policy pages must not show placeholders |
 
 There is never a dev sign-in in production: it exists only with

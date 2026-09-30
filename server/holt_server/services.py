@@ -12,7 +12,7 @@ import httpx
 from holt_server import budget, engine, llm, payments, pro
 from holt_server.db import Database, Job
 from holt_server.errors import ApiError
-from holt_server.github import GitHubLookup, TokenPool
+from holt_server.github import GitHubLookup, build_pool
 from holt_server.jobs import JobRunner
 from holt_server.ratelimit import RateLimiter
 from holt_server.settings import Settings
@@ -24,9 +24,10 @@ class Services:
     def __init__(self, settings: Settings, db: Database | None = None) -> None:
         self.settings = settings
         self.db = db or Database(settings.database_url)
-        self.pool = TokenPool(settings.token_list)
         # One connection pool for every GitHub call this process makes.
         self.http = httpx.Client(timeout=30.0)
+        # The GitHub App if it is set up, else GITHUB_TOKENS.
+        self.pool = build_pool(settings, self.http)
         self.lookup = GitHubLookup(self.pool, self.http)
         # Paid features: None when HOLT_PRO_URL is not set.
         self.pro: pro.ProClient | None = pro.build(settings)

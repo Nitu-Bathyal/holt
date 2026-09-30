@@ -28,6 +28,13 @@ class Settings(BaseSettings):
     web_url: str = Field("https://githolt.com", alias="HOLT_WEB_URL")
 
     github_tokens: str = Field("", alias="GITHUB_TOKENS")
+    # The Holt GitHub App (github_app.py). With all three set, the server reads
+    # GitHub as the app and GITHUB_TOKENS is not used; with none, it is.
+    github_app_id: str = Field("", alias="GITHUB_APP_ID")
+    github_app_installation_id: str = Field("", alias="GITHUB_APP_INSTALLATION_ID")
+    # A path to the .pem (mounted read-only), or the key itself.
+    github_app_private_key_file: str = Field("", alias="GITHUB_APP_PRIVATE_KEY_FILE")
+    github_app_private_key: str = Field("", alias="GITHUB_APP_PRIVATE_KEY", repr=False)
 
     # The optional internal service for paid features. Empty URL = off.
     pro_url: str = Field("", alias="HOLT_PRO_URL")

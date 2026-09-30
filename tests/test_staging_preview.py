@@ -53,7 +53,7 @@ n=$(cat "$STUB_DIR/containers" 2>/dev/null || echo 0)
 case " $* " in
     *" up "*)
         case " $* " in *" --scale "*) echo $((n + 1)) > "$STUB_DIR/containers" ;; esac
-        cp "$HOLT_STAGE_HOME/now.json" "$STUB_DIR/now-while-starting"; env | grep -E '^(STAGING_HOST|HOLT_WEB_URL|AUTH_|NEXT_PUBLIC_|GITHUB_TOKENS=|OPENROUTER_|HOLT_AI_|HOLT_PRO_MODEL_|HOLT_PRO_PLAYBOOK_)' | sort > "$STUB_DIR/compose.env" ;;
+        cp "$HOLT_STAGE_HOME/now.json" "$STUB_DIR/now-while-starting"; env | grep -E '^(STAGING_HOST|HOLT_WEB_URL|AUTH_|NEXT_PUBLIC_|GITHUB_TOKENS=|GITHUB_APP_|HOLT_GITHUB_APP_KEY_GID=|OPENROUTER_|HOLT_AI_|HOLT_PRO_MODEL_|HOLT_PRO_PLAYBOOK_)' | sort > "$STUB_DIR/compose.env" ;;
     *" ps "*) i=1; while [ "$i" -le "$n" ]; do echo "c$i"; i=$((i + 1)); done ;;
     *" config --hash "*) echo "$last stub-hash" ;;
     *" config "*)
@@ -403,6 +403,39 @@ def test_the_github_token_is_read_fresh_and_overrides_env_file(sandbox: Sandbox)
     logs = "".join(p.read_text(encoding="utf-8") for p in (sandbox.state / "logs").glob("*.log"))
     for text in (calls, done.stdout, done.stderr, logs):
         assert "ghp_fromsecrets" not in text
+
+
+def test_the_github_app_replaces_the_tokens(sandbox: Sandbox, tmp_path: Path) -> None:
+    key = tmp_path / "github-app.pem"
+    key.write_text("-----BEGIN PRIVATE KEY-----\nstub\n-----END PRIVATE KEY-----\n", encoding="utf-8")
+    key.chmod(0o640)
+    sandbox.write_secrets(GITHUB_TOKENS="ghp_personal", GITHUB_APP_ID="123",
+                          GITHUB_APP_INSTALLATION_ID="456", GITHUB_APP_PRIVATE_KEY_FILE=str(key))
+    done = sandbox.run()
+    assert done.returncode == 0, done.stdout + done.stderr
+    started = sandbox.live()
+    assert (started["GITHUB_APP_ID"], started["GITHUB_APP_INSTALLATION_ID"]) == ("123", "456")
+    assert started["GITHUB_APP_PRIVATE_KEY_FILE"] == str(key)  # compose mounts it read-only
+    assert started["HOLT_GITHUB_APP_KEY_GID"] == str(key.stat().st_gid)
+    assert started["GITHUB_TOKENS"] == ""  # nor the one make-env.sh wrote into .env
+    assert "reading as the GitHub App" in done.stdout
+    assert "stub" not in done.stdout + done.stderr
+    assert not sandbox.stub_lines("github_calls"), "no personal token is checked or used"
+
+
+def test_a_half_set_up_github_app_stops_the_build(sandbox: Sandbox, tmp_path: Path) -> None:
+    sandbox.write_secrets(GITHUB_APP_ID="123")
+    done = sandbox.run()
+    assert done.returncode != 0
+    assert "only partly set up" in done.stdout
+    assert not (sandbox.stub_dir / "compose.env").exists()
+
+    sandbox.write_secrets(GITHUB_APP_ID="123", GITHUB_APP_INSTALLATION_ID="456",
+                          GITHUB_APP_PRIVATE_KEY_FILE=str(tmp_path / "missing.pem"))
+    done = sandbox.run()
+    assert done.returncode != 0
+    assert "no file at" in done.stdout
+    assert not (sandbox.state / "fingerprint").exists()
 
 
 def test_a_refused_github_token_stops_the_build_loudly(sandbox: Sandbox) -> None:
