@@ -27,7 +27,7 @@ type Shown = { key: string; result: Result<FindStart> };
  * Signed out, `initial` is the shared default search (`searched`), and any
  * other search asks for sign-in instead of running.
  */
-export function FindView({ initialPicks, searched = initialPicks, initial, source, hf, saved, signedIn = true }: {
+export function FindView({ initialPicks, searched = initialPicks, initial, source, hf, saved, signedIn = true, notice }: {
   initialPicks: Picks;
   /** The picks `initial` was searched with, when not `initialPicks`. */
   searched?: Picks;
@@ -36,6 +36,8 @@ export function FindView({ initialPicks, searched = initialPicks, initial, sourc
   hf: { note: string; on: boolean } | null;
   saved: string[] | null;
   signedIn?: boolean;
+  /** A one-off note (profile saved), just under the filters. */
+  notice?: React.ReactNode;
 }) {
   const [picks, setPicks] = useState(initialPicks);
   const [shown, setShown] = useState<Shown>({ key: searchKey(searched), result: initial });
@@ -103,6 +105,7 @@ export function FindView({ initialPicks, searched = initialPicks, initial, sourc
   return (
     <>
       <FindFilters picks={picks} onChange={setPicks} hf={hf} />
+      {notice}
       <Results shown={shown} pending={pending} locked={pending && !signedIn ? `/find?${q}` : null} fit={fit} days={picks.days} saved={saved} picks={picks} setPicks={setPicks} onRetry={retryNow}>
         {source === "profile" && untouched && (
           <span>
@@ -168,7 +171,7 @@ function Results({ shown, pending, locked, fit, days, saved, picks, setPicks, on
 
   return (
     <section aria-label="Results" aria-busy={!locked && (pending || (!raw && !error))} className="mt-5">
-      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-[0.87rem] text-faint">
+      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-[0.8rem] text-faint">
         <p aria-live="polite" className="flex items-center gap-x-2">
           {pending && !locked ? (
             <>
