@@ -2753,6 +2753,34 @@
     box-shadow: 0 0 0 100vmax var(--header), 0 1px 0 100vmax var(--line-strong);
     clip-path: inset(0 -100vmax -1px);
   }
+  /* Suggestions under a box (suggest-input.tsx): the menus' panel, border and
+     shadow, at most six rows so it never scrolls. Placed by script. */
+  .suggest[popover] {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    padding: 4px;
+    border: 1px solid var(--line-strong);
+    background: var(--panel);
+    box-shadow: var(--shadow);
+    color: var(--ink);
+    overflow: hidden;
+  }
+  .suggest-option {
+    display: flex;
+    min-height: 36px;
+    cursor: pointer;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    color: var(--muted);
+  }
+  .suggest-option[aria-selected="true"] {
+    background: var(--panel-2);
+    color: var(--ink);
+  }
+
   /* The tab row: the places as quiet pills on the left; the repo box and
      Hacktoberfest on the right. */
   .find-tabs {
