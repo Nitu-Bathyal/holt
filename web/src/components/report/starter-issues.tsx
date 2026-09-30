@@ -22,7 +22,7 @@ export function StarterIssueCard({ issue, compact = false }: { issue: StarterIss
         </a>
       </h3>
       {issue.on_it && (
-        <p className={`mt-1 text-[0.85rem] ${issue.people || issue.open_prs ? "text-amber" : "text-green"}`}>{issue.on_it}</p>
+        <p className={`mt-1 font-sans text-[0.88rem] ${issue.people || issue.open_prs ? "text-amber" : "text-green"}`}>{issue.on_it}</p>
       )}
       {!compact && issue.why.length > 0 && (
         <ul className="mt-2 space-y-0.5 font-sans text-[0.89rem] text-muted">
@@ -34,7 +34,7 @@ export function StarterIssueCard({ issue, compact = false }: { issue: StarterIss
           ))}
         </ul>
       )}
-      <p className="mt-3 flex gap-2 border-t border-dashed border-line pt-3 text-[0.87rem] text-green">
+      <p className="mt-3 flex gap-2 border-t border-dashed border-line pt-3 font-sans text-[0.9rem] text-green">
         <span aria-hidden="true">→</span>
         <span>
           <span className="sr-only">What to do next: </span>
