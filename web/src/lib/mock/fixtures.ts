@@ -467,6 +467,12 @@ export function mockAbout(repo: string): Report["about"] {
     archived: repo.toLowerCase().includes("archived"),
     fork: false,
     fork_of: null,
+    links: [
+      { kind: "contributing", url: `https://github.com/${repo}/blob/main/CONTRIBUTING.md` },
+      { kind: "docs", url: `https://${repo.split("/")[1]}.readthedocs.io` },
+      { kind: "discord", url: "https://discord.gg/mock" },
+    ],
+    latest_release: { tag: "v1.4.0", published_at: hoursAgo(24 * 20), url: `https://github.com/${repo}/releases/tag/v1.4.0` },
     fetched_at: hoursAgo(3),
   };
 }
