@@ -263,7 +263,7 @@ async def run(svc: Services, job: Job, emit) -> dict[str, Any]:
                                       user_id=job.user_id, request_id=job.id)
     except pro.ProError as err:
         raise pro_failure(err, job.repo) from None
-    svc.ai_costs[job.id] = budget.pro_cost(body)
+    budget.note_pro(svc, job.id, body)
     try:
         result = from_pro(job.repo, body)
     except ValueError:  # pydantic's ValidationError included

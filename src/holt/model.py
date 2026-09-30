@@ -222,6 +222,10 @@ PROVIDER_PRESETS: dict[str, dict[str, str]] = {
         "base_url": "https://openrouter.ai/api/v1",
         "api_key_env": "OPENROUTER_API_KEY",
     },
+    # Azure OpenAI's v1 endpoint. No default base URL: it names your resource,
+    # https://<resource>.openai.azure.com/openai/v1/, and the model is your
+    # deployment's name. See docs/ops/azure-openai.md.
+    "azure": {"api_key_env": "AZURE_OPENAI_API_KEY"},
     "openai-compatible": {"api_key_env": "OPENAI_API_KEY"},
 }
 
@@ -236,7 +240,13 @@ KEY_URLS: dict[str, str] = {
 }
 
 # Providers that speak the OpenAI wire protocol; everything except anthropic.
-_OPENAI_WIRE = {"openai", "ollama", "gemini", "openrouter", "openai-compatible"}
+_OPENAI_WIRE = {"openai", "ollama", "gemini", "openrouter", "azure", "openai-compatible"}
+
+# Providers that read OpenAI's own parameter names (`max_completion_tokens`).
+_OPENAI_PARAMS = {"openai", "azure"}
+
+#: Providers with no default endpoint: the base URL names the user's own resource.
+NEEDS_BASE_URL = {"azure", "openai-compatible"}
 
 
 @dataclass(slots=True)
@@ -461,6 +471,12 @@ class OpenAIModel:
         config = active_config()
         key_env = config.resolved_key_env()
         base_url = config.resolved_base_url()
+        if config.provider == "azure" and not base_url:
+            raise RuntimeError(
+                "The azure provider needs your resource's endpoint. Run:\n"
+                "  holt models --provider azure --model <deployment name> "
+                "--base-url https://<resource>.openai.azure.com/openai/v1/"
+            )
         api_key = os.environ.get(key_env)
         if not api_key:
             if base_url:
@@ -522,11 +538,12 @@ def _elapsed_ms(started: float) -> int:
 def _output_cap(label: str) -> dict[str, int]:
     """The output limit, in the parameter the configured provider reads.
 
-    OpenAI's own API takes `max_completion_tokens` for its reasoning models and
-    rejects `max_tokens`; OpenRouter, Gemini, Ollama and other compatible
-    servers read `max_tokens`.
+    OpenAI's own API, and Azure OpenAI's, take `max_completion_tokens` for
+    their reasoning models and reject `max_tokens`; OpenRouter, Gemini, Ollama
+    and other compatible servers read `max_tokens`.
     """
-    name = "max_completion_tokens" if active_config().provider == "openai" else "max_tokens"
+    name = ("max_completion_tokens" if active_config().provider in _OPENAI_PARAMS
+            else "max_tokens")
     return {name: max_output_tokens(label)}
 
 

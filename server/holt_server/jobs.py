@@ -453,6 +453,7 @@ class JobRunner:
         # Here, not at the top: these import the API module, which imports this one.
         from holt_server import discover, playbook, preflight
 
+        model_id = self._ai_model(job)
         cost = self._ai_cost(job, result)
         async with self.services.db.session() as s:
             if job.kind == "find":
@@ -474,7 +475,7 @@ class JobRunner:
             elif job.kind == "preflight":
                 await preflight.store(s, job, result)
             if budget.kind_of(job):
-                await budget.settle(s, job.id, cost)
+                await budget.settle(s, job.id, cost, model_id)
             await s.commit()
         self.hub.publish(job.id, "done", done_payload(job.kind, result))
         if job.kind == "analysis" and job.repo:
@@ -524,6 +525,14 @@ class JobRunner:
                 log.exception("queueing a report for %s failed", repo)
         self.wake()
 
+    def _ai_model(self, job: Job) -> str | None:
+        """The model id the job's AI work ran on, for `budget.settle`: what the
+        service said, or the model an AI report was built with. Call it before
+        `_ai_cost`, which lets go of the report's model."""
+        if job.id in self.services.ai_models:
+            return self.services.ai_models.pop(job.id)
+        return getattr(self._models.get(job.id), "model", None)
+
     def _ai_cost(self, job: Job, result: dict[str, Any] | None = None) -> float | None:
         """What the job's model work cost, for `budget.settle`: the report's
         own `cost`, what its model spent before it failed, or what the service
@@ -544,6 +553,7 @@ class JobRunner:
         # Here, not at the top: playbook.py imports the API module, which imports this one.
         from holt_server import playbook
 
+        model_id = self._ai_model(job)
         cost = self._ai_cost(job)
         async with self.services.db.session() as s:
             failed = await s.execute(self._mine(job.id).values(
@@ -557,7 +567,7 @@ class JobRunner:
             if job.kind == "playbook":
                 await playbook.refund_unlocks(s, job.id)
             if budget.kind_of(job):
-                await budget.settle(s, job.id, cost)
+                await budget.settle(s, job.id, cost, model_id)
             await s.commit()
         self.hub.publish(job.id, "error", {"error": err.body()})
 

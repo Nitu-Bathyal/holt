@@ -50,6 +50,8 @@ class Services:
         # What each running AI job's model work cost, when the job learns it
         # (budget.py): playbook and pre-flight jobs put it here for `_finish`.
         self.ai_costs: dict[str, float | None] = {}
+        # And which model did it, for `ai_runs.model`.
+        self.ai_models: dict[str, str | None] = {}
 
     def _live_provider(self, repo: str, as_of: datetime):
         # The pool's transport: it skips dead or used-up tokens and hears back

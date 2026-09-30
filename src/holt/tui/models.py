@@ -167,8 +167,8 @@ class Provider:
 
     @property
     def needs_base_url(self) -> bool:
-        """`openai-compatible` is only meaningful once you say where."""
-        return self.name == "openai-compatible" and not self.base_url
+        """`openai-compatible` and `azure` are only meaningful once you say where."""
+        return self.name in model_module.NEEDS_BASE_URL and not self.base_url
 
     def status(self) -> str:
         """One line about whether this provider could be used right now."""

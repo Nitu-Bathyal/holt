@@ -733,7 +733,9 @@ class AiRun(Base):
     pre-flight summary from the paid-features service. `reserved_micros` is
     held when the job is queued; `cost_micros` is what the run cost, recorded
     when it ends (`estimated` when it isn't known, e.g. a run that timed out,
-    and it is then counted at the reservation)."""
+    and it is then counted at the reservation). `model` is the model id it
+    ran on, recorded then too, for comparing models offline; it is never
+    shown to anyone."""
 
     __tablename__ = "ai_runs"
 
@@ -743,6 +745,7 @@ class AiRun(Base):
     reserved_micros: Mapped[int] = mapped_column(BigInteger)
     cost_micros: Mapped[int | None] = mapped_column(BigInteger, nullable=True)
     estimated: Mapped[bool] = mapped_column(Boolean, default=False)
+    model: Mapped[str | None] = mapped_column(String(200), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
     started_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     settled_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
