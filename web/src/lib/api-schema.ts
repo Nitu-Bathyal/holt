@@ -1043,7 +1043,9 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "ticket_first" | "no_ai_prs" | "ok_to_test" | "sig_team" | "cla" | "dco" | "issue_first" | "ai_disclosure" | "duplicates";
+            code: "ticket_first" | "no_ai_prs" | "ok_to_test" | "sig_team" | "cla" | "dco" | "issue_first" | "ai_disclosure" | "duplicates" | "stale_bot";
+            /** Days */
+            days: number | null;
             /** Link */
             link: string | null;
             /** Url */
@@ -2458,6 +2460,8 @@ export interface components {
             /** Headline */
             readonly headline: string;
             holt_users: components["schemas"]["HoltUsers"] | null;
+            /** How Long */
+            readonly how_long: components["schemas"]["Counted"][];
             /** Landing */
             landing: components["schemas"]["LandingPath"][];
             /**
@@ -2638,6 +2642,7 @@ export interface components {
              * @default 0
              */
             still_open: number;
+            timing: components["schemas"]["Timing"] | null;
             /**
              * Too Old
              * @default 0
@@ -2648,6 +2653,49 @@ export interface components {
              * @default 0
              */
             withdrawn: number;
+        };
+        /**
+         * Timing
+         * @description How long it takes here (engine 7, agent/timing.py). Facts, never read
+         *     by the verdict. Each is null under its minimum.
+         */
+        Timing: {
+            /** First Reply Half Hours */
+            first_reply_half_hours: number | null;
+            /** First Reply Slow Hours */
+            first_reply_slow_hours: number | null;
+            /** Last Outside Merge */
+            last_outside_merge: string | null;
+            /** Merge Cohort From */
+            merge_cohort_from: string | null;
+            /** Merge Cohort Merged */
+            merge_cohort_merged: number | null;
+            /** Merge Cohort Prs */
+            merge_cohort_prs: number | null;
+            /** Merge Cohort To */
+            merge_cohort_to: string | null;
+            /** Merge Half Days */
+            merge_half_days: number | null;
+            /** Merge Slow Days */
+            merge_slow_days: number | null;
+            /** Merge Typical Days */
+            merge_typical_days: number | null;
+            /** Merged Within 14 Days */
+            merged_within_14_days: number | null;
+            /** Merged Within 30 Days */
+            merged_within_30_days: number | null;
+            /** Merged Within 3 Days */
+            merged_within_3_days: number | null;
+            /** Merged Within 60 Days */
+            merged_within_60_days: number | null;
+            /** Merged Within 7 Days */
+            merged_within_7_days: number | null;
+            /** Merges In Bursts */
+            merges_in_bursts: boolean | null;
+            /** Stale Bot */
+            stale_bot: boolean | null;
+            /** Stale Close Days */
+            stale_close_days: number | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -2778,6 +2826,7 @@ export type SavedState = components['schemas']['SavedState'];
 export type StarterIssue = components['schemas']['StarterIssue'];
 export type StarterIssues = components['schemas']['StarterIssues'];
 export type Stats = components['schemas']['Stats'];
+export type Timing = components['schemas']['Timing'];
 export type ValidationError = components['schemas']['ValidationError'];
 export type $defs = Record<string, never>;
 export interface operations {

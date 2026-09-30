@@ -17,6 +17,7 @@ without it), add it to API.md, and regenerate the TypeScript types.
 
 from __future__ import annotations
 
+import math
 from datetime import datetime
 from typing import Literal
 
@@ -89,6 +90,45 @@ class ErrorBody(Model):
 # --- the report --------------------------------------------------------------------
 
 
+class Timing(Model):
+    """How long it takes here (engine 7, agent/timing.py). Facts, never read
+    by the verdict. Each is null under its minimum."""
+
+    # The waits by which half, and 8 in 10, of settled outside pull requests
+    # had an answer: a reply from the team, or a merge. Null when fewer than
+    # that ever get one (a pull request closed unanswered stopped waiting and
+    # isn't counted past its close).
+    first_reply_half_hours: float | None = None
+    first_reply_slow_hours: float | None = None
+    # Share of outside pull requests opened 60-240 days before the report
+    # that were merged within 3, 7, 14, 30 and 60 days of opening.
+    merged_within_3_days: float | None = None
+    merged_within_7_days: float | None = None
+    merged_within_14_days: float | None = None
+    merged_within_30_days: float | None = None
+    merged_within_60_days: float | None = None
+    # Days to merge among those merged: the median, and the 90th percentile.
+    merge_typical_days: float | None = None
+    merge_slow_days: float | None = None
+    # The wait by which half of them were merged (null when fewer were).
+    merge_half_days: float | None = None
+    # The outside pull requests those are over, and when the first and last
+    # were opened (dates).
+    merge_cohort_prs: int | None = None
+    merge_cohort_merged: int | None = None
+    merge_cohort_from: str | None = None
+    merge_cohort_to: str | None = None
+    # Outside merges came in bursts over the last 26 weeks; null when that
+    # can't be read (a short sample, too few merges, work landed elsewhere).
+    merges_in_bursts: bool | None = None
+    # When the newest outside pull request was merged (a date).
+    last_outside_merge: str | None = None
+    # A bot closes quiet pull requests, and after how many quiet days (null
+    # when only its closes were seen, not its config).
+    stale_bot: bool | None = None
+    stale_close_days: int | None = None
+
+
 class Stats(Model):
     # Decided attempts only (opened more than the 14-day settle window ago):
     # the denominator of every rate here. `still_open` were opened within the
@@ -110,6 +150,9 @@ class Stats(Model):
     withdrawn: int = 0
     # Opened more than a year ago: read, and in no count.
     too_old: int = 0
+    # How long it takes here (engine 7): null on reports from before it, and
+    # on readings of the frozen benchmark.
+    timing: Timing | None = None
 
 
 class PartialStats(Model):
@@ -174,7 +217,7 @@ class Odds(Model):
 
 
 AskCode = Literal["ticket_first", "no_ai_prs", "ok_to_test", "sig_team", "cla", "dco",
-                  "issue_first", "ai_disclosure", "duplicates"]
+                  "issue_first", "ai_disclosure", "duplicates", "stale_bot"]
 
 
 class Ask(Model):
@@ -186,6 +229,9 @@ class Ask(Model):
     code: AskCode
     url: str
     link: str | None = None
+    # `stale_bot` only: quiet days before the bot closes a pull request, when
+    # its config says (null when only its closes were seen).
+    days: int | None = None
 
 
 class Sample(Model):
@@ -429,6 +475,70 @@ def first_timer_line(s: Stats) -> str | None:
             "merged here.")
 
 
+# --- how long it takes here (engine 7) ------------------------------------------
+
+
+def wait_phrase(hours: float) -> str:
+    """A wait in plain words, rounded up so "within" stays true: "6 hours",
+    "a day", "3 days", "2 weeks", "2 months"."""
+    days = hours / 24
+    if hours <= 1:
+        return "an hour"
+    if hours < 22:
+        return f"{math.ceil(hours)} hours"
+    if days <= 1:
+        return "a day"
+    if days <= 13:
+        return f"{math.ceil(days)} days"
+    if days <= 7 * 8:
+        weeks = math.ceil(days / 7)
+        return f"{weeks} weeks"
+    return f"{math.ceil(days / 30)} months"
+
+
+def share_phrase(share: float) -> str:
+    """0.83 -> "most", 0.5 -> "about half", 0.27 -> "about 3 in 10"."""
+    if share >= 0.95:
+        return "nearly all"
+    if share >= 0.75:
+        return "most"
+    if 0.45 <= share <= 0.55:
+        return "about half"
+    if share < 0.05:
+        return "hardly any"
+    return f"about {max(1, round(share * 10))} in 10"
+
+
+def how_long(s: Stats) -> list[Counted]:
+    """ "How long it takes here": first reply, merged within a week and a
+    month, bursts, and the stale bot. Only what cleared its minimum."""
+    t = s.timing
+    if t is None:
+        return []
+    out: list[Counted] = []
+    if t.first_reply_slow_hours is not None:
+        typical = s.median_first_response_hours
+        out.append(Counted(topic="first reply", text=(
+            (f"Typically {wait_phrase(typical)}. " if typical is not None else "")
+            + f"Most get one within {wait_phrase(t.first_reply_slow_hours)}.")))
+    elif t.first_reply_half_hours is not None:
+        out.append(Counted(topic="first reply", text=(
+            f"About half get one within {wait_phrase(t.first_reply_half_hours)}.")))
+    if t.merged_within_7_days is not None and t.merged_within_30_days is not None:
+        week, month = share_phrase(t.merged_within_7_days), share_phrase(t.merged_within_30_days)
+        text = (f"{week} within a week." if week == month
+                else f"{week} within a week, {month} within a month.")
+        out.append(Counted(topic="merged", text=text[:1].upper() + text[1:]))
+    if t.merges_in_bursts and t.last_outside_merge and (d := _date(t.last_outside_merge)):
+        out.append(Counted(topic="rhythm", text=(
+            f"In bursts. The last outside merge was on {d[0]} {d[1]} {d[2]}.")))
+    if t.stale_bot:
+        out.append(Counted(topic="closed if quiet", text=(
+            f"A bot closes pull requests after {t.stale_close_days} quiet days."
+            if t.stale_close_days else "A bot closes quiet pull requests.")))
+    return out
+
+
 # The best place to start needs this many merged outside pull requests in it;
 # fewer is luck, not a pattern. A folder where this many tried and none landed
 # is worth a warning.
@@ -445,14 +555,18 @@ ASK_STEP: dict[str, str] = {
     "issue_first": "Open an issue before you write code: CONTRIBUTING asks for that.",
     "ai_disclosure": "Say whether you used AI: the project asks for that.",
     "duplicates": "Search open pull requests first: duplicates get closed.",
+    "stale_bot": "Keep yours active: a bot closes quiet pull requests.",
 }
 
 
-def ask_text(code: str, link: str | None = None) -> str:
-    """The sentence for one ask. A ticket names the tracker the bot linked."""
+def ask_text(code: str, link: str | None = None, days: int | None = None) -> str:
+    """The sentence for one ask. A ticket names the tracker the bot linked;
+    the stale bot, its quiet days."""
     if code == "ticket_first" and link:
         host = link.split("://", 1)[-1].split("/", 1)[0]
         return f"Get an accepted ticket at {host} first."
+    if code == "stale_bot" and days:
+        return f"Keep yours active: a bot closes pull requests after {days} quiet days."
     return ASK_STEP[code]
 NOT_VIABLE_STEP: dict[str, str] = {
     "archived": "Don't send a pull request here. Look for an active fork or a similar "
@@ -508,9 +622,9 @@ def next_step(verdict: str, decided_by: list[str], rule_codes: list[str],
         return CATALOGUE_STEP
     if verdict == "long_shot":
         first = next((c for c in rule_codes if c in LONG_SHOT_CODES), "few_merged")
-        return " ".join([LONG_SHOT_STEP[first]] + [ask_text(a.code, a.link) for a in asks])
+        return " ".join([LONG_SHOT_STEP[first]] + [ask_text(a.code, a.link, a.days) for a in asks])
     if verdict != "viable":
-        return " ".join([INSUFFICIENT_STEP] + [ask_text(a.code, a.link) for a in asks])
+        return " ".join([INSUFFICIENT_STEP] + [ask_text(a.code, a.link, a.days) for a in asks])
     areas = [a for a in landing if a.path != "(root)" and a.merged >= BEST_AREA_MIN_MERGED]
     best = max(areas, key=lambda a: (a.merged, a.merged / a.attempted), default=None)
     if best is not None:
@@ -521,7 +635,7 @@ def next_step(verdict: str, decided_by: list[str], rule_codes: list[str],
     avoid = next((a for a in never_landed if a.attempted >= AVOID_AREA_MIN_TRIED), None)
     if avoid is not None:
         out.append(f"Nothing from outside landed in {avoid.path} ({avoid.attempted} tried).")
-    out += [ask_text(a.code, a.link) for a in asks]
+    out += [ask_text(a.code, a.link, a.days) for a in asks]
     return " ".join(out)
 
 
@@ -766,6 +880,11 @@ class Report(VerdictView):
     @property
     def odds(self) -> Odds | None:
         return odds_for(self.verdict, self.stats)
+
+    @computed_field
+    @property
+    def how_long(self) -> list[Counted]:
+        return how_long(self.stats)
 
 
 # --- starter issues and find ------------------------------------------------------

@@ -40,7 +40,7 @@ def check_report_shape(report: dict, mode: str) -> None:
             "evidence_until", "generated_at", "cost", "rule_codes", "tone",
             "verdict_line", "odds", "sample", "asks", "numbers_line", "first_timer_line",
             "next_step", "stat_line", "counted", "holt_users", "budget_independent",
-            "outdated", "about"}
+            "outdated", "about", "how_long"}
     assert set(report) == keys
     # The committed fixtures are a frozen capture read with the benchmark's
     # rules, where the budget can move the verdict: never served for another
@@ -55,7 +55,9 @@ def check_report_shape(report: dict, mode: str) -> None:
     assert set(report["stats"]) == {
         "outsider_attempts", "outsider_merged", "distinct_outsiders",
         "first_time_merged_authors", "no_reply", "median_first_response_hours", "bot_share",
-        "still_open", "closed_silently", "closed_by_bot", "withdrawn", "too_old"}
+        "still_open", "closed_silently", "closed_by_bot", "withdrawn", "too_old", "timing"}
+    # A frozen capture gets no timing block (engine 7 reads live evidence only).
+    assert report["stats"]["timing"] is None and report["how_long"] == []
     for item in report["evidence"]:
         assert item["url"].startswith("https://github.com/"), item
         assert set(item) == {"id", "url", "kind", "value", "text", "quote"}

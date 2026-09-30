@@ -170,9 +170,11 @@ def replay_transport(name: str) -> tuple[starter.GitHub, datetime]:
         if key not in by_key:
             key = starter.query_key(as_recorded(sent["query"]), sent["variables"])
         if key not in by_key:
-            # Recorded before engine 6 read the pull request settings and AI policies.
+            # Recorded before engine 6 read the pull request settings and AI
+            # policies, and engine 7 the stale bot's config.
             before = "\n".join(line for line in sent["query"].replace(PR_SETTINGS, "").split("\n")
-                               if "ai_policy" not in line)
+                               if "ai_policy" not in line and "stale_" not in line
+                               and "workflows:" not in line)
             key = starter.query_key(before, sent["variables"])
         if key not in by_key:
             key = starter.query_key(as_recorded(before), sent["variables"])

@@ -17,7 +17,8 @@
     "closed_silently": 0,
     "closed_by_bot": 0,
     "withdrawn": 0,
-    "too_old": 0
+    "too_old": 0,
+    "timing": null
   },
   "decided_by": [
     "28 pull requests from outside contributors were merged, by 28 different people, out of 119 attempts by 81 people. Of those who got a reply, half heard back within 2.3 hours. 55 attempts got no reply at all and weren't merged."
@@ -231,5 +232,6 @@
     "level": "fair",
     "tone": "warn",
     "text": "some outside pull requests land; a well-chosen starter issue helps"
-  }
+  },
+  "how_long": []
 }

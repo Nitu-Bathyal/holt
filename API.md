@@ -80,6 +80,7 @@ responses. The server also accepts and normalises full URLs
   "next_step": "string",              // line 3: what to do next
   "stat_line": "string | null",       // short count for the extension chip: "22 of 120 outside PRs merged"
   "counted": [ { "topic": "What we read", "text": "The newest 200 pull requests on GitHub, opened 3 Jun – 26 Sep 2026." } ],
+  "how_long": [ { "topic": "first reply", "text": "Typically 14 hours. Most get one within 3 days." } ],
   "odds": { "level": "good" | "fair" | "long", "tone": "good" | "warn" | "bad",
             "text": "most outside pull requests get a reply, and plenty get merged" } | null,
   "bottom_line": "string | null",     // ai mode: at most two model-written sentences, the lead of the AI explanation
@@ -89,7 +90,17 @@ responses. The server also accepts and normalises full URLs
     "first_time_merged_authors": 15, "no_reply": 63,
     "median_first_response_hours": 0.8, "bot_share": 0.085,
     "still_open": 12, "closed_silently": 20, "closed_by_bot": 31, "withdrawn": 4,
-    "too_old": 0                     // opened more than a year ago: read, in no count (default 0)
+    "too_old": 0,                    // opened more than a year ago: read, in no count (default 0)
+    "timing": {                      // how long it takes here (engine 7); null before it
+      "first_reply_half_hours": 5.0, "first_reply_slow_hours": 70.2,
+      "merged_within_3_days": 0.41, "merged_within_7_days": 0.52, "merged_within_14_days": 0.6,
+      "merged_within_30_days": 0.68, "merged_within_60_days": 0.72,
+      "merge_typical_days": 4.1, "merge_slow_days": 38.0, "merge_half_days": 6.2,
+      "merge_cohort_prs": 180, "merge_cohort_merged": 130,
+      "merge_cohort_from": "2026-02-10", "merge_cohort_to": "2026-07-28",
+      "merges_in_bursts": false, "last_outside_merge": "2026-09-27",
+      "stale_bot": true, "stale_close_days": 37
+    } | null
   },
   "decided_by": ["plain-English rule sentence", "..."],
   "rule_codes": ["merges", "rubber_stamp"], // stable code per decided_by line, same order
@@ -107,8 +118,9 @@ responses. The server also accepts and normalises full URLs
               "last_opened": "2026-09-26T09:00:00Z", "team_pull_requests": 40,
               "team_people": 9, "bot_pull_requests": 12 } | null,
   "asks": [ { "code": "ticket_first" | "no_ai_prs" | "ok_to_test" | "sig_team" | "cla" | "dco"
-              | "issue_first" | "ai_disclosure" | "duplicates",
-              "url": "https://github.com/…", "link": "https://code.djangoproject.com" | null } ],
+              | "issue_first" | "ai_disclosure" | "duplicates" | "stale_bot",
+              "url": "https://github.com/…", "link": "https://code.djangoproject.com" | null,
+              "days": 37 | null } ],
   "budget_independent": true,         // the verdict is the same for any `days` (see below)
   "cost": { "input_tokens": 9000, "output_tokens": 6000,
             "usd": 0.0123, "seconds": 48.2 }, // ai only, else null
@@ -220,13 +232,66 @@ label), `cla` (a CLA bot commented on outside pull requests), `dco` or
 `issue_first` (CONTRIBUTING says so in as many words), `ai_disclosure` (a
 written rule, or a closing bot, asks you to say whether you used AI; never
 beside `no_ai_prs`), `duplicates` (5+ outside pull requests closed as
-duplicates). `url` is where it was read; `link` is null except on
-`ticket_first`. An empty list means nothing was found, not that nothing is
+duplicates), `stale_bot` (a bot closes quiet pull requests: read from
+actions/stale or probot's `.github/stale.yml` at the commit the report read,
+`url` the config file and `days` its quiet days before a close; or, with no
+config found, 2+ outside pull requests closed later by a bot with no reply,
+`url` the newest and `days` null). `url` is where it was read; `link` is null except on
+`ticket_first`; `days` is null except on `stale_bot`. An empty list means nothing was found, not that nothing is
 asked. Neither affects the verdict. `next_step` carries one sentence per ask
 under Worth your time, Long shot and Not enough evidence.
 
+**`stats.timing`: how long it takes here (engine 7).** Facts for the reader and for My PRs, never read by the verdict. Null on
+reports from before engine 7 (and on readings of the frozen benchmark); each
+field is null under its minimum. All waits are measured from when a pull
+request was opened.
+
+- **First reply**: `first_reply_half_hours` and `first_reply_slow_hours` are
+  the waits by which half, and 8 in 10, of the settled outside pull requests
+  (opened 14+ days before the report, the ones `stats` counts) had an answer:
+  a reply from the team, or a merge. One still open with no answer counts as
+  not answered; one closed with no answer stopped waiting and leaves every
+  longer wait. Null when fewer than 8 were answered, or when fewer than half
+  (8 in 10) ever were. `stats.median_first_response_hours` (the typical wait,
+  over the ones that got a reply) is unchanged.
+- **Merges** come from a cohort nobody is still waiting on: outside pull
+  requests opened 60 to 240 days before the report, so each had at least 60
+  days to land. `merged_within_{3,7,14,30,60}_days` are the shares merged
+  within that many days (open and closed-unmerged ones count as not merged);
+  `merge_half_days` is the wait by which half were merged;
+  `merge_typical_days` and `merge_slow_days` are the median and the 90th
+  percentile among the merged ones. `merge_cohort_prs` and
+  `merge_cohort_merged` are how many they are over, and `merge_cohort_from` /
+  `merge_cohort_to` (dates) when the first and last were opened. On a busy
+  repository the cohort is the newest 100 of the window plus the newest 100 of
+  each older third of it (one light search, up to 3 GitHub points); a quieter
+  one's own sample covers it. Outside means not on the team the sample shows,
+and not anyone who merged a pull request in the cohort (merging takes write
+access; staff often read as CONTRIBUTOR). Minimums: 8 outside pull requests for any
+  merge number, 8 merges for `merge_slow_days`. All null when most outside
+  work lands off GitHub's merge button (Gerrit, a merge bot, an internal
+  sync): GitHub's merge time isn't the project's.
+- **Rhythm**: `merges_in_bursts` is true when, over the last 26 weeks, there
+  were 8+ outside merges, under 30% of weeks had one, and the busiest 4 weeks
+  held 60%+ of them; false for a steadier flow; null when the sample doesn't
+  reach back 26 weeks or has fewer merges. `last_outside_merge` is the date of
+  the newest outside merge in the sample.
+- **Stale bot**: `stale_bot` and `stale_close_days` as in the `stale_bot` ask
+  (null days when only its closes were seen).
+
+`how_long` is the block the report shows for it, derived from `stats` like
+`counted`: up to four `{topic, text}` lines, in order `first reply`
+("Typically 14 hours. Most get one within 3 days.", or "About half get one
+within 2 days."), `merged` ("About half within a week, most within a month."),
+`rhythm` (only when `merges_in_bursts`), and `closed if quiet` (the stale
+bot). Empty when nothing cleared its minimum. Render the lines as given.
+
+My PRs (PR 2 of engine 6b) reads `stats.timing` through the report join, so it
+can say "Day 9, no reply yet. Most get one within 3 days here." without
+another GitHub read.
+
 `headline`, `tone`, `verdict_line`, `numbers_line`, `first_timer_line`,
-`next_step`, `stat_line`, `counted` and `odds` are derived by the server from
+`next_step`, `stat_line`, `counted`, `how_long` and `odds` are derived by the server from
 `verdict`, `stats`, `sample`, `landing`, `asks` and
 `decided_by`/`rule_codes`, every time a report is
 served (so cached reports pick up wording changes). Every surface (web, OG

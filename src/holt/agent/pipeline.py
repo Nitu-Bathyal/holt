@@ -18,7 +18,7 @@ from datetime import UTC, datetime
 from holt.about import about_from_records
 from holt.agent import (
     examples, labels, landing, landing_detection, narration, personal, rates, repo_kind_rules,
-    stages,
+    stages, timing,
 )
 from holt.agent.findings import Finding, Findings
 from holt.agent.signals import (
@@ -128,6 +128,9 @@ class Trace:
     # "narrate") and "total", for AI reports. Classify, opportunity and
     # outcomes overlap, so the stages add up to more than the total.
     timings: dict[str, float] = field(default_factory=dict)
+    # How long it takes here (agent/timing.py): facts for the reader, never
+    # read by the verdict or the narration.
+    timing: timing.Timing | None = None
 
 
 def analyze(
@@ -263,6 +266,7 @@ def analyze(
         model_written=MODEL_WRITTEN_FIELDS,
         unsupported_sentences=unsupported,
         timings=timings,
+        timing=timing.read(records, threads, read_at, signals.settle_hours),
     )
 
 
@@ -578,7 +582,8 @@ def analyze_without_model(
         examples=examples.counted(threads, {r.evidence_id: r for r in records},
                                   as_of or datetime.now(UTC),
                                   _min_age(provider, min_age_hours)),
-    ), _done(report, Trace(signals=signals, rules=rules))
+    ), _done(report, Trace(signals=signals, rules=rules, timing=timing.read(
+        records, threads, as_of or datetime.now(UTC), signals.settle_hours)))
 
 
 def first_timer_sentence(signals: Signals) -> str:

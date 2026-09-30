@@ -151,6 +151,76 @@ def record(repos: list[str], root: Path = RECORDINGS, force: bool = False) -> in
     return failed
 
 
+def timing_records(transport: Any, repo: str, cutoff: datetime,
+                   records: list[EvidenceRecord],
+                   stale: bool = True) -> tuple[list[EvidenceRecord], int]:
+    """What a live read at `cutoff` adds for engine 7's timing block, from a
+    recording made before it: the stale bot's config at the cutoff commit, and
+    the timing cohort (or a note that the recording's own pages cover it).
+    Returns the records and the points the cohort search cost.
+    """
+    from holt.evidence.github_graphql import (
+        PAGE_SIZE,
+        project_stale,
+        read_timing,
+        timing_source,
+        timing_window,
+    )
+
+    meta = next((r for r in records if r.evidence_id.endswith(":meta")), None)
+    home = (meta.payload.get("name_with_owner") if meta else None) or repo
+    owner, name = home.split("/")
+    out: list[EvidenceRecord] = []
+    if stale:
+        repo_meta = transport.repo_meta(owner, name, cutoff)
+        history = (((repo_meta.get("defaultBranchRef") or {}).get("target") or {})
+                   .get("history") or {}).get("nodes") or []
+        if history:
+            out += project_stale(repo, transport.docs_at(owner, name, history[0]["oid"]),
+                                 history[0])
+    # The newest pages are the newest PAGES * PAGE_SIZE pull requests by
+    # creation; anything older came from the settled read.
+    created = sorted((r.timestamp for r in records if r.evidence_id.startswith("pr:")
+                      and r.evidence_id.endswith(":opened")), reverse=True)
+    newest = created[:PAGES * PAGE_SIZE]
+    before = transport.points_used
+    if timing_source(newest, len(newest) >= PAGES * PAGE_SIZE, cutoff) == "sample":
+        out.append(timing_window(repo, cutoff, "sample"))
+    else:
+        out += read_timing(transport, repo, home, cutoff)
+    return [r for r in out if r.timestamp <= cutoff], transport.points_used - before
+
+
+def without_timing(records: Iterable[EvidenceRecord]) -> list[EvidenceRecord]:
+    return [r for r in records if not r.evidence_id.startswith("timing:")
+            and ":stale:" not in r.evidence_id]
+
+
+def record_timing(repos: list[str], root: Path = RECORDINGS) -> int:
+    """Add (or redo) engine 7's timing evidence in existing recordings, as of
+    each one's own cutoff. Returns the number that failed."""
+    from holt.evidence.github_graphql import GitHubGraphQL
+
+    transport = GitHubGraphQL()
+    failed = 0
+    for i, repo in enumerate(repos, 1):
+        if not recording_path(repo, root).exists():
+            continue
+        cutoff, records = read_recording(repo, root)
+        try:
+            added, points = timing_records(transport, repo, cutoff, records)
+        except Exception as exc:  # noqa: BLE001 -- reported, and the rest still run
+            failed += 1
+            print(f"[{i}/{len(repos)}] {repo}: FAILED {type(exc).__name__}: {exc}")
+            continue
+        write_recording(repo, without_timing(records) + added, cutoff, root)
+        window = next((r for r in added if r.evidence_id.endswith(":window")), None)
+        print(f"[{i}/{len(repos)}] {repo}: {window.payload if window else None}, "
+              f"{sum(1 for r in added if ':stale:' in r.evidence_id)} stale configs, "
+              f"cohort search {points} points (rate {transport.remaining})", flush=True)
+    return failed
+
+
 # --- the engine's answer -------------------------------------------------------
 
 
@@ -163,10 +233,15 @@ def run(repo: str, root: Path = RECORDINGS) -> dict[str, Any]:
     provider = RecordingProvider(repo, root)
     assessment, trace = analyze_without_model(
         repo, provider, contributor_days=DEFAULT_CONTRIBUTOR_DAYS, as_of=provider.cutoff)
+    numbers = trace.signals.as_dict()
+    if trace.timing is not None:
+        # How long it takes here (engine 7): facts beside the counts, not rules.
+        numbers.update({k: v for k, v in trace.timing.as_dict().items()
+                        if v is not None and v is not False})
     return {
         "verdict": assessment.verdict.value,
         "rules": rule_codes(trace.rules),
-        "numbers": {k: _round(v) for k, v in trace.signals.as_dict().items()},
+        "numbers": {k: _round(v) for k, v in numbers.items()},
     }
 
 
@@ -365,6 +440,9 @@ def main(argv: list[str] | None = None) -> int:
     rec = sub.add_parser("record", help="capture live evidence (needs GITHUB_TOKEN)")
     rec.add_argument("repos", nargs="*", help="default: every repository in repos.json")
     rec.add_argument("--force", action="store_true", help="re-record existing recordings")
+    tim = sub.add_parser("record-timing", help="add the timing cohort and stale config to "
+                         "existing recordings, as of their cutoff (needs GITHUB_TOKEN)")
+    tim.add_argument("repos", nargs="*", help="default: every repository in repos.json")
     diff = sub.add_parser("diff", help="before/after table for the current engine")
     diff.add_argument("--base", help="compare against expected.json at this git ref "
                       "(e.g. origin/main) instead of the working tree's")
@@ -379,6 +457,8 @@ def main(argv: list[str] | None = None) -> int:
     repos = load_repos()
     if args.cmd == "record":
         return 1 if record(args.repos or list(repos), force=args.force) else 0
+    if args.cmd == "record-timing":
+        return 1 if record_timing(args.repos or list(repos)) else 0
 
     current = run_all(r for r in repos if recording_path(r).exists())
     missing = [r for r in repos if not recording_path(r).exists()]
