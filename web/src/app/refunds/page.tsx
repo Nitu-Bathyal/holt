@@ -20,7 +20,7 @@ export default function RefundsPage() {
         <p><strong>The short version.</strong></p>
         <ul>
           <li>A pass is one payment. It doesn&rsquo;t renew, so there&rsquo;s nothing to cancel.</li>
-          <li>Full refund within 3 days if the pass is unused: no merge plan made and no alert sent. Non-refundable once used.</li>
+          <li>Full refund within 3 days if no merge plan has been made with the pass. Non-refundable once one has.</li>
           <li>Approved refunds go back to the original payment method within 5 to 7 business days.</li>
         </ul>
       </div>
@@ -36,8 +36,8 @@ export default function RefundsPage() {
       <h2>2. Passes</h2>
       <ul>
         <li><strong>One payment, no renewal.</strong> A pass gives Pro for the period shown when you buy it (1, 3 or 12 months). It ends on its own and is never charged again, so there&rsquo;s nothing to cancel.</li>
-        <li><strong>Refundable within 3 days if unused.</strong> If you bought a pass by mistake or changed your mind, email us within 3 days of the purchase. As long as the pass hasn&rsquo;t been used (no merge plan made and no alert sent), we&rsquo;ll refund the full amount.</li>
-        <li><strong>Non-refundable once used.</strong> Once a pass has been used, it can&rsquo;t be refunded, in whole or in part, including for the days left. The exceptions are where the law requires a refund, and failed or duplicate charges (see section 3).</li>
+        <li><strong>Refundable within 3 days if unused.</strong> If you bought a pass by mistake or changed your mind, email us within 3 days of the purchase. As long as no merge plan has been made with it, we&rsquo;ll refund the full amount.</li>
+        <li><strong>Non-refundable once used.</strong> Once a merge plan has been made with a pass, it can&rsquo;t be refunded, in whole or in part, including for the days left. The exceptions are where the law requires a refund, and failed or duplicate charges (see section 3).</li>
         <li>A pass has no cash value and can&rsquo;t be transferred to another account.</li>
       </ul>
 
