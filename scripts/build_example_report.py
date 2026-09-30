@@ -1,4 +1,4 @@
-"""Regenerate the public example AI report the web app serves at /example-ai-report.
+"""Regenerate the recorded AI report the web app's landing falls back on.
 
 It replays a recorded model run through the current pipeline and the server's
 report builder, then writes the finished report to

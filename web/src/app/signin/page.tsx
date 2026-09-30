@@ -6,10 +6,10 @@ import { CatFace } from "@/components/cat-face";
 import { PageTransition } from "@/components/motion/page-transition";
 import { TONE_MOOD } from "@/components/report/tone";
 import { VerdictPill } from "@/components/report/verdict-pill";
-import { EXAMPLE_PATH, EXAMPLE_REPORT, exampleRecordedOn } from "@/lib/example-report";
+import { EXAMPLE_PATH } from "@/lib/example-report";
 import { EXAMPLES_PATH } from "@/lib/examples";
-import { humanHours } from "@/lib/format";
 import { afterSignIn } from "@/lib/home";
+import { EXAMPLE_PLAN, planRecordedOn } from "@/lib/merge-plan";
 import { currentUser } from "@/lib/session";
 import { signInNotice } from "@/lib/signin";
 import { WELCOME_AI_CREDITS } from "@/lib/site";
@@ -126,33 +126,28 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
 
 /** Desktop only: what an AI report looks like, from the recorded example. */
 function ExampleReport() {
-  const r = EXAMPLE_REPORT;
-  const stats: [string, string][] = [
-    [`${r.stats.outsider_merged} of ${r.stats.outsider_attempts}`, "outside PRs merged"],
-    [humanHours(r.stats.median_first_response_hours), "typical wait for a first reply"],
-    [String(r.stats.first_time_merged_authors), "people's first PR merged"],
-  ];
+  const p = EXAMPLE_PLAN;
   return (
     <figure className="relative m-0 hidden lg:block">
       {/* A second sheet behind the report, so it reads as one of a pile you'll keep. */}
       <div aria-hidden="true" className="absolute inset-0 translate-x-3 translate-y-3 border border-line bg-panel-2" />
       <div className="relative border border-line-strong bg-panel shadow-card">
         <div className="flex min-h-10 items-center justify-between border-b border-line px-5 text-[0.8rem] text-faint">
-          <span>{r.repo}</span>
-          <span>example AI report · {exampleRecordedOn()}</span>
+          <span>{p.repo}</span>
+          <span>example AI report · {planRecordedOn()}</span>
         </div>
         <div className="p-7">
           <div className="flex items-center justify-between">
-            <VerdictPill headline={r.headline} tone={r.tone} />
-            <CatFace mood={TONE_MOOD[r.tone]} className="text-[1.2rem]" />
+            <VerdictPill headline={p.verdict.headline} tone={p.verdict.tone} />
+            <CatFace mood={TONE_MOOD[p.verdict.tone]} className="text-[1.2rem]" />
           </div>
           <blockquote className="mt-5 border-l-2 border-blue pl-4 font-sans text-[1.05rem] leading-relaxed text-ink">
-            {r.verdict_line}
+            {p.call.text}
           </blockquote>
           <ul className="mt-6 grid grid-cols-3 gap-px border border-line bg-line">
-            {stats.map(([big, label]) => (
+            {p.verdict.numbers.map(({ value, label }) => (
               <li key={label} className="bg-panel p-3">
-                <p className="text-[1.1rem] font-semibold tracking-tight">{big}</p>
+                <p className="text-[1.1rem] font-semibold tracking-tight">{value}</p>
                 <p className="font-sans text-[0.82rem] leading-snug text-muted">{label}</p>
               </li>
             ))}
@@ -160,8 +155,8 @@ function ExampleReport() {
         </div>
       </div>
       <figcaption className="mt-7 font-sans text-[0.88rem] text-muted">
-        The rules pick the verdict. The AI report explains it in plain words, with links to the PRs behind it.{" "}
-        <Link href={EXAMPLE_PATH} className="text-link">Read the full example</Link> (recorded {exampleRecordedOn()}).
+        The rules pick the verdict. The AI report turns it into a plan for your first pull request.{" "}
+        <Link href={EXAMPLE_PATH} className="text-link">Read the full example</Link>.
       </figcaption>
     </figure>
   );

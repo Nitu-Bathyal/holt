@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { creditsNote, evidenceLabel, mergeTone, noReplyTone, statLines } from "./format.ts";
+import { creditsNote, evidenceLabel, mergeTone, noReplyTone, statLines, fieldLabel, outcomeLabel } from "./format.ts";
 
 const stats = (attempts: number, merged: number, noReply: number) => ({
   outsider_attempts: attempts, outsider_merged: merged, no_reply: noReply,
@@ -43,4 +43,11 @@ test("creditsNote says free only when every credit is free", () => {
   assert.equal(creditsNote(c), "13 AI reports left. This one uses 1. A failed report doesn't count.");
   assert.equal(creditsNote({ ...c, balance: 3, purchased: 0 }), "3 free AI reports left. This one uses 1. A failed report doesn't count.");
   assert.equal(creditsNote({ ...c, balance: 1, free: 1, purchased: 0 }).startsWith("1 free AI report left."), true);
+});
+
+test("the merge plan's AI findings use the site's labels", () => {
+  assert.equal(outcomeLabel("merged_after_review"), "Merged after review");
+  assert.equal(outcomeLabel("closed_with_guidance"), "Closed, with a pointer elsewhere");
+  assert.equal(fieldLabel("onboarding"), "Contributor guide");
+  assert.equal(fieldLabel("outsider_posture"), "How outside contributors are treated");
 });
