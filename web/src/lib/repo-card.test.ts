@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { fromFind, langColor, languageLabel, neighbours, oddsSegments, oddsText, statPills, type CardStats } from "./repo-card.ts";
+import { fromFind, issueSummary, langColor, languageLabel, neighbours, oddsSegments, oddsText, statPills, type CardStats } from "./repo-card.ts";
 
 const stats = (over: Partial<CardStats> = {}): CardStats => ({ attempts: 71, merged: 57, noReply: 5, closedSilently: 8, closedOther: 0, stillOpen: 95, firstTimers: 3, replyHours: 46.9, ...over });
 
@@ -64,4 +64,14 @@ test("closes by a bot or the author get their own segment, not the replied one",
   const segs = oddsSegments(stats({ attempts: 100, merged: 10, noReply: 20, closedSilently: 5, closedOther: 50, stillOpen: 0 }))!;
   assert.deepEqual(segs.map((x) => [x.key, x.n]), [["merged", 10], ["replied", 15], ["closed", 5], ["shut", 50], ["silent", 20]]);
   assert.match(oddsText(stats({ attempts: 10, merged: 5, noReply: 0, closedSilently: 0, closedOther: 5, stillOpen: 0 })), /5 closed by a bot or their author/);
+});
+
+test("issue summary: how many, how many nobody is on, and the kinds of work", () => {
+  const issue = (over: Record<string, unknown>) => ({ number: 1, title: "t", url: "u", labels: [], comments: 0, created_at: null, people: 0, open_prs: 0, on_it: null, why: [], beginner: true, areas: [], ...over }) as never;
+  assert.equal(issueSummary([]), null);
+  assert.deepEqual(issueSummary([issue({ areas: ["docs"] }), issue({ people: 1, areas: ["code", "docs"] }), issue({ open_prs: 1 })]), { count: "3 starter issues", free: "1 unclaimed", allTaken: false, areas: ["code", "docs"] });
+  assert.deepEqual(issueSummary([issue({})]), { count: "1 starter issue", free: "unclaimed", allTaken: false, areas: [] });
+  assert.equal(issueSummary([issue({}), issue({})])!.free, "all unclaimed");
+  assert.deepEqual(issueSummary([issue({ people: 2 }), issue({ open_prs: 1 })])!.free, "all taken");
+  assert.equal(issueSummary([issue({ people: null, open_prs: null })])!.free, "unclaimed");
 });
