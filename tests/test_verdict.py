@@ -475,3 +475,45 @@ def test_every_reason_is_plain_english():
     for s in shapes:
         for line in classify(findings(), s)[1]:
             assert "_" not in line and "%" not in line.replace("% of", ""), line
+
+
+# --- engine 5: people's first pull requests, and catalogues ----------------------
+
+
+def test_few_newcomers_merged_is_a_long_shot_and_its_reason_comes_first():
+    """microsoft/vscode: 1 of 18 people's first pull request merged, while the
+    pull request count (28%) cleared every other line. The backtest found this
+    share predicts the next newcomers best (docs/research/BACKTEST.md)."""
+    s = live(first_pr_people=18, first_pr_merged=1, outsider_ignored=60)
+    v, trace = classify(findings(), s)
+    assert v is Verdict.LONG_SHOT
+    assert rule_codes(trace)[-2:] == ["few_newcomers_merged", "mostly_silent"]
+    assert trace[-2] == ("Only 1 of the 18 people who sent their first pull request here "
+                         "got it merged.")
+    none = classify(findings(), live(first_pr_people=9, first_pr_merged=0))[1]
+    assert none[-1] == "None of the 9 people who sent their first pull request here got it merged."
+
+
+def test_the_newcomer_line_is_three_in_ten_from_eight_people():
+    assert classify(findings(), live(first_pr_people=10, first_pr_merged=3))[0] is Verdict.VIABLE
+    assert classify(findings(), live(first_pr_people=10, first_pr_merged=2))[0] \
+        is Verdict.LONG_SHOT
+    # Seven people is too few to say: the other rules decide.
+    assert classify(findings(), live(first_pr_people=7, first_pr_merged=0))[0] is Verdict.VIABLE
+
+
+def test_the_frozen_benchmark_never_reads_the_newcomer_line():
+    s = signals(outsider_merged=4, first_pr_people=20, first_pr_merged=1)
+    assert classify(findings(), s)[0] is Verdict.VIABLE
+
+
+def test_a_catalogue_gets_its_own_answer_on_a_live_reading():
+    """winget-pkgs, first-contributions: entries get merged easily, so "Not
+    worth your time" was a false red on both backtest dates."""
+    v, trace = classify(findings(repo_kind="registry"), live(outsider_merged=400))
+    assert v is Verdict.CATALOGUE and rule_codes(trace)[-1] == "non_software_kind"
+    assert classify(findings(repo_kind="awesome_list"), live())[0] is Verdict.CATALOGUE
+    # Portfolio and course material are about whose project it is: unchanged.
+    assert classify(findings(repo_kind="course_material"), live())[0] is Verdict.NOT_VIABLE
+    # The frozen benchmark keeps the answer it was scored with.
+    assert classify(findings(repo_kind="registry"), signals())[0] is Verdict.NOT_VIABLE

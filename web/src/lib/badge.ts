@@ -23,6 +23,7 @@ const ADVICE: Record<string, string[]> = {
   archived: ["Archived repos don't get a badge. Unarchive it if you want outside help again."],
   closed_kind: ["This looks like a mirror of a project developed somewhere else. Put the badge on the repo where PRs get reviewed."],
   non_software_kind: ["Holt rates projects where outside contributors change code or docs. Lists, personal forks and sign-up repos don't get a badge."],
+  catalogue_shape: ["Holt rates projects where outside contributors change code or docs. Lists and catalogues don't get a badge."],
   no_attempts: [
     "Nobody outside the team opened a PR recently, so there's nothing to judge.",
     "Label a few small issues \"good first issue\" and link a CONTRIBUTING file from your README, then check again once people have tried.",
@@ -55,6 +56,9 @@ const ADVICE: Record<string, string[]> = {
   slow_replies: [
     "The typical first reply takes over three weeks. A quick acknowledgement counts, even before a full review.",
     "A CODEOWNERS file or a triage rota makes sure new PRs get seen.",
+  ],
+  few_newcomers_merged: [
+    "Few people get their first PR merged here. Label issues you'd welcome help with, and review first-time contributors' PRs first.",
   ],
   few_merged: [
     "Fewer than 1 in 10 outside PRs get merged. Say in CONTRIBUTING what kind of change you'd accept, and label issues you'd welcome help with.",

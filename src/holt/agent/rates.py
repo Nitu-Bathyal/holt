@@ -75,7 +75,8 @@ INFO_CODES = frozenset({"sample_period", "dormant", "excluded", "still_open", "c
 
 # Rules that come after the merge count and overrule it (verdict.py): when
 # one is there, it is the reason, not the count before it.
-OVERRULING_CODES = frozenset({"rubber_stamp", "long_odds", "replies_no_merges", "few_merged",
+OVERRULING_CODES = frozenset({"rubber_stamp", "long_odds", "replies_no_merges",
+                              "few_newcomers_merged", "few_merged",
                               "mostly_silent", "slow_replies", "one_merge", "one_person"})
 
 

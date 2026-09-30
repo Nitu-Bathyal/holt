@@ -75,7 +75,7 @@ CATALOGUE_RULES = frozenset({"catalogue_shape", "non_software_kind"})
 
 RANK = {"viable": 3, "long_shot": 2, "not_viable": 1}
 SHORT = {"viable": "Worth", "long_shot": "Long shot", "not_viable": "Not worth",
-         "insufficient_evidence": "Not enough", "personal": "Personal"}
+         "insufficient_evidence": "Not enough", "personal": "Personal", "catalogue": "List"}
 
 
 # --- recordings -----------------------------------------------------------------

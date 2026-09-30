@@ -59,8 +59,8 @@
    "shape": "audit problem case",
    "note": "registry: every PR is one JSON file claiming a subdomain",
    "expected": {
-    "verdict": "not_viable",
-    "reason": "A registry: every PR adds one JSON file to claim a subdomain (a review bot closed 22 of the 74 closed ones). Getting one merged isn't a software contribution, so Holt should not call it worth a contributor's time."
+    "verdict": "catalogue",
+    "reason": "A registry: every PR adds one JSON file to claim a subdomain (a review bot closed 22 of the 74 closed ones). Getting one merged isn't a software contribution, so Holt should not call it worth a contributor's time. Engine 5 says that with its own answer, \"A list, not code\", instead of \"Not worth your time\": entries do get merged (35% of the next newcomers in the June backtest)."
    }
   },
   "Homebrew/homebrew-cask": {
@@ -71,9 +71,9 @@
    "shape": "audit problem case",
    "note": "registry: manifests in one package directory, validated by a user-account bot",
    "expected": {
-    "verdict": "not_viable",
+    "verdict": "catalogue",
     "reason": "A package-manifest registry: 134 of the non-member PRs in the recording were merged by microsoft-github-policy-service after automated validation. Submitting a manifest isn't contributing to software.",
-    "judgment_call": "It is easy to get merged here, which is exactly why the merge counts look good; the verdict follows the product rule that registries are 'Not worth' (ticket 07)."
+    "judgment_call": "It is easy to get merged here, which is exactly why the merge counts look good. Engine 5 gives registries their own answer, \"A list, not code\", instead of 'Not worth' (ticket 07's rule): 81-82% of the next newcomers got in on both backtest dates."
    }
   },
   "termux/termux-packages": {

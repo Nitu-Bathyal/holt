@@ -61,6 +61,7 @@ CAT_HOSTILE = "outsider attempts went unanswered"
 CAT_LONG_ODDS = "few outsider attempts get merged (the merge-rate floor)"
 CAT_LONG_SHOT = "a long shot: few merged, most unanswered or very slow replies"
 CAT_PERSONAL = "a personal or team project"
+CAT_CATALOGUE = "a list or catalogue, not code"
 
 
 @dataclass(slots=True)
@@ -166,6 +167,8 @@ def _categorise(verdict: Verdict, trace: list[str]) -> str | None:
         return CAT_ARCHIVED
     if "personal" in codes:
         return CAT_PERSONAL
+    if verdict is Verdict.CATALOGUE:
+        return CAT_CATALOGUE
     if verdict is Verdict.LONG_SHOT:
         return CAT_LONG_SHOT
     if "rubber_stamp" in codes or "waved through unread" in joined:

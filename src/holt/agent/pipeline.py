@@ -336,7 +336,7 @@ def _legacy_measurements(signals: Signals) -> dict:
                      "outsider_closed_silently", "outsider_excluded",
                      "outsider_reviewed_share", "merged_threads",
                      "outsider_too_old", "outsider_landed_elsewhere")
-        and not k.startswith(("first_timer_", "distinct_first_timer_"))
+        and not k.startswith(("first_timer_", "distinct_first_timer_", "first_pr_"))
     }
 
 

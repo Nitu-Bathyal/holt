@@ -237,3 +237,53 @@ them except kubernetes merged about 1 in 4 newcomers or fewer afterwards (golang
   said so (#9), and the backtest agrees: their merge odds are high.
 - Done: the second as-of date (15 April) confirms the combination above.
   The next engine PR is that rule, judged by this harness on both dates.
+
+## Engine 5: what the backtest led to
+
+Engine 5 makes two changes, each scored here before it shipped.
+
+1. **A new first reason for "Long shot", `few_newcomers_merged`.** It applies
+   when fewer than 3 in 10 of at least 8 people got their first pull request
+   in the sample merged (`Signals.first_pr_people`, `first_pr_merged`). This
+   is finding 4's combination, but built into the engine and not bolted onto
+   it.
+2. **Catalogues and lists get their own answer**, "A list, not code"
+   (`catalogue`, neutral), instead of "Not worth your time". Their answer is
+   about what a merge there is worth, not whether one happens.
+
+**One more correction came out of the golden diff.** A first version counted
+every first pull request older than the 14-day settle window as "not merged"
+if it was still open. On today's golden recordings that turned pytorch,
+openssl, react-native, golang/go, llvm, kubernetes and ruff into long shots.
+Yet each of them merged 40–76% of newcomers in the backtest windows. On
+projects where review takes weeks, a first pull request two to eight weeks old
+is usually still on its way in. So an open first pull request now counts only
+once it is 60 days old (`FIRST_PR_OPEN_DAYS`).
+
+That change also made the first-PR rate a better predictor of what happens
+next: rank agreement between the before sample's rate and the next newcomers'
+rate went from 0.79 and 0.81 to 0.87 and 0.88 (April and June). Waiting 30,
+45 or 90 days did nearly as well. Kubernetes, the one repository June's
+combination got wrong on both dates, is now right on both.
+
+| engine | as of | scored | false greens | false reds | rank agreement | Worth: merged | Long shot | Not worth |
+|---|---|---|---|---|---|---|---|---|
+| 4 | 15 Apr | 50 | 3 | 5 | 0.39 | 49% | 11% | 15% |
+| 5 | 15 Apr | 42 | 1 | 0 | **0.83** | 50% | 11% | 3% |
+| 4 | 15 Jun | 49 | 3 | 5 | 0.38 | 44% | 6% | 9% |
+| 5 | 15 Jun | 41 | 0 | 0 | **0.81** | 52% | 10% | 4% |
+
+Engine 5 scores fewer repositories because catalogues now get their own
+answer, which makes no promise about merging. Its one miss is semgrep in
+April: it read Worth, and 1 of the next 13 newcomers got in. No Long shot
+went on to merge 40% or more of newcomers on either date. On today's golden
+recordings, 14 verdicts change: 8 catalogues move to "A list, not code", and
+bubbletea, material-components-android, pdf.js, rustlings, tldr and zulip move
+from Worth to Long shot. The hand checks agree 10/10; the two registry hand
+checks now expect the catalogue answer.
+
+Caveats: the 30% line and the 60-day wait were both chosen on these same two
+dates, so they need a third date or a fresh set of repositories before they
+are treated as settled. The winget-pkgs hand check was written for "Not
+worth"; its reason still holds under the new answer.
+

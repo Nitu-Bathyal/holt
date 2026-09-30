@@ -17,7 +17,7 @@ from __future__ import annotations
 import statistics
 from collections.abc import Iterable
 from dataclasses import dataclass, field
-from datetime import datetime
+from datetime import datetime, timedelta
 
 from holt.agent import landing_detection, people, rates, replies
 from holt.agent.people import MAINTAINER_ASSOCIATIONS
@@ -298,6 +298,20 @@ class Signals:
     # which says nothing about how outsiders are treated.
     outsider_reviewed_share: float | None = None
     merged_threads: int = 0
+    # Each outside person once, by the first pull request they sent in the
+    # sample: how many of those first pull requests have an outcome (merged,
+    # closed, or still open after FIRST_PR_OPEN_DAYS), and how many were merged. The question a reader has is "will *my* pull request get
+    # in?", and they send one. Counted per pull request, one prolific author
+    # weighs as much as twenty people who each tried once. The backtest
+    # (docs/research/BACKTEST.md) found this share predicts what happens to
+    # the next newcomers better than any per-pull-request rate.
+    first_pr_people: int = 0
+    first_pr_merged: int = 0
+
+    @property
+    def first_pr_rate(self) -> float | None:
+        """Share of people whose first pull request here was merged."""
+        return self.first_pr_merged / self.first_pr_people if self.first_pr_people else None
 
     @property
     def outsider_judgeable(self) -> int:
@@ -331,7 +345,40 @@ class Signals:
             "outsider_landed_elsewhere": self.outsider_landed_elsewhere,
             "outsider_reviewed_share": self.outsider_reviewed_share,
             "merged_threads": self.merged_threads,
+            "first_pr_people": self.first_pr_people,
+            "first_pr_merged": self.first_pr_merged,
         }
+
+
+# A first pull request still open and unmerged at this age counts as not
+# merged; a younger one still open counts as neither. The 14-day settle
+# window is too short for this rate: on projects where review takes weeks
+# (pytorch, llvm, kubernetes) most first pull requests two to eight weeks old
+# are still open and will land, and counting them as failures read kubernetes
+# at 12% of newcomers merged when 49% of the next ones got in. Leaving them out
+# until 60 days made the rate predict the next newcomers better on both
+# backtest dates (docs/research/BACKTEST.md); 30 and 45 days did nearly as well.
+FIRST_PR_OPEN_DAYS = 60
+
+
+def first_prs(outsiders: Iterable[Thread], as_of: datetime | None,
+              min_age_hours: float = MIN_AGE_HOURS) -> rates.Split:
+    """Each person's first pull request in the sample, sorted by outcome.
+
+    First among the ones any rate could count: not a draft or labelled spam,
+    and not older than the sample reaches (rates.split). A person whose first
+    one is too new to judge is still open, not decided.
+    """
+    capped = rates.judges_time(as_of, min_age_hours)
+    firsts: dict[str, Thread] = {}
+    for t in outsiders:
+        if rates.excluded(t):
+            continue
+        if capped and as_of - t.opened_at > timedelta(days=rates.MAX_SAMPLE_DAYS):
+            continue
+        if t.author not in firsts or t.opened_at < firsts[t.author].opened_at:
+            firsts[t.author] = t
+    return rates.split(firsts.values(), as_of, min_age_hours)
 
 
 def compute(
@@ -347,8 +394,14 @@ def compute(
     attempt is decided and every silent one counts as ignored, which is how
     the committed benchmark was computed.
     """
-    split = rates.split(outsider_threads(threads), as_of, min_age_hours)
+    everyone = outsider_threads(threads)
+    split = rates.split(everyone, as_of, min_age_hours)
     outsiders = split.decided
+    firsts_by_person = [
+        t for t in first_prs(everyone, as_of, min_age_hours).decided
+        if t.merged or t.closed_unmerged or not rates.judges_time(as_of, min_age_hours)
+        or as_of - t.opened_at >= timedelta(days=FIRST_PR_OPEN_DAYS)
+    ]
     decided = {t.key for t in outsiders}
     firsts = [t for t in first_timer_threads(threads) if t.key in decided]
     merged_threads = [t for t in threads.values() if t.merged]
@@ -405,4 +458,6 @@ def compute(
             if outsider_merges else None
         ),
         merged_threads=len(merged_threads),
+        first_pr_people=len(firsts_by_person),
+        first_pr_merged=sum(1 for t in firsts_by_person if t.merged),
     )

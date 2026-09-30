@@ -72,8 +72,8 @@ responses. The server also accepts and normalises full URLs
   "repo": "pallets/flask",
   "mode": "rules" | "ai",            // rules = no model; ai = model-written report
   "days": 7,                          // contributor time budget used
-  "verdict": "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal",
-  "headline": "Worth your time" | "Long shot" | "Not worth your time" | "Not enough evidence" | "Personal project",
+  "verdict": "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal" | "catalogue",
+  "headline": "Worth your time" | "Long shot" | "Not worth your time" | "Not enough evidence" | "Personal project" | "A list, not code",
   "tone": "good" | "warn" | "bad" | "neutral", // the verdict's colour
   "verdict_line": "string",           // line 1: the reason for the verdict, one sentence
   "numbers_line": "string",           // line 2: what happened to outside contributors, with dates
@@ -218,16 +218,20 @@ images, the extension) shows these fields and never works them out itself, so
 they cannot disagree with each other or with the verdict:
 
 - `tone` follows the verdict: `viable` → `good`, `long_shot` → `warn`,
-  `not_viable` → `bad`, `insufficient_evidence` and `personal` → `neutral`.
-  (Before engine 4 `insufficient_evidence` was `warn`; `tone` is derived, so
-  cached reports serve the new one.)
+  `not_viable` → `bad`, `insufficient_evidence`, `personal` and `catalogue`
+  → `neutral`. (Before engine 4 `insufficient_evidence` was `warn`; `tone` is
+  derived, so cached reports serve the new one.)
 - `long_shot` ("Long shot"): outside work does get merged, but a given pull
-  request probably won't be: fewer than 1 in 10 merged, more than half never
+  request probably won't be: fewer than 3 in 10 people getting their first
+  pull request merged (from 8 people; engine 5), fewer than 1 in 10 merged, more than half never
   answered, a typical first reply over 3 weeks, or only one person's work
   merged among 20+ attempts. `personal` ("Personal project"): someone's own
   project or a small team's (a hackathon entry, coursework), with nothing from
-  outside ever merged; Discover, Find and picks never list it. Both come only
-  from live readings.
+  outside ever merged; Discover, Find and picks never list it. `catalogue`
+  ("A list, not code"; engine 5): a list or a catalogue of entries, like
+  links or package manifests, where a merged entry isn't code work (and
+  whose merge odds aren't what the answer is about). Before engine 5 these were `not_viable`. All three come only from
+  live readings.
 - `verdict_line` never oversells: "Worth your time" with many unanswered pull
   requests says so. Under every other verdict it is the sentence of the rule
   that decided it (under "Long shot", the first of its reasons), never a
@@ -257,7 +261,8 @@ they cannot disagree with each other or with the verdict:
   `merges`, `rubber_stamp`, `long_odds` (under 5% of outside pull requests
   merged, from 20 decided), `replies_no_merges` (20+ decided, most answered,
   none merged), `inactive` (nothing merged or pushed in 90 days; decides alone),
-  `personal` (decides alone), the Long shot reasons `few_merged`,
+  `personal` (decides alone), `catalogue_shape` (the catalogue answer's
+  reason), the Long shot reasons `few_newcomers_merged`, `few_merged`,
   `mostly_silent`, `slow_replies`, `one_merge`, `one_person`,
   `slow`, `too_few_attempts`, `few_merges`, `few_people`,
   `elsewhere` (a mirror or a fork; decides alone, like `archived`),
@@ -445,7 +450,7 @@ report:
   "Holt | merges outsiders · replies in ~6h" ("merges outsiders" when
   `outsider_merged` > 0; the reply time when the median first reply is within
   72h; "worth your time" if neither).
-- any other verdict (`long_shot` and `personal` included): neutral grey
+- any other verdict (`long_shot`, `personal` and `catalogue` included): neutral grey
   "Holt | see report", never a red or amber verdict.
 - no report yet: neutral grey "Holt | not checked yet".
 - the report is from an older engine version: neutral grey "Holt | updating",

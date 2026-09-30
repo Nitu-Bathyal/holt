@@ -9,9 +9,11 @@ const HEADLINE: Record<Verdict, string> = {
   not_viable: "Not worth your time",
   insufficient_evidence: "Not enough evidence",
   personal: "Personal project",
+  catalogue: "A list, not code",
 };
 const TONE: Record<Verdict, Tone> = {
   viable: "good", long_shot: "warn", not_viable: "bad", insufficient_evidence: "neutral", personal: "neutral",
+  catalogue: "neutral",
 };
 
 export function verdictView(verdict: Verdict): { headline: string; tone: Tone } {

@@ -23,7 +23,9 @@ from typing import Literal
 from holt.agent.verdict import headline as verdict_headline
 from holt.agent.rates import SETTLE_DAYS
 from holt.agent.verdict import (
+    LONG_SHOT_FIRST_PR_RATE,
     LONG_SHOT_MERGE_RATE,
+    LONG_SHOT_MIN_PEOPLE,
     LONG_SHOT_REPLY_DAYS,
     MERGE_RATE_FLOOR,
     MIN_ATTEMPTS_FOR_RATE,
@@ -36,7 +38,8 @@ from pydantic import BaseModel, ConfigDict, Field, computed_field, model_seriali
 # Bound here, not looked up per call: tests swap `holt.starter` for a fake.
 from holt.starter import is_beginner_issue, issue_areas, on_it_text
 
-Verdict = Literal["viable", "long_shot", "not_viable", "insufficient_evidence", "personal"]
+Verdict = Literal["viable", "long_shot", "not_viable", "insufficient_evidence", "personal",
+                  "catalogue"]
 Mode = Literal["rules", "ai"]
 ContributionType = Literal["code", "docs", "tests", "design", "translations"]
 Level = Literal["newcomer", "experienced"]
@@ -44,10 +47,12 @@ Tone = Literal["good", "bad", "warn", "neutral"]
 OddsLevel = Literal["good", "fair", "long"]
 JobState = Literal["queued", "running", "done", "error"]
 
-# Amber is Long shot's: a caution, not a no. "Not enough evidence" and
-# "Personal project" say nothing either way, so they are neutral.
+# Amber is Long shot's: a caution, not a no. "Not enough evidence",
+# "Personal project" and "A list, not code" say nothing either way about
+# whether your code would get in, so they are neutral.
 TONES: dict[str, Tone] = {"viable": "good", "long_shot": "warn", "not_viable": "bad",
-                          "insufficient_evidence": "neutral", "personal": "neutral"}
+                          "insufficient_evidence": "neutral", "personal": "neutral",
+                          "catalogue": "neutral"}
 
 
 class Model(BaseModel):
@@ -258,7 +263,8 @@ INFO_CODES = frozenset({
 
 # The reasons a project that merges outside work is still a long shot, in the
 # order the engine gives them (verdict.py). The first is the headline's reason.
-LONG_SHOT_CODES = ("few_merged", "mostly_silent", "slow_replies", "one_merge", "one_person")
+LONG_SHOT_CODES = ("few_newcomers_merged", "few_merged", "mostly_silent", "slow_replies",
+                   "one_merge", "one_person")
 
 
 def deciding_rule(decided_by: list[str], rule_codes: list[str]) -> tuple[str, str]:
@@ -319,7 +325,8 @@ def verdict_line(verdict: str, s: Stats, decided_by: list[str], rule_codes: list
             return f"None of the last {n} pull requests from outside contributors were merged."
         return (f"Only {s.outsider_merged} of {n} pull requests from outside contributors "
                 "were merged, and most never got a useful reply.")
-    # "Not enough evidence" and "Personal project": the rule that decided,
+    # "Not enough evidence", "Personal project" and "A list, not code": the
+    # rule that decided,
     # in its own words (verdict.py has one line per rule).
     return (deciding_rule(decided_by, rule_codes)[0]
             or "Too few outside contributors have tried recently for Holt to say either way.")
@@ -438,6 +445,8 @@ NOT_VIABLE_STEP["replies_no_merges"] = (
 NOT_VIABLE_DEFAULT_STEP = ("Put your time into a project that answers outside "
                            "contributors; Holt's Find page lists some.")
 LONG_SHOT_STEP: dict[str, str] = {
+    "few_newcomers_merged": "Pick an issue a maintainer has asked for help with, say on it "
+                            "that you'd like to work on it, and keep the change small.",
     "mostly_silent": "Before you write code, ask on an issue whether a pull request "
                      "would be welcome, and start only if a maintainer answers.",
     "slow_replies": "Start here only if you can wait a month or more for a first reply.",
@@ -448,6 +457,8 @@ LONG_SHOT_STEP: dict[str, str] = {
     "one_person": "Pick an issue a maintainer has asked for help with, and keep the "
                   "change small.",
 }
+CATALOGUE_STEP = ("Adding an entry is fine if that's what you want. For experience "
+                  "with real code, pick a different project.")
 PERSONAL_STEP = ("Read it or fork it, but for a contribution pick a project that "
                  "takes outside pull requests; Holt's Find page lists some.")
 INSUFFICIENT_STEP = ("There's too little to go on. Before writing code, open an issue "
@@ -464,6 +475,8 @@ def next_step(verdict: str, decided_by: list[str], rule_codes: list[str],
         return NOT_VIABLE_STEP.get(code, NOT_VIABLE_DEFAULT_STEP)
     if verdict == "personal":
         return PERSONAL_STEP
+    if verdict == "catalogue":
+        return CATALOGUE_STEP
     if verdict == "long_shot":
         first = next((c for c in rule_codes if c in LONG_SHOT_CODES), "few_merged")
         return " ".join([LONG_SHOT_STEP[first]] + [ASK_STEP[a.code] for a in asks])
@@ -508,21 +521,26 @@ def verdict_rule_text(days: int) -> str:
         "and a year ago count, so each has had time for an answer and reflects how the "
         "project works now. "
         f"“{verdict_headline('viable')}” needs at least {MIN_MERGES} of them merged, from "
-        f"at least {MIN_DISTINCT_AUTHORS} different people, with at least 1 in "
+        f"at least {MIN_DISTINCT_AUTHORS} different people, with at least "
+        f"{round(10 * LONG_SHOT_FIRST_PR_RATE)} in 10 people getting their first pull "
+        f"request merged (once {LONG_SHOT_MIN_PEOPLE} or more have tried), at least 1 in "
         f"{round(1 / LONG_SHOT_MERGE_RATE)} merged, no more than half left without any "
         f"reply, a typical first reply within {LONG_SHOT_REPLY_DAYS // 7} weeks, and people "
         "actually reviewing what gets merged. "
         f"“{verdict_headline('long_shot')}” is a project that merges some outside work "
-        f"but misses one of those: fewer than 1 in {round(1 / LONG_SHOT_MERGE_RATE)} "
+        f"but misses one of those: fewer than {round(10 * LONG_SHOT_FIRST_PR_RATE)} in 10 "
+        f"newcomers getting in, fewer than 1 in {round(1 / LONG_SHOT_MERGE_RATE)} "
         "merged, most left unanswered, very slow first replies, or only one person's "
         "work getting in. "
         f"“{verdict_headline('not_viable')}” is an archived repository, a mirror, a "
-        "project with nothing merged or pushed in 90 days, a catalogue of entries, "
+        "project with nothing merged or pushed in 90 days, "
         f"merges nobody reviews, fewer than 1 in {round(1 / MERGE_RATE_FLOOR)} outside pull "
         f"requests merged once at least {MIN_ATTEMPTS_FOR_RATE} have been decided, or "
         "outside pull requests that are almost all ignored. "
         f"“{verdict_headline('personal')}” is someone's own project or a small team's, "
         "like a hackathon entry, with nothing from outside ever merged. "
+        f"“{verdict_headline('catalogue')}” is a list or a catalogue of entries, like "
+        "links or package listings, where a merged entry isn't code work. "
         f"Anything in between is “{verdict_headline('insufficient_evidence')}”. "
         "These rules are fixed; no AI chooses the verdict."
     )

@@ -15,7 +15,7 @@ from holt.about import About, about_lines, about_to_dict
 
 
 class Verdict(str, Enum):
-    """The answer, in five values.
+    """The answer, in six values.
 
     A repository nobody has tried to contribute to is not the same as one that
     turns contributors away, and flattening them would hide the distinction the
@@ -25,8 +25,9 @@ class Verdict(str, Enum):
     of it meets silence, very slow replies or a closed door. `PERSONAL` is not
     a judgement of the project at all: it is someone's own project (or a small
     team's, like a hackathon entry), not one run for outside contributors.
-    Both only come from live readings; the frozen benchmark was scored on the
-    first three.
+    `CATALOGUE` isn't one either: a list or a registry, where a merged entry
+    isn't code work. All three only come from live
+    readings; the frozen benchmark was scored on the first three.
     """
 
     VIABLE = "viable"
@@ -34,6 +35,7 @@ class Verdict(str, Enum):
     NOT_VIABLE = "not_viable"
     INSUFFICIENT_EVIDENCE = "insufficient_evidence"
     PERSONAL = "personal"
+    CATALOGUE = "catalogue"
 
 
 # The verdict word alone tells a reader almost nothing. These say what it means
@@ -44,6 +46,7 @@ VERDICT_HEADLINES = {
     Verdict.NOT_VIABLE: "Not worth your time",
     Verdict.INSUFFICIENT_EVIDENCE: "Not enough evidence to say",
     Verdict.PERSONAL: "Personal project",
+    Verdict.CATALOGUE: "A list, not code",
 }
 
 

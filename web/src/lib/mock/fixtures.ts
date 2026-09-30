@@ -416,6 +416,7 @@ const BOTTOM_LINE: Record<Verdict, string> = {
   insufficient_evidence: "Too few outsiders have tried here lately to say how you'd be treated. If you try, keep your first change very small.",
   long_shot: "Some outside work lands here, but most gets no answer. Ask on an issue first, and start only if a maintainer replies.",
   personal: "This is someone's own project, not one run for outside contributors. Pick a project that takes outside pull requests.",
+  catalogue: "An entry here isn't code work. For experience with real code, pick a different project.",
 };
 
 function fromSeed(seed: Seed, mode: "rules" | "ai", days: number): Report {

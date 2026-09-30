@@ -122,6 +122,15 @@ LONG_SHOT_SILENT_SHARE = 0.50
 LONG_SHOT_REPLY_DAYS = 21
 # ...over at least this many replies: fresco's 26-day "typical" reply was two.
 LONG_SHOT_MIN_REPLIES = 5
+# Fewer than 3 in 10 people got their first pull request here merged, over at
+# least 8 people. The backtest (docs/research/BACKTEST.md) scored this on two
+# dates: without it, 9 of engine 4's 29 "Worth" repositories went on to merge
+# under 1 in 4 newcomers; with it, none of the Worth answers was broken on
+# either date. 25% and 30% both hold; 35% starts calling llvm and termux long
+# shots, which merged half their newcomers. The 8 people is the same floor the
+# ignored rule uses; 5 and 12 gave the same answers.
+LONG_SHOT_FIRST_PR_RATE = 0.30
+LONG_SHOT_MIN_PEOPLE = 8
 
 # One merge from one person is an anecdote; two people is a pattern.
 MIN_MERGES = 2
@@ -182,6 +191,7 @@ HEADLINES = {
     Verdict.NOT_VIABLE: "Not worth your time",
     Verdict.INSUFFICIENT_EVIDENCE: "Not enough evidence",
     Verdict.PERSONAL: "Personal project",
+    Verdict.CATALOGUE: "A list, not code",
 }
 
 
@@ -379,6 +389,13 @@ def classify(
                 code="non_software_kind",
                 legacy=f"repo_kind={kind}: merged work here is not a software contribution",
             ))
+            # A catalogue or a list: its answer is about what a merge there is
+            # worth, not whether one happens (winget merged 8 in 10 newcomers,
+            # awesome 1 in 20), so it gets its own (live readings; the frozen
+            # benchmark kept Not worth). Every one of engine 4's false "Not
+            # worth" answers in the backtest was a catalogue.
+            if kind in CATALOGUE_KINDS and signals.settle_hours > 0:
+                return Verdict.CATALOGUE, trace
             return Verdict.NOT_VIABLE, trace
 
     # What the rates leave out, and why (rates.py). They never decide.
@@ -630,6 +647,17 @@ def _long_shot_rules(signals: Signals) -> list[Rule]:
     # say nothing about how your work would be read.
     reviewed_elsewhere = merged and signals.outsider_landed_elsewhere * 2 >= merged
     out = []
+    # First: it is the one about people like the reader, and the one the
+    # backtest found predicts best.
+    people, landed = signals.first_pr_people, signals.first_pr_merged
+    if people >= LONG_SHOT_MIN_PEOPLE and landed / people < LONG_SHOT_FIRST_PR_RATE:
+        out.append(Rule(
+            (f"None of the {people} people who sent their first pull request here "
+             "got it merged." if landed == 0 else
+             f"Only {landed} of the {people} people who sent their first pull request "
+             "here got it merged."),
+            code="few_newcomers_merged",
+        ))
     if judgeable and merged / judgeable < LONG_SHOT_MERGE_RATE:
         out.append(Rule(
             f"Only {merged} of {judgeable} pull requests from outside contributors "

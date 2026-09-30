@@ -64,6 +64,7 @@ VERDICT_MOODS: dict[str, str] = {
     "not_viable": "not_worth_time",
     "insufficient_evidence": "not_enough_evidence",
     "personal": "idle",
+    "catalogue": "idle",
 }
 
 
