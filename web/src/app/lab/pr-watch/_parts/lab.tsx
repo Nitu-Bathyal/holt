@@ -68,7 +68,7 @@ export function PrWatchLab({ initial }: { initial: Access }) {
         </section>
 
         <section aria-labelledby="lab-email-h">
-          <SectionHead id="lab-email-h" title="The daily email" />
+          <SectionHead id="lab-email-h" title="Email" />
           <EmailPreview />
         </section>
       </div>

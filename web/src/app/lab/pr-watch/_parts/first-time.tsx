@@ -7,11 +7,11 @@ import { ALERT_RULE, alertLine } from "@/components/alerts/types";
 import { ALERTS, EMAIL, UNTIL } from "../mock";
 import { EmailChoice, type EmailMode } from "./settings";
 
-const SAMPLES = [ALERTS[0], ALERTS[2]];
+const SAMPLES = ALERTS.filter((a) => a.kind === "changes" || a.kind === "stale_soon");
 
 export function FirstTime({ onDone, onDismiss }: { onDone: () => void; onDismiss: () => void }) {
   const [step, setStep] = useState<"ask" | "email">("ask");
-  const [mode, setMode] = useState<EmailMode>("daily");
+  const [mode, setMode] = useState<EmailMode>("turn");
   return (
     <section aria-labelledby="first-alerts-h" className="panel relative mb-10 px-5 py-5 sm:px-6">
       {step === "ask" ? (
@@ -35,8 +35,8 @@ export function FirstTime({ onDone, onDismiss }: { onDone: () => void; onDismiss
           }}
         >
           <h2 id="first-alerts-h" className="text-[1.05rem] font-semibold tracking-tight">Alerts are on until {UNTIL}.</h2>
-          <div className="mt-4 flex flex-wrap items-end gap-x-5 gap-y-3">
-            <label className="block min-w-0 flex-1 basis-60">
+          <div className="mt-4 space-y-4">
+            <label className="block max-w-md">
               <span className="mb-1.5 block text-[0.8rem] text-faint">Email</span>
               <input type="email" required defaultValue={EMAIL} className="min-h-11 w-full border border-line-strong bg-bg px-3 font-sans text-[0.95rem] outline-none focus-visible:border-blue" />
             </label>

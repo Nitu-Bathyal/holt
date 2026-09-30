@@ -1,33 +1,43 @@
 "use client";
-// PROTOTYPE: the daily email, as a mail app would show it, next to its
-// plain-text part.
+// PROTOTYPE: the two emails, as a mail app would show them, each next to its
+// plain-text part: "your turn" right away, and the daily one at 8:00 with
+// everything else.
 import { useState } from "react";
 import { alertLine } from "@/components/alerts/types";
-import { ALERTS, emailHtml, emailSubject, emailText } from "../mock";
+import { emailAlerts, emailHtml, emailSubject, emailText, type EmailKind } from "../mock";
 
-const TODAY = ALERTS.filter((a) => !a.read);
+function Toggle<T extends string>({ label, value, options, onChange }: { label: string; value: T; options: [T, string][]; onChange: (v: T) => void }) {
+  return (
+    <div role="group" aria-label={label} className="app-tabs">
+      {options.map(([v, text]) => (
+        <button key={v} type="button" aria-pressed={value === v} onClick={() => onChange(v)} className="app-tab">
+          {text}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 export function EmailPreview() {
+  const [kind, setKind] = useState<EmailKind>("now");
   const [part, setPart] = useState<"html" | "text">("html");
+  const items = emailAlerts(kind);
   return (
     <div>
+      <div className="mb-5 flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
+        <Toggle label="Which email" value={kind} onChange={setKind} options={[["now", "Your turn"], ["daily", "Daily"]]} />
+        <Toggle label="Email part" value={part} onChange={setPart} options={[["html", "HTML"], ["text", "Plain text"]]} />
+      </div>
       <dl className="mb-4 grid grid-cols-[auto_minmax(0,1fr)] gap-x-4 gap-y-1 font-sans text-[0.88rem]">
         <dt className="text-faint">From</dt>
         <dd>Holt &lt;alerts@githolt.com&gt;</dd>
         <dt className="text-faint">Subject</dt>
-        <dd className="font-semibold">{emailSubject(TODAY)}</dd>
+        <dd className="font-semibold">{emailSubject(kind, items)}</dd>
       </dl>
-      <div role="group" aria-label="Email part" className="app-tabs mb-4">
-        {(["html", "text"] as const).map((p) => (
-          <button key={p} type="button" aria-pressed={part === p} onClick={() => setPart(p)} className="app-tab">
-            {p === "html" ? "HTML" : "Plain text"}
-          </button>
-        ))}
-      </div>
       {part === "html" ? (
-        <iframe title="The daily email, HTML part" className="lab-email" srcDoc={emailHtml(TODAY, alertLine)} sandbox="" />
+        <iframe key={kind} title={`The ${kind === "now" ? "your turn" : "daily"} email, HTML part`} className="lab-email" srcDoc={emailHtml(kind, items, alertLine)} sandbox="" />
       ) : (
-        <pre className="panel overflow-x-auto whitespace-pre-wrap p-5 text-[0.85rem] leading-relaxed">{emailText(TODAY, alertLine)}</pre>
+        <pre className="panel overflow-x-auto whitespace-pre-wrap p-5 text-[0.85rem] leading-relaxed">{emailText(items, alertLine)}</pre>
       )}
       <p className="mt-3 font-mono text-[0.76rem] leading-relaxed text-faint">
         List-Unsubscribe: &lt;https://api.githolt.com/v1/alerts/unsubscribe?t=…&gt;

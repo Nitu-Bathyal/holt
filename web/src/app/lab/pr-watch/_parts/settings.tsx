@@ -1,25 +1,26 @@
 "use client";
 // PROTOTYPE: /settings/alerts, in the settings pages' blocks and the Display
-// tab's choice buttons.
+// tab's choice buttons. Email is the owner's hybrid by default: "your turn"
+// right away, the rest in one email at 8:00.
 import Link from "next/link";
 import { useState } from "react";
 import type { Access } from "@/components/alerts/types";
 import { Block } from "@/components/settings/section-head";
 import { EMAIL, TZ, UNTIL, WATCHING } from "../mock";
 
-export type EmailMode = "each" | "daily" | "off";
+export type EmailMode = "turn" | "daily" | "all";
 
-const MODES: { value: EmailMode; label: string }[] = [
-  { value: "each", label: "Each alert" },
-  { value: "daily", label: "One a day, at 8:00" },
-  { value: "off", label: "Off" },
+export const MODES: { value: EmailMode; label: string }[] = [
+  { value: "turn", label: "Your turn right away, the rest at 8:00" },
+  { value: "daily", label: "Only the daily email" },
+  { value: "all", label: "Everything as it happens" },
 ];
 
 export function EmailChoice({ value, onChange, name }: { value: EmailMode; onChange: (m: EmailMode) => void; name: string }) {
   return (
     <fieldset>
-      <legend className="sr-only">How often to email</legend>
-      <div className="flex flex-wrap gap-2">
+      <legend className="sr-only">When to email</legend>
+      <div className="flex flex-col items-start gap-2">
         {MODES.map((o) => (
           <label
             key={o.value}
@@ -36,17 +37,9 @@ export function EmailChoice({ value, onChange, name }: { value: EmailMode; onCha
   );
 }
 
-function Switch({ on, onChange, label, disabled }: { on: boolean; onChange: (v: boolean) => void; label: string; disabled?: boolean }) {
+function Switch({ on, onChange, label }: { on: boolean; onChange: (v: boolean) => void; label: string }) {
   return (
-    <button
-      type="button"
-      role="switch"
-      aria-checked={on}
-      aria-label={label}
-      disabled={disabled}
-      onClick={() => onChange(!on)}
-      className="grid min-h-11 place-items-center px-1 disabled:opacity-50"
-    >
+    <button type="button" role="switch" aria-checked={on} aria-label={label} onClick={() => onChange(!on)} className="grid min-h-11 place-items-center px-1">
       <span className={`relative block h-6 w-11 rounded-full border transition-colors ${on ? "border-blue bg-blue" : "border-line-strong bg-panel-2"}`}>
         <span className={`absolute top-0.5 size-[18px] rounded-full bg-panel shadow transition-[left] ${on ? "left-[22px]" : "left-0.5"}`} />
       </span>
@@ -56,7 +49,8 @@ function Switch({ on, onChange, label, disabled }: { on: boolean; onChange: (v: 
 
 export function AlertSettings({ access, onTurnOn }: { access: Access; onTurnOn: () => void }) {
   const [enabled, setEnabled] = useState(true);
-  const [mode, setMode] = useState<EmailMode>("daily");
+  const [emailOn, setEmailOn] = useState(true);
+  const [mode, setMode] = useState<EmailMode>("turn");
   const [editing, setEditing] = useState(false);
   const live = access === "on" || access === "empty";
   const note = live ? `until ${UNTIL}` : access === "ended" ? `ended ${UNTIL}` : null;
@@ -83,31 +77,38 @@ export function AlertSettings({ access, onTurnOn }: { access: Access; onTurnOn: 
 
       {live && enabled && (
         <div className="app-row block sm:px-3">
-          <p className="font-sans text-[0.95rem]">Email</p>
-          {editing ? (
-            <form
-              className="mt-3 flex flex-wrap gap-2"
-              onSubmit={(e) => {
-                e.preventDefault();
-                setEditing(false);
-              }}
-            >
-              <label className="min-w-0 flex-1 basis-60">
-                <span className="sr-only">Email address</span>
-                <input type="email" required defaultValue={EMAIL} className="min-h-11 w-full border border-line-strong bg-bg px-3 font-sans text-[0.95rem] outline-none focus-visible:border-blue" />
-              </label>
-              <button type="submit" className="btn-ghost">send a link</button>
-            </form>
-          ) : (
-            <p className="mt-1 flex flex-wrap items-baseline gap-x-4 font-sans text-[0.92rem] text-muted">
-              {EMAIL}
-              <button type="button" onClick={() => setEditing(true)} className="text-link tap font-mono text-[0.82rem]">change</button>
-            </p>
-          )}
-          <div className="mt-4">
-            <EmailChoice value={mode} onChange={setMode} name="settings-mode" />
+          <div className="flex items-center justify-between gap-4">
+            <p className="font-sans text-[0.95rem]">Email</p>
+            <Switch on={emailOn} onChange={setEmailOn} label="Email" />
           </div>
-          {mode !== "off" && <p className="mt-3 text-[0.8rem] text-faint">No email between 22:00 and 8:00 ({TZ}).</p>}
+          {emailOn && (
+            <>
+              {editing ? (
+                <form
+                  className="mt-1 flex flex-wrap gap-2"
+                  onSubmit={(e) => {
+                    e.preventDefault();
+                    setEditing(false);
+                  }}
+                >
+                  <label className="min-w-0 flex-1 basis-60">
+                    <span className="sr-only">Email address</span>
+                    <input type="email" required defaultValue={EMAIL} className="min-h-11 w-full border border-line-strong bg-bg px-3 font-sans text-[0.95rem] outline-none focus-visible:border-blue" />
+                  </label>
+                  <button type="submit" className="btn-ghost">send a link</button>
+                </form>
+              ) : (
+                <p className="flex flex-wrap items-baseline gap-x-4 font-sans text-[0.92rem] text-muted">
+                  {EMAIL}
+                  <button type="button" onClick={() => setEditing(true)} className="text-link tap font-mono text-[0.82rem]">change</button>
+                </p>
+              )}
+              <div className="mt-4">
+                <EmailChoice value={mode} onChange={setMode} name="settings-mode" />
+              </div>
+              <p className="mt-3 text-[0.8rem] text-faint">No email between 22:00 and 8:00 ({TZ}).</p>
+            </>
+          )}
         </div>
       )}
     </Block>
