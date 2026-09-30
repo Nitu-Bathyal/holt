@@ -15,11 +15,14 @@ export function FindFiltersSkeleton() {
         <Skeleton className="h-6 w-56" />
         <Skeleton className="ml-auto h-4 w-28" />
       </div>
+      <div className="border-t border-line py-3.5">
+        <Skeleton className="h-3 w-72 max-w-full" />
+      </div>
     </div>
   );
 }
 
 /** Result cards while a search loads. */
 export function FindResultsSkeleton({ count = 6 }: { count?: number }) {
-  return <RepoGridSkeleton count={count} />;
+  return <RepoGridSkeleton count={count} verdict={false} />;
 }
