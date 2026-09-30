@@ -107,4 +107,4 @@ The five default roles (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-
 
 ### Domain docs
 
-Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root, created as terms and decisions get settled. See `docs/agents/domain.md`.
+Single-context: one `CONTEXT.md` at the repo root, created as terms get settled. Architecture decision records (ADRs) live in the private repo's `docs/adr/` (`holt-oss/holt-pro`), not here. See `docs/agents/domain.md`.
