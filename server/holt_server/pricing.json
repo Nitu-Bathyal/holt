@@ -13,7 +13,7 @@
     "issue_watch": {"name": "Issue watch", "credits": null, "free_credits": false}
   },
   "plans": {
-    "free": {"name": "Free", "features": {}},
+    "free": {"name": "Free", "features": {"merge_plan": {"total": 3}}},
     "pro": {
       "name": "Pro",
       "features": {

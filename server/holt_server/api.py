@@ -395,6 +395,8 @@ def job_body(job: Job) -> dict[str, Any]:
         body["playbook"] = job.result if job.status == "done" else None
     elif job.kind == "preflight":
         body["preflight"] = job.result if job.status == "done" else None
+    elif job.kind == "merge_plan":
+        body["plan"] = job.result if job.status == "done" else None
     else:
         body["report"] = job.result if job.status == "done" else None
     return body

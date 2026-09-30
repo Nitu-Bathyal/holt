@@ -16,6 +16,10 @@
 #                     jobs call this service, and each holds its cost first.
 #   HOLT_DB_PASSWORD  from staging/.env; the database is holt_pro in the
 #                     staging Postgres (deploy/README.md, "Paid features")
+#   GITHUB_TOKENS     the staging server's tokens; holt-pro reads GitHub with
+#                     the first. Empty when staging reads GitHub as its own
+#                     GitHub App, and then holt-pro can't read evidence (it
+#                     has no app support yet).
 #
 #   docker compose -p stage-holt-pro -f deploy/staging/compose.pro.yml \
 #     --env-file deploy/staging/.env up -d --build
@@ -33,6 +37,7 @@ services:
       HOLT_PRO_KEY: ${HOLT_PRO_KEY:?STAGING_HOLT_PRO_KEY in ~/.config/holt/secrets.env (preview.sh maps it)}
       DATABASE_URL: postgresql+asyncpg://holt:${HOLT_DB_PASSWORD:?pass --env-file deploy/staging/.env}@db:5432/holt_pro
       HOLT_PRO_MODEL_KEY: ${HOLT_PRO_MODEL_KEY:-}
+      GITHUB_TOKENS: ${GITHUB_TOKENS:-}
       HOLT_PRO_MODEL_PROVIDER: ${HOLT_PRO_MODEL_PROVIDER:-openrouter}
       HOLT_PRO_PLAYBOOK_MODEL: ${HOLT_PRO_PLAYBOOK_MODEL:-openai/gpt-5-mini}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}

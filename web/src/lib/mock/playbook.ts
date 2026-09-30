@@ -48,9 +48,9 @@ function err<T>(status: number, code: ApiError["code"], message: string): Result
 
 function access(user: string): Access {
   const have = credits(user);
-  if (have >= 1) return { feature: "playbook", name: "Contribution playbook", allowed: true, via: "credits", cost: 1, left_this_month: null, code: null, message: null };
+  if (have >= 1) return { feature: "playbook", name: "Contribution playbook", allowed: true, via: "credits", cost: 1, left_this_month: null, left: null, code: null, message: null };
   return {
-    feature: "playbook", name: "Contribution playbook", allowed: false, via: null, cost: 1, left_this_month: null, code: "quota_exceeded",
+    feature: "playbook", name: "Contribution playbook", allowed: false, via: null, cost: 1, left_this_month: null, left: null, code: "quota_exceeded",
     message: "Contribution playbook costs 1 credit, and free credits can't be used for it. You don't have enough purchased credits.",
   };
 }
