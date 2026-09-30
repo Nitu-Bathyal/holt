@@ -658,6 +658,24 @@ class Language(Model):
     share: float
 
 
+LinkKind = Literal["contributing", "discussions", "docs", "discord", "slack", "gitter",
+                   "matrix", "zulip"]
+LINK_KINDS: tuple[str, ...] = LinkKind.__args__
+
+
+class RepoLink(Model):
+    """Where a newcomer finds the rules or help."""
+
+    kind: LinkKind
+    url: str
+
+
+class Release(Model):
+    tag: str
+    published_at: str | None = None
+    url: str
+
+
 class RepoAbout(Model):
     """What the repository is and how big and alive it is: GitHub's own fields
     and the README's first sentence, read daily into `repo_meta` (never on the
@@ -683,6 +701,11 @@ class RepoAbout(Model):
     fork: bool = False
     # The repository this one is a fork of, when GitHub says.
     fork_of: str | None = None
+    # The contributing guide, Discussions, then the README's docs and chat
+    # links; one per kind, in that order. Empty until read.
+    links: list[RepoLink] = Field(default_factory=list)
+    # GitHub's latest release; null when there is none (or not read yet).
+    latest_release: Release | None = None
     fetched_at: str
 
 
