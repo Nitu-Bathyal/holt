@@ -36,6 +36,16 @@ type Card = (r: CardRepo) => React.ReactNode;
 const changed = new Map<string, boolean>();
 
 const PARAM = "focus";
+
+const NAV_BTN = "grid size-11 place-items-center border border-line-strong bg-panel text-muted transition-colors hover:border-blue hover:text-ink disabled:pointer-events-none disabled:opacity-30 sm:size-8";
+
+function Icon({ d }: { d: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={d} />
+    </svg>
+  );
+}
 const reportHref = (repo: string, days?: number) => `/${repo}${days && days !== 7 ? `?days=${days}` : ""}`;
 
 function withFocus(repo: string | null): string {
