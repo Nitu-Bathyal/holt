@@ -101,8 +101,12 @@ async function start(gsap: Gsap, ScrollTrigger: ST, cat: HTMLButtonElement) {
   };
 
   const pose = (name?: string) => {
-    gsap.killTweensOf([face, ears, eyes, mouth]);
-    gsap.set([face, eyes, mouth, ears], { clearProps: "x,y,rotation,scale,scaleX,scaleY" });
+    // The eyes' x/y belong to the pointer-follow quickTo tweens below: killing
+    // those makes the next quickTo call throw ("y not eligible for reset").
+    gsap.killTweensOf([face, ears, mouth]);
+    gsap.killTweensOf(eyes, "scaleY");
+    gsap.set([face, mouth, ears], { clearProps: "x,y,rotation,scale,scaleX,scaleY" });
+    gsap.set(eyes, { scaleY: 1 });
     const t = gsap.timeline();
     if (name === "curious") t.fromTo(face, { rotation: -4, y: 2 }, { rotation: 3, y: 0, duration: 0.38, ease: "power2.out" });
     if (name === "startled") t.fromTo(face, { y: 5, scale: 0.94 }, { y: -5, scale: 1.04, duration: 0.22 }).to(face, { y: 0, scale: 1, duration: 0.3 });
@@ -116,7 +120,8 @@ async function start(gsap: Gsap, ScrollTrigger: ST, cat: HTMLButtonElement) {
   const setMood = (m: CatMood) => {
     if (!CAT[m] || m === current) return;
     current = m;
-    gsap.killTweensOf([face, eyes, mouth, ears]);
+    gsap.killTweensOf([face, mouth, ears]);
+    gsap.killTweensOf(eyes, "scaleY");
     gsap
       .timeline()
       .to(face, { scaleX: 1.14, scaleY: 0.62, y: 5, duration: 0.12, ease: "power2.in" })
