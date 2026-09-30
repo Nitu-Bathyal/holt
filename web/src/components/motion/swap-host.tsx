@@ -4,8 +4,9 @@
 // letters of "hub" in github.com flip over to "holt" like a split-flap board,
 // and back, only while the line is on screen. Click to flip it yourself. The
 // server HTML shows the answer (this site's host). Reduced motion: before and
-// after, side by side. A host that isn't *githolt.com (local dev) is shown
-// plainly, since the flip would name a host that isn't this one.
+// after, side by side. A deployed host that isn't *githolt.com is shown
+// plainly, since the flip would name a host that isn't this one; local dev
+// flips to githolt.com so the animation can be worked on.
 // `big`: the URL-trick section's version, a whole address at display size.
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -15,8 +16,11 @@ import { useOnScreen, useReducedMotion } from "./use-seen";
 const FROM = ["h", "u", "b", ""];
 const TO = ["h", "o", "l", "t"];
 
+const DEV = process.env.NODE_ENV === "development";
+
 export function SwapHost({ path = "", big = false }: { path?: string; big?: boolean }) {
-  const m = /^(.*)githolt(\.com)$/.exec(SITE_HOST);
+  const host = /githolt\.com$/.test(SITE_HOST) || !DEV ? SITE_HOST : "githolt.com";
+  const m = /^(.*)githolt(\.com)$/.exec(host);
   const { ref, on } = useOnScreen<HTMLSpanElement>();
   const still = useReducedMotion();
   // true = "holt", as in the server HTML.
@@ -32,7 +36,7 @@ export function SwapHost({ path = "", big = false }: { path?: string; big?: bool
   const size = big ? "swap--big" : "";
   const tail = path && <span className="text-muted">{path}</span>;
   const tryIt = big && path && (
-    <span className="mt-6 block">
+    <span className="mt-[clamp(1.75rem,5svh,3rem)] block">
       <Link href={path} prefetch={false} className="bracket-link">
         [ try it on {path.slice(1)} → ]
       </Link>
@@ -72,7 +76,7 @@ export function SwapHost({ path = "", big = false }: { path?: string; big?: bool
         onClick={() => setSwapped((s) => !s)}
         className={`swap tap font-mono text-left ${size}`}
         data-swapped={swapped}
-        aria-label={`github.com${path} becomes ${SITE_HOST}${path}. Press to flip it.`}
+        aria-label={`github.com${path} becomes ${host}${path}. Press to flip it.`}
       >
         <span aria-hidden="true">
           {/* "staging." only belongs to the holt side: it fades out for "hub". */}

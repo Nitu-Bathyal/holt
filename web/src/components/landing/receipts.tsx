@@ -25,7 +25,7 @@ export function Receipts() {
             {t.id}
             <span className="mt-1 inline-block border border-line-strong px-1.5 text-[0.75rem] md:block md:w-max">closed</span>
           </div>
-          <blockquote className="m-0 font-sans text-[clamp(1.06rem,min(1.6vw,2.8svh),1.6rem)] leading-snug text-ink">
+          <blockquote className="m-0 font-sans text-[clamp(0.98rem,min(1.15vw,2.1svh),1.2rem)] leading-snug text-ink">
             “{t.before}
             <mark className="ls-mark" data-ink={t.ink}>
               {t.mark}

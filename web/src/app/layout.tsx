@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { JetBrains_Mono } from "next/font/google";
+import { Archivo, JetBrains_Mono } from "next/font/google";
 import { cookies } from "next/headers";
 import { Footer } from "@/components/footer";
 import { MarketingHeader } from "@/components/header";
@@ -24,6 +24,14 @@ const mono = JetBrains_Mono({
   // greek: the ω in the header cat is on every page; preloading it with latin
   // saves a second font swap (and re-layout) right after first paint.
   subsets: ["latin", "greek"],
+  display: "swap",
+});
+
+// Only the hero's sub-line uses it, at the regular weight.
+const sans = Archivo({
+  variable: "--font-archivo",
+  weight: "400",
+  subsets: ["latin"],
   display: "swap",
 });
 
@@ -64,7 +72,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // The motion setting, on <html> before the first paint (lib/motion.ts).
   const motion = motionAttr(motionFromCookies(jar));
   return (
-    <html lang="en" className={mono.variable} data-motion={motion} data-rail={rail ? "collapsed" : undefined} suppressHydrationWarning>
+    <html lang="en" className={`${mono.variable} ${sans.variable}`} data-motion={motion} data-rail={rail ? "collapsed" : undefined} suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
         {ANALYTICS && <script defer src={ANALYTICS.src} data-website-id={ANALYTICS.websiteId} />}
