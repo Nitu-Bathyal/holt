@@ -1668,10 +1668,10 @@
 @media (min-width: 1024px) {
   [data-cat-companion] {
     top: calc(61px + clamp(0.4rem, 2.5svh, 2rem));
-    /* The face's right edge 22px from the viewport's, as at the side (the
+    /* The face's right edge 38px from the viewport's, as at the side (the
        button's 20px padding is outside the face), so it only has to shrink
        and drop into the lane when the walk starts. */
-    right: 2px;
+    right: 18px;
   }
 }
 /* Reduced motion: the companion cat doesn't travel (cat-companion.tsx never
