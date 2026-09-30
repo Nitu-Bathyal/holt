@@ -36,9 +36,9 @@ const SEEDS: Seed[] = [
       outsider_attempts: 58, outsider_merged: 43, distinct_outsiders: 40,
       first_time_merged_authors: 30, no_reply: 8, median_first_response_hours: 14.7, bot_share: 0.052, still_open: 75, closed_silently: 4, closed_by_bot: 0, withdrawn: 0, too_old: 0,
       timing: {
-        first_reply_slow_hours: 70.2, merged_within_3_days: 0.41, merged_within_7_days: 0.52,
+        first_reply_half_hours: 5, first_reply_slow_hours: 70.2, merged_within_3_days: 0.41, merged_within_7_days: 0.52,
         merged_within_14_days: 0.6, merged_within_30_days: 0.68, merged_within_60_days: 0.72,
-        merge_typical_days: 4.1, merge_slow_days: 38, merge_cohort_prs: 180, merge_cohort_merged: 130,
+        merge_typical_days: 4.1, merge_slow_days: 38, merge_half_days: 6.2, merge_cohort_prs: 180, merge_cohort_merged: 130,
         merge_cohort_from: "2026-02-10", merge_cohort_to: "2026-07-28", merges_in_bursts: false,
         last_outside_merge: "2026-09-27", stale_bot: true, stale_close_days: 37,
       },

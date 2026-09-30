@@ -206,7 +206,6 @@
   "first_timer_line": "28 people got their first pull request merged here.",
   "next_step": "Best bet: a small change in homeassistant/components, where 26 of 104 outside pull requests were merged.",
   "stat_line": "28 of 119 outside PRs merged",
-  "how_long": [],
   "counted": [
     {
       "topic": "What we read",
@@ -233,5 +232,6 @@
     "level": "fair",
     "tone": "warn",
     "text": "some outside pull requests land; a well-chosen starter issue helps"
-  }
+  },
+  "how_long": []
 }
