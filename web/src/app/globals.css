@@ -1948,11 +1948,14 @@
   }
 }
 .ls-person {
+  container-type: inline-size;
   min-height: clamp(13rem, 36svh, 24rem);
   padding: clamp(1.1rem, 1.6vw, 1.6rem);
 }
+/* Sized by the card too (7cqi keeps the face near a third of it), so four
+   narrow cards at 1280-1440 don't squeeze the label into a sliver. */
 .ls-person-cat {
-  font-size: clamp(1.3rem, min(2vw, 3.6svh), 2.2rem);
+  font-size: min(clamp(1.25rem, min(1.85vw, 3.4svh), 2.05rem), max(1.05rem, 8cqi));
 }
 .ls-person-title {
   padding-top: clamp(1rem, 4svh, 2.5rem);
