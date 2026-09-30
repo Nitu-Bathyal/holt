@@ -1,6 +1,6 @@
 "use client";
 
-// The cat on a report that just finished (docs/design/EXPRESSIVE.md, pattern
+// The cat on a report that just finished (the expressive design plan, pattern
 // 4): still thinking as the answer lands, then it reacts to the verdict. With
 // reduced motion it shows the verdict's face straight away.
 import { useEffect, useState } from "react";

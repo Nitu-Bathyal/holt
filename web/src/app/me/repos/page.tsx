@@ -1,4 +1,4 @@
-// Your repos (docs/design/DASHBOARD.md): the repos you saved and the ones you
+// Your repos (the dashboard plan): the repos you saved and the ones you
 // checked, as one list with today's verdict on each. /me/saved and
 // /me/history land here (lib/shell.ts, RETIRED).
 import type { Metadata } from "next";

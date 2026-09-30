@@ -70,7 +70,7 @@
   --hf-line: #c9b5f2;
   color-scheme: light;
 
-  /* Motion (docs/design/MOTION.md). Short, decelerating, tiny distances;
+  /* Motion (the motion plan). Short, decelerating, tiny distances;
      exits about two thirds of entrances. */
   --dur-press: 80ms; /* :active scale */
   --dur-fast: 120ms; /* hover, colour, small exits */
@@ -863,7 +863,7 @@
   }
 }
 /* The reacting cat (components/reactive-cat.tsx) and the footer (footer.tsx),
-   docs/design/EXPRESSIVE.md. Transform and opacity only; nothing moves under
+   the expressive design plan. Transform and opacity only; nothing moves under
    reduced motion, and every element's resting state is its final state. */
 @layer components {
   .rcat {
@@ -1037,7 +1037,7 @@
 }
 
 
-/* The report page (docs/design/EXPRESSIVE.md, patterns 4 and 8): the answer
+/* The report page (the expressive design plan, patterns 4 and 8): the answer
    lands when a check finishes on the page (report-view.tsx), and a running
    check prints as a log (analysis-progress.tsx). Transform and opacity only;
    under reduced motion everything is simply in its final state. */
@@ -1107,7 +1107,7 @@
 
 
 /* ------------------------------------------------------------------------
- * Motion (docs/design/MOTION.md). Everything here is progressive: without
+ * Motion (the motion plan). Everything here is progressive: without
  * view transitions, @starting-style or allow-discrete, things just swap.
  * ---------------------------------------------------------------------- */
 
@@ -1478,7 +1478,7 @@
   }
 }
 
-/* Landing at full scale (docs/design/EXPRESSIVE.md, pattern 1). Each pane is
+/* Landing at full scale (the expressive design plan, pattern 1). Each pane is
    one screen tall (.pane), so its content is sized by the screen too: type by
    the smaller of width and height (min(vw, svh)), so it fills 1440x900 and
    still fits 1280x720; rem floors keep phones readable. No side rail: each
@@ -1775,7 +1775,7 @@
   }
 }
 
-/* The landing story (docs/design/EXPRESSIVE.md, patterns 3 and 6, and the
+/* The landing story (the expressive design plan, patterns 3 and 6, and the
    redesigned panes): transform and opacity only, and every rule that moves
    something sits under prefers-reduced-motion: no-preference, so reduced
    motion gets the finished state. */
@@ -2193,7 +2193,7 @@
 }
 
 /* ------------------------------------------------------------------------
-   The app shell (docs/design/SIGNED-IN-HOME.md, "One system"): what a
+   The app shell (the signed-in home plan, "One system"): what a
    signed-in person sees on app pages. A top bar, a sidebar rail on desktop
    (a drawer below lg), and one look for nav items, section headings and
    page headers. The selected mark is the same one the settings tabs use:
@@ -2623,7 +2623,7 @@
     display: block;
   }
 
-  /* One frame for every app page (docs/design/DASHBOARD.md, "The frame"):
+  /* One frame for every app page (the dashboard plan, "The frame"):
      the page sits in the column beside the rail, fills it up to its width
      and centres once the screen is wider, so there's no dead band on one
      side. Two widths: the default for your things, rows, forms and reading,

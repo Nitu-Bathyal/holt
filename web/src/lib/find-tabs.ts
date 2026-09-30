@@ -1,4 +1,4 @@
-// Find a project is one place with tabs (docs/design/DASHBOARD.md): a search
+// Find a project is one place with tabs (the dashboard plan): a search
 // shaped by your picks (/find), ranked boards (/discover) and, around
 // October, Hacktoberfest. Each tab keeps its own public URL. Pure, so it runs
 // under `node --test`.

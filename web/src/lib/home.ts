@@ -1,4 +1,4 @@
-// The signed-in home (/me, docs/design/SIGNED-IN-HOME.md): where sign-in lands,
+// The signed-in home (/me, the signed-in home plan): where sign-in lands,
 // and what the home suggests next. Fixed rules, no
 // model. Pure, so it runs under `node --test`.
 import { humanHours } from "./format.ts";
@@ -49,7 +49,7 @@ export function outsidePulls(pulls: ContributionPR[], login: string | null | und
   return me ? pulls.filter((p) => p.repo.split("/")[0].toLowerCase() !== me) : pulls;
 }
 
-// --- the next move (docs/design/DASHBOARD.md, "Home") -------------------------------------
+// --- the next move (the dashboard plan, "Home") -------------------------------------
 
 const HOUR = 3_600_000;
 /** Now, for the home's rules. A function, so a page can read the clock outside render purity rules. */

@@ -1,4 +1,4 @@
-// Find a project's one frame (docs/design/DASHBOARD.md): the tabs, then the
+// Find a project's one frame (the dashboard plan): the tabs, then the
 // tab. /find, /discover and /hacktoberfest each render it, so their public
 // URLs stay and they read as one place. There's no visible page head: the tab
 // row and each tab's filter tray (.find-tray) continue the top bar as one band

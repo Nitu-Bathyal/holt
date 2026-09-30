@@ -87,7 +87,7 @@ RUBBER_STAMP_MERGE_RATE_MIN = 0.60
 # On a live reading the rule asks about outside contributors' merges only (a
 # maintainer merging their own work unreviewed says nothing about how yours
 # would be read), and needs this many of them: "0 of 3 merges got a comment"
-# is three data points, not a policy. See docs/research/REVIEW-2026-09-30.md.
+# is three data points, not a policy. See the maintainers' 30 Sep review notes.
 RUBBER_STAMP_MIN_MERGES = 10
 
 # The merge-rate floor (ticket 08, live readings only). Enough merges from
@@ -95,7 +95,7 @@ RUBBER_STAMP_MIN_MERGES = 10
 # merged 5 of 171 outside pull requests and read "Worth your time". Below this
 # share of decided outside attempts the answer is Not worth your time. The
 # threshold, and why not 10%, is argued from the golden set and the prod
-# re-run in docs/research/REVIEW-2026-09-30.md.
+# re-run in the maintainers' 30 Sep review notes.
 MERGE_RATE_FLOOR = 0.05
 
 # The floor applies from this many decided outside attempts, however many of
@@ -123,7 +123,7 @@ LONG_SHOT_REPLY_DAYS = 21
 # ...over at least this many replies: fresco's 26-day "typical" reply was two.
 LONG_SHOT_MIN_REPLIES = 5
 # Fewer than 3 in 10 people got their first pull request here merged, over at
-# least 8 people. The backtest (docs/research/BACKTEST.md) scored this on two
+# least 8 people. The backtest (the maintainers' backtest notes) scored this on two
 # dates: without it, 9 of engine 4's 29 "Worth" repositories went on to merge
 # under 1 in 4 newcomers; with it, none of the Worth answers was broken on
 # either date. 25% and 30% both hold; 35% starts calling llvm and termux long

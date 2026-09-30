@@ -1,4 +1,4 @@
-// The two shells (docs/design/SIGNED-IN-HOME.md): the marketing shell (a top
+// The two shells (the signed-in home plan): the marketing shell (a top
 // nav that jumps between the landing page's sections) and the app shell (a
 // sidebar with everything a signed-in person can do). Pure, so it runs under
 // `node --test`.
@@ -73,7 +73,7 @@ export interface NavGroup {
 export const CHECK_HREF = "/me#check";
 
 /**
- * The five places a signed-in person goes (docs/design/DASHBOARD.md). The
+ * The five places a signed-in person goes (the dashboard plan). The
  * check box lives in the top bar, account things in the avatar menu.
  * Hacktoberfest is a tab of Find a project (lib/find-tabs.ts).
  */
