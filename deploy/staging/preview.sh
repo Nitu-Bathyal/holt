@@ -449,30 +449,34 @@ staging_oauth() {   # staging_oauth GITHUB|GOOGLE display-name
 staging_oauth GITHUB GitHub
 staging_oauth GOOGLE Google
 
-# How the server reads GitHub, as production does (deploy/prod/env.sh): as
-# the GitHub App when $SECRETS sets it up (docs/ops/github-app.md; staging
-# uses production's app), else with GITHUB_TOKENS. Stopping here on a
-# problem doesn't record the fingerprint, so the next tick tries again once
-# it is fixed.
+# How the server reads GitHub: as staging's own GitHub App when $SECRETS
+# sets up STAGING_GITHUB_APP_* (docs/ops/github-app.md), else with
+# GITHUB_TOKENS. Never production's app (GITHUB_APP_*): one app is one
+# budget, and staging's builds and warm passes would spend production's.
+# Stopping here on a problem doesn't record the fingerprint, so the next
+# tick tries again once it is fixed.
 github_fail() {
     log "FAILED: $1"
     buildinfo attempt failed "$1" "$preview_sha" || true
     buildinfo now failed "the last build failed: $1" || true
     exit 1
 }
-GITHUB_APP_ID="$(secret GITHUB_APP_ID)"
-GITHUB_APP_INSTALLATION_ID="$(secret GITHUB_APP_INSTALLATION_ID)"
-GITHUB_APP_PRIVATE_KEY_FILE="$(secret GITHUB_APP_PRIVATE_KEY_FILE)"
+GITHUB_APP_ID="$(secret STAGING_GITHUB_APP_ID)"
+GITHUB_APP_INSTALLATION_ID="$(secret STAGING_GITHUB_APP_INSTALLATION_ID)"
+GITHUB_APP_PRIVATE_KEY_FILE="$(secret STAGING_GITHUB_APP_PRIVATE_KEY_FILE)"
 HOLT_GITHUB_APP_KEY_GID=""
 if [[ -n "$GITHUB_APP_ID$GITHUB_APP_INSTALLATION_ID$GITHUB_APP_PRIVATE_KEY_FILE" ]]; then
     [[ -n "$GITHUB_APP_ID" && -n "$GITHUB_APP_INSTALLATION_ID" && -n "$GITHUB_APP_PRIVATE_KEY_FILE" ]] \
-        || github_fail "the GitHub App is only partly set up in $SECRETS: set GITHUB_APP_ID, GITHUB_APP_INSTALLATION_ID and GITHUB_APP_PRIVATE_KEY_FILE, or none of them"
+        || github_fail "staging's GitHub App is only partly set up in $SECRETS: set STAGING_GITHUB_APP_ID, STAGING_GITHUB_APP_INSTALLATION_ID and STAGING_GITHUB_APP_PRIVATE_KEY_FILE, or none of them"
+    [[ "$GITHUB_APP_ID" != "$(secret GITHUB_APP_ID)" \
+        && "$GITHUB_APP_INSTALLATION_ID" != "$(secret GITHUB_APP_INSTALLATION_ID)" ]] \
+        || github_fail "STAGING_GITHUB_APP_* in $SECRETS is production's GitHub App; make a separate app for staging (docs/ops/github-app.md)"
     [[ -f "$GITHUB_APP_PRIVATE_KEY_FILE" ]] \
-        || github_fail "GITHUB_APP_PRIVATE_KEY_FILE in $SECRETS: no file at $GITHUB_APP_PRIVATE_KEY_FILE"
+        || github_fail "STAGING_GITHUB_APP_PRIVATE_KEY_FILE in $SECRETS: no file at $GITHUB_APP_PRIVATE_KEY_FILE"
     # The server's user reads the key through its group (compose.yml, group_add).
     HOLT_GITHUB_APP_KEY_GID="$(stat -c %g "$GITHUB_APP_PRIVATE_KEY_FILE")"
     GITHUB_TOKENS=""   # wins over the token make-env.sh wrote into .env
-    log "GitHub: reading as the GitHub App (app $GITHUB_APP_ID)"
+    log "GitHub: reading as staging's GitHub App (app $GITHUB_APP_ID)"
 else
     # GITHUB_TOKENS from $SECRETS, else the current `gh auth token`. Exported,
     # so it wins over the copy make-env.sh wrote into .env once (a token

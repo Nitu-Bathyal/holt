@@ -8,6 +8,11 @@ the one-time setup, how to check it works, and how to undo it.
 Until the three variables in step 4 are set, nothing changes: the server
 keeps reading with `GITHUB_TOKENS`.
 
+Steps 1 to 6 set up production. Staging can get its own App afterwards
+([Staging](#staging-optional)). It never uses production's App: one App is
+one budget, and staging's builds and warm passes would spend production's
+reads.
+
 ## 1. Create the App
 
 Open https://github.com/organizations/holt-oss/settings/apps/new (you need
@@ -111,10 +116,39 @@ The server's log then says `reading GitHub as the GitHub App (app …,
 installation …)`, and every hour or so `got a new installation token for the
 GitHub App`.
 
-Staging uses the same App. It reads the same three lines from the same
-file, and its next build picks them up. Production and staging then share
-one budget of 5,000 points an hour. Staging runs one job at a time, so its
-share is small.
+If `GITHUB_TOKENS` holds tokens from more than one GitHub account today,
+the App has less budget in total than you have now: 5,000 points an hour,
+against 5,000 for each account. Compare the "points left" line from step 5
+with what you see today.
+
+## Staging (optional)
+
+Without this, staging keeps reading with `GITHUB_TOKENS` as it does today.
+To give staging its own App and budget:
+
+1. Repeat step 1 with the name `holt-oss-reader-staging` and the homepage
+   `https://staging.githolt.com`, and generate its private key.
+2. Repeat step 2 to install it on `holt-oss` and note its installation ID.
+3. Repeat step 3, saving the key as `~/.config/holt/github-app-staging.pem`.
+4. Add these lines to `~/.config/holt/secrets.env`:
+
+   ```sh
+   STAGING_GITHUB_APP_ID=<the staging App's ID>
+   STAGING_GITHUB_APP_INSTALLATION_ID=<its installation ID>
+   STAGING_GITHUB_APP_PRIVATE_KEY_FILE=/home/aahil/.config/holt/github-app-staging.pem
+   ```
+
+The next staging build logs `GitHub: reading as staging's GitHub App`. To
+check it the way step 5 does:
+
+```sh
+docker compose -p stage-holt-new -f deploy/staging/compose.yml --env-file deploy/staging/.env \
+  exec server python -m holt_server.github_app
+```
+
+Staging refuses production's App under the staging names, and it refuses
+only some of the three lines. It never reads `GITHUB_APP_*`. To undo,
+delete the three `STAGING_GITHUB_APP_*` lines.
 
 ## Undo
 

@@ -57,8 +57,10 @@ are equal on rate limits. The App wins on everything else:
 **(a) The GitHub App.** The server swaps an RS256 JWT for an installation
 token and renews it 10 minutes before it expires
 (`server/holt_server/github_app.py`). When the App isn't set up, it falls
-back to `GITHUB_TOKENS`. Staging uses the same App as production. It runs
-one job at a time, so its share of the budget is small.
+back to `GITHUB_TOKENS`. Staging never uses production's App: one App is
+one budget, and staging's builds, smoke runs and warm passes would spend
+production's reads on launch day. Staging either gets an App of its own
+(`STAGING_GITHUB_APP_*`) or keeps `GITHUB_TOKENS`.
 
 The docs leave one question open: can an installation token read public
 repositories outside the org through GraphQL? The verify command
@@ -69,8 +71,10 @@ variables: the server is back on `GITHUB_TOKENS`, and (b) is next.
 
 ## What we won't do
 
-We won't pool identities to raise the limit: several apps, several
-installations, several machine users, or other people's tokens.
+We won't pool identities to raise production's limit: several apps,
+several installations, several machine users, or other people's tokens.
+Staging's own App is not pooling: it reads only for staging, and
+production never uses its budget.
 GitHub's API terms say "You may not share API tokens to exceed GitHub's
 rate limitations", and the Acceptable Use Policies forbid putting an
 "undue burden" on GitHub's servers. `GITHUB_TOKENS` still accepts a list,
@@ -87,8 +91,10 @@ If Holt outgrows 5,000 points an hour, there are two legitimate ways up:
 - The owner creates the App and installs it once
   ([ops/github-app.md](../ops/github-app.md)). Nothing changes until the
   three variables are set.
-- Production and staging share one budget of 5,000 points an hour. The warm
-  pass's floor (`HOLT_WARM_MIN_POINTS`, 1,500) and the pool's `LOW_POINTS`
-  skip keep background work from spending it all.
+- Production has 5,000 points an hour to itself. If `GITHUB_TOKENS` today
+  holds tokens from more than one account, that is less in total than now.
+  The verify command's "points left" shows the difference. The warm pass's
+  floor (`HOLT_WARM_MIN_POINTS`, 1,500) and the pool's `LOW_POINTS` skip
+  keep background work from spending all of it.
 - Logs name the identity ("the GitHub App", "token #2"), never a token.
 - The CLI and TUI are unchanged: they read with the user's own token.
