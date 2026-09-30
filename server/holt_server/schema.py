@@ -168,6 +168,11 @@ class PartialStats(Model):
     no_reply: int | None = None
     median_first_response_hours: float | None = None
     bot_share: float | None = None
+    # What became of the rest, when a report has counted them (as on Discover).
+    still_open: int | None = None
+    closed_silently: int | None = None
+    closed_by_bot: int | None = None
+    withdrawn: int | None = None
 
     @model_serializer(mode="wrap")
     def _only_known(self, handler):
@@ -772,6 +777,24 @@ class Language(Model):
     share: float
 
 
+LinkKind = Literal["contributing", "discussions", "docs", "discord", "slack", "gitter",
+                   "matrix", "zulip"]
+LINK_KINDS: tuple[str, ...] = LinkKind.__args__
+
+
+class RepoLink(Model):
+    """Where a newcomer finds the rules or help."""
+
+    kind: LinkKind
+    url: str
+
+
+class Release(Model):
+    tag: str
+    published_at: str | None = None
+    url: str
+
+
 class RepoAbout(Model):
     """What the repository is and how big and alive it is: GitHub's own fields
     and the README's first sentence, read daily into `repo_meta` (never on the
@@ -785,6 +808,10 @@ class RepoAbout(Model):
     stars: int
     forks: int | None = None
     open_issues: int | None = None
+    # Pull requests ever opened, how many are open now, and people who committed.
+    pull_requests: int | None = None
+    open_pull_requests: int | None = None
+    contributors: int | None = None
     # SPDX id ("MIT") or GitHub's name for it; null when there is none.
     license: str | None = None
     topics: list[str] = Field(default_factory=list)
@@ -797,6 +824,11 @@ class RepoAbout(Model):
     fork: bool = False
     # The repository this one is a fork of, when GitHub says.
     fork_of: str | None = None
+    # The contributing guide, Discussions, then the README's docs and chat
+    # links; one per kind, in that order. Empty until read.
+    links: list[RepoLink] = Field(default_factory=list)
+    # GitHub's latest release; null when there is none (or not read yet).
+    latest_release: Release | None = None
     fetched_at: str
 
 
@@ -938,6 +970,12 @@ class FindResult(VerdictView):
     # As on a Discover card: primary first, a second when it's a real share.
     languages: list[str] = Field(default_factory=list)
     stars: int | None = None
+    # As on a Discover card; null until the repo's details are read (find only
+    # screens repos, so most are null on a first search).
+    open_issues: int | None = None
+    pull_requests: int | None = None
+    open_pull_requests: int | None = None
+    contributors: int | None = None
     stats: PartialStats = Field(default_factory=PartialStats)
     issues: list[StarterIssue] = Field(default_factory=list)
 
@@ -1831,6 +1869,11 @@ class Recommendation(VerdictView):
     language: str | None = None
     languages: list[str] = Field(default_factory=list)
     stars: int | None = None
+    # As on a Discover card: the whole repository, null until its details are read.
+    open_issues: int | None = None
+    pull_requests: int | None = None
+    open_pull_requests: int | None = None
+    contributors: int | None = None
     topics: list[str] = Field(default_factory=list)
     # The report's one-line reason (the same sentence Discover shows).
     reason: str

@@ -40,11 +40,13 @@ from fastapi import APIRouter, Depends, Query, Request
 from pydantic import Field
 from sqlalchemy import func, select
 
-from holt_server import repos, schema
-from holt_server.db import FindCache, RepoMeta, Report, Usage, current_engine, iso, now, utc
+from holt_server import repos, schema, starter
+from holt_server.db import (
+    FindCache, RepoMeta, Report, StarterCache, Usage, current_engine, iso, now, utc,
+)
 from holt_server.deps import internal, services
 from holt_server.github import DETAILS_BATCH
-from holt_server.schema import Model, Stats, VerdictView, odds_for, verdict_line
+from holt_server.schema import Model, StarterIssue, Stats, VerdictView, odds_for, verdict_line
 from holt_server.services import Services
 
 log = logging.getLogger("holt_server.discover")
@@ -71,6 +73,11 @@ PRIOR_PRS, PRIOR_RATE = 10, 0.2
 # Personal projects aren't set up for outside contributors, so Discover never
 # lists them, under any sort.
 VERDICTS = set(schema.TONES) - {"personal"}
+# Starter issues this old may be closed by now; older ones aren't shown.
+STARTER_MAX_HOURS = 72
+# Starter issues a card carries, as on a find result: the card shows the
+# first and counts them, the focus view lists them.
+CARD_ISSUES = 5
 
 
 class DiscoverRepo(VerdictView):
@@ -81,6 +88,13 @@ class DiscoverRepo(VerdictView):
     # share of the code. Empty until the details are read.
     languages: list[str] = Field(default_factory=list)
     stars: int | None = None
+    # The whole repository, not Holt's sample: open issues, pull requests ever
+    # opened, how many of those are open, and people who committed. Null until
+    # the details are read again (and contributors when GitHub wouldn't say).
+    open_issues: int | None = None
+    pull_requests: int | None = None
+    open_pull_requests: int | None = None
+    contributors: int | None = None
     topics: list[str] = Field(default_factory=list)
     # When someone last pushed to the repository, per GitHub.
     pushed_at: str | None = None
@@ -90,6 +104,11 @@ class DiscoverRepo(VerdictView):
     # People who checked it on Holt in the last 7 days; null below TRENDING_MIN.
     checked_this_week: int | None = None
     generated_at: str | None = None
+    # Open issues to start with, from the starter-issue cache (what the
+    # starter-issues endpoint or the warm pass last read, within
+    # STARTER_MAX_HOURS). Empty when none are cached; Discover never reads
+    # GitHub for them.
+    issues: list[StarterIssue] = Field(default_factory=list)
 
 
 class LanguageCount(Model):
@@ -137,6 +156,32 @@ async def _latest(svc: Services, keys: list[str] | None = None) -> list[tuple]:
         )).all()
 
 
+async def starter_issues(svc: Services, keys: list[str]) -> dict[str, list[dict]]:
+    """repo_key -> its cached starter issues, for those cached recently by
+    the current rules. Reads only the database."""
+    if not keys:
+        return {}
+    since = now() - timedelta(hours=STARTER_MAX_HOURS)
+    async with svc.db.session() as s:
+        rows = (await s.execute(select(StarterCache.repo_key, StarterCache.issues,
+                                       StarterCache.rules_version)
+                                .where(StarterCache.repo_key.in_(keys),
+                                       StarterCache.created_at >= since))).all()
+    return {key: list(issues or []) for key, issues, version in rows
+            if starter.current(issues or [], version)}
+
+
+def card_issues(raw: list[dict]) -> list[StarterIssue]:
+    """The first CARD_ISSUES that parse, nobody-on-it first (stable)."""
+    issues = []
+    for i in raw:
+        try:
+            issues.append(StarterIssue.model_validate(i))
+        except ValueError:
+            continue
+    return sorted(issues, key=lambda i: bool(i.people or i.open_prs))[:CARD_ISSUES]
+
+
 async def checked_this_week(svc: Services) -> dict[str, int]:
     """repo_key -> people who asked for its report in the last 7 days. `who`
     changes every UTC day, so this counts each person once per day."""
@@ -166,6 +211,7 @@ def _card(row: tuple, views: dict[str, int]) -> DiscoverRepo | None:
         language=meta.language if meta else None,
         languages=list(meta.languages or []) if meta else [],
         stars=meta.stars if meta else None,
+        **counts(meta),
         topics=list(meta.topics or []) if meta else [],
         pushed_at=iso(meta.pushed_at) if meta else None,
         reason=verdict_line(verdict, st, decided_by, rule_codes), stats=st,
@@ -219,9 +265,14 @@ async def discover_body(svc: Services, sort: Sort, language: str | None,
               and (topic is None or topic in {t.lower() for t in c.topics})]
     # The language as GitHub spells it, when a repo has it.
     shown = next((name for name in counts if name.lower() == language), language)
+    ranked = rank(chosen, sort)[:limit]
+    # Only for the cards shown, so a board is one more small read.
+    cached = await starter_issues(svc, [repos.key(c.repo) for c in ranked])
+    ranked = [c.model_copy(update={"issues": card_issues(cached.get(repos.key(c.repo), []))})
+              for c in ranked]
     return DiscoverOut(
         sort=sort, language=shown, topic=topic, hacktoberfest=hacktoberfest,
-        repos=rank(chosen, sort)[:limit],
+        repos=ranked,
         languages=[LanguageCount(name=name, repos=n)
                    for name, n in sorted(counts.items(), key=lambda x: (-x[1], x[0].lower()))
                    [:LANGUAGES_SHOWN]],
@@ -266,7 +317,7 @@ async def stale_meta(svc: Services, extra: list[str] = ()) -> list[str]:
 
 
 async def with_meta(s, results: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Find results with the description, language and stars `repo_meta` has
+    """Find results with the description, language, stars and counts `repo_meta` has
     for them: the finder screens repos without reading those. A repo with no
     details yet keeps what its result had (null). No GitHub call."""
     keys = {repos.key(r["repo"]) for r in results if isinstance(r, dict) and r.get("repo")}
@@ -274,14 +325,48 @@ async def with_meta(s, results: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return results
     metas = {m.repo_key: m for m in (await s.execute(
         select(RepoMeta).where(RepoMeta.repo_key.in_(keys)))).scalars()}
+    breakdowns = await _breakdowns(s, keys)
     out = []
     for r in results:
-        m = metas.get(repos.key(r.get("repo") or "")) if isinstance(r, dict) else None
-        out.append(r if m is None else {
-            **r, "description": m.description or r.get("description"),
-            "language": m.language or r.get("language"),
-            "languages": list(m.languages or []), "stars": m.stars})
+        if not isinstance(r, dict):
+            out.append(r)
+            continue
+        key = repos.key(r.get("repo") or "")
+        m = metas.get(key)
+        if m is not None:
+            r = {**r, "description": m.description or r.get("description"),
+                 "language": m.language or r.get("language"),
+                 "languages": list(m.languages or []), "stars": m.stars, **counts(m)}
+        if (extra := breakdowns.get(key)) and _same_sample(r.get("stats"), extra):
+            r = {**r, "stats": {**r["stats"], **{k: extra[k] for k in BREAKDOWN}}}
+        out.append(r)
     return out
+
+
+# What became of the pull requests that weren't merged: a find screen doesn't
+# count these, a report does, and the odds bar draws them.
+BREAKDOWN = ("closed_silently", "closed_by_bot", "withdrawn", "still_open")
+
+
+async def _breakdowns(s, keys: set[str]) -> dict[str, dict[str, Any]]:
+    """repo_key -> the latest 7-day rules report's stats, for the repos that have one."""
+    latest = (select(func.max(Report.id).label("id"))
+              .where(Report.mode == "rules", Report.days == DAYS, current_engine(),
+                     Report.repo_key.in_(keys))
+              .group_by(Report.repo_key).subquery())
+    rows = (await s.execute(
+        select(Report.repo_key, Report.report["stats"])
+        .join(latest, Report.id == latest.c.id))).all()
+    return {key: st for key, st in rows
+            if isinstance(st, dict) and all(isinstance(st.get(k), int) for k in BREAKDOWN)}
+
+
+def _same_sample(stats: Any, report_stats: dict[str, Any]) -> bool:
+    """The screen counted the same pull requests as the report, so the report's
+    breakdown describes it (a find of another window has other counts)."""
+    return (isinstance(stats, dict)
+            and stats.get("outsider_attempts") == report_stats.get("outsider_attempts")
+            and stats.get("outsider_merged") == report_stats.get("outsider_merged"))
 
 
 def _parse_ts(value: Any) -> datetime | None:
@@ -309,6 +394,29 @@ def _homepage(value: Any) -> str | None:
     return url if scheme in ("http", "https") and "://" in url else None
 
 
+def _web_url(value: Any) -> str | None:
+    """An absolute http(s) address, else None: the page links to it."""
+    url = str(value or "").strip()
+    parts = urlsplit(url)
+    return url if len(url) <= 500 and parts.scheme.lower() in ("http", "https") and parts.netloc else None
+
+
+def _links(value: Any) -> list[dict[str, str]]:
+    out = []
+    for link in value or []:
+        kind = (link or {}).get("kind") if isinstance(link, dict) else None
+        url = _web_url((link or {}).get("url")) if isinstance(link, dict) else None
+        if kind in schema.LINK_KINDS and url and all(o["kind"] != kind for o in out):
+            out.append({"kind": kind, "url": url})
+    return out
+
+
+def _release(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict) or not value.get("tag") or not _web_url(value.get("url")):
+        return None
+    return {"tag": str(value["tag"])[:100], "published_at": value.get("published_at"), "url": value["url"]}
+
+
 async def store_meta(svc: Services, details: dict[str, dict[str, Any] | None]) -> int:
     """Save what `GitHubLookup.details` returned; missing repos are left alone.
     Returns how many rows were written."""
@@ -330,6 +438,11 @@ async def store_meta(svc: Services, details: dict[str, dict[str, Any] | None]) -
             row.fork = bool(d.get("fork"))
             row.forks = _int(d.get("forks"))
             row.open_issues = _int(d.get("open_issues"))
+            row.pull_requests = _int(d.get("pull_requests"))
+            row.open_pull_requests = _int(d.get("open_pull_requests"))
+            # A count GitHub wouldn't give this time keeps yesterday's.
+            if d.get("contributors") is not None:
+                row.contributors = _int(d.get("contributors"))
             row.license = (d.get("license") or "")[:80] or None
             row.homepage = _homepage(d.get("homepage"))
             row.language_shares = list(d.get("language_shares") or [])[:3]
@@ -337,6 +450,8 @@ async def store_meta(svc: Services, details: dict[str, dict[str, Any] | None]) -
             row.default_branch = (d.get("default_branch") or "")[:200] or None
             row.fork_of = (d.get("fork_of") or "")[:200] or None
             row.readme_line = (d.get("readme_line") or "")[:500] or None
+            row.links = _links(d.get("links"))
+            row.latest_release = _release(d.get("latest_release"))
             row.fetched_at = now()
             s.add(row)
             written += 1
@@ -344,17 +459,29 @@ async def store_meta(svc: Services, details: dict[str, dict[str, Any] | None]) -
     return written
 
 
+COUNTS = ("open_issues", "pull_requests", "open_pull_requests", "contributors")
+
+
+def counts(meta: RepoMeta | None) -> dict[str, int | None]:
+    """The repository's own counts for a card; all None until its details are read."""
+    return {name: getattr(meta, name, None) if meta else None for name in COUNTS}
+
+
 def about_view(meta: RepoMeta) -> schema.RepoAbout:
     return schema.RepoAbout(
         description=meta.description, readme_line=meta.readme_line, homepage=meta.homepage,
         stars=meta.stars, forks=meta.forks, open_issues=meta.open_issues,
+        pull_requests=meta.pull_requests, open_pull_requests=meta.open_pull_requests,
+        contributors=meta.contributors,
         license=meta.license, topics=list(meta.topics or []),
         languages=[lang for lang in meta.language_shares or []
                    if isinstance(lang, dict) and lang.get("name")],
         created_at=iso(meta.created_at),
         pushed_at=iso(meta.pushed_at),
         default_branch=meta.default_branch, archived=bool(meta.archived),
-        fork=bool(meta.fork), fork_of=meta.fork_of, fetched_at=iso(meta.fetched_at))
+        fork=bool(meta.fork), fork_of=meta.fork_of,
+        links=_links(meta.links), latest_release=_release(meta.latest_release),
+        fetched_at=iso(meta.fetched_at))
 
 
 async def about(svc: Services, repo: str) -> schema.RepoAbout | None:

@@ -35,7 +35,7 @@ test("stat pills", () => {
 });
 
 test("fromFind keeps what a find result has and leaves the rest empty", () => {
-  const c = fromFind({ repo: "o/r", headline: "Worth your time", tone: "good", verdict: "viable", description: null, language: "Go", languages: [], stars: 5, stats: { outsider_attempts: 4, outsider_merged: 3 }, issues: [] });
+  const c = fromFind({ repo: "o/r", headline: "Worth your time", tone: "good", verdict: "viable", description: null, language: "Go", languages: [], stars: 5, open_issues: null, pull_requests: null, open_pull_requests: null, contributors: null, stats: { outsider_attempts: 4, outsider_merged: 3 }, issues: [] });
   assert.equal(c.stats.attempts, 4);
   assert.equal(c.stats.noReply, null);
   assert.deepEqual(c.why, []);

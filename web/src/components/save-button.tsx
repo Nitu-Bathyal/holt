@@ -92,7 +92,7 @@ export function SaveButton({ repo, saved: initial, onChange, compact = false, sm
       className={
         small
           ? `grid size-11 items-center justify-items-end transition-colors [&>svg]:size-6 ${saved ? "text-hf" : "text-faint hover:text-ink"}`
-          : `inline-flex min-h-11 items-center gap-2 border px-3 text-[0.87rem] transition-colors ${
+          : `inline-flex min-h-11 items-center gap-2 border px-4 font-sans text-[0.92rem] font-medium transition-colors ${
               saved ? "border-blue bg-blue/10 text-blue" : "border-line-strong bg-panel text-muted hover:border-ink hover:text-ink"
             }`
       }

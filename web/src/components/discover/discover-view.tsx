@@ -76,7 +76,8 @@ export async function DiscoverView({ sort, language, topic }: { sort: DiscoverSo
           {!result.ok ? (
             <ErrorPanel error={result.error} retryHref={here} />
           ) : data!.repos.length ? (
-            <RepoGrid repos={data!.repos.map(fromDiscover)} topicBase={boardHref({ sort, language })} saved={saved} />
+            // The welcoming board is all "Worth your time", so its cards leave the verdict out like Find's; the others mix verdicts.
+            <RepoGrid repos={data!.repos.map(fromDiscover)} topicBase={boardHref({ sort, language })} saved={saved} verdict={sort !== "welcoming"} />
           ) : (
             <EmptyState title={emptyText(sort, language, topic, data!.trending_min)}>
               {widenBoard({ sort, language, topic }).map((w, i) => (

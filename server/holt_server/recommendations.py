@@ -43,20 +43,19 @@ from typing import Any
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import select
 
-from holt_server import entitlements, repos, schema, starter
+from holt_server import entitlements, repos, schema
 from holt_server.db import (
     Contribution,
     FindCache,
     GitHubConnection,
     Profile,
     RepoMeta,
-    StarterCache,
     iso,
     now,
     utc,
 )
 from holt_server.deps import Caller, caller, services, signed_in
-from holt_server.discover import _latest, merged_share
+from holt_server.discover import _latest, counts, merged_share, starter_issues
 from holt_server.schema import Stats, StarterIssue, odds_for, verdict_line
 from holt_server.services import Services
 
@@ -69,8 +68,6 @@ MAX_PICKS = 10
 ISSUES_PER_PICK = 3
 REPORT_MAX_DAYS = 14
 FIND_MAX_DAYS = 7
-# Starter issues this old may be closed by now; older ones aren't shown.
-STARTER_MAX_HOURS = 72
 # "Recent maintainer replies": the typical first reply within a week, and at
 # most half of outside pull requests left without one.
 REPLY_MAX_HOURS = 7 * 24
@@ -101,6 +98,8 @@ class Candidate:
     language: str | None = None
     languages: list[str] = field(default_factory=list)
     stars: int | None = None
+    # discover.counts: open issues, pull requests, contributors.
+    counts: dict[str, int | None] = field(default_factory=dict)
     topics: list[str] = field(default_factory=list)
     checked_at: str | None = None
     # Starter issues from a find result; `starter_cache` wins when fresh.
@@ -189,7 +188,7 @@ async def candidates(svc: Services) -> dict[str, Candidate]:
             description=meta.description if meta else None,
             language=meta.language if meta else None,
             languages=list(meta.languages or []) if meta else [],
-            stars=meta.stars if meta else None,
+            stars=meta.stars if meta else None, counts=counts(meta),
             topics=list(meta.topics or []) if meta else [],
             checked_at=generated or iso(created))
     # Find results fill in repositories Holt has no recent report for.
@@ -225,22 +224,9 @@ def _from_find(r: Any, created, metas: dict[str, RepoMeta]) -> Candidate | None:
         description=(meta.description if meta else None) or r.get("description"),
         language=(meta.language if meta else None) or r.get("language"),
         languages=list(meta.languages or []) if meta else [],
-        stars=meta.stars if meta else r.get("stars"),
+        stars=meta.stars if meta else r.get("stars"), counts=counts(meta),
         topics=list(meta.topics or []) if meta else [],
         checked_at=iso(created), issues=list(r.get("issues") or []))
-
-
-async def starter_issues(svc: Services, keys: list[str]) -> dict[str, list[dict]]:
-    if not keys:
-        return {}
-    since = now() - timedelta(hours=STARTER_MAX_HOURS)
-    async with svc.db.session() as s:
-        rows = (await s.execute(select(StarterCache.repo_key, StarterCache.issues,
-                                       StarterCache.rules_version)
-                                .where(StarterCache.repo_key.in_(keys),
-                                       StarterCache.created_at >= since))).all()
-    return {key: list(issues or []) for key, issues, version in rows
-            if starter.current(issues or [], version)}
 
 
 # --- the rules ------------------------------------------------------------------------
@@ -351,7 +337,7 @@ def pick(x: Scored) -> schema.Recommendation:
     c = x.candidate
     return schema.Recommendation(
         repo=c.repo, verdict="viable", description=c.description, language=c.language,
-        languages=c.languages, stars=c.stars, topics=c.topics,
+        languages=c.languages, stars=c.stars, topics=c.topics, **(c.counts or counts(None)),
         reason=verdict_line("viable", c.stats, c.decided_by, c.rule_codes),
         why=x.why, stats=c.stats, issues=x.issues, checked_at=c.checked_at)
 
