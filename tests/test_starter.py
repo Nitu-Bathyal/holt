@@ -164,6 +164,8 @@ def replay_transport(name: str) -> tuple[starter.GitHub, datetime]:
 
     def handler(request: httpx.Request) -> httpx.Response:
         sent = json.loads(request.content)
+        # Recorded before the issues query also asked search which are assigned.
+        sent["variables"].pop("assigned", None)
         key = starter.query_key(sent["query"], sent["variables"])
         if key not in by_key:
             key = starter.query_key(as_recorded(sent["query"]), sent["variables"])
@@ -445,12 +447,24 @@ def test_a_maintainers_templated_batch_is_still_dropped():
     assert starter.farmed_issues(farm) == {10, 11, 12, 13}
 
 
-def _one_repo(nodes, merged_by=()):
-    return scripted([httpx.Response(200, json={"data": {
-        "repository": {"nameWithOwner": "o/r", "isArchived": False,
-                       "issues": {"nodes": []},
-                       "mergers": {"nodes": [{"mergedBy": m} for m in merged_by]}},
-        "labelled": {"nodes": nodes}}})])
+def _one_repo(nodes, merged_by=(), recent=(), assigned=None):
+    data = {"repository": {"nameWithOwner": "o/r", "isArchived": False,
+                           "issues": {"nodes": list(recent)},
+                           "mergers": {"nodes": [{"mergedBy": m} for m in merged_by]}},
+            "labelled": {"nodes": nodes}}
+    if assigned is not None:
+        data["assigned"] = {"nodes": [{"number": n} for n in assigned]}
+    return scripted([httpx.Response(200, json={"data": data})])
+
+
+def test_an_issue_assigned_to_a_hidden_account_is_not_listed():
+    # processing/p5.js#9176: assigned to an account GitHub hides, so the
+    # issue's assignees read empty; only search still knows it is assigned.
+    hidden = issue(9176, recent=[(12, "Thanks @someone, I'll assign this to you.", "m")])
+    free = issue(2)
+    transport = _one_repo([], recent=[hidden, free], assigned=[9176])
+    issues = starter.starter_issues("o/r", None, as_of=AS_OF, transport=transport)
+    assert [i.number for i in issues] == [2]
 
 
 def test_starter_issues_keeps_a_maintainers_batch_end_to_end():
