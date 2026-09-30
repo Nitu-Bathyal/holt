@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState, ViewTransition } from "react";
 import { reportHref } from "@/lib/budget";
 import { checkNeedsSignIn } from "@/lib/gate";
@@ -20,7 +21,9 @@ import { StarterIssues, type IssuesState } from "./starter-issues";
  * ends on the teaser.
  */
 export function AnalysisRunner({ repo, mode, days, signedIn, fallback, ticket }: { repo: string; mode: Mode; days: number; signedIn: boolean; fallback?: Report; ticket?: string }) {
-  const { state, retry } = useAnalysis(repo, mode, days, true, ticket);
+  // Signed in, the check carries on if they leave; the app says when it's ready.
+  const stays = signedIn && !ticket;
+  const { state, retry } = useAnalysis(repo, mode, days, true, ticket, stays);
   const [issues, setIssues] = useState<IssuesState>(null);
   const showFallback = state.phase === "error" && fallback !== undefined;
 
@@ -66,7 +69,15 @@ export function AnalysisRunner({ repo, mode, days, signedIn, fallback, ticket }:
   return (
     <ViewTransition exit="sk-out" default="none">
       <div>
-        <AnalysisProgress repo={repo} mode={mode} stage={state.phase === "running" ? state.stage : undefined} progress={state.phase === "running" ? state.progress : 0.02} />
+        <AnalysisProgress
+          repo={repo}
+          mode={mode}
+          stage={state.phase === "running" ? state.stage : undefined}
+          progress={state.phase === "running" ? state.progress : 0.02}
+          ahead={state.phase === "running" ? state.ahead : undefined}
+          estimate
+          note={stays ? <>You can leave. It&rsquo;ll be in <Link href="/me/repos" className="text-link">Your repos</Link>.</> : undefined}
+        />
         {/* The report's shape, dimmed and still, so the page doesn't jump when it lands. */}
         <div aria-hidden="true" className="sk-still mt-10">
           <ReportBodySkeleton />

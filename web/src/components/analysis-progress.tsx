@@ -6,12 +6,13 @@
 // from the start (the last six lines show), so nothing below it moves. Screen
 // readers hear only the current stage, never the ticking times.
 import { useEffect, useState } from "react";
-import { logStage, stageTime } from "@/lib/stages";
+import { eta, logStage, stageTime } from "@/lib/stages";
 import { ReactiveCat } from "./reactive-cat";
 
 const LINES = 6;
 
-export function AnalysisProgress({ repo, stage, progress, mode, kicker, note }: { repo: string; stage?: string; progress: number; mode: "rules" | "ai"; kicker?: string; note?: string }) {
+/** `ahead`: the check's place in the queue while it waits. `estimate`: show how long is left. */
+export function AnalysisProgress({ repo, stage, progress, mode, kicker, note, ahead, estimate = false }: { repo: string; stage?: string; progress: number; mode: "rules" | "ai"; kicker?: string; note?: React.ReactNode; ahead?: number; estimate?: boolean }) {
   // Whole seconds since this screen appeared: the log's clock.
   const [elapsed, setElapsed] = useState(0);
   useEffect(() => {
@@ -27,6 +28,10 @@ export function AnalysisProgress({ repo, stage, progress, mode, kicker, note }: 
 
   const current = lines[lines.length - 1];
   const shown = lines.slice(-LINES);
+  // Counted from the first stage past the queue; in the queue, from its place in line.
+  const queued = current.title === "Getting in line";
+  const began = lines.find((l) => l.title !== "Starting" && l.title !== "Getting in line")?.at ?? elapsed;
+  const left = estimate ? (queued ? eta({ mode, elapsed: 0, ahead }) : eta({ mode, elapsed: elapsed - began })) : null;
   const scale = Math.min(1, Math.max(0.03, progress));
   return (
     <div className="scan border border-line-strong bg-panel p-6 shadow-card sm:p-10" aria-busy="true">
@@ -73,9 +78,14 @@ export function AnalysisProgress({ repo, stage, progress, mode, kicker, note }: 
             );
           })}
         </ol>
-        <div className="mt-2 h-1 bg-panel-2" role="progressbar" aria-valuenow={Math.round(scale * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Progress">
+        <div className="mt-2 h-1 bg-panel-2" role="progressbar" aria-valuenow={Math.round(scale * 100)} aria-valuemin={0} aria-valuemax={100} aria-label="Progress" aria-valuetext={left ?? undefined}>
           <div className="plog-bar h-full origin-left bg-blue" style={{ transform: `scaleX(${scale})` }} />
         </div>
+        {estimate && (
+          <p aria-hidden="true" className="mt-1 h-[1.9em] text-right text-[0.8rem] tabular-nums text-faint">
+            {left}
+          </p>
+        )}
       </div>
       <p className="mt-8 border-t border-dashed border-line pt-4 font-sans text-[0.89rem] text-faint">
         {note ?? "The first check of a repo takes about 20 seconds. After that it's instant for everyone for a day."}

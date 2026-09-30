@@ -6,6 +6,7 @@ import { MarketingHeader } from "@/components/header";
 import { MenuAutoClose } from "@/components/motion/menu-autoclose";
 import { RouteFallback } from "@/components/motion/route-fallback";
 import { SmoothScroll } from "@/components/motion/smooth-scroll";
+import { CheckWatch } from "@/components/check-watch";
 import { appShell, creditsLine } from "@/components/shell/app-shell";
 import { CheckLinks } from "@/components/shell/check-focus";
 import { ShellFrame } from "@/components/shell/shell-frame";
@@ -78,6 +79,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
           {children}
           <RouteFallback />
         </ShellFrame>
+        {user && <CheckWatch />}
         <MenuAutoClose />
         <CheckLinks />
         <SmoothScroll />

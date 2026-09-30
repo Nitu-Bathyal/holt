@@ -11,6 +11,7 @@ import { compareHref, type YourRepo } from "@/lib/your-repos";
 
 function Meta({ r }: { r: YourRepo }) {
   const parts: React.ReactNode[] = [];
+  if (r.checking) parts.push(<span className="text-blue">checking now</span>);
   if (r.savedAt) parts.push(<>saved <time dateTime={r.savedAt}>{timeAgo(r.savedAt)}</time></>);
   if (r.checkedAt) parts.push(<>{r.ai ? "AI report" : "checked"} <time dateTime={r.checkedAt}>{timeAgo(r.checkedAt)}</time></>);
   if (r.stats?.outsider_attempts) parts.push(`${r.stats.outsider_merged} of ${r.stats.outsider_attempts} merged`);
@@ -57,6 +58,8 @@ export function RepoRows({ rows, saved, compact = false }: { rows: YourRepo[]; s
               <div className="relative z-10 flex flex-wrap items-center justify-end gap-2 max-sm:justify-start">
                 {r.headline && r.tone ? (
                   <VerdictPill headline={r.headline} tone={r.tone} className="px-1.5 py-0.5 text-[0.74rem]" />
+                ) : r.checking ? (
+                  <Link href={`/${r.repo}`} className="text-[0.82rem] text-blue hover:underline">watch it →</Link>
                 ) : (
                   <Link href={`/${r.repo}`} className="inline-flex min-h-11 items-center text-[0.82rem] text-green hover:underline sm:min-h-0">check it →</Link>
                 )}

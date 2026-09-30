@@ -71,7 +71,7 @@ const pr = (repo: string, state: ContributionPR["state"], openedHoursAgo: number
   ...over,
 } as ContributionPR);
 const repo = (name: string, tone: YourRepo["tone"], saved: boolean): YourRepo => ({
-  repo: name, savedAt: saved ? hoursAgo(10) : null, checkedAt: saved ? null : hoursAgo(10), ai: false,
+  repo: name, savedAt: saved ? hoursAgo(10) : null, checkedAt: saved ? null : hoursAgo(10), ai: false, checking: false,
   headline: tone === "good" ? "Worth your time" : "Not worth your time", tone, stats: null, at: hoursAgo(10),
 });
 
@@ -121,4 +121,17 @@ test("also for you: other late PRs and saved repos that turned; in flight: the r
   const also = alsoForYou(m, { pulls, repos, now: NOW });
   assert.deepEqual(also.map((a) => (a.kind === "late" ? a.wait.pr.repo : a.repo.repo)), ["c/late", "pallets/flask"]);
   assert.deepEqual(othersInFlight(m, pulls, NOW).map((w) => w.pr.repo), ["a/fine"]);
+});
+
+test("your checks running or just finished lead Also for you", () => {
+  const running: YourRepo = { ...repo("a/running", "good", false), checking: true };
+  const ready: YourRepo = { ...repo("b/ready", "good", false), checkedAt: hoursAgo(0.5) };
+  const older: YourRepo = { ...repo("c/older", "good", false), checkedAt: hoursAgo(2) };
+  const turned = repo("d/turned", "bad", true);
+  const repos = [running, ready, older, turned];
+  const m = nextMove({ pulls: [], repos, now: NOW });
+  const also = alsoForYou(m, { pulls: [], repos, now: NOW });
+  assert.deepEqual(also.map((a) => [a.kind, a.kind === "late" ? a.wait.pr.repo : a.repo.repo]), [
+    ["checking", "a/running"], ["ready", "b/ready"], ["turned", "d/turned"],
+  ]);
 });

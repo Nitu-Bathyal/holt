@@ -2,18 +2,25 @@
 
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import type { ApiError, Mode, Report } from "@/lib/types";
+import { forgetCheck, rememberCheck } from "./check-watch";
 
 export type AnalysisState =
   | { phase: "starting" }
-  | { phase: "running"; stage: string; progress: number }
+  /** `ahead`: the job's place in the queue while it waits (1 = next). */
+  | { phase: "running"; stage: string; progress: number; ahead?: number }
   /** `fresh`: the check ran while this page watched (not a report that was already there). */
   | { phase: "done"; report: Report; fresh: boolean }
   | { phase: "error"; error: ApiError };
 
 const LOST: ApiError = { code: "upstream", message: "We lost the connection while the report was running. It may have finished; try again." };
 
-/** Start (or reuse) an analysis and follow its progress over SSE. `ticket`: a signed-out check the report page allowed (lib/anon-check.ts). */
-export function useAnalysis(repo: string, mode: Mode, days: number, enabled = true, ticket?: string) {
+/**
+ * Start (or reuse) an analysis and follow its progress over SSE. `ticket`: a
+ * signed-out check the report page allowed (lib/anon-check.ts). `remember`: a
+ * signed-in person's check, which the app's check watcher follows if they
+ * leave the page before it's done.
+ */
+export function useAnalysis(repo: string, mode: Mode, days: number, enabled = true, ticket?: string, remember = false) {
   const [state, setState] = useState<AnalysisState>({ phase: "starting" });
   const [attempt, setAttempt] = useState(0);
   const es = useRef<EventSource | null>(null);
@@ -44,14 +51,17 @@ export function useAnalysis(repo: string, mode: Mode, days: number, enabled = tr
         return;
       }
       setState({ phase: "running", stage: "Getting in line", progress: 0.02 });
-      const src = new EventSource(`/api/analyses/${encodeURIComponent(body.job_id)}/events`);
+      const job: string = body.job_id;
+      if (remember) rememberCheck({ job, repo, mode, days, at: Date.now() });
+      const src = new EventSource(`/api/analyses/${encodeURIComponent(job)}/events`);
       es.current = src;
       src.addEventListener("stage", (e) => {
         const d = JSON.parse((e as MessageEvent).data);
-        setState({ phase: "running", stage: d.stage, progress: d.progress ?? 0 });
+        setState({ phase: "running", stage: d.stage, progress: d.progress ?? 0, ahead: d.queue_position ?? undefined });
       });
       src.addEventListener("done", (e) => {
         src.close();
+        forgetCheck(job);
         const report = JSON.parse((e as MessageEvent).data).report;
         // A transition, so the <ViewTransition>s around the progress and the
         // report crossfade them (a plain setState swaps instantly).
@@ -60,6 +70,8 @@ export function useAnalysis(repo: string, mode: Mode, days: number, enabled = tr
       src.addEventListener("error", (e) => {
         const data = (e as MessageEvent).data;
         src.close();
+        // A dropped connection has no data: the check may still be running.
+        if (data) forgetCheck(job);
         let error = LOST;
         if (data) {
           try {
@@ -73,7 +85,7 @@ export function useAnalysis(repo: string, mode: Mode, days: number, enabled = tr
       cancelled = true;
       es.current?.close();
     };
-  }, [repo, mode, days, attempt, enabled, ticket]);
+  }, [repo, mode, days, attempt, enabled, ticket, remember]);
 
   const retry = useCallback(() => {
     setState({ phase: "starting" });

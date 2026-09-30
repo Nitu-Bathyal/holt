@@ -47,3 +47,22 @@ export function stageTime(seconds: number): string {
   const s = Math.max(0, Math.round(seconds));
   return s < 60 ? `${s}s` : `${Math.floor(s / 60)}m ${String(s % 60).padStart(2, "0")}s`;
 }
+
+/**
+ * Seconds a free check typically takes once it starts: 11 to 23 seconds on
+ * the repos measured for PR #179, busy ones at the top. The ETA rounds to it.
+ */
+export const TYPICAL_CHECK_SECONDS = 20;
+
+/**
+ * "about 15s left", "almost done", or null when there's no honest guess: an
+ * AI report (the model's time varies too much), or a check already running
+ * well past the typical time. `ahead`: checks in the queue before this one.
+ */
+export function eta(s: { mode: "rules" | "ai"; elapsed: number; ahead?: number }): string | null {
+  if (s.mode !== "rules") return null;
+  const left = (s.ahead ?? 0) * TYPICAL_CHECK_SECONDS + TYPICAL_CHECK_SECONDS - s.elapsed;
+  if (left < -TYPICAL_CHECK_SECONDS) return null;
+  if (left <= 5) return "almost done";
+  return left < 60 ? `about ${Math.ceil(left / 5) * 5}s left` : `about ${Math.round(left / 60)} min left`;
+}
