@@ -349,6 +349,13 @@ def classify(
         ))
         return Verdict.NOT_VIABLE, trace
 
+    # GitHub's pull request settings: switched off, or collaborators only
+    # (pipeline._add_pr_settings). Nobody outside can open one.
+    if closed := findings.get("prs_closed"):
+        trace.append(Rule(closed, code="prs_closed",
+                          legacy="pull requests closed to outsiders in GitHub's settings"))
+        return Verdict.NOT_VIABLE, trace
+
     # A mirror or a fork, read from GitHub's own fields (landing_detection).
     if elsewhere := findings.get("contribute_elsewhere"):
         trace.append(Rule(elsewhere, code="elsewhere"))
@@ -402,7 +409,10 @@ def classify(
     for text, code in rates.count_sentences(signals.outsider_still_open,
                                             signals.outsider_closed_silently,
                                             signals.outsider_excluded,
-                                            too_old=signals.outsider_too_old):
+                                            too_old=signals.outsider_too_old,
+                                            closed_by_bot=signals.outsider_closed_by_bot,
+                                            closed_stale=signals.outsider_closed_stale,
+                                            withdrawn=signals.outsider_withdrawn):
         trace.append(Rule(text, code=code))
 
     if signals.outsider_threads == 0:

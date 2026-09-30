@@ -15,6 +15,8 @@
     "bot_share": 0.055,
     "still_open": 0,
     "closed_silently": 0,
+    "closed_by_bot": 0,
+    "withdrawn": 0,
     "too_old": 0
   },
   "decided_by": [

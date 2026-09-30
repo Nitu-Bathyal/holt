@@ -70,6 +70,7 @@ query($owner:String!, $name:String!, $until:GitTimestamp!) {
   rateLimit { cost remaining resetAt }
   repository(owner:$owner, name:$name) {
     createdAt pushedAt isArchived isMirror isFork stargazerCount
+    hasPullRequestsEnabled pullRequestCreationPolicy
     description homepageUrl primaryLanguage { name }
     nameWithOwner mirrorUrl parent { nameWithOwner }
     repositoryTopics(first:20) { nodes { topic { name } } }
@@ -110,7 +111,15 @@ CONTRIBUTING_CANDIDATES = (
     ".github/contributing.md", "docs/contributing.md", "Contributing.md",
     "CONTRIBUTING.MD", "docs/source/contributing.rst", "docs/contributing.rst",
 )
-DOC_CANDIDATES = {"readme": README_CANDIDATES, "contributing": CONTRIBUTING_CANDIDATES}
+# A project's rules on AI-written contributions, where it keeps them in a file
+# of their own (agent/asks.py reads them). Blob lookups are free: adding paths
+# doesn't change what the query costs.
+AI_POLICY_CANDIDATES = (
+    "AI_POLICY.md", ".github/AI_POLICY.md", "docs/AI_POLICY.md", "AI_USAGE_POLICY.md",
+    "LLM_POLICY.md", ".github/LLM_POLICY.md", "AI-POLICY.md",
+)
+DOC_CANDIDATES = {"readme": README_CANDIDATES, "contributing": CONTRIBUTING_CANDIDATES,
+                  "ai_policy": AI_POLICY_CANDIDATES}
 
 
 def docs_query(oid: str) -> tuple[str, dict[str, tuple[str, str]]]:
@@ -885,6 +894,12 @@ def project_repo_meta(repo_slug: str, repo: dict[str, Any]) -> EvidenceRecord:
         payload["mirror_url"] = repo["mirrorUrl"]
     if "releases" in repo:
         payload["release_count"] = (repo["releases"] or {}).get("totalCount", 0)
+    # GitHub's own pull request switches (engine 6): off, or collaborators only
+    # (ALL | COLLABORATORS_ONLY). Absent from captures made before them.
+    if "hasPullRequestsEnabled" in repo:
+        payload["pull_requests_enabled"] = repo["hasPullRequestsEnabled"]
+    if "pullRequestCreationPolicy" in repo:
+        payload["pull_request_policy"] = repo["pullRequestCreationPolicy"]
     # Added with the personal-project rule (agent/personal.py); absent before.
     if "repositoryTopics" in repo:
         payload["topics"] = [
@@ -929,9 +944,9 @@ MAX_DOC_CHARS = 12000
 
 
 def project_docs(repo_slug: str, docs: dict[str, Any], commit: dict[str, Any]) -> Iterator[EvidenceRecord]:
-    """README and CONTRIBUTING as they stood at the cutoff commit."""
+    """README, CONTRIBUTING and an AI policy as they stood at the cutoff commit."""
     when = _ts(commit["committedDate"])
-    for kind in ("readme", "contributing"):
+    for kind in DOC_CANDIDATES:
         blob = docs.get(kind)
         text = (blob or {}).get("text")
         if not text:

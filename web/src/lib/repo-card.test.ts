@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { fromFind, langColor, languageLabel, neighbours, oddsSegments, oddsText, statPills, type CardStats } from "./repo-card.ts";
 
-const stats = (over: Partial<CardStats> = {}): CardStats => ({ attempts: 71, merged: 57, noReply: 5, closedSilently: 8, stillOpen: 95, firstTimers: 3, replyHours: 46.9, ...over });
+const stats = (over: Partial<CardStats> = {}): CardStats => ({ attempts: 71, merged: 57, noReply: 5, closedSilently: 8, closedOther: 0, stillOpen: 95, firstTimers: 3, replyHours: 46.9, ...over });
 
 test("segments add up to the decided pull requests, then the recent ones", () => {
   const s = oddsSegments(stats())!;
@@ -56,4 +56,12 @@ test("a card names a second language when the server gives one", () => {
   assert.equal(languageLabel("Python", ["Python"]), "Python");
   assert.equal(languageLabel("Python", undefined), "Python");
   assert.equal(languageLabel(null, []), null);
+});
+
+// Engine 6, django's shape: most unmerged outside PRs closed by a bot's check.
+// They are neither "closed without a word" nor "got a reply".
+test("closes by a bot or the author get their own segment, not the replied one", () => {
+  const segs = oddsSegments(stats({ attempts: 100, merged: 10, noReply: 20, closedSilently: 5, closedOther: 50, stillOpen: 0 }))!;
+  assert.deepEqual(segs.map((x) => [x.key, x.n]), [["merged", 10], ["replied", 15], ["closed", 5], ["shut", 50], ["silent", 20]]);
+  assert.match(oddsText(stats({ attempts: 10, merged: 5, noReply: 0, closedSilently: 0, closedOther: 5, stillOpen: 0 })), /5 closed by a bot or their author/);
 });

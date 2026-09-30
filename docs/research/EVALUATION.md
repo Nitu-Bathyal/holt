@@ -29,6 +29,7 @@ reading count.
 | # | Rule | Answer | code |
 |---|---|---|---|
 | 1 | Archived | Not worth | `archived` |
+| 1b | **Engine 6.** Pull requests switched off, or only collaborators may open them (GitHub's own settings) | Not worth | `prs_closed` |
 | 2 | A mirror or a fork | Not worth | `elsewhere` |
 | 3 | **New.** Someone's own or a small team's project (below) | Personal project | `personal` |
 | 4 | Nothing merged and nothing pushed in 90 days | Not worth | `inactive` |
@@ -47,6 +48,15 @@ Rule 10's silence and reply-time tests are skipped where at least half of
 the outside merges landed off GitHub's button (Gerrit, a merge bot): the
 review happened there, and GitHub's silence says nothing. golang/go lands all
 44 of its outside merges through Gerrit and answers 2 of 152 PRs on GitHub.
+
+Engine 6 sorts unmerged closes that got no reply from the project: closed by
+a bot within three days (a check against the project's rules: django's Trac
+ticket bot, is-a-dev, hacs, tldr), closed later by a bot (stale bots,
+gitgitgadget, gopherbot), and closed by the author. Only the rest are "closed
+without a word". All stay decided attempts that weren't merged, so no rule's
+input moves. Titles a maintainer rewrote as spam ("AI junk", "[rejected AI]
+…" on flask, click and itsdangerous) now leave the counts like a spam label.
+None of this changed a verdict on the golden set or the backtest.
 
 The answer never depends on the reader's budget: the reply-time rule uses a
 fixed 21 days, and the budget only moves the "replies are slow" note

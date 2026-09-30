@@ -287,3 +287,29 @@ dates, so they need a third date or a fresh set of repositories before they
 are treated as settled. The winget-pkgs hand check was written for "Not
 worth"; its reason still holds under the new answer.
 
+
+## Engine 6: the way in
+
+Engine 6 changes what a report says about closes and requirements, not the
+rules. Unmerged closes with no reply are sorted (a bot's check within three
+days, a stale bot, the author withdrawing, closed without a word), and the
+next step names what a project requires (an accepted ticket, no AI-written
+pull requests, approved tests, a team to find). All of these stay decided
+attempts that weren't merged, so no rule's input moves.
+
+One change does reach the counts: titles a maintainer rewrote as spam ("AI
+junk", "[rejected AI] …") now leave them, like a spam label already did. On
+the backtest that only touches the outcome side for flask and itsdangerous:
+the people who sent AI junk after the date no longer count as newcomers who
+tried, so flask in April falls under the 8-person line and isn't scored.
+
+| engine | as of | scored | false greens | false reds | rank agreement | Worth: merged | Long shot | Not worth |
+|---|---|---|---|---|---|---|---|---|
+| 5 | 15 Apr | 42 | 1 | 0 | 0.83 | 50% | 11% | 3% |
+| 6 | 15 Apr | 41 | 1 | 0 | 0.83 | 50% | 12% | 3% |
+| 5 | 15 Jun | 41 | 0 | 0 | 0.81 | 52% | 10% | 4% |
+| 6 | 15 Jun | 41 | 0 | 0 | 0.81 | 52% | 13% | 4% |
+
+No verdict changes on either date or on the golden set. Kubernetes and
+semgrep stay where engine 5 had them: the new asks tell a newcomer how to get
+in, and don't touch the answer.

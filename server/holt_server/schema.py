@@ -103,6 +103,11 @@ class Stats(Model):
     bot_share: float
     still_open: int = 0
     closed_silently: int = 0
+    # Closed with no reply by a bot, or by the person who opened it: not
+    # "without a word", and not `no_reply` either. Absent (0) on reports
+    # cached before engine 6, where they are inside `closed_silently`.
+    closed_by_bot: int = 0
+    withdrawn: int = 0
     # Opened more than a year ago: read, and in no count.
     too_old: int = 0
 
@@ -168,15 +173,19 @@ class Odds(Model):
     text: str
 
 
-AskCode = Literal["cla", "dco", "issue_first"]
+AskCode = Literal["ticket_first", "no_ai_prs", "ok_to_test", "sig_team", "cla", "dco",
+                  "issue_first", "ai_disclosure", "duplicates"]
 
 
 class Ask(Model):
     """Something the project asks of a contributor before a pull request, and
-    where Holt read it (a CLA bot's comment, or CONTRIBUTING)."""
+    where Holt read it (a bot's comment, a pull request, CONTRIBUTING or an AI
+    policy). `link` is a link the source gives, such as the tracker a bot
+    names, which `next_step` quotes."""
 
     code: AskCode
     url: str
+    link: str | None = None
 
 
 class Sample(Model):
@@ -258,7 +267,7 @@ RUBBER_STAMP_LINE = ("Outside pull requests here get merged without anyone revie
 INFO_CODES = frozenset({
     "awaiting_reply", "landed_off_button", "package_updates", "kind_contested",
     "kind_uncited", "sample_period", "dormant", "excluded", "still_open",
-    "closed_silently", "slow_note", "too_old",
+    "closed_silently", "closed_by_bot", "closed_stale", "withdrawn", "slow_note", "too_old",
 })
 
 # The reasons a project that merges outside work is still a long shot, in the
@@ -387,6 +396,10 @@ def numbers_line(s: Stats, sample: Sample | None) -> str:
         out.append("No maintainer replied to any of them.")
     if s.closed_silently:
         out.append(f"{_pct(s.closed_silently, n)}% were closed without a word.")
+    if s.closed_by_bot:
+        out.append(f"{_pct(s.closed_by_bot, n)}% were closed by a bot.")
+    if s.withdrawn:
+        out.append(f"{_pct(s.withdrawn, n)}% were closed by their authors.")
     if s.no_reply:
         out.append(f"{_pct(s.no_reply, n)}% sat open with no reply.")
     if s.still_open:
@@ -423,13 +436,29 @@ BEST_AREA_MIN_MERGED = 3
 AVOID_AREA_MIN_TRIED = 5
 
 ASK_STEP: dict[str, str] = {
+    "ticket_first": "Get an accepted ticket first.",
+    "no_ai_prs": "AI-written pull requests get closed here.",
+    "ok_to_test": "A maintainer has to approve tests first.",
+    "sig_team": "Find the team (SIG) for your area.",
     "cla": "Sign the CLA (Contributor License Agreement) when the bot asks.",
     "dco": "Sign off every commit (git commit -s): the project asks for a DCO sign-off.",
     "issue_first": "Open an issue before you write code: CONTRIBUTING asks for that.",
+    "ai_disclosure": "Say whether you used AI: the project asks for that.",
+    "duplicates": "Search open pull requests first: duplicates get closed.",
 }
+
+
+def ask_text(code: str, link: str | None = None) -> str:
+    """The sentence for one ask. A ticket names the tracker the bot linked."""
+    if code == "ticket_first" and link:
+        host = link.split("://", 1)[-1].split("/", 1)[0]
+        return f"Get an accepted ticket at {host} first."
+    return ASK_STEP[code]
 NOT_VIABLE_STEP: dict[str, str] = {
     "archived": "Don't send a pull request here. Look for an active fork or a similar "
                 "project that's still maintained.",
+    "prs_closed": "Pick a project that takes outside pull requests; Holt's Find page "
+                  "lists some.",
     "elsewhere": "Contribute where the project is really developed, not here.",
     "closed_kind": "Contribute where the project is really developed, not here.",
     "non_software_kind": "Adding an entry is fine if that's what you want. For experience "
@@ -479,9 +508,9 @@ def next_step(verdict: str, decided_by: list[str], rule_codes: list[str],
         return CATALOGUE_STEP
     if verdict == "long_shot":
         first = next((c for c in rule_codes if c in LONG_SHOT_CODES), "few_merged")
-        return " ".join([LONG_SHOT_STEP[first]] + [ASK_STEP[a.code] for a in asks])
+        return " ".join([LONG_SHOT_STEP[first]] + [ask_text(a.code, a.link) for a in asks])
     if verdict != "viable":
-        return INSUFFICIENT_STEP
+        return " ".join([INSUFFICIENT_STEP] + [ask_text(a.code, a.link) for a in asks])
     areas = [a for a in landing if a.path != "(root)" and a.merged >= BEST_AREA_MIN_MERGED]
     best = max(areas, key=lambda a: (a.merged, a.merged / a.attempted), default=None)
     if best is not None:
@@ -492,7 +521,7 @@ def next_step(verdict: str, decided_by: list[str], rule_codes: list[str],
     avoid = next((a for a in never_landed if a.attempted >= AVOID_AREA_MIN_TRIED), None)
     if avoid is not None:
         out.append(f"Nothing from outside landed in {avoid.path} ({avoid.attempted} tried).")
-    out += [ASK_STEP[a.code] for a in asks]
+    out += [ask_text(a.code, a.link) for a in asks]
     return " ".join(out)
 
 
@@ -502,6 +531,9 @@ INFO_TOPICS: dict[str, str] = {
     "still_open": "Too recent to count",
     "slow_note": "Reply time",
     "closed_silently": "Closed without a word",
+    "closed_by_bot": "Closed by a bot",
+    "closed_stale": "Closed by a bot",
+    "withdrawn": "Closed by their authors",
     "excluded": "Drafts and spam",
     "dormant": "Recent activity",
     "landed_off_button": "Merges GitHub shows as closed",

@@ -7,6 +7,7 @@ export const SEGMENT_CLASS: Record<SegmentKey, string> = {
   replied: "bg-blue/50",
   other: "bg-faint/50",
   closed: "bg-amber",
+  shut: "bg-faint/50",
   silent: "bg-orange",
   recent: "bg-[repeating-linear-gradient(135deg,var(--line-strong)_0_2px,transparent_2px_5px)]",
 };

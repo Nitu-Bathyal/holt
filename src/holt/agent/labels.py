@@ -36,6 +36,7 @@ FIELDS = {
     "inactive": "Activity",
     "personal_project": "Whose project this is",
     "contribute_elsewhere": "Where to contribute",
+    "prs_closed": "Who can open pull requests",
 }
 
 # Values, by field. A value missing here is shown with its underscores

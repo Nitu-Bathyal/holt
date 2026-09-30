@@ -55,7 +55,7 @@ def check_report_shape(report: dict, mode: str) -> None:
     assert set(report["stats"]) == {
         "outsider_attempts", "outsider_merged", "distinct_outsiders",
         "first_time_merged_authors", "no_reply", "median_first_response_hours", "bot_share",
-        "still_open", "closed_silently", "too_old"}
+        "still_open", "closed_silently", "closed_by_bot", "withdrawn", "too_old"}
     for item in report["evidence"]:
         assert item["url"].startswith("https://github.com/"), item
         assert set(item) == {"id", "url", "kind", "value", "text", "quote"}

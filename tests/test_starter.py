@@ -144,6 +144,9 @@ query($owner:String!, $name:String!, $q:String!) {
 """
 
 
+PR_SETTINGS = "    hasPullRequestsEnabled pullRequestCreationPolicy\n"
+
+
 def as_recorded(document: str) -> str:
     from holt.evidence import github_graphql as gql
 
@@ -164,6 +167,13 @@ def replay_transport(name: str) -> tuple[starter.GitHub, datetime]:
         key = starter.query_key(sent["query"], sent["variables"])
         if key not in by_key:
             key = starter.query_key(as_recorded(sent["query"]), sent["variables"])
+        if key not in by_key:
+            # Recorded before engine 6 read the pull request settings and AI policies.
+            before = "\n".join(line for line in sent["query"].replace(PR_SETTINGS, "").split("\n")
+                               if "ai_policy" not in line)
+            key = starter.query_key(before, sent["variables"])
+        if key not in by_key:
+            key = starter.query_key(as_recorded(before), sent["variables"])
         if key not in by_key:
             raise AssertionError(f"unrecorded GitHub call: {sent['variables']}")
         return httpx.Response(200, json=by_key[key])

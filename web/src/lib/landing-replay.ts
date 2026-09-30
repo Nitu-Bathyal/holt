@@ -44,7 +44,9 @@ export function cliHours(h: number): string {
 export function buildReplay(r: Report): Replay {
   const s = r.stats;
   // Closed without a word is no reply either (the CLI says it apart).
-  const replied = s.no_reply != null ? s.outsider_attempts - s.no_reply - (s.closed_silently ?? 0) : null;
+  const bots = s.closed_by_bot ?? 0;
+  const withdrawn = s.withdrawn ?? 0;
+  const replied = s.no_reply != null ? s.outsider_attempts - s.no_reply - (s.closed_silently ?? 0) - bots - withdrawn : null;
   const terminal: ReplayLine[] = [
     { text: `Reading recent pull requests for ${r.repo} from GitHub…`, style: "faint" },
     { text: r.repo, style: "heading" },
@@ -61,6 +63,9 @@ export function buildReplay(r: Report): Replay {
   if (s.no_reply != null) terminal.push({ text: "{n} got no reply at all.", counts: [s.no_reply], style: "bad" });
   if (s.closed_silently)
     terminal.push({ text: "{n} were closed without a reply, which isn't counted as ignored.", counts: [s.closed_silently], style: "faint" });
+  if (bots) terminal.push({ text: `{n} ${bots === 1 ? "was" : "were"} closed by a bot.`, counts: [bots], style: "faint" });
+  if (withdrawn)
+    terminal.push({ text: `{n} ${withdrawn === 1 ? "was" : "were"} closed by the people who opened them.`, counts: [withdrawn], style: "faint" });
   if (r.landing.length) {
     terminal.push({ text: "Where outsider work landed", style: "heading" });
     for (const l of r.landing.slice(0, 2))
