@@ -2,16 +2,16 @@
 
 The catalogue is a JSON file: `HOLT_PRICING_FILE`, or `pricing.json` next to
 this module. It names the paid features and what each costs in credits, the
-plans (what they unlock, for how long) and the credit packs. Prices are in
-minor units (paise, cents) and are null while they are still to be decided;
-`on_sale` is false everywhere until payments are switched on. Nothing here
-takes money: the payment code reads `on_sale` and the prices, and calls
-`entitlements.purchase_pack` / `entitlements.set_plan` once a payment is
+plans (free and pro: what each unlocks) and the passes that sell Pro. A pass
+is one payment for a fixed number of days of Pro; it never renews, and a
+second pass adds its days to the first. Prices are in minor units (paise,
+cents). Nothing here takes money: the payment code (payments.py) reads
+`on_sale` and the prices, and extends the user's plan once a payment is
 confirmed.
 
 A feature a plan doesn't cover can still be used by spending its `credits`
 (null: plan only). `free_credits` says whether the free weekly credits may
-pay for it, or only purchased ones.
+pay for it, or only purchased ones (which only an admin grant gives now).
 
     python -m holt_server.pricing     # check the file this process would load
 """
@@ -26,6 +26,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 DEFAULT_FILE = Path(__file__).with_name("pricing.json")
 FREE = "free"
+# The plan every pass gives.
+PRO = "pro"
 
 
 class Strict(BaseModel):
@@ -60,22 +62,14 @@ class PlanFeature(Strict):
 
 class Plan(Strict):
     name: str
-    on_sale: bool = False
-    # How long one payment keeps the plan; None: until changed.
-    period_days: int | None = Field(None, ge=1)
-    price: Price = Price()
-    # The Razorpay plan (created in its dashboard, same price and period) a
-    # subscription to this plan bills through; None: it can't be subscribed to.
-    razorpay_plan_id: str | None = Field(None, pattern=r"^plan_[A-Za-z0-9]{1,40}$")
     features: dict[str, PlanFeature] = {}
 
 
-class Pack(Strict):
+class Pass(Strict):
     name: str
-    credits: int = Field(ge=1)
+    # Days of Pro one payment gives.
+    days: int = Field(ge=1)
     on_sale: bool = False
-    # Days until purchased credits expire; None: never.
-    expires_days: int | None = Field(None, ge=1)
     price: Price = Price()
 
 
@@ -86,21 +80,25 @@ class Catalogue(Strict):
     tbd: bool = True
     features: dict[str, Feature]
     plans: dict[str, Plan]
-    packs: dict[str, Pack] = {}
+    passes: dict[str, Pass] = {}
 
     @model_validator(mode="after")
     def _consistent(self) -> Catalogue:
         if FREE not in self.plans:
             raise ValueError(f"there must be a {FREE!r} plan")
-        if self.plans[FREE].on_sale:
-            raise ValueError("the free plan can't be on sale")
-        if self.plans[FREE].razorpay_plan_id:
-            raise ValueError("the free plan can't have a Razorpay plan")
+        if self.passes and PRO not in self.plans:
+            raise ValueError(f"passes sell the {PRO!r} plan, and there isn't one")
         for name, plan in self.plans.items():
             unknown = set(plan.features) - set(self.features)
             if unknown:
                 raise ValueError(f"plan {name!r} unlocks unknown features {sorted(unknown)}")
         return self
+
+    def sold(self, feature: str) -> bool:
+        """Whether a pass on sale unlocks `feature`."""
+        pro = self.plans.get(PRO)
+        return (pro is not None and feature in pro.features
+                and any(p.on_sale for p in self.passes.values()))
 
 
 def load(path: str | Path | None = None) -> Catalogue:
@@ -128,7 +126,7 @@ def main() -> int:
         print(exc)
         return 1
     print(f"{path or DEFAULT_FILE}: {len(cat.features)} features, "
-          f"plans {sorted(cat.plans)}, packs {sorted(cat.packs)}"
+          f"plans {sorted(cat.plans)}, passes {sorted(cat.passes)}"
           + (" (prices TBD)" if cat.tbd else ""))
     return 0
 

@@ -20,18 +20,31 @@ export function CatCompanion() {
   const reduced = useReducedMotion();
 
   useEffect(() => {
-    if (reduced || !matchMedia("(min-width: 1024px)").matches) return;
+    if (reduced) return;
+    // Starts and stops as the window crosses 1024px, not just at load: below
+    // it the cat is hidden (CSS); above it, a cat that never started would
+    // hang over every section.
+    const wide = matchMedia("(min-width: 1024px)");
     let cleanup: (() => void) | undefined;
-    let cancelled = false;
+    let run = 0;
     const idle = (cb: () => void) =>
       "requestIdleCallback" in window ? requestIdleCallback(cb, { timeout: 2500 }) : setTimeout(cb, 1200);
-    idle(async () => {
-      const [{ gsap }, { ScrollTrigger }] = await Promise.all([import("gsap"), import("gsap/ScrollTrigger")]);
-      if (cancelled || !root.current) return;
-      cleanup = await start(gsap, ScrollTrigger, root.current);
-    });
+    const sync = () => {
+      const id = ++run;
+      cleanup?.();
+      cleanup = undefined;
+      if (!wide.matches) return;
+      idle(async () => {
+        const [{ gsap }, { ScrollTrigger }] = await Promise.all([import("gsap"), import("gsap/ScrollTrigger")]);
+        if (id !== run || !root.current) return;
+        cleanup = await start(gsap, ScrollTrigger, root.current);
+      });
+    };
+    sync();
+    wide.addEventListener("change", sync);
     return () => {
-      cancelled = true;
+      run++;
+      wide.removeEventListener("change", sync);
       cleanup?.();
     };
   }, [reduced]);
@@ -71,6 +84,8 @@ type ST = typeof import("gsap/ScrollTrigger").ScrollTrigger;
 
 /** The face's width at the side, in px: small enough for the landing's right lane. */
 const SIDE_FACE = 84;
+/** The gap between the face and the viewport's right edge, in px (globals.css matches it at home). */
+const SIDE_EDGE = 38;
 
 const POSE: Partial<Record<CatMood, string>> = {
   ready: "curious",
@@ -220,40 +235,53 @@ async function start(gsap: Gsap, ScrollTrigger: ST, cat: HTMLButtonElement) {
   let back: gsap.core.Tween | undefined;
   let journeyTrigger: ReturnType<ST["create"]> | undefined;
   let footerTrigger: ReturnType<ST["create"]> | undefined;
+  let onRefresh: (() => void) | undefined;
   if (desktop) {
-    const home = cat.getBoundingClientRect();
-    // The face's box at rest, before any pose or lean.
-    const f = face.getBoundingClientRect();
-    const scale = SIDE_FACE / f.width;
-    // At the side: the face, SIDE_FACE wide, centred 22px + half its width
-    // from the right edge and halfway down, in the landing's right gutter
-    // (globals.css, .landing-wide: at least 136px), clear of every section.
-    const side = {
-      x: innerWidth - 22 - SIDE_FACE - (f.left - home.left) * scale - home.left,
-      y: innerHeight * 0.5 - (f.top - home.top + f.height / 2) * scale - home.top,
-      scale,
+    // At the side: the face, SIDE_FACE wide, SIDE_EDGE from the right edge and
+    // halfway down, in the landing's right gutter (globals.css, .landing-wide:
+    // at least 136px), clear of every section. Measured from layout (offset*
+    // ignores transforms), so it's right mid-walk and after a resize, when the
+    // viewport and the face's own clamp()ed size have both changed.
+    const side = () => {
+      const scale = SIDE_FACE / face.offsetWidth;
+      return {
+        x: innerWidth - SIDE_EDGE - SIDE_FACE - face.offsetLeft * scale - cat.offsetLeft,
+        y: innerHeight * 0.5 - (face.offsetTop + face.offsetHeight / 2) * scale - cat.offsetTop,
+        scale,
+      };
     };
+    let atSide = false;
     // Out of the text column first, fast (the page is already scrolling
     // under it), then down the lane.
     journey = gsap
       .timeline({ paused: true })
-      .to(cat, { x: side.x, scale: side.scale, opacity: 0.92, duration: 0.35, ease: "power3.out", force3D: true })
-      .to(cat, { y: side.y, duration: 0.6, ease: "power3.inOut", force3D: true }, 0.25);
+      .to(cat, { x: () => side().x, scale: () => side().scale, opacity: 0.92, duration: 0.35, ease: "power3.out", force3D: true })
+      .to(cat, { y: () => side().y, duration: 0.6, ease: "power3.inOut", force3D: true }, 0.25);
     // Back at the top it glides home on its own ease: reversing the walk
     // would replay the fast exit backwards, ending in a snap.
     journeyTrigger = ScrollTrigger.create({
       trigger: "[data-hero]",
       start: "top top",
       onEnter: () => {
+        atSide = true;
         back?.kill();
         // From wherever it is (it may be on its way home).
         journey!.invalidate().restart();
       },
       onLeaveBack: () => {
+        atSide = false;
         journey!.pause();
         back = gsap.to(cat, { x: 0, y: 0, scale: 1, opacity: 0.85, duration: 0.7, ease: "power3.inOut", force3D: true });
       },
     });
+    // After a resize (ScrollTrigger refreshes once it settles), a cat at the
+    // side moves to the new side; one at home follows its CSS on its own.
+    onRefresh = () => {
+      if (!atSide) return;
+      journey!.pause();
+      gsap.to(cat, { ...side(), duration: 0.3, ease: "power2.out", overwrite: "auto", force3D: true });
+    };
+    ScrollTrigger.addEventListener("refresh", onRefresh);
 
     // The footer has a cat of its own. As the footer comes into view this one
     // fades out where it is (no glide across the page) and the footer's lands;
@@ -287,6 +315,7 @@ async function start(gsap: Gsap, ScrollTrigger: ST, cat: HTMLButtonElement) {
   return () => {
     idleCall?.kill();
     triggers.forEach((t) => t.kill());
+    if (onRefresh) ScrollTrigger.removeEventListener("refresh", onRefresh);
     journeyTrigger?.kill();
     journey?.kill();
     back?.kill();

@@ -80,25 +80,17 @@ class Settings(BaseSettings):
     # be claimed each time this many days have passed since the last claim.
     signup_ai_credits: int = Field(3, alias="HOLT_SIGNUP_AI_CREDITS")
     claim_every_days: float = Field(7, alias="HOLT_CLAIM_EVERY_DAYS")
-    # Features, plans and credit packs (pricing.py). Empty: the packaged
-    # holt_server/pricing.json, where every price is still TBD.
+    # Features, plans and passes (pricing.py). Empty: the packaged
+    # holt_server/pricing.json, where no pass is on sale.
     pricing_file: str = Field("", alias="HOLT_PRICING_FILE")
-    # Credit-pack checkout (payments.py). Off unless this is 1 AND the
-    # Razorpay keys are set: with it off, no pack is offered and no order can
-    # be created. Orders already paid for are still confirmed.
+    # Pass checkout (payments.py). Off unless this is 1 AND the Razorpay keys
+    # are set: with it off, no pass is offered and no order can be created.
+    # Orders already paid for are still confirmed.
     payments_enabled: bool = Field(False, alias="HOLT_PAYMENTS_ENABLED")
     razorpay_key_id: str = Field("", alias="RAZORPAY_KEY_ID")
     razorpay_key_secret: str = Field("", alias="RAZORPAY_KEY_SECRET")
     # Set in the Razorpay dashboard with the webhook URL. Empty: webhooks refused.
     razorpay_webhook_secret: str = Field("", alias="RAZORPAY_WEBHOOK_SECRET")
-    # Monthly plans (subscriptions.py): a switch of their own, separate from
-    # credit packs. Off unless this is 1 AND the Razorpay keys are set: with it
-    # off, no plan is offered and no subscription can be started. Subscriptions
-    # that already exist still renew, lapse and can be cancelled.
-    subscriptions_enabled: bool = Field(False, alias="HOLT_SUBSCRIPTIONS_ENABLED")
-    # How long a paid plan outlives its billing period while Razorpay retries a
-    # failed renewal. A halted subscription ends the plan straight away.
-    subscription_grace_days: float = Field(7, alias="HOLT_SUBSCRIPTION_GRACE_DAYS")
     # User ids (comma-separated) that may read /v1/admin/*. Empty: nobody.
     admin_users: str = Field("", alias="HOLT_ADMIN_USERS")
     # New work (jobs, starter-issue lookups) per hour.
@@ -132,6 +124,15 @@ class Settings(BaseSettings):
     find_cache_hours: float = Field(6, alias="HOLT_FIND_CACHE_HOURS")
     # Pull-request pages crawled per analysis (25 PRs a page).
     max_pages: int = Field(8, alias="HOLT_MAX_PAGES")
+    # Evidence snapshots (evidence_store.py): the evidence each report read,
+    # one gzipped file per report under this directory. Empty = none kept.
+    evidence_dir: str = Field("", alias="HOLT_EVIDENCE_DIR")
+    # Delete a repo's snapshots older than this many days (its newest always
+    # stays). 0 = keep every one.
+    evidence_keep_days: float = Field(0, ge=0, alias="HOLT_EVIDENCE_KEEP_DAYS")
+    # `warm --stale-only` makes a report again from a snapshot younger than
+    # this instead of reading GitHub. 0 = always read GitHub.
+    evidence_reuse_hours: float = Field(168, ge=0, alias="HOLT_EVIDENCE_REUSE_HOURS")
 
     @property
     def token_list(self) -> list[str]:

@@ -33,15 +33,14 @@ with codes: `unauthorized`, `not_found` (repo missing or private),
 signing in), `ai_unavailable` (AI is switched off: the server has no
 model key or no AI budget, or the environment's AI budget is used up, which
 also sends `"reason": "ai_budget_used_up"`; nothing is charged), `claim_not_ready` (a weekly claim before it is due),
-`payments_off` (credit packs or plans aren't on sale), `payment_unconfirmed` (a
-payment's signature didn't check out; nothing was credited),
-`already_subscribed` (the user already has a paid plan),
+`payments_off` (passes aren't on sale), `payment_unconfirmed` (a
+payment's signature didn't check out; nothing was given),
 `upstream` (GitHub/model failure), `internal`.
 
 HTTP statuses: `unauthorized` 401, `not_found` 404, `invalid_repo` and
 `invalid_request` (malformed body or query) 400, `rate_limited` 429 (also sent
 as a `Retry-After` header), `quota_exceeded` 402, `needs_plan` 402, `needs_key` 403,
-`claim_not_ready` 409, `already_subscribed` 409, `payments_off` 403, `payment_unconfirmed` 400, `ai_unavailable` 503, `upstream` 502, `internal` 500, `not_implemented` 501 (starter issues and find,
+`claim_not_ready` 409, `payments_off` 403, `payment_unconfirmed` 400, `ai_unavailable` 503, `upstream` 502, `internal` 500, `not_implemented` 501 (starter issues and find,
 until the engine side ships).
 
 ## Rate limits
@@ -123,7 +122,7 @@ responses. The server also accepts and normalises full URLs
               "url": "https://github.com/…", "link": "https://code.djangoproject.com" | null,
               "days": 37 | null } ],
   "budget_independent": true,         // the verdict is the same for any `days` (see below)
-  "cost": { "model": "…", "input_tokens": 9000, "output_tokens": 6000,
+  "cost": { "input_tokens": 9000, "output_tokens": 6000,
             "usd": 0.0123, "seconds": 48.2 }, // ai only, else null
   "holt_users": { "people": 9, "pull_requests": 12, "merged": 7, "closed": 2,
                   "waiting": 3, "window_days": 365, "computed_at": "…" } | null,
@@ -148,7 +147,8 @@ null on AI reports cached before it existed. Show them as AI-written.
 `cost` is for operators, not the product: `usd` is what the model calls cost
 (from the engine's price table), `seconds` the whole run's wall time. Both are
 null on reports cached before they were recorded. Per-stage timings go to the
-server log, not the report.
+server log, not the report. Which model wrote a report, playbook or summary is
+never in a response; the server keeps it in its `ai_runs` table.
 
 `holt_users` is what connected Holt users' public pull requests to this
 repository came to (from My Contributions, the last `window_days`): counts only,
@@ -553,8 +553,8 @@ one at a time, and wait behind every user request.
 - `GET /v1/me/credits` → `Credits`:
   `{"balance": 3, "free": 3, "purchased": 0, "can_claim": false, "next_claim_at": "…", "claim_every_days": 7, "ai_available": true}`.
   `balance` is every credit the user can spend (`free` + `purchased`); `free` is
-  welcome, weekly and gifted credits, `purchased` credits from packs (0 until
-  payments are switched on). `next_claim_at` is when the weekly claim
+  welcome, weekly and gifted credits, `purchased` credits an admin granted (or
+  a credit pack bought before passes). `next_claim_at` is when the weekly claim
   opens (`can_claim` is true once it has passed). `ai_available` is false while
   the server has no model key.
 - `GET /v1/me/entitlements` → `{"plan": "free", "plan_expires_at": null, "features": [Access]}`,
@@ -579,58 +579,66 @@ claim one more whenever `HOLT_CLAIM_EVERY_DAYS` (7) have passed since the last
 claim; the welcome grant starts that clock. Claims don't accumulate: at most one
 is ever due. Spending, claiming and refunds are atomic on the server.
 
-#### Credits and plans
+#### Credits, plans and passes
 
-Payments are off: nothing is on sale and every price is still to be decided.
-What exists is the model they plug into, all on the server, never taken from
-the client, and a checkout for credit packs that stays switched off (below):
+Payments are off: nothing is on sale. What exists is the model they plug
+into, all on the server, never taken from the client, and a checkout for
+passes that stays switched off (below):
 
 - **Features** (`ai_report`, `playbook`, `preflight`, `guidance`,
-  `recommendations`) and what one use costs in credits, **plans** (`free`,
-  `pro`: what each covers, unlimited or N uses per UTC month, and for how long)
-  and **credit packs** are defined in a JSON catalogue
-  (`server/holt_server/pricing.json`, or `HOLT_PRICING_FILE`), with prices in
-  INR and USD.
+  `recommendations`, `merge_plan`, `pr_watch`, `repo_watch`, `issue_watch`)
+  and what one use costs in credits, **plans** (`free`, `pro`: what each
+  covers, unlimited or N uses per UTC month) and **passes** (days of Pro for
+  one payment, with INR and USD prices) are defined in a JSON catalogue
+  (`server/holt_server/pricing.json`, or `HOLT_PRICING_FILE`).
 - A use is paid for by the plan when it covers the feature (free), else with
   the feature's credits: free credits first when the feature accepts them,
   then purchased credits, soonest-expiring first. A feature with no credit
   price needs a plan (`needs_plan`).
 - Two credit pools, one ledger: free credits (welcome, weekly claim, gifts)
-  and purchased credits (packs; they never expire, or expire when the pack
-  says). Every change is a ledger row saying which pool.
+  and purchased credits (admin grants, and credit packs bought before passes;
+  they never expire, or expire when the grant says). Every change is a ledger
+  row saying which pool.
 - Admins change credits and plans with a CLI (`python -m holt_server.credits`,
   server/README.md), not over HTTP.
 
-#### Credit packs (checkout)
+#### Passes (checkout)
 
-Razorpay, INR, one-time payments. **Switched off** unless the server has
-`HOLT_PAYMENTS_ENABLED=1` and its Razorpay keys, and a pack in the catalogue
-has `on_sale: true` and an INR price. While off, `GET /v1/packs` offers
-nothing and `POST /v1/me/orders` answers 403 `payments_off`. The price,
-the credits and the expiry always come from the server's catalogue.
+A pass is one payment for a fixed number of days of Pro (`pro_1m` 30 days,
+`pro_3m` 90, `pro_12m` 365). It never renews. Razorpay, INR. **Switched
+off** unless the server has `HOLT_PAYMENTS_ENABLED=1` and its Razorpay keys,
+and a pass in the catalogue has `on_sale: true` and an INR price. While off,
+`GET /v1/passes` offers nothing and `POST /v1/me/orders` answers 403
+`payments_off`. The price and the days always come from the server's
+catalogue.
 
-- `GET /v1/packs` (internal key; no user needed) → `{"on_sale": false, "packs": [Pack]}`,
-  `Pack`: `{"id": "credits_10", "name": "10 credits", "credits": 10, "expires_days": null, "amount": 49900, "currency": "INR"}`
-  (`amount` in paise). `on_sale` is false and `packs` empty while payments are off.
-- `POST /v1/me/orders {"pack": "credits_10"}` → `Checkout`:
-  `{"order_id", "provider": "razorpay", "key_id", "provider_order_id", "amount", "currency", "name", "description", "pack", "credits"}`,
-  everything Razorpay Checkout needs (`key_id` is the public key id). Any other
-  field in the body is ignored. 400 `invalid_request` for a pack not on sale,
-  403 `payments_off`, 502 `upstream` when Razorpay fails. Counts against the
-  user's hourly work limit.
+- `GET /v1/passes` (internal key; no user needed) → `{"on_sale": false, "passes": [Pass], "features": [PassFeature]}`,
+  `Pass`: `{"id": "pro_1m", "name": "1 month", "days": 30, "amount": 9900, "currency": "INR"}`
+  (`amount` in paise), `PassFeature`: `{"id": "merge_plan", "name": "Merge plan", "per_month": 30, "unlimited": false}`
+  (what Pro unlocks; every pass gives the same Pro). `on_sale` is false and
+  both lists empty while payments are off or no pass is on sale.
+- `POST /v1/me/orders {"pass": "pro_1m"}` → `Checkout`:
+  `{"order_id", "provider": "razorpay", "key_id", "provider_order_id", "amount", "currency", "name", "description", "item", "days"}`,
+  everything Razorpay Checkout needs (`key_id` is the public key id; `item` is
+  the pass id). Any other field in the body is ignored. 400
+  `invalid_request` for a pass not on sale, 403 `payments_off`, 502
+  `upstream` when Razorpay fails. Counts against the user's hourly work limit.
 - `POST /v1/me/orders/confirm {"razorpay_order_id", "razorpay_payment_id", "razorpay_signature"}`
-  (exactly what Checkout's success handler receives) → `{"order": Order, "credits": Credits}`.
-  The server checks the signature, then asks Razorpay for the payment, and
-  credits the pack only when the payment is captured (it captures an
-  authorized one) for the order's exact amount and currency. `order.status`
-  is `paid`, or still `created` while Razorpay is processing (the webhook
-  finishes it; poll `GET /v1/me/orders`), or `held` when the amount didn't
-  match (nothing credited; a person checks it). 400 `payment_unconfirmed` for
-  a bad signature, 404 for an order that isn't this user's. Safe to repeat.
+  (exactly what Checkout's success handler receives) →
+  `{"order": Order, "plan": "pro", "plan_expires_at": "…" | null}` (the plan
+  in force afterwards). The server checks the signature, then asks Razorpay
+  for the payment, and gives the pass only when the payment is captured (it
+  captures an authorized one) for the order's exact amount and currency.
+  `order.status` is `paid`, or still `created` while Razorpay is processing
+  (the webhook finishes it; poll `GET /v1/me/orders`), or `held` when the
+  amount didn't match (nothing given; a person checks it). 400
+  `payment_unconfirmed` for a bad signature, 404 for an order that isn't this
+  user's. Safe to repeat.
 - `GET /v1/me/orders?limit=50` → `{"orders": [Order]}`, newest first, the
-  purchase history. `Order`: `{"id", "pack", "name", "credits", "amount", "currency", "status", "created_at", "paid_at"}`,
-  `status` one of `paid`, `failed` (the payment was declined), `held`.
-  Checkouts that were opened and never paid are left out.
+  purchase history. `Order`: `{"id", "item", "name", "days", "amount", "currency", "status", "created_at", "paid_at"}`,
+  `item` the pass id (or a credit pack's, for purchases from before passes,
+  with `days` null), `status` one of `paid`, `failed` (the payment was
+  declined), `held`. Checkouts that were opened and never paid are left out.
 - `POST /v1/payments/razorpay/webhook` (internal key; no user). `web/` serves
   Razorpay's webhook URL (`/api/payments/razorpay/webhook`) and forwards the
   request body byte for byte with its `X-Razorpay-Signature` header. The
@@ -638,70 +646,18 @@ the credits and the expiry always come from the server's catalogue.
   body: 400 `payment_unconfirmed` if it doesn't match. Signed events answer 200
   `{"ok": true, "result": "paid"|"already_paid"|"held"|"failed"|"pending"|"unknown_order"|"ignored"}`
   (the result is for logs). Handled: `payment.authorized` (captured),
-  `payment.captured` and `order.paid` (credited), `payment.failed`.
+  `payment.captured` and `order.paid` (given), `payment.failed`. Anything
+  else, including `subscription.*`, is `ignored`.
 
-A pack is credited once per order, whichever of the confirm call and the
-webhooks arrives first, however often they repeat: marking the order paid and
-adding its credits happen in one transaction, and a payment id can pay only
-one order. With payments switched off, orders that already exist are still
-confirmed, so someone who paid just before the switch gets their credits.
-
-#### Plans (subscriptions)
-
-A monthly plan through Razorpay subscriptions, INR. **Switched off** by its
-own flag, separate from credit packs: plans are offered only when the server
-has `HOLT_SUBSCRIPTIONS_ENABLED=1` and its Razorpay keys, and a plan in the
-catalogue has `on_sale: true`, an INR price and a `razorpay_plan_id` (a plan
-made in the Razorpay dashboard; the server checks it charges the catalogue's
-price before anyone pays). While off, `GET /v1/plans` offers nothing and
-`POST /v1/me/subscription` answers 403 `payments_off`.
-
-- `GET /v1/plans` (internal key; no user needed) → `{"on_sale": false, "plans": [PlanOffer]}`,
-  `PlanOffer`: `{"id": "pro", "name": "Pro", "amount": 19900, "currency": "INR", "features": [{"id": "playbook", "name": "…", "per_month": 10, "unlimited": false}]}`
-  (`amount` in paise, per month).
-- `POST /v1/me/subscription {"plan": "pro"}` → `SubscriptionCheckout`:
-  `{"subscription_id", "provider": "razorpay", "key_id", "provider_subscription_id", "plan", "name", "description", "amount", "currency"}`.
-  Checkout opens with `subscription_id: provider_subscription_id`. A second
-  call while the first is still unpaid returns the same subscription. 400
-  `invalid_request` for a plan not on sale, 403 `payments_off`, 409
-  `already_subscribed` when the user already has a plan that is paid for (or
-  being paid), 502 `upstream` when Razorpay fails or its plan's price doesn't
-  match. Counts against the user's hourly work limit.
-- `POST /v1/me/subscription/confirm {"razorpay_payment_id", "razorpay_subscription_id", "razorpay_signature"}`
-  (what Checkout's success handler receives) → `SubscriptionConfirmed`:
-  `{"subscription": Subscription | null, "plan": "pro", "plan_expires_at": "…" | null}`.
-  The server checks the signature (HMAC of `payment_id|subscription_id`), then
-  asks Razorpay for the subscription and the payment. The plan starts when
-  Razorpay says the subscription is active; otherwise the webhook starts it.
-  400 `payment_unconfirmed` for a bad signature, 404 for a subscription that
-  isn't this user's. Safe to repeat.
-- `GET /v1/me/subscription?limit=50` → `{"subscription": Subscription | null, "charges": [Charge]}`:
-  the latest subscription (unpaid checkouts left out) and every payment,
-  newest first. `Subscription`: `{"id", "plan", "name", "status", "amount", "currency", "paid_until", "next_charge_at", "cancel_at_period_end", "created_at", "ended_at"}`,
-  `status` one of `created`, `authenticated`, `active`, `pending` (a renewal
-  failed; Razorpay is retrying), `halted` (the retries failed), `paused`,
-  `cancelled`, `completed`, `expired`. `next_charge_at` is null once it won't
-  renew. `Charge`: `{"id" (Razorpay's payment id), "amount", "currency", "period_start", "period_end", "status": "paid"|"held", "paid_at"}`.
-- `POST /v1/me/subscription/cancel` → `SubscriptionConfirmed`. An active plan
-  stops renewing and runs to the end of the period paid for
-  (`cancel_at_period_end: true`); an unpaid one, or one whose renewal is
-  failing, is cancelled now. 404 when there is nothing to cancel. Works with
-  the switch off.
-- Webhooks arrive on `POST /v1/payments/razorpay/webhook` (above). Handled:
-  `subscription.authenticated`, `.activated`, `.charged`, `.pending`,
-  `.halted`, `.paused`, `.resumed`, `.cancelled`, `.completed`, `.expired`;
-  results `activated`, `charged`, `already_charged`, `held`, `stale`, `ended`,
-  `unknown_subscription`, ….
-
-What the plan does (`Me.plan`, `Me.plan_expires_at`): each payment gives the
-plan to the end of the period Razorpay says was paid for, plus a grace period
-(`HOLT_SUBSCRIPTION_GRACE_DAYS`, 7) so a failed renewal that Razorpay retries
-doesn't cut anyone off. Halted or paused ends it now. Cancelled or completed
-ends it with the paid period (no grace). Each payment is recorded once, events
-about an older period than the server holds change nothing, and a cancelled
-subscription never comes back. Only the subscription that gave the plan can
-end it, so a plan an admin gave is never taken away by a webhook. With the
-switch off, existing subscriptions still renew, lapse and can be cancelled.
+What a pass does (`Me.plan`, `Me.plan_expires_at`): the plan becomes `pro`
+for the pass's days, counted from when the user's current Pro ends if it
+hasn't yet (so passes stack), else from the payment. Pro that an admin gave
+with no end stays as it is. A pass is given once per order, whichever of the
+confirm call and the webhooks arrives first, however often they repeat:
+marking the order paid and extending the plan happen in one transaction, and a
+payment id can pay only one order. With payments switched off, orders that
+already exist are still confirmed, so someone who paid just before the switch
+gets their pass.
 
 ### Admin (read-only)
 
@@ -932,7 +888,7 @@ report's. It exists only when the server runs with its paid features
   and `GET /v1/playbook-jobs/{job_id}/events` (SSE, as for analyses; `done`
   carries `{"playbook": Playbook}`).
 
-`Playbook`: `{"repo", "generated_at", "model", "note", "window_days", "archived", "sections"}`.
+`Playbook`: `{"repo", "generated_at", "note", "window_days", "archived", "sections"}`.
 `note` is plain English to show once near the top when present (e.g. the counts
 cover everyone's pull requests because too few outside ones were merged).
 `sections` always has five lists, in display order; show nothing for an empty
@@ -1083,7 +1039,7 @@ kinds at once is 400 `invalid_request` with a plain message.
 - `note`: plain English to show once near the top when present (the
   comparison covers everyone's pull requests because too few outside ones were
   merged).
-- `summary` (when asked for): `{"model", "sentences": [{"text", "checks": ["issue"]}]}`,
+- `summary` (when asked for): `{"sentences": [{"text", "checks": ["issue"]}]}`,
   at most 3 sentences, each checked against the checks it cites; it never says
   whether the pull request will be merged.
 

@@ -27,7 +27,6 @@ from holt_server import (
     profiles,
     recommendations,
     saved,
-    subscriptions,
 )
 from holt_server.api import public, router
 from holt_server.services import Services
@@ -95,7 +94,6 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(recommendations.router)
     app.include_router(saved.router)
     app.include_router(preflight.router)
-    app.include_router(subscriptions.router)
     return app
 
 

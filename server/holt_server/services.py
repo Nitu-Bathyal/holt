@@ -12,6 +12,7 @@ import httpx
 from holt_server import budget, engine, llm, payments, pro
 from holt_server.db import Database, Job
 from holt_server.errors import ApiError
+from holt_server.evidence_store import EvidenceStore
 from holt_server.github import GitHubLookup, build_pool
 from holt_server.jobs import JobRunner
 from holt_server.ratelimit import RateLimiter
@@ -41,6 +42,8 @@ class Services:
         self.inflight: dict[str, Any] = {}
         # Its own counters: badge traffic never uses up what user requests draw on.
         self.badge_limiter = RateLimiter()
+        # The evidence each report read, kept on disk (off without HOLT_EVIDENCE_DIR).
+        self.evidence = EvidenceStore(settings.evidence_dir, settings.evidence_keep_days)
         self.runner = JobRunner(self, settings.job_concurrency, settings.badge_concurrency)
         self._canonical: OrderedDict[str, str] = OrderedDict()
         # Swappable seams. Tests replace these; production uses the defaults.
@@ -50,6 +53,8 @@ class Services:
         # What each running AI job's model work cost, when the job learns it
         # (budget.py): playbook and pre-flight jobs put it here for `_finish`.
         self.ai_costs: dict[str, float | None] = {}
+        # And which model did it, for `ai_runs.model`.
+        self.ai_models: dict[str, str | None] = {}
 
     def _live_provider(self, repo: str, as_of: datetime):
         # The pool's transport: it skips dead or used-up tokens and hears back

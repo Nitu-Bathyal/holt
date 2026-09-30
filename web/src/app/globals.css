@@ -1668,10 +1668,10 @@
 @media (min-width: 1024px) {
   [data-cat-companion] {
     top: calc(61px + clamp(0.4rem, 2.5svh, 2rem));
-    /* The face's right edge 22px from the viewport's, as at the side (the
+    /* The face's right edge 38px from the viewport's, as at the side (the
        button's 20px padding is outside the face), so it only has to shrink
        and drop into the lane when the walk starts. */
-    right: 2px;
+    right: 18px;
   }
 }
 /* Reduced motion: the companion cat doesn't travel (cat-companion.tsx never
@@ -1703,9 +1703,11 @@
   grid-area: 1 / 1;
   text-align: center;
 }
+/* 110%, not 100%: at a fractional line height the hidden tile's edge showed
+   as a 1px line under the other word. */
 .swap-from {
   color: var(--orange);
-  transform: translateY(-100%);
+  transform: translateY(-110%);
 }
 .swap-to,
 .swap-on {
@@ -1723,7 +1725,7 @@
   transform: none;
 }
 .swap[data-swapped="false"] .swap-to {
-  transform: translateY(100%);
+  transform: translateY(110%);
 }
 /* "hub" is a letter shorter than "holt": the tail closes the gap. */
 .swap[data-swapped="false"] .swap-tail {
@@ -1946,11 +1948,14 @@
   }
 }
 .ls-person {
+  container-type: inline-size;
   min-height: clamp(13rem, 36svh, 24rem);
   padding: clamp(1.1rem, 1.6vw, 1.6rem);
 }
+/* Sized by the card too (7cqi keeps the face near a third of it), so four
+   narrow cards at 1280-1440 don't squeeze the label into a sliver. */
 .ls-person-cat {
-  font-size: clamp(1.3rem, min(2vw, 3.6svh), 2.2rem);
+  font-size: min(clamp(1.25rem, min(1.85vw, 3.4svh), 2.05rem), max(1.05rem, 8cqi));
 }
 .ls-person-title {
   padding-top: clamp(1rem, 4svh, 2.5rem);
@@ -2085,26 +2090,21 @@
 }
 
 /* 06: four answers (landing/answers.tsx). */
+/* One column grid for all four: the cats' column is as wide as the widest
+   face, so every answer's words start at the same x. */
 .ls-answers {
   display: grid;
-  gap: clamp(1rem, 3.5svh, 2.5rem);
+  grid-template-columns: auto minmax(0, 1fr);
+  row-gap: clamp(1rem, 3.5svh, 2.5rem);
   margin-top: clamp(1.2rem, 4svh, 3rem);
 }
 .ls-answer {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: start;
   gap: 0 clamp(0.75rem, 2vw, 2.5rem);
   padding: clamp(0.9rem, 2.4svh, 1.8rem) 0 clamp(0.9rem, 2.4svh, 1.8rem) clamp(1rem, 1.6vw, 1.75rem);
-}
-/* A quiet rule between answers, so each row reads as its own. */
-.ls-answer + .ls-answer::before {
-  content: "";
-  position: absolute;
-  top: calc(-0.5 * clamp(1rem, 3.5svh, 2.5rem));
-  left: 0;
-  right: 0;
-  border-top: 1px dashed var(--line);
 }
 .ls-answer-bar {
   transform-origin: left;
@@ -2133,6 +2133,15 @@
   row-gap: 0.6rem;
   font-size: clamp(0.9rem, min(1.05vw, 1.95svh), 1.1rem);
   line-height: 1.55;
+}
+/* Wide screens: each "what it means" / "what to do" on one line. */
+@media (min-width: 1024px) {
+  .ls-answer-text {
+    max-width: none;
+  }
+  .ls-answer-text dd {
+    white-space: nowrap;
+  }
 }
 @media (prefers-reduced-motion: no-preference) and (min-width: 1024px) {
   .ls-answers[data-phase="wait"] .ls-answer-word {

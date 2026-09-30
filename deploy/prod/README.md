@@ -15,12 +15,13 @@ pause it, and `deploy.sh` still works by hand.
 | `follow.sh` | The auto-deploy: one tick checks origin/main against CI and staging and runs `deploy.sh` for it. `--status`, `--pause`, `--resume`, `--retry`. See [Auto-deploy](#auto-deploy). |
 | `install-follow.sh` | One-time: the timer that runs `follow.sh` every 2 minutes (`--remove` takes it out). |
 | `deploy.sh` | One deploy: build main's images, migrate, swap, health-check, roll back on failure, prune only this stack's images, stop the builder container. |
-| `env.sh` | Sourced by `deploy.sh` and `warm.sh`: state paths, `secrets.env`, the GitHub App's settings and the GitHub token fallback (`load_prod_env`). |
+| `env.sh` | Sourced by `deploy.sh` and `warm.sh`: state paths, `secrets.env`, the GitHub App's settings and the GitHub token fallback (`load_prod_env`); makes the evidence directory. |
 | `github-app.sh` | Who production reads GitHub as (the GitHub App or `GITHUB_TOKENS`), its points left, and a test read of a public repository. Prints no secret. See [docs/ops/github-app.md](../../docs/ops/github-app.md). |
 | `make-env.sh` | Writes `~/.local/share/holt-prod/.env` once: fresh `AUTH_SECRET`, `HOLT_INTERNAL_KEY`, `HOLT_SECRET_KEY`, db password. Nothing shared with staging. |
-| `install.sh` | One-time: the env file plus the nightly backup timer and the daily repo-details timer. The deploy timer is `install-follow.sh`. |
+| `install.sh` | One-time: the env file plus the nightly backup timer and the daily repo-details timer; writes the report refresh timer, off until `--refresh-on`. The deploy timer is `install-follow.sh`. |
 | `backup.sh` | `pg_dump` of both databases to `~/backups/holt/<stamp>/`, keeps 14 days. |
 | `warm.sh` | Runs `python -m holt_server.warm` detached in the server image (fills the caches), with the same secrets and token as a deploy. |
+| `warm-refresh.sh` | The report refresh: weekly tier (saved or recently viewed repos), then monthly tier (the other seeds), in the foreground. Off until switched on. See [Report refresh](#report-refresh). |
 | `warm-meta.sh` | The daily details-only warm pass (language, stars, topics for Discover), in the foreground, holding the deploy lock. See [Repository details](#repository-details). |
 | `edge.conf` | nginx: keeps the port across deploys, `/__build`, `www` → apex redirect, SSE-friendly proxy, the Umami paths. A deploy puts changes live with a reload ([Edge config](#edge-config)). |
 | `../swap.sh` | Sourced by `deploy.sh` (and staging's `preview.sh`): `swap_service` starts a service's new container beside the old one and retires the old one once the new one is healthy. |
@@ -334,9 +335,62 @@ pass by itself after such a deploy (stopping a pass that is still running).
 After a deploy by hand, run it once the deploy is up:
 
 ```sh
-deploy/prod/warm.sh --dry-run --stale-only   # "would analyse …" per outdated seed
+deploy/prod/warm.sh --dry-run --stale-only   # "would analyse …" / "would make … again" per outdated seed
 deploy/prod/warm.sh --stale-only             # then --status or --logs
 ```
+
+A seed whose evidence was kept in the last `HOLT_EVIDENCE_REUSE_HOURS` (168)
+is made again from that snapshot, with no GitHub points; the summary line
+counts them ("N made again from kept evidence"). The rest are read from
+GitHub as before.
+
+## Evidence snapshots
+
+Every report also keeps the evidence it read, one gzipped file per report, in
+`~/.local/share/holt-prod/evidence/<owner>__<name>/<UTC time>.json.gz`
+(`server/README.md`, "Evidence snapshots"). It is on `/home`, bind-mounted
+into the server at `/data/evidence`, never in the database volume on `/`.
+`env.sh` makes the directory before each deploy or warm pass: group-writable
+and setgid, and the server's user (uid 10001) joins its group
+(`HOLT_EVIDENCE_GID`, compose.yml `group_add`), so the files stay readable
+and removable by you. Staging keeps its own in
+`~/.local/share/holt-staging/evidence` (preview.sh).
+
+Every snapshot is kept. About 126 MB per 1,000 repos per round; with the
+refresh timer on, 325 repos take about 0.5 GB a year if all are monthly
+(12 rounds), plus a weekly repo's 52 rounds (6 MB a year each) and what
+people's own checks add. To cap it, set `HOLT_EVIDENCE_KEEP_DAYS` in
+`~/.local/share/holt-prod/.env` (a repo's newest snapshot always stays).
+
+```sh
+du -sh ~/.local/share/holt-prod/evidence
+ls ~/.local/share/holt-prod/evidence/pallets__flask/
+```
+
+## Report refresh
+
+`holt-prod-warm-refresh.timer` refreshes reports by interest, daily at 06:00
+UTC (`warm-refresh.sh`, log `~/.local/share/holt-prod/logs/warm-refresh.log`):
+
+- **weekly**: repos someone saved, or viewed on Holt in the last 30 days,
+  whose report is over 168 hours old (`HOLT_REFRESH_WEEKLY_HOURS`);
+- **monthly**: the rest of the seed list, over 720 hours old
+  (`HOLT_REFRESH_MONTHLY_HOURS`).
+
+Oldest first, through the job queue at badge priority (people first), and it
+stops below `HOLT_WARM_MIN_POINTS`; what's left carries on the next day. Each
+report it makes adds a snapshot. At about 12 GitHub points a report, a month
+costs about 3,900 points at today's ~325 repos (4,900 if 25 of them are
+weekly) and about 24,000 at 2,000 (about 32,000 with 200 weekly): 130 to
+1,070 points a day, against 5,000 an hour.
+
+**It ships off.** To switch it on (after a deploy that includes it):
+
+```sh
+deploy/prod/install.sh --refresh-on
+```
+
+`--refresh-off` switches it off. By hand, once: `~/.local/share/holt-prod/bin/warm-refresh.sh`.
 
 ## Repository details
 
@@ -423,11 +477,11 @@ on the port to show it never drops.
 
 ```sh
 deploy/prod/install-follow.sh --remove
-systemctl --user disable --now holt-prod-backup.timer holt-prod-warm-meta.timer
+systemctl --user disable --now holt-prod-backup.timer holt-prod-warm-meta.timer holt-prod-warm-refresh.timer
 dc down            # add -v to drop the database too (take a backup first)
 docker buildx rm holt-prod
 docker image prune -af --filter label=holt.stack=holt-prod
-rm -rf ~/.local/share/holt-prod ~/.config/systemd/user/holt-prod-backup.* ~/.config/systemd/user/holt-prod-warm-meta.*
+rm -rf ~/.local/share/holt-prod ~/.config/systemd/user/holt-prod-backup.* ~/.config/systemd/user/holt-prod-warm-meta.* ~/.config/systemd/user/holt-prod-warm-refresh.*
 ```
 
 ## Analytics

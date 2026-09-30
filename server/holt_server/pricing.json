@@ -1,36 +1,47 @@
 {
-  "_about": "Holt's features, plans and credit packs. PRICES ARE TBD: every price is null until they are decided, and nothing is on sale. Prices are in minor units (paise for INR, cents for USD). See server/README.md, 'Credits and plans'.",
-  "tbd": true,
+  "_about": "Holt's features, what each plan unlocks, and the passes that sell Pro. A pass is one payment for a fixed number of days of Pro; it never renews. Nothing is on sale until a pass says on_sale: true (and payments are switched on). Prices are in minor units (paise for INR, cents for USD). See server/README.md, 'Credits and plans'.",
+  "tbd": false,
   "features": {
     "ai_report": {"name": "AI-written report", "credits": 1, "free_credits": true},
     "playbook": {"name": "Contribution playbook", "credits": 1, "free_credits": false},
     "preflight": {"name": "PR pre-flight check", "credits": 1, "free_credits": false},
     "guidance": {"name": "Personalised guidance", "credits": 1, "free_credits": false},
-    "recommendations": {"name": "Repository recommendations", "credits": null, "free_credits": false}
+    "recommendations": {"name": "Repository recommendations", "credits": null, "free_credits": false},
+    "merge_plan": {"name": "Merge plan", "credits": null, "free_credits": false},
+    "pr_watch": {"name": "PR watch", "credits": null, "free_credits": false},
+    "repo_watch": {"name": "Repo watch", "credits": null, "free_credits": false},
+    "issue_watch": {"name": "Issue watch", "credits": null, "free_credits": false}
   },
   "plans": {
     "free": {"name": "Free", "features": {}},
     "pro": {
       "name": "Pro",
-      "on_sale": false,
-      "period_days": 30,
-      "price": {"inr_paise": null, "usd_cents": null},
-      "razorpay_plan_id": null,
       "features": {
-        "playbook": {"per_month": 10},
-        "preflight": {"per_month": 10},
-        "guidance": {"per_month": 10},
-        "recommendations": {"unlimited": true}
+        "merge_plan": {"per_month": 30},
+        "pr_watch": {"unlimited": true},
+        "repo_watch": {"unlimited": true},
+        "issue_watch": {"unlimited": true}
       }
     }
   },
-  "packs": {
-    "credits_10": {
-      "name": "10 credits",
-      "credits": 10,
+  "passes": {
+    "pro_1m": {
+      "name": "1 month",
+      "days": 30,
       "on_sale": false,
-      "expires_days": null,
-      "price": {"inr_paise": null, "usd_cents": null}
+      "price": {"inr_paise": 9900, "usd_cents": 700}
+    },
+    "pro_3m": {
+      "name": "3 months",
+      "days": 90,
+      "on_sale": false,
+      "price": {"inr_paise": 24900, "usd_cents": 1500}
+    },
+    "pro_12m": {
+      "name": "12 months",
+      "days": 365,
+      "on_sale": false,
+      "price": {"inr_paise": 79900, "usd_cents": 3900}
     }
   }
 }

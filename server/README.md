@@ -74,10 +74,8 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `HOLT_CACHE_HOURS` | `24` | How long a finished report is served instead of re-running. |
 | `HOLT_SIGNUP_AI_CREDITS` | `3` | Free AI reports every signed-in user gets once, on their first visit. |
 | `HOLT_CLAIM_EVERY_DAYS` | `7` | After that, one more can be claimed each time this many days have passed since the last claim (or the welcome grant). |
-| `HOLT_PRICING_FILE` | the catalogue shipped in the package (`holt_server/pricing.json`) | Features, plans and credit packs, with prices (TBD) in INR and USD. See [Credits and plans](#credits-and-plans). A file that doesn't parse stops startup. |
-| `HOLT_PAYMENTS_ENABLED` | `0` | `1` switches the credit-pack checkout on (it also needs the Razorpay keys and a pack on sale). See [Credit-pack checkout](#credit-pack-checkout). |
-| `HOLT_SUBSCRIPTIONS_ENABLED` | `0` | `1` switches monthly plans on (it also needs the Razorpay keys and a plan on sale with a `razorpay_plan_id`). Separate from `HOLT_PAYMENTS_ENABLED`. See [Monthly plans](#monthly-plans-subscriptions). |
-| `HOLT_SUBSCRIPTION_GRACE_DAYS` | `7` | How long a paid plan outlives its billing period while Razorpay retries a failed renewal. |
+| `HOLT_PRICING_FILE` | the catalogue shipped in the package (`holt_server/pricing.json`) | Features, plans and Pro passes, with prices in INR and USD. See [Credits, plans and passes](#credits-plans-and-passes). A file that doesn't parse stops startup. |
+| `HOLT_PAYMENTS_ENABLED` | `0` | `1` switches the pass checkout on (it also needs the Razorpay keys and a pass on sale). See [Pass checkout](#pass-checkout). |
 | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | *(empty)* | Razorpay API keys (`rzp_test_…` for test mode). Empty: no checkout. |
 | `RAZORPAY_WEBHOOK_SECRET` | *(empty)* | The secret set on the webhook in the Razorpay dashboard. Empty: webhooks are refused. |
 | `HOLT_ADMIN_USERS` | *(empty)* | Comma-separated user ids that may read `/v1/admin/*`. Empty means nobody. |
@@ -96,6 +94,9 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `HOLT_WARM_MAX_AGE_HOURS` | `20` | A warm pass skips repos whose report is younger than this. |
 | `HOLT_WARM_MIN_POINTS` | `1500` | A warm pass stops when any GitHub token has fewer GraphQL points left. |
 | `HOLT_MAX_PAGES` | `8` | Pull-request pages crawled per analysis (25 PRs a page). |
+| `HOLT_EVIDENCE_DIR` | empty (off) | Keep every report's evidence here, one gzipped file per report (`<owner>__<name>/<UTC time>.json.gz`, the shape of a golden recording). See [Evidence snapshots](#evidence-snapshots). |
+| `HOLT_EVIDENCE_KEEP_DAYS` | `0` (keep all) | Delete a repo's snapshots older than N days when it gets a new one; its newest always stays. |
+| `HOLT_EVIDENCE_REUSE_HOURS` | `168` | `warm --stale-only` makes an outdated report again from a snapshot younger than this, without GitHub. `0` = always read GitHub. |
 | `HOST`, `PORT` | `127.0.0.1`, `8000` | Where `holt-server` listens. |
 | `LOG_LEVEL` | `INFO` | |
 
@@ -104,7 +105,7 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | File | What |
 |---|---|
 | `holt_server/api.py` | The endpoints. Cache lookups, rate limits and the AI credit spend happen here, before a job is queued. |
-| `holt_server/credits.py` | Credit balances in two pools: free (the welcome grant, the weekly claim, gifts) and purchased (lots from packs). Taking and giving back credits, pack purchases, the `/v1/me/credits` routes and the admin CLI. |
+| `holt_server/credits.py` | Credit balances in two pools: free (the welcome grant, the weekly claim, gifts) and purchased (lots from admin grants, and credit packs bought before passes). Taking and giving back credits, pack purchases, the `/v1/me/credits` routes and the admin CLI. |
 | `holt_server/entitlements.py` | Can user U use feature F now, and what does it cost: `check` (read-only) and `charge`/`refund` (inside the caller's transaction). Plans, their expiry and monthly allowances. |
 | `holt_server/pricing.py` | Loads and checks the catalogue (`pricing.json`). |
 | `holt_server/admin.py` | The read-only `/v1/admin/*` view (balances, ledger, plans). |
@@ -172,27 +173,26 @@ curl -s localhost:20130/v1/admin/ai-spend -H "$K" -H "X-Holt-User: <admin id>"
 Staging runs with $1.00 for the server and the service together
 (`deploy/staging/preview.sh`); production with 0.
 
-## Credits and plans
+## Credits, plans and passes
 
 Payments are off; nothing is on sale. This is the model the payment code
-([Credit-pack checkout](#credit-pack-checkout)) plugs into.
+([Pass checkout](#pass-checkout)) plugs into.
 
 **Catalogue.** `holt_server/pricing.json` (or `HOLT_PRICING_FILE`) lists the
 paid features and what one use costs in credits (`free_credits`: whether free
-credits may pay for it), the plans (which features each covers, unlimited or
-`per_month` uses per UTC month, `period_days`) and the credit packs (`credits`,
-`expires_days`, null = never). Prices are `inr_paise` / `usd_cents`, null
-while TBD, and `on_sale` is false everywhere. `python -m holt_server.pricing`
-checks a file.
+credits may pay for it), the plans (`free`, `pro`: which features each
+covers, unlimited or `per_month` uses per UTC month) and the passes that sell
+Pro (`days` of Pro for one payment, `on_sale`, prices as `inr_paise` /
+`usd_cents`). A pass never renews. `python -m holt_server.pricing` checks a
+file.
 
 **Balances.** Free credits are `users.ai_credits`. Purchased credits are
-`credit_lots` rows, one per pack (`credits.purchase_pack`, idempotent on the
-payment's reference) or admin grant, each with an optional expiry; what is
-left in an expired lot is written off the next time the user is seen. Every
-change writes a `credit_events` row with its pool (`source`: free or
-purchased) and kind (grant, claim, purchase, adjust, spend, refund, expire).
-Per user, the free rows sum to `ai_credits` and the purchased rows to what the
-lots have left.
+`credit_lots` rows, one per admin grant (or credit pack bought before
+passes), each with an optional expiry; what is left in an expired lot is
+written off the next time the user is seen. Every change writes a
+`credit_events` row with its pool (`source`: free or purchased) and kind
+(grant, claim, purchase, adjust, spend, refund, expire). Per user, the free
+rows sum to `ai_credits` and the purchased rows to what the lots have left.
 
 **Entitlements.** `entitlements.charge(session, svc, user, feature)` pays for
 one use inside the caller's transaction: the plan (lapsed to free at
@@ -223,23 +223,28 @@ python -m holt_server.credits plan set --user <id> --plan free --reason "ended"
 that pays for purchased-only features too. `take` never goes below zero.
 Reading is `/v1/admin/*` (API.md), for users in `HOLT_ADMIN_USERS`.
 
-## Credit-pack checkout
+## Pass checkout
 
-`holt_server/payments.py`: Razorpay, INR, one-time payments for the packs in
+`holt_server/payments.py`: Razorpay, INR, one-time payments for the passes in
 the catalogue. **Off by default**: it needs `HOLT_PAYMENTS_ENABLED=1`, the
-Razorpay keys, and a pack with `on_sale: true` and an `inr_paise` price. The
-flow and the endpoints are in API.md ("Credit packs"); the short version:
+Razorpay keys, and a pass with `on_sale: true` and an `inr_paise` price. The
+flow and the endpoints are in API.md ("Passes"); the short version:
 
-- An order (`orders` table) copies the pack, credits and price from the
-  catalogue when it is created; the browser only names the pack.
-- Credits are added only for a payment Razorpay vouches for: the Checkout
+- An order (`orders` table) copies the pass and price from the catalogue when
+  it is created (the pass id in `pack_id`, its days in `expires_days`,
+  `credits` 0); the browser only names the pass.
+- Pro is given only for a payment Razorpay vouches for: the Checkout
   callback's signature (then the payment is fetched from Razorpay), or a
   webhook's signature. The payment must be captured and match the order's
-  amount and currency; a mismatch puts the order on `held`, credits nothing
+  amount and currency; a mismatch puts the order on `held`, gives nothing
   and logs an error.
 - `orders.status` goes `created` → `paid` once, in the same transaction that
-  adds the `credit_lots` row (its `reference` is the payment id, unique), so
-  the callback, the webhooks and their retries credit a pack exactly once.
+  sets the plan to `pro` (`write_plan`, `actor=payment`, `reference=<payment
+  id>`) for the pass's days, counted from the end of the user's current Pro
+  if it hasn't lapsed. So the callback, the webhooks and their retries give a
+  pass exactly once, and passes stack. Pro an admin gave with no end is left
+  alone.
+- Orders for credit packs from before passes still settle as credits.
 
 Webhook: in the Razorpay dashboard, point a webhook at
 `https://<site>/api/payments/razorpay/webhook` (served by `web/`, which
@@ -248,49 +253,14 @@ forwards it here) for `payment.authorized`, `payment.captured`,
 `RAZORPAY_WEBHOOK_SECRET`.
 
 Trying it locally in test mode: use `rzp_test_` keys, a pricing file with a
-pack on sale (copy `pricing.json`, set `on_sale: true` and a price, point
+pass on sale (copy `pricing.json`, set `on_sale: true`, point
 `HOLT_PRICING_FILE` at it) and `HOLT_PAYMENTS_ENABLED=1`. Razorpay can't reach
-a local webhook, so the callback does the crediting; test the webhook on
+a local webhook, so the callback does the giving; test the webhook on
 staging.
 
-## Monthly plans (subscriptions)
-
-`holt_server/subscriptions.py`: Razorpay subscriptions, INR. **Off by
-default, with its own switch**, separate from credit packs:
-`HOLT_SUBSCRIPTIONS_ENABLED=1`, the Razorpay keys, and a plan with
-`on_sale: true`, an `inr_paise` price and a `razorpay_plan_id`. Create that
-plan in the Razorpay dashboard (Subscriptions → Plans, monthly, the same
-price); the server fetches it before each new subscription and refuses if its
-price differs. Endpoints and behaviour are in API.md ("Plans"); the short
-version:
-
-- A `subscriptions` row per subscription (at most one live per user, a partial
-  unique index), and a `subscription_charges` row per payment (unique payment
-  id: the billing history, and what makes a replayed `subscription.charged`
-  a no-op).
-- The plan is set with `entitlements.write_plan` (the in-transaction form of
-  `set_plan`), `actor=razorpay`, `reference=<Razorpay subscription id>`, to the
-  end of the period Razorpay says was paid for plus
-  `HOLT_SUBSCRIPTION_GRACE_DAYS` (7). Halted/paused ends it now;
-  cancelled/completed ends it with the paid period. Only the subscription
-  named on the user's latest `plan_events` row can end their plan, so admin
-  grants are never undone by a webhook.
-- Events about an older period than the row holds are ignored; a cancelled,
-  completed or expired subscription never comes back.
-- Cancelling from Settings stops renewal at the end of the paid period
-  (Razorpay `cancel_at_cycle_end=1`); an unpaid subscription, or one whose
-  renewal is failing, is cancelled at once.
-- With the switch off, existing subscriptions still renew, lapse and can be
-  cancelled.
-
-Webhook: the same Razorpay webhook as the packs; also tick
-`subscription.authenticated`, `.activated`, `.charged`, `.pending`, `.halted`,
-`.paused`, `.resumed`, `.cancelled` and `.completed`.
-
-Trying it locally in test mode: as for packs, plus a test-mode plan in the
-Razorpay dashboard, its id as `razorpay_plan_id` in your pricing file, and
-`HOLT_SUBSCRIPTIONS_ENABLED=1`. Sign webhooks yourself with a local
-`RAZORPAY_WEBHOOK_SECRET` to try renewals and failures.
+Monthly subscriptions were replaced by passes. Their tables
+(`subscriptions`, `subscription_charges`) are still in the schema, unused,
+until a migration drops them.
 
 Per process (fine for one server; revisit with more): rate-limit counters,
 the badge lane's concurrency count and the repo-name cache are in memory. SSE
@@ -339,7 +309,7 @@ Rules:
 `holt_server/warm.py` fills the caches before people arrive, so launch-day
 traffic mostly costs no GitHub quota at request time:
 
-1. **Reports** (7-day rules) for the ~300 repositories in `server/holt_server/seeds/repos.txt`,
+1. **Reports** (7-day rules) for the ~1,550 repositories in `server/holt_server/seeds/repos.txt`,
    skipping any under 20 hours old.
 2. **Starter issues** for the same repositories.
 3. **`/v1/find`** for the searches the web app's own pages make: the nine
@@ -359,6 +329,41 @@ uv run python -m holt_server.warm --limit 50 --no-find
 
 Or set `HOLT_WARM_INTERVAL_HOURS` to run it inside the API on a schedule.
 
+**Refresh tiers** (`--tier`): reports only, oldest first, skipping any younger
+than `HOLT_WARM_MAX_AGE_HOURS`. `weekly` is every repo someone saved
+(`saved_repos`) or viewed in the last 30 days (`repo_views`), seed or not;
+`monthly` is the rest of the seed list. Production's refresh timer
+(`deploy/prod/warm-refresh.sh`, off until the owner switches it on) runs both
+daily with a week's and a month's age.
+
+```sh
+HOLT_WARM_MAX_AGE_HOURS=168 uv run python -m holt_server.warm --tier weekly --dry-run
+HOLT_WARM_MAX_AGE_HOURS=720 uv run python -m holt_server.warm --tier monthly
+```
+
+## Evidence snapshots
+
+With `HOLT_EVIDENCE_DIR` set, every finished report also writes the evidence
+it read (`holt_server/evidence_store.py`): the pull requests with their
+comments, reviews, merges and closes, the repository facts, README and
+CONTRIBUTING, as `golden record` saves them, run through the same credential
+redaction (`holt/evidence/redact.py`). Public GitHub data only; Holt's tokens
+are never part of it. The file is written after the report is stored, and a
+failed write is logged (`saving the evidence of … failed`) and never fails the
+report. Not in Postgres: production keeps them in
+`~/.local/share/holt-prod/evidence` on `/home` (`deploy/prod/README.md`).
+
+Size, measured on the 73 golden recordings: 123 KB a snapshot on average
+(median 70 KB, largest 821 KB), so **about 126 MB per 1,000 repos** each time
+they are all read.
+
+`python -m holt_server.warm --stale-only` (after an `ENGINE_VERSION` bump)
+uses them: a repo whose newest snapshot is younger than
+`HOLT_EVIDENCE_REUSE_HOURS`, and not older than the report it replaces, gets
+its report made again from the snapshot in the warm process, with no GitHub
+call. The new report is dated like the evidence behind it, so the refresh
+tiers still see its real age. Otherwise the repo is read from GitHub as before.
+
 **GitHub cost, measured** (GraphQL points; a token has 5,000 an hour): a rules
 report ~10 (up to ~20 for very busy repositories), starter issues ~5, a find
 search ~60 when its repositories are not cached yet and much less when they
@@ -375,6 +380,21 @@ languages; ~30 points). Re-run it to refresh the list and commit the result:
 ```sh
 GITHUB_TOKEN=... uv run python server/scripts/build_seeds.py --total 300
 ```
+
+Below its marker line, the list continues with blocks built by
+`scripts/build_seed_list.py` from free public lists, no GitHub search: GSoC
+2026 organisations (CNCF through its landscape), goodfirstissue.dev,
+awesome-for-beginners and up-for-grabs. It drops catalogues and farms by
+name, and `--check` drops repos that are gone, archived, forks, under 20 stars
+or not pushed since 2025 (one batched GraphQL pass, ~16 points). Each script
+keeps the other's part:
+
+```sh
+GITHUB_TOKEN=$(gh auth token) uv run python scripts/build_seed_list.py --check
+```
+
+With ~1,550 seeds a cold pass is about 1,550 × ~15 ≈ 23,000 points, so warm a
+new list in `--limit` steps over several days rather than in one pass.
 
 ## Tests
 

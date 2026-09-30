@@ -5,7 +5,7 @@ import { CLAIM_EVERY_DAYS, CONTACT_CITY, GITHUB_REPO_URL, PAYMENT_BRAND, WELCOME
 
 export const metadata: Metadata = {
   title: "Terms of Service",
-  description: "The rules for using Holt at githolt.com: what the service does, accounts, paid plans, and what we do and don't promise.",
+  description: "The rules for using Holt at githolt.com: what the service does, accounts, paid passes, and what we do and don't promise.",
   alternates: { canonical: "/terms" },
 };
 
@@ -74,15 +74,15 @@ export default function TermsPage() {
       <p>
         Rules reports, finding and comparing projects, badges and share images are free, and we intend to keep them free.
         Signed-in users also get free AI reports, as described in section 5. Some features are paid, or will be:
-        a subscription for more AI reports, or a pack of report credits.
+        Pro, sold as a pass that covers a set period.
       </p>
       <ul>
         <li>The price, currency and what you get are shown before you pay. Prices may include tax where the law requires it.</li>
         <li>Payments in Indian rupees are processed by <strong>Razorpay</strong>. Payments in US dollars are processed by <strong>Dodo Payments</strong>, which acts as the merchant of record for those purchases: Dodo Payments is the seller on your receipt and its terms also apply to the transaction.</li>
         <li>We never see or store your card, UPI or bank details. The payment processor handles them.</li>
-        <li>Subscriptions renew automatically at the end of each period until you cancel. You can cancel at any time, from your account settings or by email, and keep access until the end of the period you paid for.</li>
+        <li>A pass is a one-time payment. It doesn&rsquo;t renew and ends on its own at the end of its period.</li>
         <li>Cancellations and refunds follow our <Link href="/refunds" className="text-link">Refund and Cancellation Policy</Link>, which is part of these terms.</li>
-        <li>We may change prices or what a plan includes. Changes apply from your next renewal, and we&rsquo;ll tell you before they do.</li>
+        <li>We may change prices or what Pro includes. A price change doesn&rsquo;t affect a pass you&rsquo;ve already bought.</li>
       </ul>
 
       <h2>7. Reports, badges and the code</h2>

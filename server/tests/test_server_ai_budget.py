@@ -146,7 +146,8 @@ def test_a_finished_run_gives_back_what_it_didnt_spend(make_harness):
         assert h.wait(r.json()["job_id"])["status"] == "done"
     assert committed(h) == pytest.approx(5 * 0.0213)
     done = runs(h)
-    assert [(r.kind, r.cost_micros, r.estimated) for r in done] == [("analysis", 21300, False)] * 5
+    assert [(r.kind, r.cost_micros, r.estimated, r.model) for r in done] == [
+        ("analysis", 21300, False, "openai/gpt-5-mini")] * 5
     spend = h.get("/v1/admin/ai-spend", user=ADMIN).json()
     assert spend["line"] == "AI spend: $0.11 of $0.25"
     assert (spend["runs"], spend["running"], spend["held_usd"]) == (5, 0, 0)
@@ -262,6 +263,7 @@ def test_a_playbook_holds_the_budget_and_settles_on_what_the_service_said(hp):
     assert h.wait(r.json()["job_id"], kind="playbook-jobs")["status"] == "done"
     # 20k in at $0.25/M and 3k out at $2/M
     assert committed(h) == pytest.approx(0.011)
+    assert runs(h)[0].model == "gpt-5-mini"
 
 
 def test_a_playbook_the_budget_cant_cover_is_refused_and_not_charged(hp):
@@ -293,6 +295,15 @@ def test_pro_cost_reads_what_the_service_says():
                            ) == pytest.approx(0.003)
     assert budget.pro_cost({"usage": {"model": "some/model", "prompt_tokens": 1}}) is None
     assert budget.pro_cost({"cached": False}) is None
+
+
+def test_pro_model_reads_which_model_the_service_used():
+    assert budget.pro_model({"model": "openai/gpt-5-mini",
+                             "usage": {"model": "gpt-5-mini-2025-08-07"}}) == "gpt-5-mini-2025-08-07"
+    assert budget.pro_model({"model": "openai/gpt-5-mini"}) == "openai/gpt-5-mini"
+    assert budget.pro_model({"summary": {"model": "gpt-5-mini", "sentences": []}}) == "gpt-5-mini"
+    assert budget.pro_model({"summary": {"model": None, "sentences": []}}) is None
+    assert budget.pro_model({"cached": True}) is None
 
 
 # --- one report's model calls ----------------------------------------------------------

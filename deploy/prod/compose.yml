@@ -97,6 +97,12 @@ services:
       GITHUB_APP_INSTALLATION_ID: ${GITHUB_APP_INSTALLATION_ID:-}
       GITHUB_APP_PRIVATE_KEY_FILE: ${GITHUB_APP_PRIVATE_KEY_FILE:+/run/secrets/github_app_key}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      # The model provider, base URL and model, from secrets.env; unset keeps
+      # the server's defaults.
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-5-mini}
+      HOLT_MODEL_PROVIDER: ${HOLT_MODEL_PROVIDER:-}
+      HOLT_MODEL_REASONING_EFFORT: ${HOLT_MODEL_REASONING_EFFORT:-}
       # AI is OFF in production: a budget of 0. Only prod-named variables in
       # $HOLT_PROD_HOME/.env or secrets.env can change that (a
       # HOLT_AI_BUDGET_USD meant for staging never reaches here), and the
@@ -114,9 +120,18 @@ services:
       HOLT_JOB_TIMEOUT_FIND: ${HOLT_JOB_TIMEOUT_FIND:-300}
       # The warm pass (warm.sh) fills this cache for a day.
       HOLT_STARTER_CACHE_HOURS: ${HOLT_STARTER_CACHE_HOURS:-24}
+      # Every report's evidence, kept (holt_server/evidence_store.py), in
+      # $HOLT_PROD_HOME/evidence on /home, not the root disk. env.sh makes the
+      # directory; the server writes through its group (group_add). Keep days
+      # 0 = keep all. `warm.sh --stale-only` reuses snapshots this young.
+      HOLT_EVIDENCE_DIR: /data/evidence
+      HOLT_EVIDENCE_KEEP_DAYS: ${HOLT_EVIDENCE_KEEP_DAYS:-0}
+      HOLT_EVIDENCE_REUSE_HOURS: ${HOLT_EVIDENCE_REUSE_HOURS:-168}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    volumes:
+      - ${HOLT_PROD_HOME:?set by deploy.sh}/evidence:/data/evidence
     secrets: [github_app_key]
-    group_add: ["${HOLT_GITHUB_APP_KEY_GID:-10001}"]
+    group_add: ["${HOLT_GITHUB_APP_KEY_GID:-10001}", "${HOLT_EVIDENCE_GID:-65534}"]
     depends_on:
       db: { condition: service_healthy }
     # The image's own check, polled every second while it starts so

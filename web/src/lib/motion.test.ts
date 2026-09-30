@@ -64,7 +64,7 @@ test("prefersReducedMotion is false on the server", () => {
 // media query itself, so the setting reaches it.
 const COMPONENTS: [string, RegExp][] = [
   ["components/motion/smooth-scroll.tsx", /useReducedMotion\(\)[\s\S]*if \(reduced \|\|[\s\S]*\}, \[reduced\]\)/],
-  ["components/motion/cat-companion.tsx", /useReducedMotion\(\)[\s\S]*if \(reduced \|\|[\s\S]*\}, \[reduced\]\)/],
+  ["components/motion/cat-companion.tsx", /useReducedMotion\(\)[\s\S]*if \(reduced\b[\s\S]*\}, \[reduced\]\)/],
   ["components/motion/scroll-marquee.tsx", /useReducedMotion\(\)[\s\S]*if \(!el \|\| reduced\)[\s\S]*\}, \[reduced\]\)/],
   ["components/motion/count-up.tsx", /prefersReducedMotion\(\) \? "done"/],
   ["components/motion/swap-host.tsx", /useReducedMotion\(\)/],

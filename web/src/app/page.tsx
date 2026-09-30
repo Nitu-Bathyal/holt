@@ -107,7 +107,7 @@ export default async function Home() {
               {/* Desktop: room on the right for the companion cat, which starts there. */}
               <div className="fade-up mb-4 flex flex-wrap items-center gap-x-4 gap-y-2 low:mb-3 short:mb-2 lg:pr-[clamp(12rem,15.5vw,17rem)]" style={{ ["--d" as string]: ".1s" }}>
                 <p className="ls-kicker text-muted">
-                  <span className="text-blue">01</span> holt / free / for your first PR or your fiftieth
+                  <span className="text-blue">01</span> start here
                 </p>
                 {hf && <HacktoberfestPill year={hf.year} short={hf.short} />}
               </div>

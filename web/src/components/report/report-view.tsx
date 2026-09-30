@@ -215,7 +215,7 @@ export function ReportView({
             )}
             {report.summary && <p className="mt-2 font-sans text-[1.02rem] leading-relaxed text-ink">{report.summary}</p>}
             <p className="mt-2 text-[0.8rem] text-faint">
-              Written by {report.cost?.model ?? "a model"} from the evidence below. The rules picked the verdict.
+              Written by AI from the evidence below. The rules picked the verdict.
             </p>
           </div>
         )}
