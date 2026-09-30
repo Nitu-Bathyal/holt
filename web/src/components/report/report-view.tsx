@@ -42,9 +42,10 @@ export function Section({ n, title, id, children, note, reveal }: { n?: string; 
 
 /**
  * `land`: the answer just arrived on this page (the expressive design plan,
- * pattern 4): the verdict's bar draws, the headline stamps down (desktop only;
- * it's the largest paint, so it never fades and never moves on phones) and the
- * cat reacts. A report read again is still.
+ * pattern 4): the verdict's bar draws and the cat reacts. A report read again
+ * is still. The card is short on purpose: the verdict, the reason, the
+ * numbers and what to do fit in one screen, with the project and its issues
+ * starting just below, so a visitor scrolls as little as possible.
  */
 export function VerdictHero({ report, reveal, land }: { report: Report; reveal?: boolean; land?: boolean }) {
   // Every sentence here comes from the server, derived there from the verdict,
@@ -54,31 +55,32 @@ export function VerdictHero({ report, reveal, land }: { report: Report; reveal?:
   return (
     <div className="relative overflow-hidden border border-line-strong bg-panel shadow-card" data-verdict-hero>
       <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${t.bg} ${land ? "land-bar" : ""}`} />
-      <div className="p-5 pl-6 sm:p-8 sm:pl-10">
-        <div className="flex items-center justify-between gap-4 text-[0.8rem] uppercase tracking-[0.08em] text-faint">
-          <span>verdict · {report.mode === "ai" ? "AI report" : "rules report"} · {report.days}-day budget</span>
+      <div className="p-4 pl-5 sm:p-5 sm:pl-7">
+        <div className="flex items-center justify-between gap-3">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <h1 className={`inline-flex items-center gap-2 border px-2.5 py-1 text-[0.95rem] font-semibold sm:text-[1rem] ${t.text} ${t.border} ${t.soft}`}>
+              <span aria-hidden="true" className={`size-1.5 rounded-full ${t.bg}`} />
+              {report.headline}
+            </h1>
+            <span className="text-[0.78rem] uppercase tracking-[0.08em] text-faint">{report.mode === "ai" ? "AI report" : "rules report"} · {report.days}-day budget</span>
+          </div>
           <span className={reveal ? "reveal" : ""}>
             {land ? (
-              <VerdictCat mood={TONE_MOOD[report.tone]} className="text-[1.1rem] normal-case tracking-normal sm:text-[1.5rem]" />
+              <VerdictCat mood={TONE_MOOD[report.tone]} className="text-[1rem] normal-case tracking-normal sm:text-[1.2rem]" />
             ) : (
-              <CatFace mood={TONE_MOOD[report.tone]} blink className="text-[1.1rem] normal-case tracking-normal sm:text-[1.5rem]" />
+              <CatFace mood={TONE_MOOD[report.tone]} blink className="text-[1rem] normal-case tracking-normal sm:text-[1.2rem]" />
             )}
           </span>
         </div>
-        {/* The largest paint: on phones it never animates, on desktop it only moves. */}
-        <h1 className={`display mt-4 text-[2.6rem] sm:text-[4rem] ${t.text} ${land ? "land-stamp" : reveal ? "reveal-lcp" : ""}`}>
-          {report.headline}
-          <span className="text-ink">.</span>
-        </h1>
-        <p className={`mt-4 max-w-2xl font-sans text-[1.05rem] leading-relaxed text-ink sm:text-[1.15rem] ${reveal ? "reveal-lcp" : ""}`} data-line="reason">
+        <p className={`mt-3 max-w-3xl font-sans text-[1rem] leading-snug text-ink sm:text-[1.05rem] ${reveal ? "reveal-lcp" : ""}`} data-line="reason">
           {report.verdict_line}
         </p>
 
-        <dl className="mt-6 max-w-2xl border-t border-dashed border-line-strong">
+        <dl className="mt-3 grid gap-x-8 border-t border-dashed border-line-strong sm:grid-cols-2">
           <TopLine label="the numbers" name="numbers">
             <p>{report.numbers_line}</p>
             {report.first_timer_line && (
-              <p className="mt-2 font-medium" data-line="first-timers">
+              <p className="mt-1.5 font-medium" data-line="first-timers">
                 {report.first_timer_line}
               </p>
             )}
@@ -88,12 +90,13 @@ export function VerdictHero({ report, reveal, land }: { report: Report; reveal?:
           </TopLine>
         </dl>
 
-        <HowCounted report={report} />
-
-        <p className="mt-5 text-[0.82rem] text-faint">
-          {report.evidence_until && <>data until {shortDate(report.evidence_until)} · </>}checked{" "}
-          <time dateTime={report.generated_at} suppressHydrationWarning>{timeAgo(report.generated_at)}</time>
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
+          <p className="text-[0.78rem] text-faint">
+            {report.evidence_until && <>data until {shortDate(report.evidence_until)} · </>}checked{" "}
+            <time dateTime={report.generated_at} suppressHydrationWarning>{timeAgo(report.generated_at)}</time>
+          </p>
+          <HowCounted report={report} />
+        </div>
       </div>
     </div>
   );
@@ -101,9 +104,9 @@ export function VerdictHero({ report, reveal, land }: { report: Report; reveal?:
 
 function TopLine({ label, name, children }: { label: string; name: string; children: React.ReactNode }) {
   return (
-    <div className="grid gap-1 border-b border-dashed border-line-strong py-4 sm:grid-cols-[8.5rem_minmax(0,1fr)] sm:gap-5" data-line={name}>
-      <dt className="text-[0.85rem] text-faint sm:pt-[0.2rem]">{label}</dt>
-      <dd className="font-sans text-[0.98rem] leading-relaxed text-ink">{children}</dd>
+    <div className="grid gap-0.5 py-3" data-line={name}>
+      <dt className="text-[0.78rem] uppercase tracking-[0.08em] text-faint">{label}</dt>
+      <dd className="font-sans text-[0.93rem] leading-snug text-ink">{children}</dd>
     </div>
   );
 }
@@ -111,7 +114,7 @@ function TopLine({ label, name, children }: { label: string; name: string; child
 /** "How this was counted": closed by default, for anyone who wants to check the working. */
 function HowCounted({ report }: { report: Report }) {
   return (
-    <details className="group mt-4 max-w-2xl" data-how-counted>
+    <details className="group max-w-2xl" data-how-counted>
       <summary className="inline-flex min-h-[44px] cursor-pointer list-none items-center gap-[0.6ch] text-[0.88rem] text-muted hover:text-ink focus-visible:text-ink [&::-webkit-details-marker]:hidden">
         <span aria-hidden="true" className="text-green">
           [<span className="inline-block w-[1ch] text-center group-open:hidden">+</span>
@@ -119,7 +122,7 @@ function HowCounted({ report }: { report: Report }) {
         </span>
         how this was counted
       </summary>
-      <dl className="mt-2 space-y-4 border-l border-line-strong pl-4 sm:pl-5">
+      <dl className="mb-3 mt-1 space-y-4 border-l border-line-strong pl-4 sm:pl-5">
         {report.counted.map((c) => (
           <div key={c.topic}>
             <dt className="text-[0.85rem] text-faint">{c.topic.toLowerCase()}</dt>
@@ -188,25 +191,27 @@ export function ReportView({
   const viable = report.verdict === "viable";
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-10">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-8">
       {!example && <Track event="report-view" data={{ verdict: report.verdict, mode: report.mode, repo }} />}
-      <div className="min-w-0 space-y-10">
+      <div className="min-w-0 space-y-6">
         <VerdictHero report={report} reveal={reveal} land={land} />
 
         {(report.bottom_line || report.summary) && (
-          <div className="border-l-2 border-blue pl-5" data-ai-explanation>
-            <p className="text-[0.8rem] uppercase tracking-[0.08em] text-blue">AI explanation</p>
+          <div className="border-l-2 border-blue pl-4" data-ai-explanation>
+            <p className="text-[0.75rem] uppercase tracking-[0.08em] text-blue">AI explanation</p>
             {report.bottom_line && (
-              <p className="mt-2 font-sans text-[1.12rem] font-medium leading-relaxed text-ink" data-bottom-line>
+              <p className="mt-1.5 font-sans text-[1rem] font-medium leading-snug text-ink" data-bottom-line>
                 {report.bottom_line}
               </p>
             )}
-            {report.summary && <p className="mt-2 font-sans text-[1.02rem] leading-relaxed text-ink">{report.summary}</p>}
-            <p className="mt-2 text-[0.8rem] text-faint">
+            {report.summary && <p className="mt-1.5 font-sans text-[0.93rem] leading-snug text-ink">{report.summary}</p>}
+            <p className="mt-1.5 text-[0.75rem] text-faint">
               Written by AI from the evidence below. The rules picked the verdict.
             </p>
           </div>
         )}
+
+        {report.about && <ProjectSection about={report.about} />}
 
         <div className="lg:hidden">
           <ShareBar url={url} text={shareText} />
