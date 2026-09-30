@@ -157,7 +157,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
           )}
           {/* A failed lookup shows "save"; saving again is harmless. Keyed so
               moving to another repo's report starts from that repo's state. */}
-          <SaveButton key={display} repo={display} saved={user ? Boolean(saved?.ok && saved.data.saved) : null} />
+          <SaveButton small key={display} repo={display} saved={user ? Boolean(saved?.ok && saved.data.saved) : null} />
           <nav aria-label="Report type" className="relative grid w-full grid-cols-2 border border-line-strong text-center text-[0.85rem] sm:w-auto">
             {/* One pill under both tabs; it slides to the current one. */}
             <span aria-hidden="true" className={`tab-pill absolute inset-y-0 left-0 w-1/2 ${mode === "ai" ? "translate-x-full bg-blue" : "bg-ink"}`} />
