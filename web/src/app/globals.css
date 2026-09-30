@@ -764,7 +764,7 @@
     top: 12px;
     left: 12px;
     z-index: 100;
-    padding: 9px 12px;
+    padding: 10px 12px;
     color: var(--on-accent);
     background: var(--blue);
     transform: translateY(-160%);
@@ -2085,35 +2085,219 @@
 :root {
   --topbar-h: 61px; /* 60px bar + its 1px rule */
   --rail-w: 15rem;
+  /* Folded: 8px, a 44px square item, 8px. The icons sit 22px in either way,
+     under the top bar's toggle, so nothing moves sideways but the edge. */
+  --rail-w-folded: 3.75rem;
+  --rail-bg: color-mix(in srgb, var(--panel-2) 55%, var(--bg));
+  /* The app frame (.app-page). The default grows a little past 1920px so an
+     ultrawide screen isn't mostly margin; the start gutter clears the top
+     bar's rail toggle (8px + 44px + 12px) from lg. */
+  --frame-max: clamp(76rem, 34rem + 35vw, 90rem);
+  --frame-max-wide: 120rem;
+  --frame-pad: clamp(16px, 4vw, 48px);
+  --frame-pad-start: var(--frame-pad);
+}
+@media (min-width: 1024px) {
+  :root {
+    --frame-pad-start: 64px;
+  }
 }
 
 @layer components {
+  /* The rail runs the full height on desktop, on its own surface a shade off
+     the page, with a hairline and a little depth on its edge. Its box takes
+     a new width at once, so the page reflows once (rail-toggle.tsx slides
+     the column across); the panel inside eases to it. */
   .app-rail {
+    --w: var(--rail-w);
     position: sticky;
-    top: var(--topbar-h);
+    top: 0;
+    z-index: 30;
     display: none;
-    height: calc(100dvh - var(--topbar-h));
-    width: var(--rail-w);
+    height: 100dvh;
+    width: var(--w);
     flex-shrink: 0;
-    flex-direction: column;
-    overflow-y: auto;
-    border-right: 1px solid var(--line);
-    background: var(--header);
-    padding: 20px 10px 14px;
+  }
+  :root[data-rail="collapsed"] .app-rail {
+    --w: var(--rail-w-folded);
   }
   @media (min-width: 1024px) {
     .app-rail {
-      display: flex;
+      display: block;
+    }
+  }
+  .rail-panel {
+    position: absolute;
+    inset: 0 auto 0 0;
+    display: flex;
+    width: var(--w);
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--rail-bg);
+    box-shadow:
+      inset -1px 0 0 var(--line),
+      12px 0 28px -26px rgb(0 0 0 / 0.45);
+  }
+  .rail-body {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    overflow: hidden auto;
+    padding: 16px 8px 12px;
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .rail-panel {
+      transition: width var(--dur-slow) var(--ease-move);
+    }
+    /* Opening, the words fade in once there's room for them. */
+    .rail-panel :is(.side-label, .rail-word, .side-credits, .side-legal) {
+      transition: opacity var(--dur-fast) var(--ease-out) var(--dur-base);
     }
   }
 
-  /* A sidebar item: icon and label, 44px tall to tap. */
+  /* The top of the rail: Holt's cat and name, on the top bar's line. */
+  .rail-brand {
+    display: flex;
+    height: var(--topbar-h);
+    flex-shrink: 0;
+    align-items: center;
+    border-bottom: 1px solid var(--line);
+    padding-inline: 8px;
+  }
+  .rail-logo {
+    position: relative;
+    display: flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 10px;
+    padding-inline: 10px;
+    white-space: nowrap;
+  }
+  .rail-cat {
+    color: var(--blue);
+    font-size: 1.1rem;
+  }
+  .rail-word {
+    font-size: 1rem;
+    font-weight: 650;
+    letter-spacing: -0.02em;
+  }
+  .rail-mark {
+    display: none;
+    width: 24px;
+    height: 24px;
+    color: var(--blue);
+  }
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .rail-mark-ears {
+      transition: transform var(--dur-fast) var(--ease-out);
+    }
+    .rail-logo:hover .rail-mark-ears {
+      transform: translateY(-5px);
+    }
+  }
+
+  /* Folded: icons only. Each label becomes its item's tooltip on hover and
+     keyboard focus (it stays the link's name for screen readers), badges
+     become dots, and the cat's glyph gives way to its drawn mark. */
+  :root[data-rail="collapsed"] :is(.rail-panel, .rail-body) {
+    overflow: visible;
+  }
+  :root[data-rail="collapsed"] .rail-panel :is(.side-group-label, .side-sub, .side-credits, .side-legal, .rail-cat) {
+    display: none;
+  }
+  :root[data-rail="collapsed"] .rail-mark {
+    display: block;
+  }
+  :root[data-rail="collapsed"] .rail-logo {
+    padding-inline: 10px;
+  }
+  :root[data-rail="collapsed"] .rail-word {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    transition: none;
+  }
+  :root[data-rail="collapsed"] .rail-panel .side-label {
+    position: absolute;
+    top: 50%;
+    left: calc(100% + 10px);
+    translate: 0 -50%;
+    opacity: 0;
+    pointer-events: none;
+    transition: none;
+  }
+  :root[data-rail="collapsed"] .rail-panel .side-item:is(:hover, :focus-visible) .side-label {
+    opacity: 1;
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+  :root[data-rail="collapsed"] .rail-panel .side-badge {
+    position: absolute;
+    top: 8px;
+    left: 30px;
+    min-width: 0;
+    width: 10px;
+    height: 10px;
+    padding: 0;
+    border: 2px solid var(--rail-bg);
+    font-size: 0;
+  }
+  :root[data-rail="collapsed"] .rail-panel .side-badge[data-tone="leaf"] {
+    background: var(--green);
+  }
+  :root[data-rail="collapsed"] .rail-panel .side-badge svg {
+    display: none;
+  }
+
+  /* A small dark label: the folded rail's names and the toggle's hint. */
+  .tip,
+  :root[data-rail="collapsed"] .rail-panel .side-label {
+    z-index: 50;
+    border-radius: 5px;
+    background: var(--ink);
+    color: var(--bg);
+    padding: 4px 8px;
+    font-size: 0.76rem;
+    font-weight: 500;
+    line-height: 1.4;
+    white-space: nowrap;
+    box-shadow: var(--shadow);
+  }
+  .tip {
+    position: absolute;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+  .tip-below {
+    top: calc(100% + 4px);
+    left: 0;
+  }
+  .tip kbd {
+    margin-left: 6px;
+    border: 1px solid color-mix(in srgb, var(--bg) 35%, transparent);
+    border-radius: 3px;
+    padding: 0 4px;
+    font-family: inherit;
+    font-size: 0.72rem;
+  }
+  :is(:hover, :focus-visible) > .tip {
+    opacity: 1;
+  }
+  .rail-toggle {
+    position: relative;
+  }
+
+  /* A sidebar item: icon and label in a soft pill. The page you're on gets
+     a blue tint, a blue icon and an accent bar on the rail's edge. */
   .side-item {
     position: relative;
     display: flex;
     min-height: 44px;
     align-items: center;
     gap: 12px;
+    border-radius: 6px;
     padding-inline: 12px;
     color: var(--muted);
     font-size: 0.86rem;
@@ -2122,20 +2306,68 @@
       color var(--dur-fast) var(--ease-out),
       background-color var(--dur-fast) var(--ease-out);
   }
+  .rail-panel .side-item {
+    min-height: 40px;
+  }
+  .side-icon {
+    display: grid;
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+    place-items: center;
+    transition: color var(--dur-fast) var(--ease-out);
+  }
   .side-item:hover {
     color: var(--ink);
-    background: var(--panel-2);
+    background: color-mix(in srgb, var(--ink) 5%, transparent);
+  }
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .side-icon {
+      transition:
+        color var(--dur-fast) var(--ease-out),
+        translate var(--dur-fast) var(--ease-out);
+    }
+    :root:not([data-rail="collapsed"]) .side-item:hover .side-icon,
+    .drawer .side-item:hover .side-icon {
+      translate: 2px 0;
+    }
   }
   .side-item[aria-current="page"] {
     color: var(--ink);
-    background: var(--panel-2);
+    background: color-mix(in srgb, var(--blue) 11%, transparent);
+    font-weight: 600;
+  }
+  .side-item[aria-current="page"] .side-icon {
+    color: var(--blue);
   }
   .side-item[aria-current="page"]::before {
     position: absolute;
-    inset: 8px auto 8px 0;
-    width: 2px;
+    inset: 9px auto 9px -8px;
+    width: 3px;
+    border-radius: 0 3px 3px 0;
     background: var(--blue);
     content: "";
+  }
+  /* A count that needs you (orange, as on Your pull requests) or a season's mark. */
+  .side-badge {
+    display: inline-grid;
+    min-width: 20px;
+    height: 18px;
+    margin-left: auto;
+    place-items: center;
+    border-radius: 9px;
+    padding-inline: 5px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
+  }
+  .side-badge[data-tone="needs"] {
+    background: var(--orange);
+    color: var(--on-accent);
+  }
+  .side-badge[data-tone="leaf"] {
+    color: var(--green);
   }
   .side-group-label {
     padding: 0 12px 6px;
@@ -2165,6 +2397,49 @@
     color: var(--ink);
   }
 
+  /* The foot: you, your AI reports, then the small print. */
+  .side-foot {
+    margin-top: auto;
+    border-top: 1px solid var(--line);
+    padding-top: 10px;
+  }
+  .side-you {
+    color: var(--ink);
+  }
+  .side-you .side-label {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .side-credits {
+    display: inline-flex;
+    margin: 4px 0 0 12px;
+    border: 1px solid var(--line-strong);
+    border-radius: 999px;
+    padding: 2px 10px;
+    color: var(--muted);
+    font-size: 0.74rem;
+    white-space: nowrap;
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      border-color var(--dur-fast) var(--ease-out);
+  }
+  .side-credits:hover {
+    border-color: var(--blue);
+    color: var(--ink);
+  }
+  .side-legal {
+    display: flex;
+    gap: 12px;
+    padding: 12px 12px 0;
+    color: var(--faint);
+    font-size: 0.74rem;
+    white-space: nowrap;
+  }
+  .side-legal a:hover {
+    color: var(--ink);
+  }
+
   /* The phone and tablet drawer: the sidebar, sliding in from the left. */
   .drawer[popover] {
     position: fixed;
@@ -2178,9 +2453,9 @@
     overflow-y: auto;
     border: 0;
     border-right: 1px solid var(--line-strong);
-    background: var(--header);
+    background: var(--rail-bg);
     color: var(--ink);
-    padding: 16px 10px;
+    padding: 16px 8px;
     box-shadow: var(--shadow);
     transition:
       translate var(--dur-exit) var(--ease-in),
@@ -2204,6 +2479,26 @@
   .drawer[popover]::backdrop {
     background: rgb(0 0 0 / 0.2);
   }
+  /* The page stays put under an open drawer, and its links are thumb-sized. */
+  :root:has(#app-drawer:popover-open) {
+    overflow: hidden;
+  }
+  .drawer .side-subitem {
+    min-height: 44px;
+  }
+  .drawer .side-legal a {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+  }
+  .drawer .side-credits {
+    position: relative;
+  }
+  .drawer .side-credits::after {
+    position: absolute;
+    inset: -9px -4px;
+    content: "";
+  }
   .site-header:has(#app-drawer:popover-open) .icon-open {
     display: none;
   }
@@ -2211,18 +2506,105 @@
     display: block;
   }
 
-  /* A section on an app page: heading left, one quiet link right. */
-  /* One frame for every app page: the same left edge and width, so content
-     never jumps sideways between pages (docs/design/DASHBOARD.md). */
-  .app-page {
+  /* One frame for every app page (docs/design/DASHBOARD.md, "The frame"):
+     the page sits in the column beside the rail, fills it up to its width
+     and centres once the screen is wider, so there's no dead band on one
+     side. Two widths: the default for your things, rows, forms and reading,
+     and `data-frame="wide"` for grids and tables, which add columns as
+     they get room. The top bar's check box starts at the frame's edge
+     (.app-bar-frame follows the page's width). */
+  .app-page,
+  .app-bar-frame {
+    --frame: var(--frame-max);
     width: 100%;
-    max-width: 72rem;
-    padding: 0 clamp(16px, 4vw, 48px) 72px;
-  }
-  /* Public app pages (find a project) signed out: no sidebar, so centre the frame. */
-  [data-shell="marketing"] .app-page {
+    max-width: calc(var(--frame) + var(--frame-pad-start) + var(--frame-pad));
     margin-inline: auto;
   }
+  .app-page {
+    padding: 0 var(--frame-pad) 72px var(--frame-pad-start);
+  }
+  .app-page[data-frame="wide"],
+  #app-column:has(.app-page[data-frame="wide"]) .app-bar-frame {
+    --frame: var(--frame-max-wide);
+  }
+  /* Pages built on the marketing .wrap (a report, examples) take the same
+     frame when they're shown in the app shell, so their edge matches. */
+  #app-column .wrap {
+    --frame: var(--frame-max);
+    width: 100%;
+    max-width: calc(var(--frame) + var(--frame-pad-start) + var(--frame-pad));
+    padding-inline: var(--frame-pad-start) var(--frame-pad);
+  }
+  /* Signed out (find a project), there's no rail toggle to clear. */
+  [data-shell="marketing"] .app-page {
+    --frame-pad-start: var(--frame-pad);
+  }
+  /* ...and the marketing header lines up with the page's frame. */
+  :root:has([data-shell="marketing"] .app-page) .site-header .wrap {
+    --frame: var(--frame-max);
+    width: 100%;
+    max-width: calc(var(--frame) + 2 * var(--frame-pad));
+    padding-inline: var(--frame-pad);
+  }
+  :root:has([data-shell="marketing"] .app-page[data-frame="wide"]) .site-header .wrap {
+    --frame: var(--frame-max-wide);
+  }
+
+  /* The top bar: menu and logo, the check box, then theme and account.
+     From lg the rail carries the logo; the rail toggle sits in the frame's
+     start gutter, the check box at the frame's edge, and theme and account
+     at the column's end. All three share one grid cell, so none of them
+     pushes the others. */
+  .app-bar {
+    display: flex;
+    min-height: 60px;
+    align-items: center;
+    gap: 12px;
+    padding-inline: 16px;
+  }
+  .app-bar-frame {
+    display: flex;
+    min-width: 0;
+    flex: 1;
+    justify-content: center;
+    padding-inline: 8px;
+  }
+  @media (min-width: 1024px) {
+    .app-bar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      padding-inline: 0;
+    }
+    .app-bar > * {
+      grid-area: 1 / 1;
+    }
+    .app-bar > .rail-toggle {
+      z-index: 1;
+      justify-self: start;
+      margin-left: 8px;
+    }
+    .app-bar-end {
+      z-index: 1;
+      justify-self: end;
+      margin-right: 20px;
+    }
+    .app-bar-frame {
+      justify-content: flex-start;
+      /* Room for theme and account, which sit over the frame's end. */
+      padding: 0 max(var(--frame-pad), 9rem) 0 var(--frame-pad-start);
+    }
+  }
+
+  /* Cards for discovery: one column on a phone, then as many as fit at
+     18rem or more, up to --cols (5 by default). */
+  .card-grid {
+    --cols: 5;
+    --gap: 16px;
+    display: grid;
+    gap: var(--gap);
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, max(18rem, (100% - (var(--cols) - 1) * var(--gap)) / var(--cols))), 1fr));
+  }
+
   .app-head {
     padding: clamp(28px, 6svh, 64px) 0 28px;
   }
@@ -2251,7 +2633,8 @@
   }
 
   /* Your things as rows: an optional state colour on the left (--rule),
-     the facts, actions on the right. Discovery uses cards instead. */
+     the facts, actions on the right (under them on a phone with data-stack,
+     further down). Discovery uses cards instead. */
   .app-row {
     position: relative;
     display: grid;
@@ -2472,6 +2855,175 @@
     .app-card:hover {
       translate: 0 -2px;
     }
+  }
+
+  /* /compare: one table, a column per repo, a row per number, so the eye runs
+     straight across. Each row is a subgrid of the table, so cells line up
+     however much a column says. Phones: the row's label sits above its
+     numbers, and three or four columns swipe a column at a time. */
+  .cmp-scroll {
+    /* Also the box for the screen-reader-only labels, so they're clipped too. */
+    position: relative;
+    overflow-x: auto;
+    overscroll-behavior-x: contain;
+    scrollbar-width: thin;
+  }
+  .cmp {
+    --col: 0px;
+    display: grid;
+    grid-template-columns: repeat(var(--n), minmax(max(var(--col), 0px), 1fr));
+    border-top: 1px solid var(--line-strong);
+  }
+  .cmp-scroll[data-many] .cmp {
+    --col: 9.5rem;
+  }
+  .cmp-row {
+    display: grid;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    border-bottom: 1px solid var(--line);
+    transition: background-color var(--dur-fast) var(--ease-out);
+  }
+  .cmp-row:not(.cmp-head, .cmp-foot):hover {
+    background: color-mix(in srgb, var(--ink) 3%, transparent);
+  }
+  .cmp-head {
+    border-bottom-color: var(--line-strong);
+  }
+  .cmp-foot {
+    border-bottom: 0;
+  }
+  .cmp-cell {
+    min-width: 0;
+    padding: 14px 12px;
+  }
+  .cmp-foot .cmp-cell {
+    padding-block: 4px;
+  }
+  .cmp-label {
+    grid-column: 1 / -1;
+    padding: 12px 12px 0;
+    color: var(--muted);
+    font-family: var(--font-sans);
+    font-size: 0.8rem;
+  }
+  .cmp-label + .cmp-cell {
+    grid-column-start: 1;
+  }
+  .cmp-corner {
+    display: none;
+  }
+  .cmp-main {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 6px;
+    font-size: 1.02rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    overflow-wrap: anywhere;
+  }
+  .cmp-sub {
+    display: block;
+    margin-top: 2px;
+    color: var(--faint);
+    font-size: 0.78rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .cmp-best {
+    color: var(--green);
+    font-size: 0.62rem;
+  }
+  /* About the project (stars first): context under the numbers Holt reads,
+     set off by a stronger rule. Stars get the room; nothing here is "best". */
+  .cmp-row[data-about="first"] {
+    border-top: 1px solid var(--line-strong);
+  }
+  .cmp-stars {
+    font-size: 1.12rem;
+  }
+  @media (max-width: 639px) {
+    /* Phones: the table runs to the screen's edges, labels stay in view as
+       the columns slide under them. */
+    .cmp-scroll {
+      margin-inline: -16px;
+      padding-inline: 16px;
+      scroll-padding-inline: 16px;
+    }
+    .cmp-scroll[data-many] {
+      scroll-snap-type: x mandatory;
+    }
+    .cmp-col-head {
+      scroll-snap-align: start;
+    }
+    .cmp-label > span {
+      position: sticky;
+      left: 12px; /* the cell's padding: sticky already stops at the scroller's */
+      display: inline-block;
+    }
+    .cmp-cell {
+      padding-top: 6px;
+    }
+    .cmp-head .cmp-cell {
+      padding-top: 14px;
+    }
+  }
+  @media (min-width: 640px) {
+    .cmp {
+      grid-template-columns: 11rem repeat(var(--n), minmax(max(var(--col), 0px), 1fr));
+    }
+    .cmp-scroll:not([data-many]) .cmp {
+      --col: 0px;
+    }
+    .cmp-label {
+      grid-column: 1;
+      padding: 14px 12px;
+    }
+    .cmp-label + .cmp-cell {
+      grid-column-start: 2;
+    }
+    .cmp-corner {
+      display: flex;
+      align-items: flex-end;
+      font-size: 0.76rem;
+    }
+  }
+}
+
+/* A text link that stands alone gets a 44px tall hit area without moving its
+   text or its underline (.text-link draws the underline as a border). Keep
+   about 10px clear above and below it. */
+@utility tap {
+  position: relative;
+  &::after {
+    position: absolute;
+    top: 50%;
+    right: 0;
+    left: 0;
+    height: 44px;
+    translate: 0 -50%;
+    content: "";
+  }
+}
+
+/* Rows that stack (data-stack on the row, or on its list): below sm the last
+   child, the actions, drops under the facts, so a phone never squeezes a repo
+   name or a title into a sliver beside a pill and a button. Unlayered, because
+   a row's columns come from a grid-cols utility. A leading checkbox keeps its
+   column. */
+@media (max-width: 639.98px) {
+  .app-row:is([data-stack], [data-stack] > *) {
+    grid-template-columns: minmax(0, 1fr);
+    row-gap: 10px;
+  }
+  .app-row:is([data-stack], [data-stack] > *):has(> :first-child:is(input, label)) {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+  .app-row:is([data-stack], [data-stack] > *) > :last-child:not(:first-child) {
+    grid-column: -2 / -1;
+    justify-self: start;
+  }
+  .app-row:is([data-stack], [data-stack] > *)[data-rule] > :last-child:not(:first-child) {
+    margin-left: 8px;
   }
 }
 @keyframes cat-land {

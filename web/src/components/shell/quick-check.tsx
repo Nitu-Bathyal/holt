@@ -1,11 +1,14 @@
 "use client";
 // A small repo box: type or paste a repo, press enter, read its report. In the
 // top bar on every app page ("bar", from md up), and on the home below md,
-// where the top bar has no room for it ("inline").
-import { useRouter } from "next/navigation";
-import { useState } from "react";
+// where the top bar has no room for it ("inline"). An unreadable entry gets a
+// hint that goes as soon as you type, leave the box or change page
+// (lib/quick-check.ts).
+import { usePathname, useRouter } from "next/navigation";
+import { useReducer, useState } from "react";
 import { track } from "@/lib/analytics";
 import { pasteHref } from "@/lib/gate";
+import { hintState, nextHint } from "@/lib/quick-check";
 import { parseRepoInput } from "@/lib/repo";
 
 export function QuickCheck({ variant = "bar" }: { variant?: "bar" | "inline" }) {
@@ -13,7 +16,11 @@ export function QuickCheck({ variant = "bar" }: { variant?: "bar" | "inline" }) 
   const id = bar ? "bar-repo" : "home-repo";
   const router = useRouter();
   const [value, setValue] = useState("");
-  const [bad, setBad] = useState(false);
+  const pathname = usePathname();
+  const [hint, send] = useReducer(nextHint, pathname, hintState);
+  // The box outlives the page: a new page starts without the hint.
+  if (hint.path !== pathname) send({ type: "route", path: pathname });
+  const bad = hint.shown && hint.path === pathname;
 
   return (
     <form
@@ -22,11 +29,18 @@ export function QuickCheck({ variant = "bar" }: { variant?: "bar" | "inline" }) 
       onSubmit={(e) => {
         e.preventDefault();
         const ref = parseRepoInput(value);
-        if (!ref) return setBad(true);
+        send({ type: "submit", valid: !!ref });
+        if (!ref) return;
         track("paste-submit", { repo: `${ref.owner}/${ref.repo}`, from: variant });
         setValue("");
         // Only signed-in people see this box; same rule as every paste box.
         router.push(pasteHref(`${ref.owner}/${ref.repo}`, true));
+      }}
+      onBlur={(e) => {
+        if (!e.currentTarget.contains(e.relatedTarget)) send({ type: "leave" });
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Escape" && bad) send({ type: "leave" });
       }}
       className={`relative w-full items-center border border-line-strong bg-panel transition-colors focus-within:border-blue ${bar ? "hidden max-w-xl md:flex" : "flex max-w-xl"}`}
     >
@@ -37,7 +51,7 @@ export function QuickCheck({ variant = "bar" }: { variant?: "bar" | "inline" }) 
         value={value}
         onChange={(e) => {
           setValue(e.target.value);
-          if (bad) setBad(false);
+          send({ type: "input" });
         }}
         aria-invalid={bad || undefined}
         aria-describedby={bad ? `${id}-error` : undefined}

@@ -105,7 +105,7 @@ Primary sources, read 29 Sep. Full notes stay out of the repo; the links are bel
 ## The structure
 
 ```
-TOP BAR     holt   [$ check a repo: owner/name]  (press /)          (avatar ▾)
+TOP BAR     (rail: holt)  ▯ [$ check a repo: owner/name]  (press /)  (avatar ▾)
                                                                      AI reports: 3 left
 SIDEBAR     ⌂ Home               /me                                 Settings
             ⌕ Find a project     /find · /discover · /hacktoberfest  How Holt works
@@ -113,7 +113,7 @@ SIDEBAR     ⌂ Home               /me                                 Settings
             ▯ Your repos         /me/repos  (saved + checked)
             ▥ Compare            /compare
             ─────
-            Privacy · Terms · GitHub ↗        « fold
+            (you) · 3 AI reports left · Privacy · Terms · GitHub ↗
 ```
 
 Five places, down from twelve. The check box is in the top bar on every app page,
@@ -158,11 +158,30 @@ Derived from the landing (EXPRESSIVE.md), at working size:
 - **Page head:** one sentence that answers the page, in the landing's mono display
   (`clamp(1.9rem, 3.6vw, 3rem)`), left-aligned, the cat on the right reacting to the
   state. The marker highlight is home-only. No lead line unless it adds a fact.
-- **One frame:** every page shares the same left edge and max width (72rem). No
-  centred narrow columns, no tinted heads.
+- **One frame:** `.app-page` in the column beside the rail. It fills the
+  column up to its width, then centres, so a big screen never has a dead band
+  on one side. Two widths: the default (76rem of content, growing to 90rem
+  past 1920px) for your things, rows, forms, compare and reading, and `data-frame="wide"` (120rem) for card
+  grids (Find a project's tabs). Pages on the marketing `.wrap` (a report,
+  examples) take the default frame inside the app. From `lg` the start gutter
+  is 64px, the rail toggle sits in it, and the top bar's check box starts at
+  the frame's edge (`.app-bar-frame`, which follows the page's width).
+  Signed out, the marketing header's edges follow the frame too. Card
+  grids are `.card-grid`: one column on a phone, then as many 18rem columns
+  as fit, up to `--cols` (5; the home's picks use 3). No tinted heads.
 - **Two card families.** *Rows* for your things (PRs, your repos): a state rule on
   the left, the fact, one action on the right. *Cards* for discovery (picks, boards):
   verdict, odds bar, the reason, one starter issue. Your own work is never a grid of boxes.
+  A row whose actions are wider than a chevron takes `data-stack` (on the row
+  or on its list): below `sm`
+  the actions drop under the fact, so a phone never squeezes the name into a
+  sliver. When a row has one main link, it is stretched over the row
+  (`after:absolute after:inset-0`), and anything else in the row sits above
+  it (`relative z-10`).
+- **Phones get 44px targets.** Buttons, chips and segments are `min-h-11`
+  below `sm` (they may drop to 40px from `sm`). A standalone text link takes
+  `tap`, which grows its hit area to 44px without moving the text or its
+  underline; keep about 10px clear above and below it.
 - **Section head:** h2 plus a faint count, one quiet link on the right. No eyebrows.
 - **Colour means something:** green is the page's one primary action. Verdict
   colours only on verdicts. PR states: *needs you* orange, *waiting* blue, *merged*
@@ -209,7 +228,12 @@ settings and pre-flight aren't drawn: they keep their pages and take the new fra
    itself (`[data-shell="marketing"]`).
 6. **Compare, settings, AI reports, pre-flight:** the new frame; `/connect` into Accounts. *Built.*
    Compare's head names the repo that merges outsiders most often once you
-   pick two or more (`compareTitle` in `lib/compare.ts`). Settings sections
+   pick two or more (`compareTitle` in `lib/compare.ts`). Its body is one table
+   (`components/compare/compare-table.tsx`): a column per repo, a row per number
+   (`ROWS`, `cells`), subgrid rows so cells line up; phones stack each label
+   over its numbers and swipe three or four columns. Under the numbers, the
+   project's About stats from #165 (`ABOUT_ROWS`, `aboutCells`): stars first,
+   forks, open issues, last pushed (or archived), main language. Settings sections
    are blocks (`Block` in `components/settings/section-head.tsx`: `.section-head`
    over rows) under `.app-tabs`; the lit tab names the section, so its h2 is
    screen-reader only. Connecting GitHub is `ConnectGitHubForm` in Accounts
@@ -232,7 +256,12 @@ Before 1 Oct only item 1 is small enough to land; the rest follows through Octob
 
 **Built:** the server half, #160 (each PR's `first_reply_hours`, the per-repo
 counted choice, migration 0019, `NOT_OUTSIDE = {"personal"}`). Then step 1, the
-shell (#164; the sidebar doesn't fold, by design). Step 2, Your repos (#169).
+shell (#164). The rail now runs the full height with the cat and name on top,
+you, your AI reports and the small print at the foot, an orange count on Your
+pull requests when one needs you, and a leaf on Find a project in October. It
+folds to icons: the toggle at the start of the top bar, on the rail's edge, or
+`[`, remembered in the `holt-rail` cookie (`components/shell/rail-toggle.tsx`).
+Step 2, Your repos (#169).
 Step 3, the home (#170). Step 4, Your pull requests (this PR). The prototype
 is #156 (`/lab/dashboard`). Close it once the rollout is done.
 

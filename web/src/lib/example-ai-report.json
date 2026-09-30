@@ -195,6 +195,7 @@
   "asks": [],
   "budget_independent": false,
   "holt_users": null,
+  "about": null,
   "outdated": false,
   "headline": "Worth your time",
   "tone": "good",

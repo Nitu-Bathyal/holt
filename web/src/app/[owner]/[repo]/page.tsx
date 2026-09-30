@@ -11,6 +11,7 @@ import { BudgetPicker } from "@/components/report/budget-picker";
 import { PartialReport } from "@/components/report/partial-report";
 import { ReportTeaser } from "@/components/report/report-teaser";
 import { ReportView } from "@/components/report/report-view";
+import { RepoAbout } from "@/components/report/repo-about";
 import { StarterIssues, StarterIssuesSkeleton } from "@/components/report/starter-issues";
 import { LinkHint } from "@/components/motion/link-hint";
 import { SkeletonReveal } from "@/components/motion/reveal";
@@ -144,6 +145,11 @@ export default async function RepoPage({ params, searchParams }: Props) {
             decoding="async"
             className="size-10 rounded-md border border-line-strong bg-panel-2"
           />
+          {report.ok && report.data.about ? (
+            <div className="min-w-0 flex-1">
+              <RepoAbout about={report.data.about} repo={display} />
+            </div>
+          ) : (
           <div className="min-w-0 flex-1">
             <p className="text-[1.05rem] font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-[1.25rem]">
               <span className="text-muted">{dOwner}/</span>
@@ -153,6 +159,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
               github.com/{display} ↗
             </a>
           </div>
+          )}
           {/* A failed lookup shows "save"; saving again is harmless. Keyed so
               moving to another repo's report starts from that repo's state. */}
           <SaveButton key={display} repo={display} saved={user ? Boolean(saved?.ok && saved.data.saved) : null} />
@@ -234,9 +241,9 @@ function ExampleNote() {
     <p className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 border border-line-strong bg-panel-2 px-4 py-3 font-sans text-[0.9rem] text-muted" data-example-note>
       <span className="border border-blue px-2 py-0.5 font-mono text-[0.78rem] uppercase tracking-[0.08em] text-blue">Example report</span>
       <span className="min-w-0 flex-1">Sign in to check any repo you like.</span>
-      <span className="flex flex-wrap gap-x-4">
-        <Link href="/signin" prefetch={false} className="text-link">sign in</Link>
-        <Link href={EXAMPLES_PATH} className="text-link">more examples</Link>
+      <span className="flex flex-wrap gap-x-4 gap-y-5">
+        <Link href="/signin" prefetch={false} className="text-link tap">sign in</Link>
+        <Link href={EXAMPLES_PATH} className="text-link tap">more examples</Link>
       </span>
     </p>
   );

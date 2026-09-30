@@ -48,14 +48,14 @@ function CountForm({ repo, counted, label, className }: { repo: string; counted:
 function PrRow({ p, w, rule, action }: { p: ContributionPR; w?: Waiting; rule: string; action?: React.ReactNode }) {
   const [owner, name] = p.repo.split("/");
   return (
-    <li data-rule className="app-row grid-cols-[minmax(0,1fr)_auto]" style={{ "--rule": rule } as React.CSSProperties}>
+    <li data-rule data-stack className="app-row grid-cols-[minmax(0,1fr)_auto]" style={{ "--rule": rule } as React.CSSProperties}>
       <div className="min-w-0 pl-2">
         <p className="flex flex-wrap items-baseline gap-x-2 text-[0.9rem]">
-          <Link href={`/${p.repo}`} className="font-semibold tracking-tight hover:text-blue"><span className="font-normal text-muted">{owner}/</span>{name}</Link>
+          <Link href={`/${p.repo}`} className="tap z-10 font-semibold tracking-tight hover:text-blue"><span className="font-normal text-muted">{owner}/</span>{name}</Link>
           <span className="text-[0.8rem] text-faint">#{p.number}</span>
           {p.found_via_holt && <span className="border border-blue/40 px-1.5 text-[0.72rem] text-blue">found via Holt</span>}
         </p>
-        <a href={p.url} className="mt-0.5 block truncate font-sans text-[0.95rem] hover:underline">{p.title}</a>
+        <a href={p.url} className="mt-0.5 block truncate font-sans text-[0.95rem] after:absolute after:inset-0 hover:underline">{p.title}</a>
         {w ? (
           <WaitBar w={w} />
         ) : (
@@ -65,9 +65,9 @@ function PrRow({ p, w, rule, action }: { p: ContributionPR; w?: Waiting; rule: s
           </p>
         )}
       </div>
-      <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-4">
+      <div className="relative z-10 flex flex-wrap items-center gap-x-5 gap-y-2 sm:flex-nowrap sm:gap-4">
         {action}
-        <CountForm repo={p.repo} counted="no" label="don't count" className="min-h-9 text-[0.8rem] text-faint transition-colors hover:text-ink" />
+        <CountForm repo={p.repo} counted="no" label="don't count" className="min-h-11 text-[0.8rem] text-faint transition-colors hover:text-ink sm:min-h-9" />
       </div>
     </li>
   );
@@ -76,9 +76,9 @@ function PrRow({ p, w, rule, action }: { p: ContributionPR; w?: Waiting; rule: s
 function Groups({ g, preflight }: { g: PrGroups; preflight: boolean }) {
   const lateAction = (w: Waiting) =>
     preflight ? (
-      <Link href={`/preflight?pr=${encodeURIComponent(w.pr.url)}`} className="btn-primary min-h-10 px-4 text-[0.84rem]">pre-flight →</Link>
+      <Link href={`/preflight?pr=${encodeURIComponent(w.pr.url)}`} className="btn-primary min-h-11 px-4 text-[0.84rem] sm:min-h-10">pre-flight →</Link>
     ) : (
-      <a href={w.pr.url} className="text-link text-[0.84rem]">open it ↗</a>
+      <a href={w.pr.url} className="text-link tap text-[0.84rem]">open it ↗</a>
     );
   const sections = [
     { id: "needs", title: "Needs you", n: g.needs.length, rows: g.needs.map((w) => <PrRow key={w.pr.url} p={w.pr} w={w} rule={RULE.needs} action={lateAction(w)} />) },
@@ -106,14 +106,14 @@ function Groups({ g, preflight }: { g: PrGroups; preflight: boolean }) {
           </summary>
           <ul>
             {g.notCounted.map((r) => (
-              <li key={r.repo} className="app-row grid-cols-[minmax(0,1fr)_auto]">
+              <li key={r.repo} data-stack className="app-row grid-cols-[minmax(0,1fr)_auto]">
                 <div className="min-w-0">
-                  <Link href={`/${r.repo}`} className="font-semibold tracking-tight hover:text-blue">{r.repo}</Link>
+                  <Link href={`/${r.repo}`} className="tap font-semibold tracking-tight hover:text-blue">{r.repo}</Link>
                   <p className="mt-0.5 text-[0.78rem] text-faint">
                     {r.pulls.length} pull request{r.pulls.length === 1 ? "" : "s"} · {r.because === "own_project" ? "Holt: your own or your team's project" : "left out by you"}
                   </p>
                 </div>
-                <CountForm repo={r.repo} counted={r.because === "own_project" ? "yes" : "reset"} label="count it" className="text-link text-[0.84rem]" />
+                <CountForm repo={r.repo} counted={r.because === "own_project" ? "yes" : "reset"} label="count it" className="text-link tap text-[0.84rem]" />
               </li>
             ))}
           </ul>

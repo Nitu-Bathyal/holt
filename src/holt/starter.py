@@ -51,6 +51,7 @@ import httpx
 
 from holt.agent import landing as landing_mod
 from holt.agent.landing import Area
+from holt.agent.people import MAINTAINER_ASSOCIATIONS
 from holt.agent.verdict import DEFAULT_CONTRIBUTOR_DAYS, headline
 from holt.evidence.errors import RateLimited, RepoNotFound
 from holt.evidence.github_graphql import GitHubGraphQL
@@ -129,6 +130,9 @@ class RepoScreen:
     verdict: Verdict | str
     stats: dict[str, Any] = field(default_factory=dict)
     landing: list[Area] = field(default_factory=list)
+    # Logins the pull request history shows are on the team, for those whose
+    # association on an issue hides it (private org members read CONTRIBUTOR).
+    team: frozenset[str] = frozenset()
 
 
 # ---------------------------------------------------------------------------
@@ -177,7 +181,7 @@ def _transport(token: str | None, transport: GitHubGraphQL | None) -> GitHubGrap
 ISSUE_FIELDS = """
 fragment StarterFields on Issue {
   number title url createdAt updatedAt body locked
-  author { login }
+  author { login } authorAssociation
   repository { nameWithOwner isArchived }
   labels(first:15) { nodes { name } }
   assignees(first:5) { totalCount nodes { login } }
@@ -200,6 +204,8 @@ fragment LinkedPR on PullRequest {
 # Two views of one repository in one call: issues carrying a beginner label
 # (search, so label spelling is case-insensitive), and the most recently active
 # open issues, where unlabelled small fixes and odd label spellings turn up.
+# `mergers` is who merged recent pull requests: the team, even members whose
+# association reads CONTRIBUTOR to a token outside a private org.
 REPO_ISSUES = ISSUE_FIELDS + """
 query($owner:String!, $name:String!, $q:String!) {
   rateLimit { remaining resetAt }
@@ -207,6 +213,9 @@ query($owner:String!, $name:String!, $q:String!) {
     nameWithOwner isArchived
     issues(states:OPEN, first:40, orderBy:{field:UPDATED_AT, direction:DESC}) {
       nodes { ...StarterFields }
+    }
+    mergers: pullRequests(states:MERGED, last:30) {
+      nodes { mergedBy { login __typename } }
     }
   }
   labelled: search(query:$q, type:ISSUE, first:50) {
@@ -255,6 +264,11 @@ SOURCE_LABELS = ('"good first issue"', '"good-first-issue"', '"first-timers-only
 
 # ---------------------------------------------------------------------------
 # Scoring
+
+# Bump when a change alters which issues are listed, or their order, for the
+# same GitHub answer. The server stores it with every cached list and fetches
+# lists from older rules again instead of serving them.
+RULES_VERSION = 2
 
 # Only issues touched this recently count as alive.
 ACTIVE_DAYS = 180
@@ -527,18 +541,27 @@ def _title_words(title: str) -> list[str]:
             if w not in stop and not w.isdigit()]
 
 
-def farmed_issues(nodes: Iterable[dict[str, Any]]) -> set[int]:
+def farmed_issues(nodes: Iterable[dict[str, Any]],
+                  team: Iterable[str] = ()) -> set[int]:
     """Numbers of issues that one account filed as a batch: at least
     `FARM_MIN_ISSUES` with near-identical titles ("Add a Japanese idiom", "Add
     a Korean idiom", ...) or created seconds apart by a script. Issues with no
-    known author are never counted."""
+    known author are never counted.
+
+    A maintainer scripting a batch of starter issues is how many projects get
+    ready for Hacktoberfest, so the burst rule skips the repository's own team:
+    an OWNER, MEMBER or COLLABORATOR association, or a login in `team`."""
+    team = {login.lower() for login in team}
     by_author: dict[str, dict[int, dict[str, Any]]] = {}
+    maintainers: set[str] = set()
     for node in nodes:
         login = ((node or {}).get("author") or {}).get("login")
         if login and "number" in node:
             by_author.setdefault(login.lower(), {})[node["number"]] = node
+            if node.get("authorAssociation") in MAINTAINER_ASSOCIATIONS:
+                maintainers.add(login.lower())
     farmed: set[int] = set()
-    for issues in by_author.values():
+    for login, issues in by_author.items():
         if len(issues) < FARM_MIN_ISSUES:
             continue
         nums = sorted(issues)
@@ -558,6 +581,8 @@ def farmed_issues(nodes: Iterable[dict[str, Any]]) -> set[int]:
         for _, members in groups:
             if len(members) >= FARM_MIN_ISSUES:
                 farmed.update(members)
+        if login in maintainers or login in team:
+            continue
         # Scripted bursts: a run of issues each filed within seconds of the last.
         timed = sorted(nums, key=lambda n: _ts(issues[n]["createdAt"]))
         run = [timed[0]]
@@ -749,14 +774,15 @@ def score_issue(node: dict[str, Any], as_of: datetime, *,
 
 def rank(nodes: Iterable[dict[str, Any]], as_of: datetime, *,
          landing: Sequence[Area] = (), hacktoberfest: bool = False,
-         limit: int = 20) -> list[tuple[float, StarterIssue]]:
+         limit: int = 20, team: Iterable[str] = ()) -> list[tuple[float, StarterIssue]]:
     """Deduplicate, drop farmed batches, score and sort: issues nobody is on
-    first, then by score. Ties go to the newer issue, then the number. `nodes` are one repository's issues."""
+    first, then by score. Ties go to the newer issue, then the number. `nodes` are one repository's issues;
+    `team` is passed to `farmed_issues`."""
     unique: dict[int, dict[str, Any]] = {}
     for node in nodes:
         if node and "number" in node:
             unique.setdefault(node["number"], node)
-    farmed = farmed_issues(unique.values())
+    farmed = farmed_issues(unique.values(), team)
     scored: list[tuple[float, StarterIssue]] = []
     for number, node in unique.items():
         if number in farmed:
@@ -773,7 +799,7 @@ def rank(nodes: Iterable[dict[str, Any]], as_of: datetime, *,
 
 
 def _scored_issues(repo: str, transport: GitHubGraphQL, as_of: datetime, limit: int,
-                   landing: Sequence[Area], hacktoberfest: bool
+                   landing: Sequence[Area], hacktoberfest: bool, team: Iterable[str] = ()
                    ) -> list[tuple[float, StarterIssue]]:
     owner, _, name = normalise(repo).partition("/")
     labels = ",".join(SEARCH_LABELS)
@@ -787,7 +813,16 @@ def _scored_issues(repo: str, transport: GitHubGraphQL, as_of: datetime, limit: 
         return []
     nodes = [*((data.get("labelled") or {}).get("nodes") or []),
              *((repository.get("issues") or {}).get("nodes") or [])]
-    return rank(nodes, as_of, landing=landing, hacktoberfest=hacktoberfest, limit=limit)
+    return rank(nodes, as_of, landing=landing, hacktoberfest=hacktoberfest, limit=limit,
+                team={*team, *mergers(repository)})
+
+
+def mergers(repository: dict[str, Any]) -> set[str]:
+    """People who merged the repository's recent pull requests (bots aside):
+    merging needs write access."""
+    return {m["login"] for pr in (repository.get("mergers") or {}).get("nodes") or []
+            if (m := (pr or {}).get("mergedBy")) and m.get("login")
+            and m.get("__typename") == "User"}
 
 
 def starter_issues(repo: str, token: str | None, limit: int = 20,
@@ -826,13 +861,14 @@ def rules_screen(transport: GitHubGraphQL, as_of: datetime,
     """`discover`'s free screen as a `find` screen: one page of pull-request
     threads, arithmetic only, plus where outsider work landed in that page."""
     from holt import discover
+    from holt.agent import people
     from holt.agent.signals import build_threads
 
     def screen(repo: str) -> RepoScreen:
         screened, records = discover.screen_slug(repo, transport, as_of, days)
         landing = landing_mod.compute(build_threads(records))
         return RepoScreen(verdict=screened.verdict, stats=_stats_subset(screened.signals),
-                          landing=list(landing.landed))
+                          landing=list(landing.landed), team=people.maintainers(records))
 
     return screen
 
@@ -992,7 +1028,7 @@ def find(languages: Sequence[str], topics: Sequence[str], hacktoberfest: bool,
         if stop.is_set():
             return None
         scored = _scored_issues(slug, transport, as_of, per_repo, result.landing,
-                                hacktoberfest)
+                                hacktoberfest, result.team)
         if not scored:
             return None
         verdict = Verdict(result.verdict)

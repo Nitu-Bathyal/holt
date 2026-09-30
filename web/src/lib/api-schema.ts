@@ -1689,6 +1689,13 @@ export interface components {
             /** Path */
             path: string;
         };
+        /** Language */
+        Language: {
+            /** Name */
+            name: string;
+            /** Share */
+            share: number;
+        };
         /** LanguageCount */
         LanguageCount: {
             /** Name */
@@ -2462,6 +2469,53 @@ export interface components {
             picks: components["schemas"]["Recommendation"][];
         };
         /**
+         * RepoAbout
+         * @description What the repository is and how big and alive it is: GitHub's own fields
+         *     and the README's first sentence, read daily into `repo_meta` (never on the
+         *     request path). Nothing here feeds the verdict. Fields a repo hasn't been
+         *     read for yet are null.
+         */
+        RepoAbout: {
+            /**
+             * Archived
+             * @default false
+             */
+            archived: boolean;
+            /** Created At */
+            created_at: string | null;
+            /** Default Branch */
+            default_branch: string | null;
+            /** Description */
+            description: string | null;
+            /** Fetched At */
+            fetched_at: string;
+            /**
+             * Fork
+             * @default false
+             */
+            fork: boolean;
+            /** Fork Of */
+            fork_of: string | null;
+            /** Forks */
+            forks: number | null;
+            /** Homepage */
+            homepage: string | null;
+            /** Languages */
+            languages: components["schemas"]["Language"][];
+            /** License */
+            license: string | null;
+            /** Open Issues */
+            open_issues: number | null;
+            /** Pushed At */
+            pushed_at: string | null;
+            /** Readme Line */
+            readme_line: string | null;
+            /** Stars */
+            stars: number;
+            /** Topics */
+            topics: string[];
+        };
+        /**
          * RepoVerdict
          * @description Holt's latest rules verdict for a repository, from the report cache.
          */
@@ -2485,6 +2539,7 @@ export interface components {
         };
         /** Report */
         Report: {
+            about: components["schemas"]["RepoAbout"] | null;
             /** Asks */
             asks: components["schemas"]["Ask"][];
             /** Bottom Line */
@@ -2875,6 +2930,7 @@ export type HistoryItem = components['schemas']['HistoryItem'];
 export type HoltUsers = components['schemas']['HoltUsers'];
 export type JobStatus = components['schemas']['JobStatus'];
 export type LandingPath = components['schemas']['LandingPath'];
+export type Language = components['schemas']['Language'];
 export type LanguageCount = components['schemas']['LanguageCount'];
 export type Me = components['schemas']['Me'];
 export type MySubscription = components['schemas']['MySubscription'];
@@ -2926,6 +2982,7 @@ export type Queued = components['schemas']['Queued'];
 export type Recommendation = components['schemas']['Recommendation'];
 export type RecommendationBasis = components['schemas']['RecommendationBasis'];
 export type Recommendations = components['schemas']['Recommendations'];
+export type RepoAbout = components['schemas']['RepoAbout'];
 export type RepoVerdict = components['schemas']['RepoVerdict'];
 export type Report = components['schemas']['Report'];
 export type ReportList = components['schemas']['ReportList'];

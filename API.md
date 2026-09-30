@@ -112,7 +112,16 @@ responses. The server also accepts and normalises full URLs
   "cost": { "model": "…", "input_tokens": 9000, "output_tokens": 6000,
             "usd": 0.0123, "seconds": 48.2 }, // ai only, else null
   "holt_users": { "people": 9, "pull_requests": 12, "merged": 7, "closed": 2,
-                  "waiting": 3, "window_days": 365, "computed_at": "…" } | null
+                  "waiting": 3, "window_days": 365, "computed_at": "…" } | null,
+  "about": {                          // what the repo is; null until its details are read
+    "description": "string | null", "readme_line": "string | null",
+    "homepage": "https://… | null", "stars": 91234, "forks": 1200 | null,
+    "open_issues": 57 | null, "license": "MIT | null", "topics": ["cli"],
+    "languages": [ { "name": "Python", "share": 0.92 } ],
+    "created_at": "…Z | null", "pushed_at": "…Z | null",
+    "default_branch": "main | null", "archived": false, "fork": false,
+    "fork_of": "owner/repo | null", "fetched_at": "…Z"
+  } | null
 }
 ```
 
@@ -137,6 +146,17 @@ are recounted by the daily contributions refresh (and
 `python -m holt_server.contributions stats`); opting out or disconnecting
 recounts that user's repositories at once. Surfaces show them as they come and
 never rank or name anyone.
+
+`about` is GitHub's own description of the repository and its counters, plus
+the README's first sentence (`readme_line`, plain text), as `repo_meta` last
+read them: right after a repository's first report and daily by the warm pass,
+many repositories per GraphQL query, never on the request path. Like
+`holt_users` it is filled only by `GET /v1/reports/{owner}/{repo}` and never
+stored with the report; it is null until the details have been read, and the
+fields added with it (`forks` onwards, `readme_line`) are null on rows read
+before they existed. `languages` holds up to three, biggest first, `share` in
+0..1. `homepage` is always an `http(s)` URL. Nothing in it feeds the verdict.
+The public extension proxy passes it on.
 
 ### Engine version and `outdated`
 

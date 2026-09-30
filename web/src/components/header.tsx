@@ -11,6 +11,7 @@ import { JumpNav } from "./shell/jump-nav";
 import { LogoLink } from "./shell/logo-link";
 import { Icon } from "./shell/icons";
 import { QuickCheck } from "./shell/quick-check";
+import { RailToggle } from "./shell/rail-toggle";
 import { ThemeToggle } from "./theme-toggle";
 
 export async function doSignOut() {
@@ -98,13 +99,13 @@ export function MarketingHeader({ user, credits }: { user: SessionUser | null; c
           <ThemeToggle />
           {user ? (
             <>
-              <Link href={HOME} className="btn-primary ml-1 min-h-10 px-4 text-[0.84rem]">open Holt →</Link>
+              <Link href={HOME} className="btn-primary ml-1 min-h-11 px-4 text-[0.84rem] sm:min-h-10">open Holt →</Link>
               <AccountMenu user={user} credits={credits} />
             </>
           ) : (
             <>
               <Link href={EXAMPLES_PATH} className="hidden min-h-11 items-center px-3 text-[0.86rem] text-ink transition-colors hover:text-blue sm:inline-flex">try an example</Link>
-              <Link href="/signin" className="btn-primary ml-1 min-h-10 px-4 text-[0.84rem]">sign in</Link>
+              <Link href="/signin" className="btn-primary ml-1 min-h-11 px-4 text-[0.84rem] sm:min-h-10">sign in</Link>
             </>
           )}
           <MenuButton target="mobile-nav" label="Menu" />
@@ -122,17 +123,21 @@ export function MarketingHeader({ user, credits }: { user: SessionUser | null; c
   );
 }
 
-/** App pages, signed in: the sidebar holds the places, so this bar stays small. */
-export function AppTopBar({ user, credits, drawer }: { user: SessionUser; credits: string | null; drawer: React.ReactNode }) {
+/** App pages, signed in: the sidebar holds the places and, on desktop, the logo, so this bar stays small. */
+export function AppTopBar({ user, credits, railCollapsed, drawer }: { user: SessionUser; credits: string | null; railCollapsed: boolean; drawer: React.ReactNode }) {
   return (
     <header className="site-header sticky top-0 z-40 border-b border-line bg-header" style={{ viewTransitionName: "site-header" }}>
-      <div className="flex min-h-[60px] items-center gap-3 px-4 lg:px-5">
+      {/* On desktop the rail carries the logo, the bar starts with the rail's toggle, and the check box lines up with the page (.app-bar). */}
+      <div className="app-bar">
         <MenuButton target="app-drawer" label="Menu" />
-        <Logo href={HOME} />
-        <div className="flex flex-1 justify-center px-2">
+        <RailToggle initial={railCollapsed} />
+        <span className="lg:hidden">
+          <Logo href={HOME} />
+        </span>
+        <div className="app-bar-frame">
           <QuickCheck />
         </div>
-        <div className="flex items-center gap-1">
+        <div className="app-bar-end flex items-center gap-1">
           <ThemeToggle />
           <AccountMenu user={user} credits={credits} />
         </div>

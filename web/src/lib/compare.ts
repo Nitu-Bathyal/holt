@@ -2,7 +2,9 @@
 // number. Only the numbers the reports already show; no verdict changes.
 // No imports beyond repo parsing and types, so it runs under `node --test`.
 import { parseRepoInput } from "./repo.ts";
-import type { Stats } from "./types.ts";
+import { humanHours, pct, timeAgo } from "./format.ts";
+import { compactCount, share } from "./repo-about.ts";
+import type { Report, Stats } from "./types.ts";
 
 export const MAX = 4;
 
@@ -32,12 +34,13 @@ export const SUGGESTIONS: { label: string; repos: string[] }[] = [
   { label: "rust vs go", repos: ["rust-lang/rust", "golang/go"] },
 ];
 
-export type Lead = "merged" | "reply" | "firstTimers" | "silent";
+export type Lead = "merged" | "reply" | "firstTimers" | "silent" | "closed";
 
 /**
  * For each number, the columns (by index) that do best on it: highest share
  * merged, fastest first reply, most first-timers merged, lowest share with no
- * reply. Only when at least two columns have the number and they differ.
+ * reply, lowest share closed without a word. Only when at least two columns
+ * have the number and they differ.
  */
 export function leaders(stats: (Stats | null)[]): Record<Lead, number[]> {
   const share = (n: number, d: number) => (d > 0 ? n / d : null);
@@ -52,6 +55,7 @@ export function leaders(stats: (Stats | null)[]): Record<Lead, number[]> {
     reply: pick(stats.map((s) => s?.median_first_response_hours ?? null), "low"),
     firstTimers: pick(stats.map((s) => s?.first_time_merged_authors ?? null), "high"),
     silent: pick(stats.map((s) => (s ? share(s.no_reply, s.outsider_attempts) : null)), "low"),
+    closed: pick(stats.map((s) => (s ? share(s.closed_silently, s.outsider_attempts) : null)), "low"),
   };
 }
 
@@ -64,4 +68,66 @@ export function compareTitle(picked: boolean, repos: string[], lead: Record<Lead
   const top = lead.merged;
   if (picked && repos.length >= 2 && top.length === 1) return `${repos[top[0]]} merges outsiders most often.`;
   return "Which one will review your pull request?";
+}
+
+/** The numbers compared, one row each, in the order they're read. */
+export const ROWS: { id: Lead | "way"; label: string }[] = [
+  { id: "merged", label: "Outside PRs merged" },
+  { id: "reply", label: "Typical first reply" },
+  { id: "firstTimers", label: "First-timers merged" },
+  { id: "silent", label: "Sat open, no reply" },
+  { id: "closed", label: "Closed without a word" },
+  { id: "way", label: "Best way in" },
+];
+
+export interface Cell {
+  /** The number to scan. */
+  main: string;
+  /** What it's out of, when that matters. */
+  sub?: string;
+  /** "bad" for a number that's a warning on its own; "none" for nothing to show. */
+  tone?: "bad" | "none";
+}
+
+/** What the project is, how big and alive (#165's `about`), under the numbers Holt reads. Stars lead. */
+export const ABOUT_ROWS: { id: "stars" | "forks" | "issues" | "pushed" | "language"; label: string }[] = [
+  { id: "stars", label: "Stars" },
+  { id: "forks", label: "Forks" },
+  { id: "issues", label: "Open issues" },
+  { id: "pushed", label: "Last pushed" },
+  { id: "language", label: "Main language" },
+];
+
+export type AboutId = (typeof ABOUT_ROWS)[number]["id"];
+
+/** One column's About cells; "–" where GitHub didn't say. An archived repo says so where the last push goes. */
+export function aboutCells(about: Report["about"], now: number): Record<AboutId, Cell & { lang?: string }> {
+  const none: Cell = { main: "–", tone: "none" };
+  if (!about) return { stars: none, forks: none, issues: none, pushed: none, language: none };
+  const count = (n: number | null | undefined): Cell => (n == null ? none : { main: compactCount(n) });
+  const lang = about.languages[0];
+  return {
+    stars: { main: compactCount(about.stars) },
+    forks: count(about.forks),
+    issues: count(about.open_issues),
+    pushed: about.archived ? { main: "archived", tone: "bad" } : about.pushed_at ? { main: timeAgo(about.pushed_at, now) || "–" } : none,
+    language: lang ? { main: lang.name, sub: share(lang.share), lang: lang.name } : none,
+  };
+}
+
+/** One column's cells, from what the report already says. */
+export function cells(report: Pick<Report, "stats" | "landing">): Record<Lead | "way", Cell> {
+  const s = report.stats;
+  const n = s.outsider_attempts;
+  const none: Cell = { main: "–", tone: "none" };
+  const share = (k: number): Cell => (n > 0 ? { main: `${pct(k, n)}%` } : none);
+  const top = report.landing[0];
+  return {
+    merged: n > 0 ? { main: `${pct(s.outsider_merged, n)}%`, sub: `${s.outsider_merged} of ${n}` } : { main: "–", sub: "no outside PRs", tone: "none" },
+    reply: s.median_first_response_hours == null ? (n > 0 ? { main: "no replies", tone: "bad" } : none) : { main: humanHours(s.median_first_response_hours) },
+    firstTimers: { main: String(s.first_time_merged_authors), ...(s.first_time_merged_authors === 0 && n > 0 ? { tone: "bad" as const } : {}) },
+    silent: share(s.no_reply),
+    closed: share(s.closed_silently),
+    way: top ? { main: top.path.startsWith("(") ? top.path : `${top.path}/` } : { main: "none yet", tone: "none" },
+  };
 }

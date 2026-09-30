@@ -620,6 +620,40 @@ class HoltUsers(Model):
     computed_at: str
 
 
+class Language(Model):
+    name: str
+    # Share of the repository's code, 0..1.
+    share: float
+
+
+class RepoAbout(Model):
+    """What the repository is and how big and alive it is: GitHub's own fields
+    and the README's first sentence, read daily into `repo_meta` (never on the
+    request path). Nothing here feeds the verdict. Fields a repo hasn't been
+    read for yet are null."""
+
+    description: str | None = None
+    # The README's first real sentence, plain text.
+    readme_line: str | None = None
+    homepage: str | None = None
+    stars: int
+    forks: int | None = None
+    open_issues: int | None = None
+    # SPDX id ("MIT") or GitHub's name for it; null when there is none.
+    license: str | None = None
+    topics: list[str] = Field(default_factory=list)
+    # Up to three, biggest first.
+    languages: list[Language] = Field(default_factory=list)
+    created_at: str | None = None
+    pushed_at: str | None = None
+    default_branch: str | None = None
+    archived: bool = False
+    fork: bool = False
+    # The repository this one is a fork of, when GitHub says.
+    fork_of: str | None = None
+    fetched_at: str
+
+
 class Report(VerdictView):
     repo: str
     mode: Mode
@@ -654,6 +688,9 @@ class Report(VerdictView):
     # Filled when the report is served (GET /v1/reports/{owner}/{repo}), never
     # stored with it; null when too few Holt users sent pull requests here.
     holt_users: HoltUsers | None = None
+    # Filled when served, never stored: what the repository is (`RepoAbout`);
+    # null until its details have been read.
+    about: RepoAbout | None = None
     # Filled when served by GET /v1/reports/{owner}/{repo}, never stored: true
     # when an older version of Holt's rules made this report. The web runs a
     # fresh check instead of showing it (and shows it only if that fails).

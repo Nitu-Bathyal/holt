@@ -35,6 +35,12 @@ def now() -> datetime:
     return datetime.now(UTC)
 
 
+def _rules_version() -> int:
+    from holt_server.starter import rules_version
+
+    return rules_version()
+
+
 def utc(value: datetime | None) -> datetime | None:
     """SQLite hands timestamps back naive; they were written as UTC."""
     if value is None:
@@ -411,13 +417,16 @@ class FindCache(Base):
     @property
     def outdated(self) -> bool:
         """Screened by an older engine (`params.engine_version`, missing on
-        results stored before it was recorded), or listing starter issues from
-        before they said who is on them: not served, searched again."""
-        from holt_server.starter import current
+        results stored before it was recorded), or listing starter issues older
+        rules picked (`params.starter_rules`): not served, searched again."""
+        from holt_server.starter import current, rules_version
 
-        version = (self.params or {}).get("engine_version")
+        params = self.params or {}
+        version = params.get("engine_version")
+        rules = params.get("starter_rules")
         return (not isinstance(version, int) or version < ENGINE_VERSION
-                or not all(current(r.get("issues") or []) for r in self.results or []))
+                or rules != rules_version()
+                or not all(current(r.get("issues") or [], rules) for r in self.results or []))
 
 
 def find_key(languages: list[str], topics: list[str], hacktoberfest: bool, days: int) -> str:
@@ -436,6 +445,8 @@ class StarterCache(Base):
     repo: Mapped[str] = mapped_column(String(200))
     issues: Mapped[list] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    # `holt.starter.RULES_VERSION` of the rules that picked `issues`.
+    rules_version: Mapped[int | None] = mapped_column(Integer, default=_rules_version)
 
 
 class Feedback(Base):
@@ -576,7 +587,8 @@ class Contribution(Base):
 
 class RepoMeta(Base):
     """What GitHub says about a repository Holt has a report for: the details
-    a Discover card shows and filters on (discover.py). Read right after the
+    a Discover card shows and filters on (discover.py), and the report's
+    "About this repo" (`schema.RepoAbout`). Read right after the
     repo's report is stored (meta_refresh.py) and daily by the warm pass,
     many repositories per GraphQL query."""
 
@@ -595,6 +607,20 @@ class RepoMeta(Base):
     pushed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     archived: Mapped[bool] = mapped_column(Boolean, default=False)
     fork: Mapped[bool] = mapped_column(Boolean, default=False)
+    # The report's "About this repo" (0021); null until the details are read
+    # again after that migration.
+    forks: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    open_issues: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    license: Mapped[str | None] = mapped_column(String(80), nullable=True)
+    homepage: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    # [{"name": "Python", "share": 0.92}, ...], biggest first, at most three.
+    language_shares: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    created_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    default_branch: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # The repository this one is a fork of.
+    fork_of: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    # The README's first sentence (holt/about.py), not the README.
+    readme_line: Mapped[str | None] = mapped_column(Text, nullable=True)
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 

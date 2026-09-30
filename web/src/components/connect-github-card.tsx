@@ -59,7 +59,7 @@ export function ConnectGitHubForm({ viaGitHub, canLink, error }: { viaGitHub: bo
         <button type="submit" className="btn-primary" disabled={viaGitHub && !canLink}>
           {viaGitHub ? "continue to GitHub" : "connect GitHub"}
         </button>
-        <Link href="/privacy#connect-github" className="text-[0.87rem] text-muted hover:text-ink">what Holt keeps</Link>
+        <Link href="/privacy#connect-github" className="inline-flex min-h-11 items-center text-[0.87rem] text-muted hover:text-ink">what Holt keeps</Link>
       </div>
       {viaGitHub && !canLink && <p className="mt-3 font-sans text-[0.89rem] text-faint">{CONNECT_ERRORS.unavailable}</p>}
     </form>
