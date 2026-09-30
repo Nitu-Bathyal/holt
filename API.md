@@ -468,14 +468,22 @@ people. Reads only the database: no GitHub call and no rate limit.
   "repos": [ { "repo": "owner/repo", "verdict": "viable", "headline": "Worth your time",
     "tone": "good", "reason": "…the report's verdict_line…", "stats": Stats,
     "description": "…"|null, "language": "Python"|null, "stars": 123|null,
+    "open_issues": 57|null, "pull_requests": 4100|null,
+    "open_pull_requests": 12|null, "contributors": 812|null,  // as in `about`
     "topics": ["cli"], "pushed_at": "…"|null,
     "checked_this_week": 12|null,     // null below trending_min
-    "generated_at": "…" } ],
+    "generated_at": "…",
+    "issues": [StarterIssue] } ],     // cached only; [] when none, see below
   "languages": [ { "name": "Python", "repos": 40 } ] }  // filter chips, most repos first
 ```
 
-`description`, `language`, `stars`, `topics` (all of them, up to GitHub's 20)
-and `pushed_at` come from `repo_meta`, read from GitHub right after a
+`issues` are the repo's starter issues as `GET /v1/repos/{o}/{r}/starter-issues`
+(or the warm pass) last cached them (at most 5, nobody-on-it first), when that
+was within 72 hours and by the current starter rules; otherwise `[]`. Discover
+never reads GitHub for them.
+
+`description`, `language`, `stars`, the four counts, `topics` (all of them,
+up to GitHub's 20) and `pushed_at` come from `repo_meta`, read from GitHub right after a
 repository's report is stored (when it has none, or they are more than a day
 old) and again once a day for every reported repository. The read after a
 report is best effort and happens a few seconds after the report is done, so
