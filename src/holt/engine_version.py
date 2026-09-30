@@ -11,4 +11,4 @@ older version as out of date: pages run a fresh check instead of serving it,
 and `python -m holt_server.warm --stale-only` re-runs them after a deploy.
 """
 
-ENGINE_VERSION = 5
+ENGINE_VERSION = 6

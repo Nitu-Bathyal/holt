@@ -189,6 +189,17 @@ def test_docs_query_covers_case_variants_and_locations():
         assert expected in paths
 
 
+def test_an_ai_policy_file_is_read_with_the_other_documents():
+    _, aliases = gql.docs_query("abc")
+    assert ("ai_policy", "AI_POLICY.md") in aliases.values()
+    docs = {"readme": None, "contributing": None,
+            "ai_policy": {"text": "Disclose any AI use.", "path": ".github/AI_POLICY.md"}}
+    records = list(gql.project_docs("a/b", docs, {"oid": "abc123",
+                                                  "committedDate": "2026-01-01T00:00:00Z"}))
+    assert [r.evidence_id for r in records] == ["repo:a/b:ai_policy"]
+    assert records[0].url.endswith("/blob/abc123/.github/AI_POLICY.md")
+
+
 def test_issue_search_asks_for_open_issues_in_a_fixed_order():
     q = gql.issue_query("a/b", datetime(2026, 9, 1, tzinfo=UTC))
     assert "is:open" in q and "is:issue" in q

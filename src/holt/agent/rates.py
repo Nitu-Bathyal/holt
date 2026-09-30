@@ -17,10 +17,15 @@ has ended. Three things used to be counted that shouldn't be:
 * Pull requests closed without a word. On a popular repository that is mostly
   maintainers clearing out spam and AI junk, which is a good sign, not being
   ignored. "Ignored" is now only an open pull request, past the settle window,
-  that nobody from the project answered.
-* Drafts, and pull requests labelled as spam or invalid. A draft isn't asking
-  for review, and a labelled spam PR is not an attempt anyone should be
-  measured by (Hacktoberfest brings plenty). Both leave the counts entirely.
+  that nobody from the project answered. And not every close with no reply is
+  "without a word" either (`closure`): a bot that checks every pull request
+  against the project's rules (django's closes one missing an accepted Trac
+  ticket within minutes), a stale bot, and the author withdrawing are each
+  said apart. All of them stay decided attempts that weren't merged.
+* Drafts, and pull requests labelled as spam or invalid, or retitled as spam by
+  a maintainer ("AI junk" on flask). A draft isn't asking for review, and a
+  spam PR is not an attempt anyone should be measured by (Hacktoberfest brings
+  plenty). Both leave the counts entirely.
 
 Also here: the dates a sample covers, and whether the repository looks dormant,
 so a report built on 2019 history says so instead of calling it "recent".
@@ -28,7 +33,8 @@ so a report built on 2019 history says so instead of calling it "recent".
 The frozen benchmark fixtures are read without a reference time (or with the
 window switched off), and keep the arithmetic they were scored with: every
 silent unmerged attempt is "no reply", nothing is still open. Drafts and labels
-were never captured there, so leaving them out changes nothing for them.
+were never captured there, so leaving them out changes nothing for them; titles
+were, so a title retitled as spam leaves the counts on live readings only.
 """
 
 from __future__ import annotations
@@ -70,7 +76,7 @@ STILL_OPEN = "still_open"
 # Rule codes this module's lines carry. They inform; they never decide, so
 # anything looking for the deciding rule skips them (`first_deciding`).
 INFO_CODES = frozenset({"sample_period", "dormant", "excluded", "still_open", "closed_silently",
-                        "slow_note", "too_old"})
+                        "closed_by_bot", "closed_stale", "withdrawn", "slow_note", "too_old"})
 
 
 # Rules that come after the merge count and overrule it (verdict.py): when
@@ -110,16 +116,63 @@ def off_topic_label(labels: Iterable[str]) -> str | None:
     return next((label for label in labels if _OFF_TOPIC.search(_flat(label))), None)
 
 
-def excluded(thread: Thread) -> bool:
-    """A draft, or labelled as spam or invalid: not counted anywhere.
+# Titles a maintainer rewrites a junk pull request to, instead of labelling it
+# (flask and click: "AI junk", "<spam>", "[rejected AI] add a hosting guide").
+# The whole title, or a bracketed tag in front: "Fix spam filter" is a real
+# pull request.
+_OFF_TOPIC_TITLE = re.compile(
+    r"^\W*(?:ai\s+)?(?:spam|junk|slop)\W*$"
+    r"|^\s*\[(?:rejected\s+ai|ai\s+(?:junk|slop|spam)|spam|junk|slop)\]",
+    re.I,
+)
+
+
+def off_topic_title(title: str | None) -> bool:
+    """Whether a maintainer retitled this pull request as spam."""
+    return bool(title) and bool(_OFF_TOPIC_TITLE.search(title or ""))
+
+
+def excluded(thread: Thread, retitled: bool = True) -> bool:
+    """A draft, or labelled or retitled as spam or invalid: not counted anywhere.
 
     Never a merged one: whatever it was labelled, it landed, and a landing is
     what the counts are about. (Hacktoberfest's `invalid` is sometimes put on
     a merged pull request only to say it doesn't count for the event.)
+    `retitled` is off for the frozen captures, which recorded titles and keep
+    the arithmetic they were scored with.
     """
     if thread.merged:
         return False
-    return thread.draft or off_topic_label(thread.labels) is not None
+    return (thread.draft or off_topic_label(thread.labels) is not None
+            or (retitled and off_topic_title(thread.title)))
+
+
+# How an unmerged pull request was closed, when nobody from the project replied
+# (a reply makes it CLOSED_REPLIED, whoever closed it). Measured on the golden
+# set: bots that check pull requests against the project's rules close within
+# minutes to two days (django, is-a-dev, hacs, tldr, fastapi); stale bots and
+# mirrors close after weeks (git, request, free-programming-books). Three days
+# sits between the two. Each kind is named as its Split field and rule code.
+BY_BOT = "closed_by_bot"
+STALE = "closed_stale"
+WITHDRAWN = "withdrawn"
+SILENT = "closed_silently"
+BOT_CHECK_HOURS = 72.0
+
+
+def closure(thread: Thread) -> str:
+    """Which kind of close with no reply this was: a bot's check, a stale bot,
+    the author withdrawing, or closed without a word. A capture from before
+    closers were recorded, or a close GitHub names nobody for, is silent."""
+    if not thread.closed_by:
+        return SILENT
+    if thread.closed_by == thread.author:
+        return WITHDRAWN
+    if thread.closed_by_bot:
+        when = thread.closed_at
+        fast = when is not None and when - thread.opened_at <= timedelta(hours=BOT_CHECK_HOURS)
+        return BY_BOT if fast else STALE
+    return SILENT
 
 
 def judges_time(as_of: datetime | None, settle_hours: float) -> bool:
@@ -151,6 +204,9 @@ class Split:
     decided: list[Thread] = field(default_factory=list)
     still_open: int = 0
     closed_silently: int = 0
+    closed_by_bot: int = 0
+    closed_stale: int = 0
+    withdrawn: int = 0
     ignored: int = 0
     excluded: int = 0
     too_old: int = 0
@@ -161,7 +217,7 @@ def split(attempts: Iterable[Thread], as_of: datetime | None,
     out = Split()
     honest = judges_time(as_of, settle_hours)
     for t in attempts:
-        if excluded(t):
+        if excluded(t, retitled=honest):
             out.excluded += 1
             continue
         if honest and as_of - t.opened_at > timedelta(days=MAX_SAMPLE_DAYS):
@@ -173,7 +229,8 @@ def split(attempts: Iterable[Thread], as_of: datetime | None,
             continue
         out.decided.append(t)
         if how == CLOSED_SILENTLY:
-            out.closed_silently += 1
+            kind = closure(t)
+            setattr(out, kind, getattr(out, kind) + 1)
         elif how == IGNORED:
             out.ignored += 1
     return out
@@ -284,8 +341,14 @@ def _pr(n: int) -> str:
             else f"{n} pull requests from outside contributors")
 
 
+def _was(n: int) -> str:
+    return "was" if n == 1 else "were"
+
+
 def count_sentences(still_open: int, closed_silently: int, excluded_: int,
-                    settle_days: int = SETTLE_DAYS, too_old: int = 0) -> list[tuple[str, str]]:
+                    settle_days: int = SETTLE_DAYS, too_old: int = 0, *,
+                    closed_by_bot: int = 0, closed_stale: int = 0,
+                    withdrawn: int = 0) -> list[tuple[str, str]]:
     out = []
     if too_old:
         out.append((
@@ -297,7 +360,7 @@ def count_sentences(still_open: int, closed_silently: int, excluded_: int,
     if excluded_:
         out.append((
             f"{_pr(excluded_)} {'was a draft or was' if excluded_ == 1 else 'were drafts or were'} "
-            "labelled as spam or invalid, so "
+            "marked as spam or invalid, so "
             f"{'it isn' if excluded_ == 1 else 'they aren'}'t counted anywhere.",
             "excluded",
         ))
@@ -316,5 +379,23 @@ def count_sentences(still_open: int, closed_silently: int, excluded_: int,
             f"spam, so {'it isn' if closed_silently == 1 else 'they aren'}'t counted "
             "as ignored.",
             "closed_silently",
+        ))
+    if closed_by_bot:
+        out.append((
+            f"{_pr(closed_by_bot)} {_was(closed_by_bot)} closed by a bot soon after "
+            f"{'it was' if closed_by_bot == 1 else 'they were'} opened.",
+            BY_BOT,
+        ))
+    if closed_stale:
+        out.append((
+            f"{_pr(closed_stale)} {_was(closed_stale)} closed later by a bot, with no "
+            "reply from the project.",
+            STALE,
+        ))
+    if withdrawn:
+        out.append((
+            f"{_pr(withdrawn)} {_was(withdrawn)} closed by "
+            f"{'the person who opened it' if withdrawn == 1 else 'the people who opened them'}.",
+            WITHDRAWN,
         ))
     return out

@@ -151,9 +151,15 @@ function HowCounted({ report }: { report: Report }) {
 }
 
 const ASK_SOURCE: Record<Report["asks"][number]["code"], string> = {
+  ticket_first: "The bot closing pull requests with no accepted ticket",
+  no_ai_prs: "Where the project turns down AI-written pull requests",
+  ok_to_test: "A pull request waiting for a maintainer to approve tests",
+  sig_team: "A pull request labelled with its team",
   cla: "A CLA bot asking an outsider to sign",
   dco: "CONTRIBUTING, on signing off commits",
   issue_first: "CONTRIBUTING, on opening an issue first",
+  ai_disclosure: "Where the project asks you to say whether you used AI",
+  duplicates: "A pull request closed as a duplicate",
 };
 
 export function ReportView({

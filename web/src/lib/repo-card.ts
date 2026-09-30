@@ -11,6 +11,8 @@ export interface CardStats {
   merged: number | null;
   noReply: number | null;
   closedSilently: number | null;
+  /** Closed with no reply by a bot or by the person who opened it: not "without a word". */
+  closedOther: number | null;
   /** Opened too recently to count. */
   stillOpen: number | null;
   firstTimers: number | null;
@@ -47,14 +49,14 @@ export function fromFind(r: FindResult): CardRepo {
   const s = r.stats;
   return {
     repo: r.repo, description: r.description, language: r.language, languageLabel: languageLabel(r.language, r.languages), stars: r.stars, headline: r.headline, tone: r.tone,
-    stats: { attempts: n(s.outsider_attempts), merged: n(s.outsider_merged), noReply: n(s.no_reply), closedSilently: null, stillOpen: null, firstTimers: n(s.first_time_merged_authors), replyHours: n(s.median_first_response_hours) },
+    stats: { attempts: n(s.outsider_attempts), merged: n(s.outsider_merged), noReply: n(s.no_reply), closedSilently: null, closedOther: null, stillOpen: null, firstTimers: n(s.first_time_merged_authors), replyHours: n(s.median_first_response_hours) },
     issues: r.issues, topics: [], why: [], reason: null, numbersLine: null, odds: null, checkedThisWeek: null,
   };
 }
 
 /** Card stats from a full report or board entry. */
 export function fullStats(s: Recommendation["stats"]): CardStats {
-  return { attempts: s.outsider_attempts, merged: s.outsider_merged, noReply: s.no_reply, closedSilently: s.closed_silently, stillOpen: s.still_open, firstTimers: s.first_time_merged_authors, replyHours: n(s.median_first_response_hours) };
+  return { attempts: s.outsider_attempts, merged: s.outsider_merged, noReply: s.no_reply, closedSilently: s.closed_silently, closedOther: (s.closed_by_bot ?? 0) + (s.withdrawn ?? 0), stillOpen: s.still_open, firstTimers: s.first_time_merged_authors, replyHours: n(s.median_first_response_hours) };
 }
 
 export function fromPick(p: Recommendation): CardRepo {
@@ -71,7 +73,7 @@ export function fromDiscover(d: DiscoverRepo): CardRepo {
   };
 }
 
-export type SegmentKey = "merged" | "replied" | "other" | "closed" | "silent" | "recent";
+export type SegmentKey = "merged" | "replied" | "other" | "closed" | "shut" | "silent" | "recent";
 export interface Segment {
   key: SegmentKey;
   n: number;
@@ -83,25 +85,27 @@ const LABEL: Record<SegmentKey, string> = {
   replied: "got a reply but weren't merged",
   other: "weren't merged",
   closed: "closed without a word",
+  shut: "closed by a bot or their author",
   silent: "got no reply",
   recent: "too recent to count",
 };
 
 /**
  * What happened to outside pull requests, as bar segments: merged, replied but
- * not merged, closed without a word, no reply, then the ones too recent to
- * count. Find results don't say which were closed without a word, so there
- * the rest is only "weren't merged". Null when there's nothing to draw.
+ * not merged, closed without a word, closed by a bot or the author, no reply,
+ * then the ones too recent to count. Find results don't say how pull requests
+ * were closed, so there the rest is only "weren't merged". Null when there's nothing to draw.
  */
 export function oddsSegments(s: CardStats): Segment[] | null {
   if (!s.attempts || s.merged == null) return null;
   const merged = Math.min(s.merged, s.attempts);
   const closed = Math.min(s.closedSilently ?? 0, s.attempts - merged);
-  const silent = Math.min(s.noReply ?? 0, s.attempts - merged - closed);
-  const replied = s.attempts - merged - closed - silent;
+  const shut = Math.min(s.closedOther ?? 0, s.attempts - merged - closed);
+  const silent = Math.min(s.noReply ?? 0, s.attempts - merged - closed - shut);
+  const replied = s.attempts - merged - closed - shut - silent;
   const seg = (key: SegmentKey, count: number): Segment => ({ key, n: count, label: LABEL[key] });
   const rest = s.closedSilently == null ? "other" : "replied";
-  return [seg("merged", merged), seg(rest, replied), seg("closed", closed), seg("silent", silent), seg("recent", s.stillOpen ?? 0)].filter((x) => x.n > 0);
+  return [seg("merged", merged), seg(rest, replied), seg("closed", closed), seg("shut", shut), seg("silent", silent), seg("recent", s.stillOpen ?? 0)].filter((x) => x.n > 0);
 }
 
 /** The bar in words, for screen readers and the focus view. */

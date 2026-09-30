@@ -1111,14 +1111,18 @@ export interface components {
         /**
          * Ask
          * @description Something the project asks of a contributor before a pull request, and
-         *     where Holt read it (a CLA bot's comment, or CONTRIBUTING).
+         *     where Holt read it (a bot's comment, a pull request, CONTRIBUTING or an AI
+         *     policy). `link` is a link the source gives, such as the tracker a bot
+         *     names, which `next_step` quotes.
          */
         Ask: {
             /**
              * Code
              * @enum {string}
              */
-            code: "cla" | "dco" | "issue_first";
+            code: "ticket_first" | "no_ai_prs" | "ok_to_test" | "sig_team" | "cla" | "dco" | "issue_first" | "ai_disclosure" | "duplicates";
+            /** Link */
+            link: string | null;
             /** Url */
             url: string;
         };
@@ -2721,6 +2725,11 @@ export interface components {
             /** Bot Share */
             bot_share: number;
             /**
+             * Closed By Bot
+             * @default 0
+             */
+            closed_by_bot: number;
+            /**
              * Closed Silently
              * @default 0
              */
@@ -2747,6 +2756,11 @@ export interface components {
              * @default 0
              */
             too_old: number;
+            /**
+             * Withdrawn
+             * @default 0
+             */
+            withdrawn: number;
         };
         /** SubscribeIn */
         SubscribeIn: {

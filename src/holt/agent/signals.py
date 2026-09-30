@@ -83,6 +83,13 @@ class Thread:
     # (when, who) for each maintainer reply; see agent/replies.py. None on a
     # thread built by hand, where every non-author response counts.
     replies: list[tuple[object, str]] | None = None
+    # The title as read at fetch time: maintainers retitle junk ("AI junk").
+    title: str = ""
+    # Who closed an unmerged pull request, and when (rates.closure). None when
+    # the capture predates `closed_by` or GitHub named nobody.
+    closed_at: object = None
+    closed_by: str | None = None
+    closed_by_bot: bool = False
 
     @property
     def first_response_hours(self) -> float | None:
@@ -128,6 +135,7 @@ def build_threads(records: Iterable[EvidenceRecord]) -> dict[str, Thread]:
             draft=bool(p.get("is_draft")),
             labels=list(p.get("labels") or []),
             association=p.get("author_association"),
+            title=p.get("title") or "",
         )
 
     closed_at: dict[str, object] = {}
@@ -142,6 +150,10 @@ def build_threads(records: Iterable[EvidenceRecord]) -> dict[str, Thread]:
         elif r.evidence_id.endswith(":closed"):
             thread.closed_unmerged = True
             closed_at[key] = r.timestamp
+            thread.closed_at = r.timestamp
+            thread.closed_by = r.payload.get("closed_by")
+            thread.closed_by_bot = bool(thread.closed_by) and replies.looks_like_automation(
+                thread.closed_by, bool(r.payload.get("closed_by_is_bot")))
         elif ":review:" in r.evidence_id or ":comment:" in r.evidence_id:
             if not looks_like_bot(
                 r.payload.get("author", ""), bool(r.payload.get("author_is_bot"))
@@ -279,6 +291,11 @@ class Signals:
     # are in `outsider_excluded` and nowhere else.
     outsider_still_open: int = 0
     outsider_closed_silently: int = 0
+    # Closed with no reply, but not "without a word" (rates.closure): by a bot
+    # soon after opening, by a bot later on, or by the author.
+    outsider_closed_by_bot: int = 0
+    outsider_closed_stale: int = 0
+    outsider_withdrawn: int = 0
     outsider_excluded: int = 0
     # Outsider attempts opened more than rates.MAX_SAMPLE_DAYS ago (live
     # readings only): in no count, like `outsider_excluded`.
@@ -340,6 +357,9 @@ class Signals:
             "distinct_first_timer_merged_authors": self.distinct_first_timer_merged_authors,
             "outsider_still_open": self.outsider_still_open,
             "outsider_closed_silently": self.outsider_closed_silently,
+            "outsider_closed_by_bot": self.outsider_closed_by_bot,
+            "outsider_closed_stale": self.outsider_closed_stale,
+            "outsider_withdrawn": self.outsider_withdrawn,
             "outsider_excluded": self.outsider_excluded,
             "outsider_too_old": self.outsider_too_old,
             "outsider_landed_elsewhere": self.outsider_landed_elsewhere,
@@ -372,7 +392,7 @@ def first_prs(outsiders: Iterable[Thread], as_of: datetime | None,
     capped = rates.judges_time(as_of, min_age_hours)
     firsts: dict[str, Thread] = {}
     for t in outsiders:
-        if rates.excluded(t):
+        if rates.excluded(t, retitled=capped):
             continue
         if capped and as_of - t.opened_at > timedelta(days=rates.MAX_SAMPLE_DAYS):
             continue
@@ -449,6 +469,9 @@ def compute(
         distinct_first_timer_merged_authors=len({t.author for t in firsts if t.merged}),
         outsider_still_open=split.still_open,
         outsider_closed_silently=split.closed_silently,
+        outsider_closed_by_bot=split.closed_by_bot,
+        outsider_closed_stale=split.closed_stale,
+        outsider_withdrawn=split.withdrawn,
         outsider_excluded=split.excluded,
         outsider_too_old=split.too_old,
         outsider_landed_elsewhere=sum(1 for t in outsider_merges if t.landed_via),

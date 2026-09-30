@@ -4,6 +4,7 @@ never disagree with the verdict."""
 from __future__ import annotations
 
 import itertools
+from typing import get_args
 
 import pytest
 from conftest import canned_report
@@ -226,6 +227,35 @@ def test_next_step_names_where_work_lands_and_what_is_asked():
     # Two merges in a folder is luck, not a place to aim for.
     thin = top("viable", stats(80, 20, 5), landing=[{"path": "a/b", "merged": 2, "attempted": 3}])
     assert thin.next_step.startswith("Best bet: a small, focused change")
+
+
+def test_the_ways_in_are_requirements_in_the_next_step():
+    """Engine 6: django's ticket, flask's AI rule and kubernetes' gate read as
+    what to do, each linked to where it was read."""
+    asks = [{"code": "ticket_first", "url": "https://github.com/o/r/pull/2",
+             "link": "https://code.djangoproject.com"},
+            {"code": "no_ai_prs", "url": "https://github.com/o/r/pull/3"},
+            {"code": "ok_to_test", "url": "https://github.com/o/r/pull/4"}]
+    r = top("long_shot", stats(80, 5, 5), ["5 merged."], ["few_merged"], asks=asks)
+    assert r.next_step == (
+        schema.LONG_SHOT_STEP["few_merged"] + " Get an accepted ticket at "
+        "code.djangoproject.com first. AI-written pull requests get closed here. "
+        "A maintainer has to approve tests first.")
+    assert r.model_dump(mode="json")["asks"][0]["link"] == "https://code.djangoproject.com"
+    # Too little to judge still says what the project requires.
+    thin = top("insufficient_evidence", stats(3, 1, 0), asks=asks[:1])
+    assert thin.next_step.endswith("Get an accepted ticket at code.djangoproject.com first.")
+    # A cached report's ask has no link: the sentence without the tracker.
+    old = top("viable", stats(80, 20, 5), asks=[{"code": "ticket_first", "url": "u"}])
+    assert old.next_step.endswith(schema.ASK_STEP["ticket_first"])
+    assert set(schema.ASK_STEP) == set(get_args(schema.AskCode))
+
+
+def test_bot_closes_and_withdrawals_are_not_closed_without_a_word():
+    s = {**stats(100, 10, 0), "closed_silently": 5, "closed_by_bot": 31, "withdrawn": 4}
+    line = top("long_shot", s, ["10 merged."], ["few_merged"]).numbers_line
+    assert "5% were closed without a word. 31% were closed by a bot. " \
+           "4% were closed by their authors." in line
 
 
 def test_next_step_follows_the_rule_that_decided():

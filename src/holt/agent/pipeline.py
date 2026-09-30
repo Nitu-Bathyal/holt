@@ -186,6 +186,7 @@ def analyze(
     contested = contested_kind(findings, signals, meta.payload if meta else None)
     if contested:
         findings.drop("repo_kind")
+    _add_pr_settings(findings, meta)
     _add_personal(findings, records, threads, signals, as_of, meta)
     _add_inactive(findings, records, threads, signals, as_of, meta)
 
@@ -334,6 +335,7 @@ def _legacy_measurements(signals: Signals) -> dict:
                      "merged_dirs_median", "merged_with_files",
                      "outsider_answered", "outsider_still_open",
                      "outsider_closed_silently", "outsider_excluded",
+                     "outsider_closed_by_bot", "outsider_closed_stale", "outsider_withdrawn",
                      "outsider_reviewed_share", "merged_threads",
                      "outsider_too_old", "outsider_landed_elsewhere")
         and not k.startswith(("first_timer_", "distinct_first_timer_", "first_pr_"))
@@ -347,7 +349,7 @@ def plain_measurements(signals: Signals) -> dict[str, object]:
     team. Attempts are the decided ones, as on the page and in the rules.
     """
     median = signals.median_first_response_hours
-    return {
+    out = {
         "Pull requests read": signals.total_threads,
         "Pull requests from outside contributors old enough to judge (the attempts)":
             signals.outsider_judgeable,
@@ -363,6 +365,18 @@ def plain_measurements(signals: Signals) -> dict[str, object]:
         "Outside pull requests closed without a word (not counted as ignored)":
             signals.outsider_closed_silently,
     }
+    # Only when there are some, so a recorded narration keeps its prompt.
+    for label, n in (
+        ("Outside pull requests closed by a bot soon after they were opened",
+         signals.outsider_closed_by_bot),
+        ("Outside pull requests closed later by a bot, with no reply",
+         signals.outsider_closed_stale),
+        ("Outside pull requests closed by the people who opened them",
+         signals.outsider_withdrawn),
+    ):
+        if n:
+            out[label] = n
+    return out
 
 
 # Stages A, B and C read different evidence and write different findings, so
@@ -440,6 +454,11 @@ def _counted_summary(signals: Signals) -> str:
             f" {s['outsider_closed_silently']} were closed without a reply, "
             "which isn't counted as ignored."
         )
+    if bots := s["outsider_closed_by_bot"] + s["outsider_closed_stale"]:
+        summary += f" {bots} {'was' if bots == 1 else 'were'} closed by a bot."
+    if s["outsider_withdrawn"]:
+        summary += (f" {s['outsider_withdrawn']} {'was' if s['outsider_withdrawn'] == 1 else 'were'}"
+                    " closed by the people who opened them.")
     if s["outsider_still_open"]:
         summary += (
             f" {s['outsider_still_open']} were opened in the last {rates.SETTLE_DAYS} "
@@ -509,6 +528,7 @@ def analyze_without_model(
         findings.add("contribute_elsewhere", elsewhere, (meta.evidence_id,),
                      "read from GitHub's mirror and fork fields and the description")
 
+    _add_pr_settings(findings, meta)
     _add_personal(findings, records, threads, signals, as_of, meta)
     _add_inactive(findings, records, threads, signals, as_of, meta)
 
@@ -580,8 +600,8 @@ def first_timer_sentence(signals: Signals) -> str:
 
 
 # Rules after which how the merges happened is beside the point.
-_NOT_ABOUT_MERGES = {"archived", "elsewhere", "closed_kind", "non_software_kind", "inactive",
-                     "personal"}
+_NOT_ABOUT_MERGES = {"archived", "prs_closed", "elsewhere", "closed_kind", "non_software_kind",
+                     "inactive", "personal"}
 # Rules that follow the merge count and turn the repository down.
 _TURNED_DOWN = rates.OVERRULING_CODES
 
@@ -599,6 +619,20 @@ def _add_inactive(findings: Findings, records: list, threads: dict[str, Thread],
     if line:
         findings.add("inactive", line, (meta.evidence_id,),
                      "no merge in the sample and no push on GitHub in 90 days")
+
+
+def _add_pr_settings(findings: Findings, meta) -> None:
+    """GitHub's own switches: pull requests turned off, or only the project's
+    collaborators may open one. Either is the answer on its own (verdict.py)."""
+    if meta is None:
+        return
+    if meta.payload.get("pull_requests_enabled") is False:
+        why = "Pull requests are switched off on this repository."
+    elif meta.payload.get("pull_request_policy") == "COLLABORATORS_ONLY":
+        why = "Only the project's collaborators can open pull requests on this repository."
+    else:
+        return
+    findings.add("prs_closed", why, (meta.evidence_id,), "read from GitHub's pull request settings")
 
 
 def _add_personal(findings: Findings, records: list, threads: dict[str, Thread],

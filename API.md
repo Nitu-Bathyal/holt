@@ -89,7 +89,7 @@ responses. The server also accepts and normalises full URLs
     "outsider_attempts": 100, "outsider_merged": 15, "distinct_outsiders": 72,
     "first_time_merged_authors": 15, "no_reply": 63,
     "median_first_response_hours": 0.8, "bot_share": 0.085,
-    "still_open": 12, "closed_silently": 20,
+    "still_open": 12, "closed_silently": 20, "closed_by_bot": 31, "withdrawn": 4,
     "too_old": 0                     // opened more than a year ago: read, in no count (default 0)
   },
   "decided_by": ["plain-English rule sentence", "..."],
@@ -107,7 +107,9 @@ responses. The server also accepts and normalises full URLs
   "sample": { "pull_requests": 200, "first_opened": "2026-06-03T10:00:00Z",
               "last_opened": "2026-09-26T09:00:00Z", "team_pull_requests": 40,
               "team_people": 9, "bot_pull_requests": 12 } | null,
-  "asks": [ { "code": "cla" | "dco" | "issue_first", "url": "https://github.com/…" } ],
+  "asks": [ { "code": "ticket_first" | "no_ai_prs" | "ok_to_test" | "sig_team" | "cla" | "dco"
+              | "issue_first" | "ai_disclosure" | "duplicates",
+              "url": "https://github.com/…", "link": "https://code.djangoproject.com" | null } ],
   "budget_independent": true,         // the verdict is the same for any `days` (see below)
   "cost": { "model": "…", "input_tokens": 9000, "output_tokens": 6000,
             "usd": 0.0123, "seconds": 48.2 }, // ai only, else null
@@ -194,20 +196,34 @@ than 14 days (the settle window) before the report, whatever happened to them.
 outsider_attempts` and `no_reply / outsider_attempts` are the rates the verdict
 was computed from. `no_reply` is still open, with no reply.
 `still_open` (opened within the window, merged or not; in no rate; reports
-cached before 30 Sep 2026 counted only the open ones) and `closed_silently` (closed with
-no reply, usually maintainers clearing out spam; not in `no_reply`) are shown
-beside them; both are 0 on reports cached before they existed. Drafts and pull
-requests labelled as spam or invalid are in no count.
+cached before 30 Sep 2026 counted only the open ones) and `closed_silently` (closed by
+a person with no reply, usually maintainers clearing out spam; not in `no_reply`) are shown
+beside them; both are 0 on reports cached before they existed. `closed_by_bot`
+(closed with no reply by a bot, soon after opening or later) and `withdrawn`
+(closed by the person who opened it) are decided attempts that weren't merged,
+in neither `no_reply` nor `closed_silently`; 0 on reports from before engine 6,
+where they are inside `closed_silently`. Drafts and pull requests labelled or
+retitled as spam or invalid are in no count.
 `landing` and `never_landed` count the same decided pull requests, so every
 number on a report is over one set.
 
 `sample` is what the counts were read from: every pull request read, when the
 oldest and newest were opened, and how many came from the team or from bots
 (left out of every count). Null on reports cached before it existed. `asks` is
-what the project asks of a contributor, where Holt could read it: `cla` (a CLA
-bot commented on outside pull requests), `dco` or `issue_first` (CONTRIBUTING
-says so in as many words). `url` is where it was read. An empty list means
-nothing was found, not that nothing is asked. Neither affects the verdict.
+what the project asks of a contributor, where Holt could read it, blocking ones
+first: `ticket_first` (the bot that closed outside pull requests says they need
+a ticket in the project's tracker; `link` is the tracker it names),
+`no_ai_prs` (outside pull requests closed and labelled or retitled as AI, or a
+written rule against AI-written ones), `ok_to_test` and `sig_team` (most
+outside pull requests carry `needs-ok-to-test`/`ok-to-test`, or a `sig/…`
+label), `cla` (a CLA bot commented on outside pull requests), `dco` or
+`issue_first` (CONTRIBUTING says so in as many words), `ai_disclosure` (a
+written rule, or a closing bot, asks you to say whether you used AI; never
+beside `no_ai_prs`), `duplicates` (5+ outside pull requests closed as
+duplicates). `url` is where it was read; `link` is null except on
+`ticket_first`. An empty list means nothing was found, not that nothing is
+asked. Neither affects the verdict. `next_step` carries one sentence per ask
+under Worth your time, Long shot and Not enough evidence.
 
 `headline`, `tone`, `verdict_line`, `numbers_line`, `first_timer_line`,
 `next_step`, `stat_line`, `counted` and `odds` are derived by the server from
@@ -246,7 +262,8 @@ they cannot disagree with each other or with the verdict:
 - The rule that decided the verdict is the last `decided_by` line whose code
   is not informational (`awaiting_reply`, `landed_off_button`,
   `package_updates`, `kind_contested`, `kind_uncited`, `sample_period`,
-  `dormant`, `excluded`, `still_open`, `closed_silently`, `too_old`).
+  `dormant`, `excluded`, `still_open`, `closed_silently`, `closed_by_bot`,
+  `closed_stale`, `withdrawn`, `too_old`).
 - `counted` is "How this was counted": the sample and its dates, the team and
   how it was worked out, bots, each informational `decided_by` line, the
   rules that decided, and the fixed rule itself. Topics are plain English and
@@ -257,7 +274,8 @@ they cannot disagree with each other or with the verdict:
   ≤ 25%, fair ≤ 50%); its `text` names the weak part. The other verdicts are
   the answer on their own.
 - `rule_codes` is `[]` on reports cached before it existed. Codes include
-  `archived`, `closed_kind`, `non_software_kind`, `no_attempts`, `ignored`,
+  `archived`, `prs_closed` (GitHub's settings switch pull requests off or
+  limit them to collaborators; decides alone, like `archived`), `closed_kind`, `non_software_kind`, `no_attempts`, `ignored`,
   `merges`, `rubber_stamp`, `long_odds` (under 5% of outside pull requests
   merged, from 20 decided), `replies_no_merges` (20+ decided, most answered,
   none merged), `inactive` (nothing merged or pushed in 90 days; decides alone),
@@ -272,7 +290,9 @@ they cannot disagree with each other or with the verdict:
   sample's pull requests were opened; first on every live report), `dormant`
   (nothing merged in 90 days), `excluded` (drafts and spam left out),
   `too_old` (opened more than a year ago, left out),
-  `still_open`, `closed_silently`, `slow_note` (under "Worth your time": the
+  `still_open`, `closed_silently`, `closed_by_bot` (closed by a bot within
+  three days of opening), `closed_stale` (closed later by a bot, with no
+  reply), `withdrawn` (closed by its author), `slow_note` (under "Worth your time": the
   typical first reply takes longer than `days`; `verdict_line` ends with
   it; comes after the merge count). `awaiting_reply` appears only on reports
   cached before `still_open` replaced it.

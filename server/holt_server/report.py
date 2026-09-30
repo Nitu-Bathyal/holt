@@ -122,6 +122,8 @@ def stats(signals: Signals) -> dict[str, Any]:
         "bot_share": round(signals.bot_share, 3),
         "still_open": signals.outsider_still_open,
         "closed_silently": signals.outsider_closed_silently,
+        "closed_by_bot": signals.outsider_closed_by_bot + signals.outsider_closed_stale,
+        "withdrawn": signals.outsider_withdrawn,
         "too_old": signals.outsider_too_old,
     }
 
@@ -217,7 +219,7 @@ def build(
         # Rules reports from a live reading: every budget gets the same verdict
         # (verdict.py), so another `days` is this report with its note redone.
         "budget_independent": mode == "rules" and signals.settle_hours > 0,
-        "asks": [{"code": a.code, "url": a.url} for a in asks_mod.read(
+        "asks": [{"code": a.code, "url": a.url, "link": a.link} for a in asks_mod.read(
             by_id.values(), {t.key for t in outsider_threads(threads)})],
     }).model_dump(mode="json")
 

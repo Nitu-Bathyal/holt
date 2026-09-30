@@ -37,3 +37,11 @@ test("closed without a word is neither a reply nor left open", () => {
   assert.ok(text.includes("Of the 72 that got a reply, half heard back within 2.3 hours."));
   assert.ok(text.includes("99 were closed without a reply, which isn't counted as ignored."));
 });
+
+test("closes by a bot or the author are not counted as replies", () => {
+  const r = buildReplay({ ...EXAMPLE_REPORT, stats: { ...EXAMPLE_REPORT.stats, outsider_attempts: 100, outsider_merged: 10, no_reply: 20, closed_silently: 5, closed_by_bot: 40, withdrawn: 10 } });
+  const text = r.terminal.map(plainLine);
+  assert.ok(text.some((l) => l.startsWith("Of the 25 that got a reply")));
+  assert.ok(text.includes("40 were closed by a bot."));
+  assert.ok(text.includes("10 were closed by the people who opened them."));
+});
