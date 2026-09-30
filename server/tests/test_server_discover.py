@@ -8,7 +8,7 @@ from datetime import timedelta
 import pytest
 from conftest import STATS, canned_report
 from holt_server import discover, github, warm
-from holt_server.db import RepoMeta, Report, Usage, now
+from holt_server.db import RepoMeta, Report, StarterCache, Usage, now
 from holt_server.errors import ApiError
 
 
@@ -98,6 +98,33 @@ def test_card_reason_does_not_point_at_starter_issues(h):
     reason = get(h)["repos"][0]["reason"]
     assert reason.startswith("Outside contributors do get merged here, but")
     assert "below" not in reason and reason.endswith("choose your first change carefully.")
+
+
+def issue(number, people=0):
+    return {"number": number, "title": f"Fix {number}", "url": f"https://github.com/o/r/issues/{number}",
+            "labels": ["good first issue"], "created_at": None, "comments": 0, "why": [],
+            "people": people, "open_prs": 0}
+
+
+def starters(repo, *issues, age_hours=0):
+    return StarterCache(repo_key=repo.lower(), repo=repo, issues=list(issues),
+                        created_at=now() - timedelta(hours=age_hours))
+
+
+def test_cards_carry_cached_starter_issues_nobody_on_first(h):
+    add(h, report("octo/one"), report("octo/stale"), report("octo/none"),
+        starters("octo/one", issue(1, people=2), issue(2), issue(3)),
+        starters("octo/stale", issue(9), age_hours=discover.STARTER_MAX_HOURS + 1))
+    cards = {c["repo"]: c for c in get(h)["repos"]}
+    assert [i["number"] for i in cards["octo/one"]["issues"]] == [2, 3, 1]
+    assert cards["octo/one"]["issues"][0]["on_it"] == "Nobody on it yet"
+    assert cards["octo/stale"]["issues"] == [] and cards["octo/none"]["issues"] == []
+
+
+def test_a_card_carries_at_most_a_handful_of_issues(h):
+    add(h, report("octo/many"),
+        starters("octo/many", *(issue(n) for n in range(1, discover.CARD_ISSUES + 4))))
+    assert len(get(h)["repos"][0]["issues"]) == discover.CARD_ISSUES
 
 
 def test_only_rules_reports_and_the_newest_one_count(h):

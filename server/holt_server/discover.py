@@ -40,11 +40,13 @@ from fastapi import APIRouter, Depends, Query, Request
 from pydantic import Field
 from sqlalchemy import func, select
 
-from holt_server import repos, schema
-from holt_server.db import FindCache, RepoMeta, Report, Usage, current_engine, iso, now, utc
+from holt_server import repos, schema, starter
+from holt_server.db import (
+    FindCache, RepoMeta, Report, StarterCache, Usage, current_engine, iso, now, utc,
+)
 from holt_server.deps import internal, services
 from holt_server.github import DETAILS_BATCH
-from holt_server.schema import Model, Stats, VerdictView, odds_for, verdict_line
+from holt_server.schema import Model, StarterIssue, Stats, VerdictView, odds_for, verdict_line
 from holt_server.services import Services
 
 log = logging.getLogger("holt_server.discover")
@@ -71,6 +73,11 @@ PRIOR_PRS, PRIOR_RATE = 10, 0.2
 # Personal projects aren't set up for outside contributors, so Discover never
 # lists them, under any sort.
 VERDICTS = set(schema.TONES) - {"personal"}
+# Starter issues this old may be closed by now; older ones aren't shown.
+STARTER_MAX_HOURS = 72
+# Starter issues a card carries, as on a find result: the card shows the
+# first and counts them, the focus view lists them.
+CARD_ISSUES = 5
 
 
 class DiscoverRepo(VerdictView):
@@ -97,6 +104,11 @@ class DiscoverRepo(VerdictView):
     # People who checked it on Holt in the last 7 days; null below TRENDING_MIN.
     checked_this_week: int | None = None
     generated_at: str | None = None
+    # Open issues to start with, from the starter-issue cache (what the
+    # starter-issues endpoint or the warm pass last read, within
+    # STARTER_MAX_HOURS). Empty when none are cached; Discover never reads
+    # GitHub for them.
+    issues: list[StarterIssue] = Field(default_factory=list)
 
 
 class LanguageCount(Model):
@@ -142,6 +154,32 @@ async def _latest(svc: Services, keys: list[str] | None = None) -> list[tuple]:
             .join(latest, Report.id == latest.c.id)
             .outerjoin(RepoMeta, RepoMeta.repo_key == Report.repo_key)
         )).all()
+
+
+async def starter_issues(svc: Services, keys: list[str]) -> dict[str, list[dict]]:
+    """repo_key -> its cached starter issues, for those cached recently by
+    the current rules. Reads only the database."""
+    if not keys:
+        return {}
+    since = now() - timedelta(hours=STARTER_MAX_HOURS)
+    async with svc.db.session() as s:
+        rows = (await s.execute(select(StarterCache.repo_key, StarterCache.issues,
+                                       StarterCache.rules_version)
+                                .where(StarterCache.repo_key.in_(keys),
+                                       StarterCache.created_at >= since))).all()
+    return {key: list(issues or []) for key, issues, version in rows
+            if starter.current(issues or [], version)}
+
+
+def card_issues(raw: list[dict]) -> list[StarterIssue]:
+    """The first CARD_ISSUES that parse, nobody-on-it first (stable)."""
+    issues = []
+    for i in raw:
+        try:
+            issues.append(StarterIssue.model_validate(i))
+        except ValueError:
+            continue
+    return sorted(issues, key=lambda i: bool(i.people or i.open_prs))[:CARD_ISSUES]
 
 
 async def checked_this_week(svc: Services) -> dict[str, int]:
@@ -227,9 +265,14 @@ async def discover_body(svc: Services, sort: Sort, language: str | None,
               and (topic is None or topic in {t.lower() for t in c.topics})]
     # The language as GitHub spells it, when a repo has it.
     shown = next((name for name in counts if name.lower() == language), language)
+    ranked = rank(chosen, sort)[:limit]
+    # Only for the cards shown, so a board is one more small read.
+    cached = await starter_issues(svc, [repos.key(c.repo) for c in ranked])
+    ranked = [c.model_copy(update={"issues": card_issues(cached.get(repos.key(c.repo), []))})
+              for c in ranked]
     return DiscoverOut(
         sort=sort, language=shown, topic=topic, hacktoberfest=hacktoberfest,
-        repos=rank(chosen, sort)[:limit],
+        repos=ranked,
         languages=[LanguageCount(name=name, repos=n)
                    for name, n in sorted(counts.items(), key=lambda x: (-x[1], x[0].lower()))
                    [:LANGUAGES_SHOWN]],
