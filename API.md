@@ -901,6 +901,8 @@ only the database: no GitHub call, no model, no rate limit, never charged.
             "6 people had their first pull request merged here recently."],
     "stats": Stats, "description": "…"|null, "language": "Python"|null,
     "stars": 123|null, "topics": ["cli"],
+    "open_issues": 57|null, "pull_requests": 4100|null,
+    "open_pull_requests": 12|null, "contributors": 812|null,  // as on Discover
     "issues": [StarterIssue],     // up to 3, fitted to level and contribution types; [] when none known
     "checked_at": "…"|null } ],
   "locked": 3, "full": false,
