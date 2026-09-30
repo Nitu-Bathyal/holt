@@ -109,6 +109,37 @@ def readme_line(text: str | None) -> str | None:
     return None
 
 
+# Where a README sends people for help: chat rooms and the project's docs. The
+# first of each kind wins; a badge's image URL (shields.io, badges.gitter.im)
+# never matches, only where the badge links to.
+_URL_END = r"[^\s)\"'<>\]]*"
+HELP_PATTERNS = (
+    ("docs", re.compile(r"https?://(?:[\w-]+\.readthedocs\.(?:io|org)|docs\.(?!github\.com)[\w.-]+\.\w+)" + _URL_END, re.I)),
+    ("discord", re.compile(r"https?://(?:www\.)?(?:discord\.gg|discord(?:app)?\.com/invite)/[\w-]+", re.I)),
+    ("slack", re.compile(r"https?://(?:join\.slack\.com/t/|[\w-]+\.slack\.com)" + _URL_END, re.I)),
+    ("gitter", re.compile(r"https?://(?:app\.)?gitter\.im/[\w-]+" + _URL_END, re.I)),
+    ("matrix", re.compile(r"https?://matrix\.to/#/" + _URL_END, re.I)),
+    ("zulip", re.compile(r"https?://[\w-]+\.zulipchat\.com" + _URL_END, re.I)),
+)
+MAX_URL = 300
+
+
+def help_links(text: str | None) -> list[dict[str, str]]:
+    """The README's links to its docs and chat rooms, as [{"kind", "url"}],
+    in HELP_PATTERNS order, one per kind."""
+    if not text:
+        return []
+    text = _COMMENT.sub("", text)
+    out = []
+    for kind, pattern in HELP_PATTERNS:
+        for m in pattern.finditer(text):
+            url = m.group(0).rstrip(".,;:!?")
+            if len(url) <= MAX_URL:
+                out.append({"kind": kind, "url": url})
+                break
+    return out
+
+
 def compact(n: int) -> str:
     """91234 -> "91k", 1234 -> "1.2k", 1250000 -> "1.3M"."""
     for size, unit in ((1_000_000_000, "B"), (1_000_000, "M"), (1_000, "k")):

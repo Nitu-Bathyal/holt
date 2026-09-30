@@ -17,8 +17,8 @@ and costs nothing:
 * the maintainers' typical first reply must fit in the time picked (`days`),
   the same line the verdict draws for "too slow for the time you have".
 * it must have starter issues Holt knows about (`starter_cache`, at most
-  `recommendations.STARTER_MAX_HOURS` old): a repo whose known issues are
-  none, or unknown yet, isn't listed. Up to `ISSUES_PER_REPO`, best first.
+  `discover.STARTER_MAX_HOURS` old): a repo whose known issues are none, or
+  unknown yet, isn't listed. They are the ones a Discover card carries.
 
 The **search** is the GitHub search `holt.starter.find` runs (jobs.py, cached
 6 h per search in `find_cache`). A search job also reads the starter issues
@@ -38,14 +38,14 @@ import asyncio
 import logging
 from typing import Any
 
-from holt_server import recommendations, repos, schema, starter
-from holt_server.discover import _card, _latest, welcoming_key
+from holt_server import repos, schema, starter
+from holt_server.discover import (
+    BREAKDOWN, COUNTS, _card, _latest, card_issues, starter_issues, welcoming_key,
+)
 from holt_server.services import Services
 
 log = logging.getLogger("holt_server.find")
 
-# Starter issues listed per repo, as the search lists them.
-ISSUES_PER_REPO = 3
 # Index matches with no known starter issues whose issues one search reads
 # (the web's first page), and how many at a time.
 FILL_ISSUES = 12
@@ -92,15 +92,17 @@ def _result(card, issues: list[dict]) -> dict[str, Any]:
     return schema.FindResult.model_validate({
         "repo": card.repo, "verdict": card.verdict, "description": card.description,
         "language": card.language, "languages": card.languages, "stars": card.stars,
-        "stats": {k: stats[k] for k in starter.STAT_KEYS if k in stats},
-        "issues": issues[:ISSUES_PER_REPO],
+        **{k: getattr(card, k) for k in COUNTS},
+        # The report counted what became of the rest, so the odds bar is whole.
+        "stats": {k: stats[k] for k in (*starter.STAT_KEYS, *BREAKDOWN) if k in stats},
+        "issues": card_issues(issues),
     }).model_dump(mode="json")
 
 
 async def index_results(svc: Services, params: dict[str, Any]) -> list[dict[str, Any]]:
     """The index part of a find: matches with starter issues, best first."""
     cards = await matches(svc, params)
-    known = await recommendations.starter_issues(svc, [repos.key(c.repo) for c in cards])
+    known = await starter_issues(svc, [repos.key(c.repo) for c in cards])
     return [_result(c, issues) for c in cards if (issues := known.get(repos.key(c.repo)))]
 
 
@@ -109,7 +111,7 @@ async def unlisted(svc: Services, params: dict[str, Any], limit: int = FILL_ISSU
     old: the ones a search reads issues for. A repo known to have none isn't
     read again until that answer is old."""
     cards = await matches(svc, params)
-    known = await recommendations.starter_issues(svc, [repos.key(c.repo) for c in cards])
+    known = await starter_issues(svc, [repos.key(c.repo) for c in cards])
     return [c.repo for c in cards if repos.key(c.repo) not in known][:limit]
 
 

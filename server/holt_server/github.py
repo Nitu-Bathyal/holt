@@ -26,7 +26,7 @@ from urllib.parse import quote
 
 import httpx
 
-from holt.about import language_shares, license_name, readme_line
+from holt.about import help_links, language_shares, license_name, readme_line
 from holt.evidence.errors import AuthError, GitHubError, RateLimited
 from holt.evidence.github_graphql import GitHubGraphQL
 from holt_server import github_app
@@ -64,6 +64,9 @@ DETAILS_FIELDS = """
   forkCount createdAt homepageUrl parent { nameWithOwner }
   licenseInfo { spdxId name } issues(states: OPEN) { totalCount }
   defaultBranchRef { name }
+  pullRequests { totalCount } openPrs: pullRequests(states: OPEN) { totalCount }
+  hasDiscussionsEnabled contributingGuidelines { url }
+  latestRelease { tagName publishedAt url }
 """
 
 # A second language is named beside the primary one when it is at least this
@@ -347,6 +350,27 @@ def main_languages(node: dict[str, Any]) -> list[str]:
     return out[:2]
 
 
+def _links(node: dict[str, Any]) -> list[dict[str, str]]:
+    """Where a newcomer finds the rules and help: the contributing guide,
+    GitHub Discussions, then the README's docs and chat links."""
+    out = []
+    contributing = (node.get("contributingGuidelines") or {}).get("url")
+    if contributing:
+        out.append({"kind": "contributing", "url": contributing})
+    if node.get("hasDiscussionsEnabled") and node.get("nameWithOwner"):
+        out.append({"kind": "discussions", "url": f"https://github.com/{node['nameWithOwner']}/discussions"})
+    readme = next((text for i in range(len(README_PATHS))
+                   if (text := (node.get(f"readme{i}") or {}).get("text"))), None)
+    return out + help_links(readme)
+
+
+def _release(node: dict[str, Any]) -> dict[str, Any] | None:
+    r = node.get("latestRelease") or {}
+    if not r.get("tagName") or not r.get("url"):
+        return None
+    return {"tag": r["tagName"], "published_at": r.get("publishedAt"), "url": r["url"]}
+
+
 def _details(node: dict[str, Any]) -> dict[str, Any]:
     topics = [((t or {}).get("topic") or {}).get("name")
               for t in ((node.get("repositoryTopics") or {}).get("nodes") or [])]
@@ -362,6 +386,10 @@ def _details(node: dict[str, Any]) -> dict[str, Any]:
         "fork": bool(node.get("isFork")),
         "forks": node.get("forkCount"),
         "open_issues": (node.get("issues") or {}).get("totalCount"),
+        "pull_requests": (node.get("pullRequests") or {}).get("totalCount"),
+        "open_pull_requests": (node.get("openPrs") or {}).get("totalCount"),
+        # GraphQL has no contributor count; `details` fills it from REST.
+        "contributors": None,
         "license": license_name(node.get("licenseInfo")),
         "homepage": (node.get("homepageUrl") or "").strip() or None,
         "language_shares": language_shares(node.get("languages")),
@@ -371,6 +399,8 @@ def _details(node: dict[str, Any]) -> dict[str, Any]:
         "readme_line": next((line for i in range(len(README_PATHS))
                              if (line := readme_line((node.get(f"readme{i}") or {}).get("text")))),
                             None),
+        "links": _links(node),
+        "latest_release": _release(node),
     }
 
 
@@ -452,7 +482,50 @@ class GitHubLookup:
         report's "About" (repo_meta) for up to
         `DETAILS_BATCH` repositories, in one GraphQL query. Keyed by the
         requested `owner/repo`; None for one that is missing or private."""
-        return await asyncio.to_thread(self._details, repos)
+        return await asyncio.to_thread(self._details_with_people, repos)
+
+    def _details_with_people(self, repos: list[str]) -> dict[str, dict[str, Any] | None]:
+        out = self._details(repos)
+        for repo, d in out.items():
+            if d is None:
+                continue
+            try:
+                d["contributors"] = self._contributors(repo)
+            except RateLimited:
+                break  # the rest are read tomorrow; counts are a nicety
+        return out
+
+    def _contributors(self, repo: str) -> int | None:
+        """People who have committed to the repository, or None when GitHub
+        wouldn't say. One REST request asking for a page of one: the number of
+        pages in the `Link` header is the count. Anonymous committers count."""
+        owner, _, name = repo.partition("/")
+        index, token = self.pool.lease()
+        try:
+            response = self.http.get(
+                REPO_URL.format(owner=quote(owner, safe=""), name=quote(name, safe="")) + "/contributors",
+                params={"per_page": 1, "anon": 1},
+                headers={**REST_HEADERS, "Authorization": f"Bearer {token}"},
+                timeout=LOOKUP_TIMEOUT_S, follow_redirects=True)
+        except httpx.HTTPError as exc:
+            log.warning("REST contributor count failed (%s)", type(exc).__name__)
+            return None
+        if response.status_code == 401:
+            self.pool.note_refused(index, "401 Unauthorized", token)
+        if response.status_code == 204:
+            return 0  # an empty repository
+        if response.status_code in (403, 429):
+            raise RateLimited(retry_after=None)
+        if response.status_code != 200:
+            return None
+        last = (response.links.get("last") or {}).get("url", "")
+        page = re.search(r"[?&]page=(\d+)", last)
+        if page:
+            return int(page.group(1))
+        try:
+            return len(response.json())
+        except (ValueError, TypeError):
+            return None
 
     def _details(self, repos: list[str]) -> dict[str, dict[str, Any] | None]:
         from holt.evidence.errors import RepoNotFound

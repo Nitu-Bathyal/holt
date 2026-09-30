@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 
-from holt.about import about_from_meta, about_lines, compact, readme_line
+from holt.about import about_from_meta, about_lines, compact, help_links, readme_line
 
 
 # --- readme_line ----------------------------------------------------------------
@@ -187,3 +187,22 @@ English · 简体中文 · Spec · Website · Discord
 PostHog is an all-in-one developer platform for building successful products.
 """
     assert readme_line(text) == "PostHog is an all-in-one developer platform for building successful products."
+
+
+def test_help_links_find_the_docs_and_chat_a_readme_points_to():
+    text = """
+[![Slack](https://img.shields.io/badge/slack-join-blue)](https://join.slack.com/t/openmldb/shared_invite/abc)
+[![Discord](https://img.shields.io/discord/1)](https://discord.gg/xyz123)
+See the [docs](https://openmldb.readthedocs.io/en/latest/), then https://discord.gg/other.
+"""
+    assert help_links(text) == [
+        {"kind": "docs", "url": "https://openmldb.readthedocs.io/en/latest/"},
+        {"kind": "discord", "url": "https://discord.gg/xyz123"},
+        {"kind": "slack", "url": "https://join.slack.com/t/openmldb/shared_invite/abc"},
+    ]
+
+
+def test_help_links_ignore_badge_images_and_github_docs():
+    assert help_links("![x](https://img.shields.io/badge/chat-gitter-green)") == []
+    assert help_links("Read https://docs.github.com/en/pull-requests first.") == []
+    assert help_links(None) == [] and help_links("") == []

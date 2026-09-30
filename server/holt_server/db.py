@@ -615,6 +615,10 @@ class RepoMeta(Base):
     # again after that migration.
     forks: Mapped[int | None] = mapped_column(Integer, nullable=True)
     open_issues: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Pull requests ever opened, how many are open, and people who committed (0024).
+    pull_requests: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    open_pull_requests: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    contributors: Mapped[int | None] = mapped_column(Integer, nullable=True)
     license: Mapped[str | None] = mapped_column(String(80), nullable=True)
     homepage: Mapped[str | None] = mapped_column(String(500), nullable=True)
     # [{"name": "Python", "share": 0.92}, ...], biggest first, at most three.
@@ -625,6 +629,10 @@ class RepoMeta(Base):
     fork_of: Mapped[str | None] = mapped_column(String(200), nullable=True)
     # The README's first sentence (holt/about.py), not the README.
     readme_line: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Where a newcomer finds help (0025): [{"kind": "contributing", "url": …}, …].
+    links: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # {"tag", "published_at", "url"} of GitHub's latest release, or null.
+    latest_release: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 

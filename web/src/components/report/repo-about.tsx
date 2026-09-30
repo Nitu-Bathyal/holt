@@ -1,13 +1,19 @@
-// In a report's header, under the repo name: what the project is (one line)
-// and how big and alive it is (one row, stars first). The rest (the README's
-// line in full, licence, dates, branch, homepage, every topic and language)
-// opens over the page from "more", so the verdict below doesn't move.
+// In a report's header, under the repo name: what the project is (one line),
+// how big and alive it is (one row, stars first) and, on a line of its own, the
+// licence, start year, branch, website and GitHub link. Every topic is listed
+// in the About section further down.
 // Public data from GitHub (the server's `about`): every visitor sees it.
 import { timeAgo } from "@/lib/format";
-import { aboutNumbers, flags, readmeShown, share, siteLabel, type RepoAbout as About } from "@/lib/repo-about";
-import { langColor } from "@/lib/repo-card";
+import { aboutNumbers, flags, readmeShown, siteLabel, type RepoAbout as About } from "@/lib/repo-about";
 
 const TOPICS_IN_ROW = 3;
+
+/** One colour per kind of fact in the details line, so each reads at a glance. */
+const FACT_TONE: Record<string, string> = {
+  licence: "text-green",
+  since: "text-amber",
+  branch: "text-orange",
+};
 
 function Icon({ d, className = "" }: { d: string; className?: string }) {
   return (
@@ -29,7 +35,12 @@ export function RepoAbout({ about, repo }: { about: About; repo: string }) {
   const readme = readmeShown(about);
   const [stars, ...counts] = aboutNumbers(about);
   const marks = flags(about);
-  const main = about.languages[0];
+  const since = about.created_at ? new Date(about.created_at).getUTCFullYear() : null;
+  const facts = [
+    about.license && ["licence", about.license],
+    since && ["since", String(since)],
+    about.default_branch && ["branch", about.default_branch],
+  ].filter(Boolean) as [string, string][];
   const line = about.description ?? readme;
   const [owner, name] = repo.split("/");
   return (
@@ -82,15 +93,8 @@ export function RepoAbout({ about, repo }: { about: About; repo: string }) {
             <span className="sr-only sm:not-sr-only">pushed</span> <time dateTime={about.pushed_at} suppressHydrationWarning>{timeAgo(about.pushed_at)}</time>
           </span>
         )}
-        {main && (
-          <span className="hidden shrink-0 items-center gap-1.5 whitespace-nowrap sm:inline-flex" title={about.languages.map((l) => `${l.name} ${share(l.share)}`).join(", ")}>
-            <LanguageStripe about={about} className="w-10" />
-            {main.name}
-          </span>
-        )}
-        <More about={about} repo={repo} readme={readme} />
         {about.topics.length > 0 && (
-          // One line of chips: any that don't fit wrap out of sight ("more" lists them all).
+          // One line of chips: any that don't fit wrap out of sight (the About section lists them all).
           <span className="hidden h-5 min-w-0 flex-1 flex-wrap gap-1.5 overflow-hidden lg:flex">
             {about.topics.slice(0, TOPICS_IN_ROW).map((t) => (
               <span key={t} className="whitespace-nowrap border border-blue/30 bg-blue/5 px-1.5 text-[0.76rem] leading-[1.15rem] text-blue">
@@ -100,80 +104,21 @@ export function RepoAbout({ about, repo }: { about: About; repo: string }) {
           </span>
         )}
       </div>
-    </div>
-  );
-}
-
-function LanguageStripe({ about, className }: { about: About; className: string }) {
-  return (
-    <span aria-hidden="true" className={`flex h-1.5 overflow-hidden bg-line ${className}`}>
-      {about.languages.map((l) => {
-        const color = langColor(l.name);
-        return (
-          <span
-            key={l.name}
-            className={color ? undefined : "bg-faint"}
-            style={{ width: `${Math.max(l.share * 100, 2)}%`, ...(color ? { background: color } : {}) }}
-          />
-        );
-      })}
-    </span>
-  );
-}
-
-/** Everything else, over the page (absolute), so opening it moves nothing. */
-function More({ about, repo, readme }: { about: About; repo: string; readme: string | null }) {
-  const since = about.created_at ? new Date(about.created_at).getUTCFullYear() : null;
-  const facts = [
-    about.license && ["licence", about.license],
-    since && ["since", String(since)],
-    about.default_branch && ["branch", about.default_branch],
-  ].filter(Boolean) as [string, string][];
-  return (
-    <details className="group">
-      {/* A 44px tap target on phones that takes no height in the row. */}
-      <summary className="-my-3 inline-flex cursor-pointer list-none items-center py-3 text-faint hover:text-ink sm:my-0 sm:py-0 [&::-webkit-details-marker]:hidden">
-        <span className="group-open:hidden">more</span>
-        <span className="hidden group-open:inline">less</span>
-      </summary>
-      <div className="absolute -left-14 top-full z-30 mt-2 w-[min(34rem,calc(100vw-2rem))] sm:left-0 space-y-3 border border-line-strong bg-panel p-4 font-sans text-[0.88rem] text-muted shadow-card">
-        {about.description && readme && <p className="text-ink">{about.description}</p>}
-        {(readme || about.description) && <p>{readme ?? about.description}</p>}
-        {about.topics.length > 0 && (
-          <ul className="flex flex-wrap gap-1.5 font-mono text-[0.76rem]">
-            {about.topics.map((t) => (
-              <li key={t} className="border border-blue/30 bg-blue/5 px-1.5 text-blue">{t}</li>
-            ))}
-          </ul>
-        )}
-        {about.languages.length > 0 && (
-          <div className="font-mono text-[0.8rem]">
-            <LanguageStripe about={about} className="w-full max-w-xs" />
-            <p className="mt-1.5 flex flex-wrap gap-x-4">
-              {about.languages.map((l) => (
-                <span key={l.name}>
-                  {l.name} <span className="text-faint">{share(l.share)}</span>
-                </span>
-              ))}
-            </p>
-          </div>
-        )}
-        <p className="flex flex-wrap gap-x-4 gap-y-1 font-mono text-[0.8rem]">
-          {facts.map(([k, v]) => (
-            <span key={k}>
-              <span className="text-faint">{k}</span> {v}
-            </span>
-          ))}
-          {about.homepage && (
-            <a href={about.homepage} target="_blank" rel="noopener noreferrer nofollow" className="max-w-full truncate hover:text-blue">
-              {siteLabel(about.homepage)} ↗
-            </a>
-          )}
-          <a href={`https://github.com/${repo}`} target="_blank" rel="noopener noreferrer" className="hover:text-blue">
-            github.com/{repo} ↗
+      <p className="mt-1 flex flex-wrap items-center gap-x-4 gap-y-0.5 font-mono text-[0.8rem]" data-repo-details>
+        {facts.map(([k, v]) => (
+          <span key={k}>
+            <span className="text-faint">{k}</span> <span className={FACT_TONE[k]}>{v}</span>
+          </span>
+        ))}
+        {about.homepage && (
+          <a href={about.homepage} target="_blank" rel="noopener noreferrer nofollow" className="max-w-full truncate text-blue/80 hover:text-blue">
+            {siteLabel(about.homepage)} ↗
           </a>
-        </p>
-      </div>
-    </details>
+        )}
+        <a href={`https://github.com/${repo}`} target="_blank" rel="noopener noreferrer" className="text-blue/80 hover:text-blue">
+          github.com/{repo} ↗
+        </a>
+      </p>
+    </div>
   );
 }

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { aboutNumbers, compactCount, flags, readmeShown, share, siteLabel } from "./repo-about.ts";
+import { aboutNumbers, compactCount, flags, helpLinks, projectFacts, readmeShown, share, siteLabel } from "./repo-about.ts";
 import type { RepoAbout } from "./repo-about.ts";
 
 const base: RepoAbout = {
@@ -10,6 +10,9 @@ const base: RepoAbout = {
   stars: 69_800,
   forks: 16_300,
   open_issues: 1,
+  pull_requests: 4_100,
+  open_pull_requests: 12,
+  contributors: 812,
   license: "BSD-3-Clause",
   topics: ["wsgi"],
   languages: [{ name: "Python", share: 0.995 }, { name: "HTML", share: 0.004 }],
@@ -19,6 +22,8 @@ const base: RepoAbout = {
   archived: false,
   fork: false,
   fork_of: null,
+  links: [],
+  latest_release: null,
   fetched_at: "2026-09-29T00:00:00Z",
 };
 
@@ -57,6 +62,32 @@ test("the README line only when it adds something", () => {
   assert.equal(readmeShown(base), base.readme_line);
   assert.equal(readmeShown({ ...base, readme_line: "The Python micro framework." }), null);
   assert.equal(readmeShown({ ...base, readme_line: null }), null);
+});
+
+test("project facts: only what GitHub gave, plain words", () => {
+  assert.deepEqual(projectFacts({ ...base, latest_release: { tag: "3.1.0", published_at: "2026-09-01T00:00:00Z", url: "https://github.com/pallets/flask/releases/tag/3.1.0" } }), [
+    { label: "people have contributed", value: "812" },
+    { label: "pull requests open of 4.1k ever", value: "12" },
+    { label: "last change", value: "", since: "2026-09-27T00:00:00Z" },
+    { label: "latest release", value: "3.1.0", since: "2026-09-01T00:00:00Z", href: "https://github.com/pallets/flask/releases/tag/3.1.0" },
+  ]);
+  const bare = projectFacts({ ...base, contributors: null, open_pull_requests: null, pushed_at: null });
+  assert.deepEqual(bare, []);
+  assert.equal(projectFacts({ ...base, contributors: 1 })[0].label, "person has contributed");
+});
+
+test("help links: the guide first, chat after, the site last, no repeats", () => {
+  const links = helpLinks({
+    ...base,
+    links: [
+      { kind: "discord", url: "https://discord.gg/x" },
+      { kind: "contributing", url: "https://github.com/pallets/flask/blob/main/CONTRIBUTING.md" },
+      { kind: "docs", url: "https://flask.palletsprojects.com/" },
+    ],
+  });
+  assert.deepEqual(links.map((l) => l.label), ["Contributing guide", "Documentation", "Discord chat"]);
+  assert.deepEqual(helpLinks({ ...base, links: [] }).map((l) => l.url), ["https://flask.palletsprojects.com/"]);
+  assert.deepEqual(helpLinks({ ...base, links: [], homepage: null }), []);
 });
 
 test("archived and fork flags", () => {
