@@ -57,6 +57,7 @@ export default async function YourReposPage({ searchParams }: PageProps<"/me/rep
                 ))}
               </nav>
             )}
+            {rows.length >= 2 && <p className="mb-2 text-[0.8rem] text-faint">Tick two to four to compare them side by side.</p>}
             {rows.length ? (
               <RepoRows rows={rows} saved={s.ok ? s.data.saved.map((i) => i.repo) : []} />
             ) : (
