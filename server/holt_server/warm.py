@@ -15,16 +15,22 @@ Or in the API process on a schedule: HOLT_WARM_INTERVAL_HOURS=6.
 How it stays out of the way:
 
 * Reports go through the normal job queue at badge priority, so every user
-  request runs first, and the runner's badge lane allows one at a time. The
-  pass itself waits for each job before queueing the next.
+  request runs first. The pass keeps HOLT_WARM_PARALLEL (3) report jobs in
+  flight and queues the next as one finishes; the runner's badge lane
+  (HOLT_BADGE_CONCURRENCY) should allow as many at a time.
 * Fresh work is skipped: reports under HOLT_WARM_MAX_AGE_HOURS (20), finds
   and starter issues still inside most of their cache lifetime. A report or
   find made by an older engine version (holt.engine_version) is never fresh.
   `--stale-only` does just those: every seed whose latest report is from an
   older engine, however young, and nothing else. Run it after a deploy that
   bumps ENGINE_VERSION. Where the evidence behind that report was kept
-  (evidence_store.py) and is younger than HOLT_EVIDENCE_REUSE_HOURS, the
-  report is made again from it, in this process, with no GitHub call.
+  (evidence_store.py) and is younger than its repo's refresh tier (a week or
+  a month; at least HOLT_EVIDENCE_REUSE_HOURS), the report is made again from
+  it, in this process, with no GitHub call.
+* Seeds the last look found closed to outside pull requests (GitHub's
+  settings, or archived) or dormant (no push in DORMANT_DAYS) go last, so a
+  pass that runs out of budget has done the useful ones. That comes from
+  their last report and repo_meta; nothing is read from GitHub to decide it.
 * Repository details (discover.py) are read for every reported repo at once,
   a hundred per GraphQL query (about a point each), once a day. A repo's
   first report reads its own details right away (meta_refresh.py); the
@@ -35,15 +41,18 @@ How it stays out of the way:
   seed list is the monthly one. A tier pass runs reports only, the oldest
   first, and skips any younger than HOLT_WARM_MAX_AGE_HOURS, which the
   timer sets per tier (a week, a month).
-* Before each step it checks the GitHub GraphQL points left on every token
-  and stops below HOLT_WARM_MIN_POINTS, so a warm pass can never starve the
-  requests people make.
+* Before each report job, and every few other steps, it checks the GitHub
+  GraphQL points left on every token and stops below HOLT_WARM_MIN_POINTS,
+  counting REPORT_POINTS for each report still in flight, so a warm pass can
+  never starve the requests people make. `--wait-for-budget` waits for the
+  points to come back instead of stopping (a long sweep, left alone).
 """
 
 from __future__ import annotations
 
 import argparse
 import asyncio
+import contextlib
 import logging
 import sys
 from collections.abc import Callable
@@ -60,6 +69,7 @@ from holt_server.db import (
     ENGINE_VERSION,
     FindCache,
     Job,
+    RepoMeta,
     RepoView,
     Report,
     SavedRepo,
@@ -78,8 +88,21 @@ SEEDS = Path(__file__).with_name("seeds") / "repos.txt"
 DAYS = 7
 JOB_TIMEOUT_S = 15 * 60
 POLL_S = 1.0
-# Budget is checked before the first step and then every this many steps.
+# Budget is checked before every report job, and before the first of the
+# other steps and then every this many.
 BUDGET_EVERY = 5
+# The most GitHub points one report costs (measured: 10 typical, 18 at most),
+# held back for each report still in flight when the budget is checked.
+REPORT_POINTS = 20
+# What a report costs on average (production, 304 repos), for dry-run estimates.
+REPORT_POINTS_TYPICAL = 12
+# --wait-for-budget: how long to wait before looking at the points again.
+BUDGET_WAIT_S = 300
+# Seeds with no push in this many days go last (the engine's "inactive" rule
+# looks at the same 90 days), and so do those whose last report was decided
+# by one of these rules.
+DORMANT_DAYS = 90
+QUIET_RULES = frozenset({"archived", "prs_closed", "inactive"})
 # A job that never finishes fails its repository and the pass goes on; this
 # many in a row means nothing is working the queue, and the pass stops.
 MAX_TIMEOUTS_IN_A_ROW = 3
@@ -151,6 +174,8 @@ class Result:
     # Made again from kept evidence, with no GitHub call (--stale-only).
     reports_rederived: int = 0
     reports_failed: int = 0
+    # Closed to outside pull requests or dormant, so warmed last.
+    quiet_last: int = 0
     starter_run: int = 0
     starter_fresh: int = 0
     meta_run: int = 0
@@ -158,15 +183,20 @@ class Result:
     finds_run: int = 0
     finds_fresh: int = 0
     stopped: str | None = None
+    dry_run: bool = False
     failures: list[str] = field(default_factory=list)
 
     def summary(self) -> str:
         parts = [f"reports {self.reports_run} run, {self.reports_fresh} fresh, "
                  f"{self.reports_failed} failed",
                  f"{self.reports_rederived} made again from kept evidence",
+                 f"{self.quiet_last} closed or dormant seeds last",
                  f"starter issues {self.starter_run} run, {self.starter_fresh} fresh",
                  f"repo details {self.meta_run} read ({self.meta_points} GitHub points)",
                  f"finds {self.finds_run} run, {self.finds_fresh} fresh"]
+        if self.dry_run:
+            parts.append(f"the reports would use about "
+                         f"{self.reports_run * REPORT_POINTS_TYPICAL} GitHub points")
         if self.stopped:
             parts.append(f"stopped: {self.stopped}")
         return "; ".join(parts)
@@ -177,26 +207,66 @@ class OutOfBudget(Exception):
 
 
 class Warmer:
-    def __init__(self, svc, say: Callable[[str], None] = log.info, dry_run: bool = False):
+    def __init__(self, svc, say: Callable[[str], None] = log.info, dry_run: bool = False,
+                 parallel: int | None = None, wait_for_budget: bool = False):
         self.svc = svc
         self.say = say
         self.dry_run = dry_run
-        self.result = Result()
+        # Report jobs in flight at once; a dry run goes one by one, in order.
+        self.parallel = 1 if dry_run else max(1, parallel or svc.settings.warm_parallel)
+        self.wait_for_budget = wait_for_budget
+        self.result = Result(dry_run=dry_run)
         self._steps = 0
         self._timeouts = 0
+        self._in_flight = 0
+        # One budget check at a time, so two workers can't both take the last points.
+        self._budget = asyncio.Lock()
+        # repo keys of the weekly refresh tier (--stale-only's snapshot ages).
+        self._weekly: set[str] = set()
 
     # --- budget -------------------------------------------------------------
 
     async def check_budget(self) -> None:
+        """Before a step other than a report: every BUDGET_EVERY steps."""
         if self.dry_run:
             return
         self._steps += 1
         if (self._steps - 1) % BUDGET_EVERY:
             return
+        async with self._budget:
+            await self._enough_points()
+
+    @contextlib.asynccontextmanager
+    async def report_slot(self):
+        """Around one report job: the budget checked first, with REPORT_POINTS
+        held back for every report already in flight."""
+        async with self._budget:
+            await self._enough_points()
+            self._in_flight += 1
+        try:
+            yield
+        finally:
+            self._in_flight -= 1
+
+    async def _enough_points(self) -> None:
+        """OutOfBudget when the points left, less what the reports in flight
+        may still spend, are under HOLT_WARM_MIN_POINTS; with --wait-for-budget,
+        wait for them to come back instead."""
         floor = self.svc.settings.warm_min_points
-        remaining = await self.svc.lookup.remaining()
-        if remaining < floor:
-            raise OutOfBudget(f"GitHub points left {remaining} < {floor}")
+        while True:
+            remaining = await self.svc.lookup.remaining()
+            spare = remaining - self._in_flight * REPORT_POINTS
+            if spare >= floor:
+                return
+            why = f"GitHub points left {remaining} < {floor}"
+            if self._in_flight:
+                n = self._in_flight
+                why = (f"GitHub points left {remaining}, {spare} after the {n} "
+                       f"report{'' if n == 1 else 's'} in flight, < {floor}")
+            if not self.wait_for_budget:
+                raise OutOfBudget(why)
+            self.say(f"{why}; looking again in {BUDGET_WAIT_S // 60} minutes")
+            await asyncio.sleep(BUDGET_WAIT_S)
 
     # --- freshness ----------------------------------------------------------
 
@@ -300,11 +370,11 @@ class Warmer:
             self.say(f"would analyse {repo}")
             self.result.reports_run += 1
             return
-        await self.check_budget()
         key = repos.key(repo)
-        done = await self.run_job(Job(
-            kind="analysis", repo=repo, repo_key=key, mode="rules", days=DAYS, params={},
-            priority=BADGE_PRIORITY, dedupe_key=dedupe_key(key, "rules", DAYS)))
+        async with self.report_slot():
+            done = await self.run_job(Job(
+                kind="analysis", repo=repo, repo_key=key, mode="rules", days=DAYS, params={},
+                priority=BADGE_PRIORITY, dedupe_key=dedupe_key(key, "rules", DAYS)))
         if done is None:
             self.result.reports_failed += 1
             self.result.failures.append(f"{repo}: timed out")
@@ -319,12 +389,23 @@ class Warmer:
             if code == "rate_limited":
                 raise OutOfBudget("GitHub rate limit reached")
 
+    def reuse_hours(self, repo: str) -> float:
+        """How old a snapshot of `repo` may be and still stand in for a GitHub
+        read: its refresh tier's age, which is how stale its report may get
+        anyway, or HOLT_EVIDENCE_REUSE_HOURS if longer. 0 when that is 0."""
+        s = self.svc.settings
+        if s.evidence_reuse_hours <= 0:
+            return 0
+        tier = (s.refresh_weekly_hours if repos.key(repo) in self._weekly
+                else s.refresh_monthly_hours)
+        return max(s.evidence_reuse_hours, tier)
+
     async def from_snapshot(self, repo: str) -> bool:
         """Make `repo`'s outdated report again from its newest kept evidence,
         without GitHub. False (read GitHub instead) when there is none, it is
-        older than HOLT_EVIDENCE_REUSE_HOURS, or older than the report it would
-        replace (that one was read while evidence wasn't kept)."""
-        hours = self.svc.settings.evidence_reuse_hours
+        older than `reuse_hours`, or older than the report it would replace
+        (that one was read while evidence wasn't kept)."""
+        hours = self.reuse_hours(repo)
         store = self.svc.evidence
         if not store.enabled or hours <= 0:
             return False
@@ -442,14 +523,18 @@ class Warmer:
         if tier:
             seeds = await oldest_first(self.svc, await tier_repos(self.svc, tier, seeds))
             self.say(f"{tier} tier: {len(seeds)} repos")
+        if stale_only:
+            self._weekly = {repos.key(r) for r in await tier_repos(self.svc, "weekly", seeds)}
+        if reports:
+            seeds, self.result.quiet_last = await quiet_last(self.svc, seeds)
+            if self.parallel > 1:
+                self.say(f"{self.parallel} reports at a time")
         try:
             # Reports first: finds screen repositories through the report
             # cache, so a warm report cache makes every search cheaper.
-            for repo in seeds:
-                if reports:
-                    await self.warm_report(repo, stale_only)
-                if starter:
-                    await self.warm_starter(repo)
+            if reports or starter:
+                await self.each_seed(seeds, lambda repo: self.warm_seed(
+                    repo, reports=reports, starter=starter, stale_only=stale_only))
             if meta:
                 await self.warm_meta(seeds)
             if finds:
@@ -459,6 +544,35 @@ class Warmer:
             self.result.stopped = str(stop)
             self.say(f"stopping: {stop}")
         return self.result
+
+    async def warm_seed(self, repo: str, *, reports: bool, starter: bool,
+                        stale_only: bool) -> None:
+        if reports:
+            await self.warm_report(repo, stale_only)
+        if starter:
+            await self.warm_starter(repo)
+
+    async def each_seed(self, seeds: list[str], work) -> None:
+        """`await work(repo)` for each seed, taken in order, `parallel` at a
+        time. The first OutOfBudget stops new seeds; the ones under way
+        finish, then it is raised."""
+        todo = iter(seeds)
+        stops: list[OutOfBudget] = []
+
+        async def worker() -> None:
+            for repo in todo:
+                try:
+                    await work(repo)
+                except OutOfBudget as stop:
+                    stops.append(stop)
+                if stops:
+                    return
+
+        async with asyncio.TaskGroup() as group:
+            for _ in range(min(self.parallel, len(seeds))):
+                group.create_task(worker())
+        if stops:
+            raise stops[0]
 
 
 async def tier_repos(svc, tier: str, seeds: list[str]) -> list[str]:
@@ -498,13 +612,41 @@ async def oldest_first(svc, names: list[str]) -> list[str]:
     return [repo for _, repo in sorted(enumerate(names), key=order)]
 
 
+async def quiet_last(svc, names: list[str]) -> tuple[list[str], int]:
+    """`names` in their order, but those that can't take outside work now at
+    the back, and how many that is: the last report was decided by a
+    QUIET_RULES rule (archived, pull requests closed to outsiders in GitHub's
+    settings, inactive), or repo_meta says archived or no push in
+    DORMANT_DAYS. Only what Holt already has; nothing is read from GitHub."""
+    keys = [repos.key(r) for r in names]
+    latest = (select(func.max(Report.id).label("id"))
+              .where(Report.mode == "rules", Report.days == DAYS, Report.repo_key.in_(keys))
+              .group_by(Report.repo_key).subquery())
+    async with svc.db.session() as s:
+        codes = (await s.execute(select(Report.repo_key, Report.report["rule_codes"])
+                                 .join(latest, Report.id == latest.c.id))).all()
+        meta = (await s.execute(select(RepoMeta.repo_key, RepoMeta.archived, RepoMeta.pushed_at)
+                                .where(RepoMeta.repo_key.in_(keys)))).all()
+    since = now() - timedelta(days=DORMANT_DAYS)
+    quiet = {key for key, rules in codes if QUIET_RULES & set(rules or [])}
+    quiet |= {key for key, archived, pushed in meta
+              if archived or (pushed is not None and utc(pushed) < since)}
+    front = [r for r in names if repos.key(r) not in quiet]
+    return front + [r for r in names if repos.key(r) in quiet], len(names) - len(front)
+
+
 async def warm_once(svc, *, seeds: list[str] | None = None, dry_run: bool = False,
-                    say: Callable[[str], None] = log.info, **passes) -> Result | None:
+                    say: Callable[[str], None] = log.info, parallel: int | None = None,
+                    wait_for_budget: bool = False, **passes) -> Result | None:
     """One pass. On Postgres, only one process warms at a time (advisory lock);
     returns None if another holds it."""
     seeds = seeds if seeds is not None else load_seeds(svc.settings.warm_seeds_file or None)
+
+    def warmer() -> Warmer:
+        return Warmer(svc, say, dry_run, parallel=parallel, wait_for_budget=wait_for_budget)
+
     if svc.db.engine.dialect.name != "postgresql":
-        return await Warmer(svc, say, dry_run).run(seeds, **passes)
+        return await warmer().run(seeds, **passes)
     async with svc.db.engine.connect() as conn:
         got = (await conn.execute(text("SELECT pg_try_advisory_lock(:id)"),
                                   {"id": LOCK_ID})).scalar()
@@ -512,7 +654,7 @@ async def warm_once(svc, *, seeds: list[str] | None = None, dry_run: bool = Fals
             say("another process is warming; skipped")
             return None
         try:
-            return await Warmer(svc, say, dry_run).run(seeds, **passes)
+            return await warmer().run(seeds, **passes)
         finally:
             await conn.execute(text("SELECT pg_advisory_unlock(:id)"), {"id": LOCK_ID})
 
@@ -549,6 +691,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--tier", choices=TIERS,
                         help="only the reports of this refresh tier, oldest first: weekly "
                              "(saved or recently viewed repos) or monthly (the other seeds)")
+    parser.add_argument("--parallel", type=int,
+                        help="report jobs in flight at once (default HOLT_WARM_PARALLEL, 3)")
+    parser.add_argument("--wait-for-budget", action="store_true",
+                        help="when GitHub points run low, wait for them to come back "
+                             "instead of stopping")
     parser.add_argument("--stale-only", action="store_true",
                         help="only re-run seeds whose report an older engine version "
                              "made, however young (after a deploy); nothing else")
@@ -575,7 +722,8 @@ def main(argv: list[str] | None = None) -> int:
                                      reports=not args.no_reports,
                                      starter=not args.no_starter, meta=not args.no_meta,
                                      finds=not args.no_find,
-                                     max_profiles=args.profiles,
+                                     max_profiles=args.profiles, parallel=args.parallel,
+                                     wait_for_budget=args.wait_for_budget,
                                      stale_only=args.stale_only, tier=args.tier)
             if result is None:
                 return BUSY
