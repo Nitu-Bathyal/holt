@@ -43,7 +43,7 @@ export function OrderWaiter({ orderId }: { orderId: string }) {
 
   return slow ? (
     <p className="prose-sans mt-4 text-[0.95rem]">
-      This is taking longer than usual. You can leave this page: your credits will appear in Settings as soon as Razorpay confirms the
+      This is taking longer than usual. You can leave this page: Pro starts as soon as Razorpay confirms the
       payment. If it doesn&apos;t go through, you won&apos;t be charged.
     </p>
   ) : (

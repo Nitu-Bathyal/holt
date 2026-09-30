@@ -1,9 +1,10 @@
 "use client";
 
-// One credit pack's buy button: start an order on the server, take the
-// payment in Razorpay Checkout, hand what Checkout returns back to the server,
-// then show the thank-you page. Nothing here adds credits: the server checks
-// Razorpay's signature and asks Razorpay about the payment first.
+// One pass's buy button: start an order on the server, take the payment in
+// Razorpay Checkout, hand what Checkout returns back to the server, then show
+// the thank-you page. Nothing here starts Pro: the server checks Razorpay's
+// signature and asks Razorpay about the payment first. With payments off the
+// server refuses the order and the page never renders this button.
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -47,9 +48,9 @@ export function loadRazorpay(): Promise<void> {
 }
 
 const MESSAGES: Partial<Record<ApiError["code"], string>> = {
-  payments_off: "Credit packs aren't on sale right now. Everything free in Holt keeps working.",
+  payments_off: "Passes aren't on sale right now. Everything free in Holt keeps working.",
   payment_unconfirmed:
-    "We couldn't confirm that payment with Razorpay. If money left your account, your credits will appear in Settings in a few minutes, or it will be refunded.",
+    "We couldn't confirm that payment with Razorpay. If money left your account, Pro will start in a few minutes, or it will be refunded.",
 };
 
 export async function post<T>(url: string, body: unknown): Promise<{ ok: true; data: T } | { ok: false; code?: string; message: string }> {
@@ -64,8 +65,8 @@ export async function post<T>(url: string, body: unknown): Promise<{ ok: true; d
   }
 }
 
-export interface BuyPackProps {
-  pack: string;
+export interface BuyPassProps {
+  pass: string;
   label: string;
   signedIn: boolean;
   prefill?: { name?: string | null; email?: string | null };
@@ -74,7 +75,7 @@ export interface BuyPackProps {
   primary?: boolean;
 }
 
-export function BuyPack({ pack, label, signedIn, prefill, autoStart, primary }: BuyPackProps) {
+export function BuyPass({ pass, label, signedIn, prefill, autoStart, primary }: BuyPassProps) {
   const router = useRouter();
   const [phase, setPhase] = useState<Phase>({ t: "idle" });
   const started = useRef(false);
@@ -97,7 +98,7 @@ export function BuyPack({ pack, label, signedIn, prefill, autoStart, primary }: 
 
   const start = useCallback(async () => {
     setPhase({ t: "starting" });
-    const r = await post<Checkout>("/api/orders", { pack });
+    const r = await post<Checkout>("/api/orders", { pass });
     if (!r.ok) {
       setPhase({ t: "failed", message: r.message });
       return;
@@ -126,7 +127,7 @@ export function BuyPack({ pack, label, signedIn, prefill, autoStart, primary }: 
     // Checkout shows the failure itself and lets them retry; this is for after it closes.
     rzp.on("payment.failed", (e) => setPhase({ t: "failed", message: e.error?.description || "The payment didn't go through. You haven't been charged." }));
     rzp.open();
-  }, [pack, prefill, confirm]);
+  }, [pass, prefill, confirm]);
 
   useEffect(() => {
     if (autoStart && signedIn && !started.current) {
@@ -138,7 +139,7 @@ export function BuyPack({ pack, label, signedIn, prefill, autoStart, primary }: 
   const cls = `${primary ? "btn-primary" : "btn-ghost"} mt-6 w-full`;
   if (!signedIn) {
     return (
-      <Link href={`/signin?callbackUrl=${encodeURIComponent(`/pricing?buy=${pack}`)}`} className={cls}>
+      <Link href={`/signin?callbackUrl=${encodeURIComponent(`/pricing?buy=${pass}`)}`} className={cls}>
         sign in to buy →
       </Link>
     );

@@ -3,7 +3,7 @@
 import "server-only";
 import type {
   AnalysisStart, ApiError, Credits, DiscoverOut, DiscoverRepo, DiscoverSort, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, HistoryItem,
-  ContributionType, JobStatus, Me, Mode, Packs, Plans, ProfileOut, ProfilePrefs, Recommendation, Recommendations, Report, Result, SavedList, SavedState, Stats, StarterIssue,
+  ContributionType, JobStatus, Me, Mode, Passes, ProfileOut, ProfilePrefs, Recommendation, Recommendations, Report, Result, SavedList, SavedState, Stats, StarterIssue,
 } from "../types";
 import type { FeedbackInput } from "../feedback";
 import { verdictView, withDerived } from "./derived";
@@ -349,22 +349,13 @@ export async function claimCredit(userId: string): Promise<Result<Credits>> {
   return { ok: true, data: c };
 }
 
-// Payments stay off in the mock: no packs, no orders.
-export async function packs(): Promise<Result<Packs>> {
-  return { ok: true, data: { on_sale: false, packs: [] } };
-}
-
-// Plans stay off in the mock too: nothing on sale, no subscription.
-export async function plans(): Promise<Result<Plans>> {
-  return { ok: true, data: { on_sale: false, plans: [] } };
-}
-
-export async function subscribe(): Promise<Result<never>> {
-  return err(403, "payments_off", "Paid plans aren't on sale yet. Everything free in Holt keeps working.");
+// Payments stay off in the mock: no passes, no orders.
+export async function passes(): Promise<Result<Passes>> {
+  return { ok: true, data: { on_sale: false, passes: [], features: [] } };
 }
 
 export async function createOrder(): Promise<Result<never>> {
-  return err(403, "payments_off", "Credit packs aren't on sale yet. Everything free in Holt keeps working.");
+  return err(403, "payments_off", "Passes aren't on sale yet. Everything free in Holt keeps working.");
 }
 
 export async function history(userId: string): Promise<Result<{ items: HistoryItem[] }>> {

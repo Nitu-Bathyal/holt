@@ -3,7 +3,7 @@ import { confirmOrder } from "@/lib/api";
 import { currentUser } from "@/lib/session";
 
 // What Razorpay Checkout handed the page after a payment. The server checks
-// the signature and asks Razorpay before adding any credits.
+// the signature and asks Razorpay before starting Pro.
 export async function POST(req: NextRequest) {
   const user = await currentUser();
   if (!user) return NextResponse.json({ error: { code: "unauthorized", message: "Please sign in first." } }, { status: 401 });

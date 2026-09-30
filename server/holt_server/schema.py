@@ -67,7 +67,7 @@ class Model(BaseModel):
 ErrorCode = Literal["unauthorized", "not_found", "invalid_repo", "invalid_request",
                     "rate_limited", "quota_exceeded", "needs_plan", "needs_key", "claim_not_ready",
                     "ai_unavailable", "upstream", "internal", "not_implemented",
-                    "payments_off", "payment_unconfirmed", "already_subscribed"]
+                    "payments_off", "payment_unconfirmed"]
 
 
 class Error(Model):
@@ -1072,27 +1072,37 @@ class Entitlements(Model):
     features: list[Access]
 
 
-# --- credit packs and orders (payments.py) -------------------------------------------
+# --- passes and orders (payments.py) --------------------------------------------------
 
 OrderStatus = Literal["created", "paid", "failed", "held"]
 
 
-class PackOffer(Model):
+class PassFeature(Model):
+    id: str
+    # The feature's name, for people.
+    name: str
+    # Uses per calendar month (UTC); null when unlimited.
+    per_month: int | None
+    unlimited: bool
+
+
+class PassOffer(Model):
     id: str
     name: str
-    credits: int
-    # Days the credits last once bought; null: they never expire.
-    expires_days: int | None
+    # Days of Pro one payment gives. It never renews.
+    days: int
     # The price in minor units (paise for INR).
     amount: int
     currency: str
 
 
-class Packs(Model):
-    """GET /v1/packs. `on_sale` is false, and `packs` empty, while payments are off."""
+class Passes(Model):
+    """GET /v1/passes. `on_sale` is false, and both lists empty, while payments are off."""
 
     on_sale: bool
-    packs: list[PackOffer]
+    passes: list[PassOffer]
+    # What Pro unlocks (every pass gives the same Pro).
+    features: list[PassFeature]
 
 
 class Checkout(Model):
@@ -1108,18 +1118,21 @@ class Checkout(Model):
     # What the payment page shows.
     name: str
     description: str
-    pack: str
-    credits: int
+    # The pass bought, and the days of Pro it gives.
+    item: str
+    days: int
 
 
 class Order(Model):
-    """One credit-pack purchase, for the buyer's purchase history."""
+    """One purchase, for the buyer's purchase history."""
 
     id: str
-    pack: str
-    # The pack's name, for people.
+    # The pass id (or, for a purchase from before passes, the credit pack's).
+    item: str
+    # What was bought, for people.
     name: str
-    credits: int
+    # Days of Pro it gave; null for a credit pack.
+    days: int | None
     amount: int
     currency: str
     status: OrderStatus
@@ -1132,101 +1145,9 @@ class Orders(Model):
 
 
 class OrderConfirmed(Model):
-    """POST /v1/me/orders/confirm: the order (paid, or still being confirmed) and balances."""
+    """POST /v1/me/orders/confirm: the order (paid, or still being confirmed) and the plan in force."""
 
     order: Order
-    credits: Credits
-
-
-# --- plans and subscriptions (subscriptions.py) -------------------------------------------
-
-SubscriptionStatus = Literal["created", "authenticated", "active", "pending", "halted",
-                             "paused", "cancelled", "completed", "expired"]
-
-
-class PlanOfferFeature(Model):
-    id: str
-    # The feature's name, for people.
-    name: str
-    # Uses per calendar month (UTC); null when unlimited.
-    per_month: int | None
-    unlimited: bool
-
-
-class PlanOffer(Model):
-    id: str
-    name: str
-    # The monthly price in minor units (paise for INR).
-    amount: int
-    currency: str
-    features: list[PlanOfferFeature]
-
-
-class Plans(Model):
-    """GET /v1/plans. `on_sale` is false, and `plans` empty, while subscriptions are off."""
-
-    on_sale: bool
-    plans: list[PlanOffer]
-
-
-class SubscriptionCheckout(Model):
-    """POST /v1/me/subscription: what Razorpay Checkout needs to start the subscription."""
-
-    subscription_id: str
-    provider: Literal["razorpay"]
-    # Razorpay's public key id (safe to show the browser).
-    key_id: str
-    provider_subscription_id: str
-    plan: str
-    # What the payment page shows.
-    name: str
-    description: str
-    # Each monthly charge, in minor units.
-    amount: int
-    currency: str
-
-
-class SubscriptionInfo(Model):
-    id: str
-    plan: str
-    # The plan's name, for people.
-    name: str
-    status: SubscriptionStatus
-    amount: int
-    currency: str
-    # The end of the last billing period paid for; null before the first payment.
-    paid_until: str | None
-    # When the next charge is due; null once it won't renew.
-    next_charge_at: str | None
-    # Cancelled by the user: the plan runs to `paid_until`, then stops.
-    cancel_at_period_end: bool
-    created_at: str
-    ended_at: str | None
-
-
-class SubscriptionChargeInfo(Model):
-    # Razorpay's payment id (for support).
-    id: str
-    amount: int
-    currency: str
-    period_start: str | None
-    period_end: str | None
-    # "held": the amount didn't match the plan; nothing was given, a person looks.
-    status: Literal["paid", "held"]
-    paid_at: str
-
-
-class MySubscription(Model):
-    """GET /v1/me/subscription: the latest subscription and every charge, newest first."""
-
-    subscription: SubscriptionInfo | None
-    charges: list[SubscriptionChargeInfo]
-
-
-class SubscriptionConfirmed(Model):
-    """POST /v1/me/subscription/confirm and /cancel: the subscription and the plan in force."""
-
-    subscription: SubscriptionInfo | None
     plan: str
     plan_expires_at: str | None
 

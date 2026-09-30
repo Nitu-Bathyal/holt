@@ -1,9 +1,9 @@
-"""Credit-pack checkout (payments.py): orders, the signed callback, the signed
-webhook, and the switch that keeps it all off.
+"""Pro passes (payments.py): orders, the signed callback, the signed webhook,
+and the switch that keeps it all off.
 
 Razorpay is faked at the HTTP layer (`FakeRazorpay._call`), so the signature
-checks are the real ones. Every test that credits ends on the ledger invariant:
-purchased ledger rows sum to what the lots hold, and one lot per paid order.
+checks are the real ones. Every test that pays ends on the invariant: one
+`PlanEvent` per paid order, referencing its payment, and no credits.
 """
 
 from __future__ import annotations
@@ -13,30 +13,35 @@ import itertools
 import json
 import threading
 from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timedelta
 from typing import Any
 
 import pytest
-from holt_server import payments
-from holt_server.db import CreditEvent, CreditLot, Order
+from holt_server import entitlements, payments
+from holt_server.db import CreditLot, Order, PlanEvent, now
 from sqlalchemy import select
 
 KEY_ID = "rzp_test_fake"
 SECRET = "fake-key-secret"
 HOOK_SECRET = "fake-webhook-secret"
-PRICE = 49900
+PRICE = 9900
 
 CATALOGUE = {
     "tbd": False,
-    "features": {"ai_report": {"name": "AI-written report", "credits": 1, "free_credits": True}},
-    "plans": {"free": {"name": "Free", "features": {}}},
-    "packs": {
-        "credits_10": {"name": "10 credits", "credits": 10, "on_sale": True,
-                       "price": {"inr_paise": PRICE, "usd_cents": None}},
-        "credits_5_90d": {"name": "5 credits", "credits": 5, "on_sale": True,
-                          "expires_days": 90, "price": {"inr_paise": 29900}},
-        "not_yet": {"name": "50 credits", "credits": 50, "on_sale": False,
-                    "price": {"inr_paise": 99900}},
-        "no_price": {"name": "20 credits", "credits": 20, "on_sale": True},
+    "features": {"ai_report": {"name": "AI-written report", "credits": 1, "free_credits": True},
+                 "pr_watch": {"name": "PR watch", "credits": None},
+                 "merge_plan": {"name": "Merge plan", "credits": None}},
+    "plans": {"free": {"name": "Free", "features": {}},
+              "pro": {"name": "Pro", "features": {"merge_plan": {"per_month": 30},
+                                                  "pr_watch": {"unlimited": True}}}},
+    "passes": {
+        "pro_1m": {"name": "1 month", "days": 30, "on_sale": True,
+                   "price": {"inr_paise": PRICE, "usd_cents": 700}},
+        "pro_3m": {"name": "3 months", "days": 90, "on_sale": True,
+                   "price": {"inr_paise": 24900}},
+        "not_yet": {"name": "12 months", "days": 365, "on_sale": False,
+                    "price": {"inr_paise": 79900}},
+        "no_price": {"name": "2 months", "days": 60, "on_sale": True},
     },
 }
 
@@ -116,20 +121,25 @@ def rows(h, model):
     return h.client.portal.call(q)
 
 
-def purchased(h, user: str) -> int:
-    return h.get("/v1/me/credits", user=user).json()["purchased"]
+def pro_days(h, user: str) -> float:
+    """Days of Pro left for `user` (0 when on free)."""
+    me = h.get("/v1/me", user=user).json()
+    if me["plan"] != "pro":
+        return 0
+    ends = datetime.fromisoformat(me["plan_expires_at"].replace("Z", "+00:00"))
+    return round((ends - now()).total_seconds() / 86400, 1)
 
 
-def assert_ledger_matches(h, user: str) -> None:
-    lots = [lot for lot in rows(h, CreditLot) if lot.user_id == user]
-    events = [e for e in rows(h, CreditEvent) if e.user_id == user and e.source == "purchased"]
-    assert sum(e.amount for e in events) == sum(lot.remaining for lot in lots)
+def assert_one_grant_per_payment(h, user: str) -> None:
     paid = [o for o in rows(h, Order) if o.user_id == user and o.status == "paid"]
-    assert sorted(o.lot_id for o in paid) == sorted(lot.id for lot in lots)
+    events = [e for e in rows(h, PlanEvent) if e.user_id == user]
+    assert sorted(e.reference for e in events) == sorted(o.provider_payment_id for o in paid)
+    assert all(e.plan == "pro" and e.actor == "payment" for e in events)
+    assert rows(h, CreditLot) == []
 
 
-def checkout(h, user: str = "buyer", pack: str = "credits_10") -> dict:
-    r = h.post("/v1/me/orders", {"pack": pack}, user=user)
+def checkout(h, user: str = "buyer", pass_: str = "pro_1m") -> dict:
+    r = h.post("/v1/me/orders", {"pass": pass_}, user=user)
     assert r.status_code == 200, r.text
     return r.json()
 
@@ -154,29 +164,36 @@ def webhook(h, body: bytes, signature: str | None = "auto"):
 # --- what is on sale ---------------------------------------------------------------
 
 
-def test_packs_on_sale_come_from_the_pricing_file(hp):
-    body = hp.get("/v1/packs").json()
+OFF = {"on_sale": False, "passes": [], "features": []}
+
+
+def test_passes_on_sale_come_from_the_pricing_file(hp):
+    body = hp.get("/v1/passes").json()
     assert body["on_sale"] is True
-    assert body["packs"] == [
-        {"id": "credits_10", "name": "10 credits", "credits": 10, "expires_days": None,
-         "amount": PRICE, "currency": "INR"},
-        {"id": "credits_5_90d", "name": "5 credits", "credits": 5, "expires_days": 90,
-         "amount": 29900, "currency": "INR"},
+    assert body["passes"] == [
+        {"id": "pro_1m", "name": "1 month", "days": 30, "amount": PRICE, "currency": "INR"},
+        {"id": "pro_3m", "name": "3 months", "days": 90, "amount": 24900, "currency": "INR"},
+    ]
+    assert body["features"] == [
+        {"id": "merge_plan", "name": "Merge plan", "per_month": 30, "unlimited": False},
+        {"id": "pr_watch", "name": "PR watch", "per_month": None, "unlimited": True},
     ]
 
 
 def test_the_packaged_pricing_file_sells_nothing(make_harness):
     h = make_harness(HOLT_PAYMENTS_ENABLED=True)
-    h.svc.razorpay = FakeRazorpay()
-    assert h.get("/v1/packs").json() == {"on_sale": False, "packs": []}
-    assert h.post("/v1/me/orders", {"pack": "credits_10"}, user="u").status_code == 400
+    h.svc.razorpay = rz = FakeRazorpay()
+    assert h.get("/v1/passes").json() == OFF
+    for pid in ("pro_1m", "pro_3m", "pro_12m"):
+        assert h.post("/v1/me/orders", {"pass": pid}, user="u").status_code == 400
+    assert rz.calls == []
 
 
 @pytest.mark.parametrize("enabled,keys", [(False, True), (True, False), (False, False)])
 def test_switched_off_offers_nothing_and_refuses_orders(make_hp, enabled, keys):
     h = make_hp(enabled=enabled, keys=keys)
-    assert h.get("/v1/packs").json() == {"on_sale": False, "packs": []}
-    r = h.post("/v1/me/orders", {"pack": "credits_10"}, user="buyer")
+    assert h.get("/v1/passes").json() == OFF
+    r = h.post("/v1/me/orders", {"pass": "pro_1m"}, user="buyer")
     assert r.status_code == 403 and r.json()["error"]["code"] == "payments_off"
     assert rows(h, Order) == []
     if h.rz is not None:
@@ -191,8 +208,8 @@ def test_payments_are_off_by_default(tmp_path):
     assert payments.build(s) is None
 
 
-def test_packs_need_the_internal_key(hp):
-    assert hp.client.get("/v1/packs").status_code == 401
+def test_passes_need_the_internal_key(hp):
+    assert hp.client.get("/v1/passes").status_code == 401
 
 
 # --- creating an order -----------------------------------------------------------------
@@ -201,36 +218,37 @@ def test_packs_need_the_internal_key(hp):
 def test_an_order_takes_its_price_from_the_server(hp):
     out = checkout(hp)
     assert out["provider"] == "razorpay" and out["key_id"] == KEY_ID
-    assert out["amount"] == PRICE and out["currency"] == "INR" and out["credits"] == 10
+    assert out["amount"] == PRICE and out["currency"] == "INR"
+    assert (out["item"], out["days"], out["description"]) == ("pro_1m", 30, "Pro, 1 month")
     rz_order = hp.rz.orders[out["provider_order_id"]]
     assert rz_order["amount"] == PRICE and rz_order["notes"]["holt_order"] == out["order_id"]
     (order,) = rows(hp, Order)
-    assert (order.user_id, order.status, order.amount, order.credits) == ("buyer", "created",
-                                                                         PRICE, 10)
+    assert (order.user_id, order.status, order.amount, order.credits, order.pack_id,
+            order.expires_days) == ("buyer", "created", PRICE, 0, "pro_1m", 30)
 
 
 def test_the_client_cannot_set_the_amount(hp):
-    r = hp.post("/v1/me/orders", {"pack": "credits_10", "amount": 100, "credits": 999},
+    r = hp.post("/v1/me/orders", {"pass": "pro_1m", "amount": 100, "days": 999},
                 user="buyer")
     assert r.status_code == 200
-    assert r.json()["amount"] == PRICE and r.json()["credits"] == 10
+    assert r.json()["amount"] == PRICE and r.json()["days"] == 30
     assert rows(hp, Order)[0].amount == PRICE
 
 
-@pytest.mark.parametrize("pack", ["not_yet", "no_price", "nope"])
-def test_packs_not_on_sale_cannot_be_ordered(hp, pack):
-    r = hp.post("/v1/me/orders", {"pack": pack}, user="buyer")
+@pytest.mark.parametrize("pid", ["not_yet", "no_price", "nope"])
+def test_passes_not_on_sale_cannot_be_ordered(hp, pid):
+    r = hp.post("/v1/me/orders", {"pass": pid}, user="buyer")
     assert r.status_code == 400 and "isn't on sale" in r.json()["error"]["message"]
     assert hp.rz.calls == []
 
 
 def test_ordering_needs_a_signed_in_user(hp):
-    assert hp.post("/v1/me/orders", {"pack": "credits_10"}).status_code == 401
+    assert hp.post("/v1/me/orders", {"pass": "pro_1m"}).status_code == 401
 
 
 def test_razorpay_failing_creates_no_order(hp):
     hp.rz.fail = True
-    r = hp.post("/v1/me/orders", {"pack": "credits_10"}, user="buyer")
+    r = hp.post("/v1/me/orders", {"pass": "pro_1m"}, user="buyer")
     assert r.status_code == 502 and "Razorpay" in r.json()["error"]["message"]
     assert rows(hp, Order) == []
 
@@ -238,33 +256,71 @@ def test_razorpay_failing_creates_no_order(hp):
 # --- the client callback ------------------------------------------------------------------
 
 
-def test_a_signed_callback_credits_the_pack_once(hp):
+def test_a_signed_callback_gives_the_pass_once(hp):
     out = checkout(hp)
     cb = hp.rz.pay(out["provider_order_id"])
     r = confirm(hp, cb)
     assert r.status_code == 200, r.text
     body = r.json()
-    assert body["order"]["status"] == "paid" and body["order"]["name"] == "10 credits"
-    assert body["credits"]["purchased"] == 10 and body["credits"]["free"] == 3
+    assert body["order"]["status"] == "paid" and body["order"]["name"] == "Pro, 1 month"
+    assert body["order"]["days"] == 30 and body["plan"] == "pro"
+    assert body["plan_expires_at"]
     # Replayed: same answer, nothing more.
     assert confirm(hp, cb).json()["order"]["status"] == "paid"
-    assert purchased(hp, "buyer") == 10
-    (lot,) = rows(hp, CreditLot)
-    assert (lot.reference, lot.pack_id, lot.granted, lot.expires_at) == (
-        cb["razorpay_payment_id"], "credits_10", 10, None)
-    assert_ledger_matches(hp, "buyer")
+    assert pro_days(hp, "buyer") == 30
+    (event,) = rows(hp, PlanEvent)
+    assert (event.reference, event.reason) == (cb["razorpay_payment_id"], "pass pro_1m")
+    # Free credits are untouched by a pass.
+    assert hp.get("/v1/me/credits", user="buyer").json()["free"] == 3
+    assert_one_grant_per_payment(hp, "buyer")
 
 
-def test_pack_expiry_starts_when_paid(hp):
-    out = checkout(hp, pack="credits_5_90d")
-    confirm(hp, hp.rz.pay(out["provider_order_id"]))
+def test_a_second_pass_adds_its_days_to_the_first(hp):
+    confirm(hp, hp.rz.pay(checkout(hp)["provider_order_id"]))
+    confirm(hp, hp.rz.pay(checkout(hp, pass_="pro_3m")["provider_order_id"]))
+    assert pro_days(hp, "buyer") == 120
+    assert_one_grant_per_payment(hp, "buyer")
+
+
+def test_a_pass_after_pro_lapsed_starts_from_now(hp):
+    async def lapsed():
+        await entitlements.set_plan(hp.svc, "buyer", "pro", expires_at=now() - timedelta(days=5),
+                                    reason="test", actor="test")
+    hp.client.portal.call(lapsed)
+    confirm(hp, hp.rz.pay(checkout(hp)["provider_order_id"]))
+    assert pro_days(hp, "buyer") == 30
+
+
+def test_a_pass_never_shortens_pro_without_an_end(hp):
+    async def forever():
+        await entitlements.set_plan(hp.svc, "buyer", "pro", expires_at=None,
+                                    reason="test", actor="test")
+    hp.client.portal.call(forever)
+    body = confirm(hp, hp.rz.pay(checkout(hp)["provider_order_id"])).json()
+    assert body["order"]["status"] == "paid"
+    assert (body["plan"], body["plan_expires_at"]) == ("pro", None)
+
+
+def test_a_credit_pack_order_from_before_passes_still_settles_as_credits(hp):
+    out = checkout(hp)
+    cb = hp.rz.pay(out["provider_order_id"])
+
+    async def make_it_a_pack():
+        async with hp.svc.db.session() as s:
+            order = await s.get(Order, out["order_id"])
+            order.pack_id, order.credits, order.expires_days = "credits_10", 10, None
+            await s.commit()
+    hp.client.portal.call(make_it_a_pack)
+    body = confirm(hp, cb).json()
+    assert body["order"]["status"] == "paid" and body["order"]["name"] == "10 credits"
+    assert body["order"]["days"] is None and body["plan"] == "free"
+    assert hp.get("/v1/me/credits", user="buyer").json()["purchased"] == 10
     (lot,) = rows(hp, CreditLot)
-    assert lot.expires_at is not None
-    assert purchased(hp, "buyer") == 5
+    assert lot.reference == cb["razorpay_payment_id"]
 
 
 @pytest.mark.parametrize("change", ["signature", "payment", "order"])
-def test_a_bad_signature_credits_nothing(hp, change):
+def test_a_bad_signature_gives_nothing(hp, change):
     out = checkout(hp)
     cb = hp.rz.pay(out["provider_order_id"])
     other = hp.rz.pay(checkout(hp)["provider_order_id"])
@@ -276,7 +332,7 @@ def test_a_bad_signature_credits_nothing(hp, change):
         cb["razorpay_order_id"] = other["razorpay_order_id"]
     r = confirm(hp, cb)
     assert r.status_code == 400 and r.json()["error"]["code"] == "payment_unconfirmed"
-    assert purchased(hp, "buyer") == 0 and rows(hp, CreditLot) == []
+    assert pro_days(hp, "buyer") == 0 and rows(hp, PlanEvent) == []
 
 
 def test_malformed_ids_are_refused_before_any_call(hp):
@@ -292,15 +348,15 @@ def test_someone_elses_order_is_not_found(hp):
     out = checkout(hp, user="buyer")
     r = confirm(hp, hp.rz.pay(out["provider_order_id"]), user="thief")
     assert r.status_code == 404
-    assert rows(hp, CreditLot) == []
+    assert rows(hp, PlanEvent) == []
 
 
-def test_a_tampered_amount_is_held_not_credited(hp):
+def test_a_tampered_amount_is_held_not_given(hp):
     out = checkout(hp)
     cb = hp.rz.pay(out["provider_order_id"], amount=100)
     r = confirm(hp, cb)
     assert r.status_code == 200 and r.json()["order"]["status"] == "held"
-    assert purchased(hp, "buyer") == 0 and rows(hp, CreditLot) == []
+    assert pro_days(hp, "buyer") == 0 and rows(hp, PlanEvent) == []
     assert "was 100 INR" in rows(hp, Order)[0].note
 
 
@@ -308,7 +364,7 @@ def test_a_wrong_currency_is_held(hp):
     out = checkout(hp)
     r = confirm(hp, hp.rz.pay(out["provider_order_id"], currency="USD"))
     assert r.json()["order"]["status"] == "held"
-    assert rows(hp, CreditLot) == []
+    assert rows(hp, PlanEvent) == []
 
 
 def test_an_authorized_payment_is_captured_then_credited(hp):
@@ -317,14 +373,14 @@ def test_an_authorized_payment_is_captured_then_credited(hp):
     assert confirm(hp, cb).json()["order"]["status"] == "paid"
     assert hp.rz.payments[cb["razorpay_payment_id"]]["status"] == "captured"
     assert ("POST", f"/payments/{cb['razorpay_payment_id']}/capture") in hp.rz.calls
-    assert purchased(hp, "buyer") == 10
+    assert pro_days(hp, "buyer") == 30
 
 
 def test_a_payment_still_processing_leaves_the_order_open(hp):
     out = checkout(hp)
     cb = hp.rz.pay(out["provider_order_id"], status="created")
     assert confirm(hp, cb).json()["order"]["status"] == "created"
-    assert purchased(hp, "buyer") == 0
+    assert pro_days(hp, "buyer") == 0
 
 
 def test_razorpay_down_during_confirm_credits_nothing_yet(hp):
@@ -334,7 +390,7 @@ def test_razorpay_down_during_confirm_credits_nothing_yet(hp):
     assert confirm(hp, cb).status_code == 502
     hp.rz.fail = False
     assert confirm(hp, cb).json()["order"]["status"] == "paid"
-    assert purchased(hp, "buyer") == 10
+    assert pro_days(hp, "buyer") == 30
 
 
 # --- the webhook ---------------------------------------------------------------------------
@@ -351,9 +407,9 @@ def test_a_signed_webhook_credits_and_a_replay_does_not(hp):
     assert webhook(hp, hook_body("order.paid", hp.rz.payments[cb["razorpay_payment_id"]])
                    ).json()["result"] == "already_paid"
     assert confirm(hp, cb).json()["order"]["status"] == "paid"
-    assert purchased(hp, "buyer") == 10
-    assert len(rows(hp, CreditLot)) == 1
-    assert_ledger_matches(hp, "buyer")
+    assert pro_days(hp, "buyer") == 30
+    assert len(rows(hp, PlanEvent)) == 1
+    assert_one_grant_per_payment(hp, "buyer")
 
 
 @pytest.mark.parametrize("signature", [None, "", "deadbeef",
@@ -364,7 +420,7 @@ def test_an_unsigned_or_badly_signed_webhook_is_refused(hp, signature):
     body = hook_body("payment.captured", hp.rz.payments[cb["razorpay_payment_id"]])
     r = webhook(hp, body, signature=signature)
     assert r.status_code == 400
-    assert rows(hp, CreditLot) == [] and rows(hp, Order)[0].status == "created"
+    assert rows(hp, PlanEvent) == [] and rows(hp, Order)[0].status == "created"
 
 
 def test_a_webhook_body_changed_after_signing_is_refused(hp):
@@ -375,7 +431,7 @@ def test_a_webhook_body_changed_after_signing_is_refused(hp):
     assert forged != real
     r = webhook(hp, forged, signature=payments.sign(HOOK_SECRET, real))
     assert r.status_code == 400
-    assert rows(hp, CreditLot) == []
+    assert rows(hp, PlanEvent) == []
 
 
 def test_a_signed_webhook_with_the_wrong_amount_is_held(hp):
@@ -383,7 +439,7 @@ def test_a_signed_webhook_with_the_wrong_amount_is_held(hp):
     cb = hp.rz.pay(out["provider_order_id"], amount=PRICE - 1)
     body = hook_body("payment.captured", hp.rz.payments[cb["razorpay_payment_id"]])
     assert webhook(hp, body).json()["result"] == "held"
-    assert rows(hp, CreditLot) == [] and rows(hp, Order)[0].status == "held"
+    assert rows(hp, PlanEvent) == [] and rows(hp, Order)[0].status == "held"
 
 
 def test_webhooks_are_refused_without_a_webhook_secret(make_hp):
@@ -407,10 +463,10 @@ def test_unknown_orders_and_other_events_are_acknowledged_and_ignored(hp):
     assert webhook(hp, body).json() == {"ok": True, "result": "unknown_order"}
     refund = json.dumps({"event": "refund.processed", "payload": {}}).encode()
     assert webhook(hp, refund).json() == {"ok": True, "result": "ignored"}
-    assert rows(hp, CreditLot) == []
+    assert rows(hp, PlanEvent) == []
 
 
-def test_a_failed_attempt_then_a_good_one_credits_once(hp):
+def test_a_failed_attempt_then_a_good_one_gives_once(hp):
     out = checkout(hp)
     oid = out["provider_order_id"]
     bad = hp.rz.pay(oid, status="failed")
@@ -422,7 +478,7 @@ def test_a_failed_attempt_then_a_good_one_credits_once(hp):
     # A late replay of the failure doesn't undo the payment.
     assert webhook(hp, failed).json()["result"] == "already_paid"
     assert rows(hp, Order)[0].status == "paid"
-    assert purchased(hp, "buyer") == 10
+    assert pro_days(hp, "buyer") == 30
 
 
 def test_an_authorized_webhook_captures(hp):
@@ -430,7 +486,7 @@ def test_an_authorized_webhook_captures(hp):
     cb = hp.rz.pay(out["provider_order_id"], status="authorized")
     body = hook_body("payment.authorized", hp.rz.payments[cb["razorpay_payment_id"]])
     assert webhook(hp, body).json()["result"] == "paid"
-    assert purchased(hp, "buyer") == 10
+    assert pro_days(hp, "buyer") == 30
 
 
 def test_one_payment_cannot_pay_two_orders(hp):
@@ -440,9 +496,9 @@ def test_one_payment_cannot_pay_two_orders(hp):
     # A (signed) event claiming the same payment paid order b.
     p = {**hp.rz.payments[cb["razorpay_payment_id"]], "order_id": b["provider_order_id"]}
     assert webhook(hp, hook_body("payment.captured", p)).json()["result"] == "already_paid"
-    assert purchased(hp, "buyer") == 10
+    assert pro_days(hp, "buyer") == 30
     assert {o.status for o in rows(hp, Order)} == {"paid", "created"}
-    assert_ledger_matches(hp, "buyer")
+    assert_one_grant_per_payment(hp, "buyer")
 
 
 def test_switching_payments_off_still_settles_orders_already_paid(make_hp, pricing_file):
@@ -450,16 +506,16 @@ def test_switching_payments_off_still_settles_orders_already_paid(make_hp, prici
     out = checkout(h)
     cb = h.rz.pay(out["provider_order_id"])
     h.svc.settings.payments_enabled = False
-    assert h.get("/v1/packs").json()["on_sale"] is False
-    assert h.post("/v1/me/orders", {"pack": "credits_10"}, user="buyer").status_code == 403
+    assert h.get("/v1/passes").json()["on_sale"] is False
+    assert h.post("/v1/me/orders", {"pass": "pro_1m"}, user="buyer").status_code == 403
     assert confirm(h, cb).json()["order"]["status"] == "paid"
-    assert purchased(h, "buyer") == 10
+    assert pro_days(h, "buyer") == 30
 
 
 # --- concurrency -------------------------------------------------------------------------
 
 
-def test_callback_and_webhooks_racing_credit_once(hp):
+def test_callback_and_webhooks_racing_give_once(hp):
     out = checkout(hp)
     cb = hp.rz.pay(out["provider_order_id"])
     body = hook_body("payment.captured", hp.rz.payments[cb["razorpay_payment_id"]])
@@ -467,12 +523,12 @@ def test_callback_and_webhooks_racing_credit_once(hp):
     with ThreadPoolExecutor(8) as pool:
         results = list(pool.map(lambda f: f(), jobs))
     assert {r.status_code for r in results} == {200}
-    assert purchased(hp, "buyer") == 10
-    assert len(rows(hp, CreditLot)) == 1
-    assert_ledger_matches(hp, "buyer")
+    assert pro_days(hp, "buyer") == 30
+    assert len(rows(hp, PlanEvent)) == 1
+    assert_one_grant_per_payment(hp, "buyer")
 
 
-def test_concurrent_credit_calls_add_one_lot(hp):
+def test_concurrent_credit_calls_give_the_pass_once(hp):
     out = checkout(hp)
     cb = hp.rz.pay(out["provider_order_id"])
     order_id, pid = out["order_id"], cb["razorpay_payment_id"]
@@ -482,8 +538,8 @@ def test_concurrent_credit_calls_add_one_lot(hp):
                                       for _ in range(8)))
 
     assert sorted(hp.client.portal.call(race)) == [False] * 7 + [True]
-    assert purchased(hp, "buyer") == 10
-    assert_ledger_matches(hp, "buyer")
+    assert pro_days(hp, "buyer") == 30
+    assert_one_grant_per_payment(hp, "buyer")
 
 
 # --- purchase history ---------------------------------------------------------------------
@@ -493,11 +549,12 @@ def test_purchase_history_lists_finished_orders_newest_first(hp):
     first = checkout(hp)
     confirm(hp, hp.rz.pay(first["provider_order_id"]))
     checkout(hp)  # opened, never paid: not a purchase
-    third = checkout(hp, pack="credits_5_90d")
+    third = checkout(hp, pass_="pro_3m")
     confirm(hp, hp.rz.pay(third["provider_order_id"], amount=1))
     checkout(hp, user="someone-else")
     orders = hp.get("/v1/me/orders", user="buyer").json()["orders"]
     assert [(o["id"], o["status"]) for o in orders] == [
         (third["order_id"], "held"), (first["order_id"], "paid")]
-    assert orders[1]["paid_at"] and orders[1]["name"] == "10 credits"
+    assert orders[1]["paid_at"] and orders[1]["name"] == "Pro, 1 month"
+    assert (orders[0]["item"], orders[0]["days"]) == ("pro_3m", 90)
     assert hp.get("/v1/me/orders").status_code == 401
