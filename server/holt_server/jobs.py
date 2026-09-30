@@ -628,7 +628,22 @@ def done_payload(kind: str, result: dict[str, Any] | None) -> dict[str, Any]:
     if kind == "find":
         return dict(result or {"results": []})
     if kind == "playbook":
-        return {"playbook": result}
+        return {"playbook": without_model(result)}
     if kind == "preflight":
-        return {"preflight": result}
-    return {"report": result}
+        return {"preflight": without_model(result, "summary")}
+    return {"report": without_model(result, "cost")}
+
+
+def without_model(result: dict[str, Any] | None, part: str | None = None
+                  ) -> dict[str, Any] | None:
+    """`result` without the model id, which is never sent to anyone (results
+    stored before it was dropped from the response bodies still hold it).
+    `part` names the object inside that carries it."""
+    if not isinstance(result, dict):
+        return result
+    if part is None:
+        return {k: v for k, v in result.items() if k != "model"}
+    inner = result.get(part)
+    if not isinstance(inner, dict) or "model" not in inner:
+        return result
+    return {**result, part: {k: v for k, v in inner.items() if k != "model"}}

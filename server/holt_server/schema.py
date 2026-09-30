@@ -155,7 +155,7 @@ class EvidenceItem(Model):
 
 
 class Cost(Model):
-    model: str
+    # Which model ran is internal (the database keeps it), so it isn't here.
     input_tokens: int
     output_tokens: int
     # What the model calls cost in US dollars, and how long the whole run took.
@@ -956,7 +956,6 @@ class PreflightSentence(Model):
 class PreflightSummary(Model):
     """A short model-written summary, checked against the checks. No verdict."""
 
-    model: str | None
     sentences: list[PreflightSentence]
 
 
@@ -1521,8 +1520,6 @@ class PlaybookSections(Model):
 class Playbook(Model):
     repo: str
     generated_at: str
-    # The model that worded it. It never decides a count or a quote.
-    model: str | None = None
     # Say once, near the top, when present (e.g. the counts cover everyone's
     # pull requests because too few outside ones were merged).
     note: str | None = None

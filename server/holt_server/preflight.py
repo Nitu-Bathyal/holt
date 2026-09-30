@@ -213,7 +213,6 @@ def from_pro(repo: str, body: dict[str, Any]) -> dict[str, Any]:
             "why": str(similar.get("why") or ""),
         } if similar and similar.get("url") else None,
         "summary": {
-            "model": summary.get("model"),
             "sentences": [{"text": str(x.get("text")), "checks": [str(i) for i in x.get("checks") or []]}
                           for x in summary.get("sentences") or []
                           if isinstance(x, dict) and x.get("text")][:3],

@@ -85,7 +85,6 @@ def from_pro(repo: str, body: dict[str, Any]) -> dict[str, Any]:
     out = {
         "repo": str(body.get("repo") or repo),
         "generated_at": str(body.get("generated_at") or iso(now())),
-        "model": body.get("model"),
         "note": body.get("note"),
         "window_days": window.get("days"),
         "archived": bool(body.get("archived")),
