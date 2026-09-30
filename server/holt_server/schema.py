@@ -689,6 +689,10 @@ class RepoAbout(Model):
     stars: int
     forks: int | None = None
     open_issues: int | None = None
+    # Pull requests ever opened, how many are open now, and people who committed.
+    pull_requests: int | None = None
+    open_pull_requests: int | None = None
+    contributors: int | None = None
     # SPDX id ("MIT") or GitHub's name for it; null when there is none.
     license: str | None = None
     topics: list[str] = Field(default_factory=list)
@@ -1537,6 +1541,11 @@ class Recommendation(VerdictView):
     language: str | None = None
     languages: list[str] = Field(default_factory=list)
     stars: int | None = None
+    # As on a Discover card: the whole repository, null until its details are read.
+    open_issues: int | None = None
+    pull_requests: int | None = None
+    open_pull_requests: int | None = None
+    contributors: int | None = None
     topics: list[str] = Field(default_factory=list)
     # The report's one-line reason (the same sentence Discover shows).
     reason: str
