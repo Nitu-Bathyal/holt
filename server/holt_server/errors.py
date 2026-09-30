@@ -30,7 +30,6 @@ STATUS = {
     "not_implemented": 501,
     "payments_off": 403,
     "payment_unconfirmed": 400,
-    "already_subscribed": 409,
 }
 
 

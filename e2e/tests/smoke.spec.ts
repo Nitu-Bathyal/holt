@@ -93,13 +93,13 @@ test("theme toggle persists across a reload", async ({ page }) => {
 });
 
 test("pricing renders the plans", async ({ page }) => {
-  // Plan names and prices change (and later come from /v1/plans), so check the
-  // shape: a heading, at least two priced plans, and a way to act on one.
+  // Plans and prices change (Pro passes come from /v1/passes and show only
+  // while on sale), so check the shape: a heading, a priced plan, and a way
+  // to act on one.
   await page.goto("/pricing");
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   const prices = page.locator("main").getByText(/^\s*(\$|₹|€|£)\s?\d/);
   await expect(prices.first()).toBeVisible();
-  expect(await prices.count()).toBeGreaterThanOrEqual(2);
   const cta = page.locator("main").locator("a[href], button").filter({ hasText: /\S/ })
     .filter({ hasText: /sign in|start|get|choose|buy|upgrade|subscribe|add a key|check a repo|→/i });
   await expect(cta.first()).toBeVisible();

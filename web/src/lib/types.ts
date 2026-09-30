@@ -42,8 +42,9 @@ export type Verdict = Report["verdict"];
 export type Tone = Report["tone"];
 export type ApiErrorCode = ApiError["code"];
 export type Credits = S.Credits;
-export type Pack = S.PackOffer;
-export type Packs = S.Packs;
+export type Pass = S.PassOffer;
+export type PassFeature = S.PassFeature;
+export type Passes = S.Passes;
 export type Checkout = S.Checkout;
 export type Order = S.Order;
 export type OrderConfirmed = S.OrderConfirmed;
@@ -67,20 +68,6 @@ export type PreflightState = S.PreflightState;
 export type PreflightVerdict = S.PreflightCheck["verdict"];
 export type PreflightFor = S.PreflightFor;
 export type PreflightStart = S.Queued;
-export type PlanOffer = S.PlanOffer;
-export type Plans = S.Plans;
-export type SubscriptionCheckout = S.SubscriptionCheckout;
-export type Subscription = S.SubscriptionInfo;
-export type SubscriptionCharge = S.SubscriptionChargeInfo;
-export type MySubscription = S.MySubscription;
-export type SubscriptionConfirmed = S.SubscriptionConfirmed;
-/** What Razorpay Checkout hands the page after the first payment of a subscription. */
-export interface RazorpaySubscriptionSuccess {
-  razorpay_payment_id: string;
-  razorpay_subscription_id: string;
-  razorpay_signature: string;
-}
-
 export type AnalysisStart = S.AnalysisDone | S.Queued;
 export type PlaybookStart = S.PlaybookDone | S.Queued;
 export type FindStart = S.FindDone | S.Queued;

@@ -147,14 +147,16 @@ class CreditLot(Base):
 
 
 class Order(Base):
-    """One credit-pack checkout (payments.py). What it costs and what it buys
-    are copied from the pricing file when it is created, so a price change
+    """One checkout (payments.py): a pass, or a credit pack from before
+    passes (`pack_id` holds the pass id, `expires_days` its days of Pro, and
+    `credits` is 0). What it costs and what it buys are copied from the
+    pricing file when it is created, so a price change
     never alters an order already open. Only a verified payment moves it to
-    `paid`, once, in the same transaction that adds its `CreditLot`.
+    `paid`, once, in the same transaction that gives what it bought.
 
     status: `created` (checkout opened), `paid`, `failed` (the last attempt
     was declined; another attempt on the same order can still pay it), `held`
-    (a payment that didn't match the order: nothing credited, a person looks).
+    (a payment that didn't match the order: nothing given, a person looks).
     """
 
     __tablename__ = "orders"
@@ -164,7 +166,7 @@ class Order(Base):
     user_id: Mapped[str] = mapped_column(String(200))
     pack_id: Mapped[str] = mapped_column(String(40))
     credits: Mapped[int] = mapped_column(Integer)
-    # Days the credits last once paid; NULL: they never expire.
+    # A pass: its days of Pro. A credit pack: days its credits last (NULL: never).
     expires_days: Mapped[int | None] = mapped_column(Integer, nullable=True)
     # Minor units (paise).
     amount: Mapped[int] = mapped_column(Integer)
@@ -186,7 +188,8 @@ class Order(Base):
 
 
 class Subscription(Base):
-    """One monthly plan bought through Razorpay (subscriptions.py). The price
+    """One monthly plan bought through Razorpay. No longer sold (passes
+    replaced monthly plans); the table stays until a migration drops it. The price
     and the Razorpay plan are copied from the pricing file when it starts.
     Only Razorpay's word (a signed webhook, or a fetch after a signed
     checkout) moves it on, and only forward: an event about an older billing
