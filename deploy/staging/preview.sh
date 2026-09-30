@@ -105,6 +105,14 @@ if [[ -f "$here/edge.sh" ]]; then . "$here/edge.sh"; else . "$here/../edge.sh"; 
 if [[ -f "$here/swap.sh" ]]; then . "$here/swap.sh"; else . "$here/../swap.sh"; fi
 EDGE_DIR="$STATE/edge"
 export HOLT_STAGE_EDGE_DIR="$EDGE_DIR"
+# Staging's own evidence snapshots (compose.yml), never production's. Made
+# here so Docker doesn't create it as root; the server's user (uid 10001)
+# writes through its group.
+EVIDENCE_DIR="$STATE/evidence"
+mkdir -p "$EVIDENCE_DIR"
+chmod 2775 "$EVIDENCE_DIR" 2>/dev/null || log "WARNING: can't make $EVIDENCE_DIR group-writable; staging won't keep evidence"
+HOLT_STAGE_EVIDENCE_GID="$(stat -c %g "$EVIDENCE_DIR")"
+export HOLT_STAGE_EVIDENCE_DIR="$EVIDENCE_DIR" HOLT_STAGE_EVIDENCE_GID HOLT_STAGE_EVIDENCE_MODE=rw
 
 RUN="$(mktemp -d "$STATE/run.XXXXXX")"
 trap 'rm -rf "$RUN"' EXIT
@@ -505,6 +513,10 @@ else
     done
 fi
 export GITHUB_TOKENS GITHUB_APP_ID GITHUB_APP_INSTALLATION_ID GITHUB_APP_PRIVATE_KEY_FILE HOLT_GITHUB_APP_KEY_GID
+# Compose refuses a group twice (compose.yml, group_add); the key's group
+# already covers the evidence directory then (65534, nogroup, stands in).
+[[ "$HOLT_STAGE_EVIDENCE_GID" == "${HOLT_GITHUB_APP_KEY_GID:-10001}" ]] && HOLT_STAGE_EVIDENCE_GID=""
+export HOLT_STAGE_EVIDENCE_GID
 
 # The paid-features service needs its own key, STAGING_HOLT_PRO_KEY (never
 # production's HOLT_PRO_KEY; the same value is refused), and a holt_pro

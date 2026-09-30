@@ -6,6 +6,8 @@ app's default pages make.
     python -m holt_server.warm --dry-run       # what would run, no GitHub calls
     python -m holt_server.warm --no-find --limit 50
     python -m holt_server.warm --stale-only    # after a deploy: redo reports from an older engine
+    python -m holt_server.warm --tier weekly   # reports only: saved or recently viewed repos
+    python -m holt_server.warm --tier monthly  # reports only: the rest of the seed list
     python -m holt_server.warm --no-reports --no-starter --no-find   # details only (daily timer)
 
 Or in the API process on a schedule: HOLT_WARM_INTERVAL_HOURS=6.
@@ -20,12 +22,19 @@ How it stays out of the way:
   find made by an older engine version (holt.engine_version) is never fresh.
   `--stale-only` does just those: every seed whose latest report is from an
   older engine, however young, and nothing else. Run it after a deploy that
-  bumps ENGINE_VERSION.
+  bumps ENGINE_VERSION. Where the evidence behind that report was kept
+  (evidence_store.py) and is younger than HOLT_EVIDENCE_REUSE_HOURS, the
+  report is made again from it, in this process, with no GitHub call.
 * Repository details (discover.py) are read for every reported repo at once,
   a hundred per GraphQL query (about a point each), once a day. A repo's
   first report reads its own details right away (meta_refresh.py); the
   details-only pass (`deploy/prod/warm-meta.sh`, a daily timer) keeps the
   rest from going stale. The summary says how many GitHub points it used.
+* Refresh tiers (`--tier`, deploy/prod/warm-refresh.sh): repos someone saved,
+  or viewed in the last INTEREST_DAYS, are the weekly tier; the rest of the
+  seed list is the monthly one. A tier pass runs reports only, the oldest
+  first, and skips any younger than HOLT_WARM_MAX_AGE_HOURS, which the
+  timer sets per tier (a week, a month).
 * Before each step it checks the GitHub GraphQL points left on every token
   and stops below HOLT_WARM_MIN_POINTS, so a warm pass can never starve the
   requests people make.
@@ -42,15 +51,18 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 from pathlib import Path
 
-from sqlalchemy import select, text
+from sqlalchemy import func, select, text
 
-from holt_server import repos, starter
+from holt_server import evidence_store, repos, starter
 from holt_server.db import (
     ACTIVE,
     BADGE_PRIORITY,
+    ENGINE_VERSION,
     FindCache,
     Job,
+    RepoView,
     Report,
+    SavedRepo,
     StarterCache,
     dedupe_key,
     find_key,
@@ -77,6 +89,12 @@ FIND_LIMIT = 20
 LOCK_ID = 7_406_111
 # Exit status when another process is warming (as deploy.sh: try again later).
 BUSY = 75
+TIERS = ("weekly", "monthly")
+# Viewed on Holt this recently: the weekly tier.
+INTEREST_DAYS = 30
+# A report is stored a few minutes after its evidence was read (the job's run
+# time), so a snapshot this much older than the report is still its evidence.
+SNAPSHOT_SLACK = timedelta(hours=1)
 
 # The searches the web app makes on its own pages (web/src/app/hacktoberfest
 # and web/src/app/find): languages as the web sends them, lower-cased.
@@ -130,6 +148,8 @@ def load_seeds(path: Path | str | None = None) -> list[str]:
 class Result:
     reports_run: int = 0
     reports_fresh: int = 0
+    # Made again from kept evidence, with no GitHub call (--stale-only).
+    reports_rederived: int = 0
     reports_failed: int = 0
     starter_run: int = 0
     starter_fresh: int = 0
@@ -143,6 +163,7 @@ class Result:
     def summary(self) -> str:
         parts = [f"reports {self.reports_run} run, {self.reports_fresh} fresh, "
                  f"{self.reports_failed} failed",
+                 f"{self.reports_rederived} made again from kept evidence",
                  f"starter issues {self.starter_run} run, {self.starter_fresh} fresh",
                  f"repo details {self.meta_run} read ({self.meta_points} GitHub points)",
                  f"finds {self.finds_run} run, {self.finds_fresh} fresh"]
@@ -273,6 +294,8 @@ class Warmer:
         if skip:
             self.result.reports_fresh += 1
             return
+        if stale_only and await self.from_snapshot(repo):
+            return
         if self.dry_run:
             self.say(f"would analyse {repo}")
             self.result.reports_run += 1
@@ -295,6 +318,43 @@ class Warmer:
             self.say(f"{repo}: failed ({code})")
             if code == "rate_limited":
                 raise OutOfBudget("GitHub rate limit reached")
+
+    async def from_snapshot(self, repo: str) -> bool:
+        """Make `repo`'s outdated report again from its newest kept evidence,
+        without GitHub. False (read GitHub instead) when there is none, it is
+        older than HOLT_EVIDENCE_REUSE_HOURS, or older than the report it would
+        replace (that one was read while evidence wasn't kept)."""
+        hours = self.svc.settings.evidence_reuse_hours
+        store = self.svc.evidence
+        if not store.enabled or hours <= 0:
+            return False
+        latest = await self.latest_report(repo)
+        snap = await asyncio.to_thread(store.newest, repo)
+        if snap is None or latest is None:
+            return False
+        made = utc(latest.created_at)
+        if snap.cutoff < now() - timedelta(hours=hours) or snap.cutoff < made - SNAPSHOT_SLACK:
+            return False
+        if self.dry_run:
+            self.say(f"would make {repo} again from its evidence of {snap.cutoff:%Y-%m-%d}")
+            self.result.reports_rederived += 1
+            return True
+        try:
+            report = await asyncio.to_thread(evidence_store.rederive, snap, DAYS)
+        except Exception:  # noqa: BLE001 -- GitHub is the way it always worked
+            log.exception("making %s again from its evidence failed", repo)
+            return False
+        async with self.svc.db.session() as s:
+            # As old as the report it replaces, never older, so it is the
+            # newest and the refresh tiers still see the evidence's real age.
+            s.add(Report(repo=snap.repo, repo_key=repos.key(repo), mode="rules", days=DAYS,
+                         report=report, engine_version=ENGINE_VERSION,
+                         created_at=max(made, snap.cutoff)))
+            await s.commit()
+        self.result.reports_rederived += 1
+        self.say(f"{repo}: {report.get('headline', 'done')} (from evidence of "
+                 f"{snap.cutoff:%Y-%m-%d})")
+        return True
 
     async def warm_starter(self, repo: str) -> None:
         from holt_server.api import fetch_starter_issues
@@ -372,11 +432,16 @@ class Warmer:
 
     async def run(self, seeds: list[str], *, reports: bool = True, starter: bool = True,
                   meta: bool = True, finds: bool = True,
-                  max_profiles: int | None = None, stale_only: bool = False) -> Result:
+                  max_profiles: int | None = None, stale_only: bool = False,
+                  tier: str | None = None) -> Result:
         """`stale_only`: only re-run seeds whose report an older engine made;
-        the other passes are skipped."""
-        if stale_only:
+        `tier`: only the reports of that refresh tier, oldest first. Either
+        way the other passes are skipped."""
+        if stale_only or tier:
             starter = meta = finds = False
+        if tier:
+            seeds = await oldest_first(self.svc, await tier_repos(self.svc, tier, seeds))
+            self.say(f"{tier} tier: {len(seeds)} repos")
         try:
             # Reports first: finds screen repositories through the report
             # cache, so a warm report cache makes every search cheaper.
@@ -394,6 +459,43 @@ class Warmer:
             self.result.stopped = str(stop)
             self.say(f"stopping: {stop}")
         return self.result
+
+
+async def tier_repos(svc, tier: str, seeds: list[str]) -> list[str]:
+    """The repos of refresh tier `tier`: "weekly", every repo someone saved or
+    viewed in the last INTEREST_DAYS, seed or not; "monthly", the seeds that
+    aren't weekly."""
+    if tier not in TIERS:
+        raise ValueError(f"no refresh tier {tier!r}; one of {', '.join(TIERS)}")
+    since = now() - timedelta(days=INTEREST_DAYS)
+    async with svc.db.session() as s:
+        rows = [*(await s.execute(select(SavedRepo.repo_key, SavedRepo.repo))).all(),
+                *(await s.execute(select(RepoView.repo_key, RepoView.repo)
+                                  .where(RepoView.last_viewed_at >= since))).all()]
+    weekly: dict[str, str] = {}
+    for key, repo in rows:
+        weekly.setdefault(key, repo)
+    if tier == "weekly":
+        return list(weekly.values())
+    return [r for r in seeds if repos.key(r) not in weekly]
+
+
+async def oldest_first(svc, names: list[str]) -> list[str]:
+    """`names` by their newest 7-day rules report, oldest first; never
+    reported ones first of all, in the order given."""
+    async with svc.db.session() as s:
+        made = dict((await s.execute(
+            select(Report.repo_key, func.max(Report.created_at))
+            .where(Report.mode == "rules", Report.days == DAYS,
+                   Report.repo_key.in_([repos.key(r) for r in names]))
+            .group_by(Report.repo_key))).all())
+
+    def order(item: tuple[int, str]):
+        i, repo = item
+        when = made.get(repos.key(repo))
+        return (0, i, None) if when is None else (1, utc(when), i)
+
+    return [repo for _, repo in sorted(enumerate(names), key=order)]
 
 
 async def warm_once(svc, *, seeds: list[str] | None = None, dry_run: bool = False,
@@ -444,6 +546,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--profiles", type=int, help="only the first N find profiles")
     parser.add_argument("--dry-run", action="store_true",
                         help="list what would run; no GitHub calls, no jobs")
+    parser.add_argument("--tier", choices=TIERS,
+                        help="only the reports of this refresh tier, oldest first: weekly "
+                             "(saved or recently viewed repos) or monthly (the other seeds)")
     parser.add_argument("--stale-only", action="store_true",
                         help="only re-run seeds whose report an older engine version "
                              "made, however young (after a deploy); nothing else")
@@ -471,7 +576,7 @@ def main(argv: list[str] | None = None) -> int:
                                      starter=not args.no_starter, meta=not args.no_meta,
                                      finds=not args.no_find,
                                      max_profiles=args.profiles,
-                                     stale_only=args.stale_only)
+                                     stale_only=args.stale_only, tier=args.tier)
             if result is None:
                 return BUSY
             print(result.summary())
