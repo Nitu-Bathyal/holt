@@ -125,6 +125,11 @@ class PartialStats(Model):
     no_reply: int | None = None
     median_first_response_hours: float | None = None
     bot_share: float | None = None
+    # What became of the rest, when a report has counted them (as on Discover).
+    still_open: int | None = None
+    closed_silently: int | None = None
+    closed_by_bot: int | None = None
+    withdrawn: int | None = None
 
     @model_serializer(mode="wrap")
     def _only_known(self, handler):
@@ -846,6 +851,12 @@ class FindResult(VerdictView):
     # As on a Discover card: primary first, a second when it's a real share.
     languages: list[str] = Field(default_factory=list)
     stars: int | None = None
+    # As on a Discover card; null until the repo's details are read (find only
+    # screens repos, so most are null on a first search).
+    open_issues: int | None = None
+    pull_requests: int | None = None
+    open_pull_requests: int | None = None
+    contributors: int | None = None
     stats: PartialStats = Field(default_factory=PartialStats)
     issues: list[StarterIssue] = Field(default_factory=list)
 
