@@ -2393,6 +2393,15 @@ export interface components {
             /** Picks */
             picks: components["schemas"]["Recommendation"][];
         };
+        /** Release */
+        Release: {
+            /** Published At */
+            published_at: string | null;
+            /** Tag */
+            tag: string;
+            /** Url */
+            url: string;
+        };
         /**
          * RepoAbout
          * @description What the repository is and how big and alive it is: GitHub's own fields
@@ -2429,10 +2438,17 @@ export interface components {
             homepage: string | null;
             /** Languages */
             languages: components["schemas"]["Language"][];
+            latest_release: components["schemas"]["Release"] | null;
             /** License */
             license: string | null;
+            /** Links */
+            links: components["schemas"]["RepoLink"][];
             /** Open Issues */
             open_issues: number | null;
+            /** Open Pull Requests */
+            open_pull_requests: number | null;
+            /** Pull Requests */
+            pull_requests: number | null;
             /** Pushed At */
             pushed_at: string | null;
             /** Readme Line */
@@ -2441,6 +2457,19 @@ export interface components {
             stars: number;
             /** Topics */
             topics: string[];
+        };
+        /**
+         * RepoLink
+         * @description Where a newcomer finds the rules or help.
+         */
+        RepoLink: {
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "contributing" | "discussions" | "docs" | "discord" | "slack" | "gitter" | "matrix" | "zulip";
+            /** Url */
+            url: string;
         };
         /**
          * RepoVerdict
@@ -2802,7 +2831,9 @@ export type Queued = components['schemas']['Queued'];
 export type Recommendation = components['schemas']['Recommendation'];
 export type RecommendationBasis = components['schemas']['RecommendationBasis'];
 export type Recommendations = components['schemas']['Recommendations'];
+export type Release = components['schemas']['Release'];
 export type RepoAbout = components['schemas']['RepoAbout'];
+export type RepoLink = components['schemas']['RepoLink'];
 export type RepoVerdict = components['schemas']['RepoVerdict'];
 export type Report = components['schemas']['Report'];
 export type ReportList = components['schemas']['ReportList'];
