@@ -598,66 +598,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/me/subscription": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * My Subscription
-         * @description The latest subscription (checkouts never paid are left out) and every
-         *     charge, newest first.
-         */
-        get: operations["my_subscription_v1_me_subscription_get"];
-        put?: never;
-        /** Subscribe */
-        post: operations["subscribe_v1_me_subscription_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/me/subscription/cancel": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /**
-         * Cancel
-         * @description Stop renewing. A paid plan runs to the end of the period paid for; one
-         *     never paid for, or whose renewal is failing, stops now.
-         */
-        post: operations["cancel_v1_me_subscription_cancel_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/me/subscription/confirm": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Confirm */
-        post: operations["confirm_v1_me_subscription_confirm_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/v1/metrics/contributions": {
         parameters: {
             query?: never;
@@ -678,15 +618,15 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/v1/packs": {
+    "/v1/passes": {
         parameters: {
             query?: never;
             header?: never;
             path?: never;
             cookie?: never;
         };
-        /** Get Packs */
-        get: operations["get_packs_v1_packs_get"];
+        /** Get Passes */
+        get: operations["get_passes_v1_passes_get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -711,23 +651,6 @@ export interface paths {
          *     doesn't retry them; 400 for anything not signed.
          */
         post: operations["razorpay_webhook_v1_payments_razorpay_webhook_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/v1/plans": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /** Get Plans */
-        get: operations["get_plans_v1_plans_get"];
-        put?: never;
-        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -1138,11 +1061,11 @@ export interface components {
                 [key: string]: components["schemas"]["Feature"];
             };
             /**
-             * Packs
+             * Passes
              * @default {}
              */
-            packs: {
-                [key: string]: components["schemas"]["Pack"];
+            passes: {
+                [key: string]: components["schemas"]["Pass"];
             };
             /** Plans */
             plans: {
@@ -1161,20 +1084,20 @@ export interface components {
         Checkout: {
             /** Amount */
             amount: number;
-            /** Credits */
-            credits: number;
             /** Currency */
             currency: string;
+            /** Days */
+            days: number;
             /** Description */
             description: string;
+            /** Item */
+            item: string;
             /** Key Id */
             key_id: string;
             /** Name */
             name: string;
             /** Order Id */
             order_id: string;
-            /** Pack */
-            pack: string;
             /**
              * Provider
              * @constant
@@ -1182,6 +1105,18 @@ export interface components {
             provider: "razorpay";
             /** Provider Order Id */
             provider_order_id: string;
+        };
+        /**
+         * ConfirmIn
+         * @description What Razorpay Checkout hands the page on success, passed on unchanged.
+         */
+        ConfirmIn: {
+            /** Razorpay Order Id */
+            razorpay_order_id: string;
+            /** Razorpay Payment Id */
+            razorpay_payment_id: string;
+            /** Razorpay Signature */
+            razorpay_signature: string;
         };
         /** ConnectIn */
         ConnectIn: {
@@ -1412,7 +1347,7 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "unauthorized" | "not_found" | "invalid_repo" | "invalid_request" | "rate_limited" | "quota_exceeded" | "needs_plan" | "needs_key" | "claim_not_ready" | "ai_unavailable" | "upstream" | "internal" | "not_implemented" | "payments_off" | "payment_unconfirmed" | "already_subscribed";
+            code: "unauthorized" | "not_found" | "invalid_repo" | "invalid_request" | "rate_limited" | "quota_exceeded" | "needs_plan" | "needs_key" | "claim_not_ready" | "ai_unavailable" | "upstream" | "internal" | "not_implemented" | "payments_off" | "payment_unconfirmed";
             /** Message */
             message: string;
             /** Reason */
@@ -1713,15 +1648,6 @@ export interface components {
             /** Plan Expires At */
             plan_expires_at: string | null;
         };
-        /**
-         * MySubscription
-         * @description GET /v1/me/subscription: the latest subscription and every charge, newest first.
-         */
-        MySubscription: {
-            /** Charges */
-            charges: components["schemas"]["SubscriptionChargeInfo"][];
-            subscription: components["schemas"]["SubscriptionInfo"] | null;
-        };
         /** NeverLanded */
         NeverLanded: {
             /** Attempted */
@@ -1755,23 +1681,23 @@ export interface components {
         };
         /**
          * Order
-         * @description One credit-pack purchase, for the buyer's purchase history.
+         * @description One purchase, for the buyer's purchase history.
          */
         Order: {
             /** Amount */
             amount: number;
             /** Created At */
             created_at: string;
-            /** Credits */
-            credits: number;
             /** Currency */
             currency: string;
+            /** Days */
+            days: number | null;
             /** Id */
             id: string;
+            /** Item */
+            item: string;
             /** Name */
             name: string;
-            /** Pack */
-            pack: string;
             /** Paid At */
             paid_at: string | null;
             /**
@@ -1782,62 +1708,24 @@ export interface components {
         };
         /**
          * OrderConfirmed
-         * @description POST /v1/me/orders/confirm: the order (paid, or still being confirmed) and balances.
+         * @description POST /v1/me/orders/confirm: the order (paid, or still being confirmed) and the plan in force.
          */
         OrderConfirmed: {
-            credits: components["schemas"]["Credits"];
             order: components["schemas"]["Order"];
+            /** Plan */
+            plan: string;
+            /** Plan Expires At */
+            plan_expires_at: string | null;
         };
         /** OrderIn */
         OrderIn: {
-            /** Pack */
-            pack: string;
+            /** Pass */
+            pass: string;
         };
         /** Orders */
         Orders: {
             /** Orders */
             orders: components["schemas"]["Order"][];
-        };
-        /** Pack */
-        Pack: {
-            /** Credits */
-            credits: number;
-            /** Expires Days */
-            expires_days?: number | null;
-            /** Name */
-            name: string;
-            /**
-             * On Sale
-             * @default false
-             */
-            on_sale: boolean;
-            /** @default {} */
-            price: components["schemas"]["Price"];
-        };
-        /** PackOffer */
-        PackOffer: {
-            /** Amount */
-            amount: number;
-            /** Credits */
-            credits: number;
-            /** Currency */
-            currency: string;
-            /** Expires Days */
-            expires_days: number | null;
-            /** Id */
-            id: string;
-            /** Name */
-            name: string;
-        };
-        /**
-         * Packs
-         * @description GET /v1/packs. `on_sale` is false, and `packs` empty, while payments are off.
-         */
-        Packs: {
-            /** On Sale */
-            on_sale: boolean;
-            /** Packs */
-            packs: components["schemas"]["PackOffer"][];
         };
         /**
          * PartialStats
@@ -1860,6 +1748,56 @@ export interface components {
             /** Outsider Merged */
             outsider_merged?: number | null;
         };
+        /** Pass */
+        Pass: {
+            /** Days */
+            days: number;
+            /** Name */
+            name: string;
+            /**
+             * On Sale
+             * @default false
+             */
+            on_sale: boolean;
+            /** @default {} */
+            price: components["schemas"]["Price"];
+        };
+        /** PassFeature */
+        PassFeature: {
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+            /** Per Month */
+            per_month: number | null;
+            /** Unlimited */
+            unlimited: boolean;
+        };
+        /** PassOffer */
+        PassOffer: {
+            /** Amount */
+            amount: number;
+            /** Currency */
+            currency: string;
+            /** Days */
+            days: number;
+            /** Id */
+            id: string;
+            /** Name */
+            name: string;
+        };
+        /**
+         * Passes
+         * @description GET /v1/passes. `on_sale` is false, and both lists empty, while payments are off.
+         */
+        Passes: {
+            /** Features */
+            features: components["schemas"]["PassFeature"][];
+            /** On Sale */
+            on_sale: boolean;
+            /** Passes */
+            passes: components["schemas"]["PassOffer"][];
+        };
         /** Plan */
         Plan: {
             /**
@@ -1871,17 +1809,6 @@ export interface components {
             };
             /** Name */
             name: string;
-            /**
-             * On Sale
-             * @default false
-             */
-            on_sale: boolean;
-            /** Period Days */
-            period_days?: number | null;
-            /** @default {} */
-            price: components["schemas"]["Price"];
-            /** Razorpay Plan Id */
-            razorpay_plan_id?: string | null;
         };
         /** PlanFeature */
         PlanFeature: {
@@ -1892,40 +1819,6 @@ export interface components {
              * @default false
              */
             unlimited: boolean;
-        };
-        /** PlanOffer */
-        PlanOffer: {
-            /** Amount */
-            amount: number;
-            /** Currency */
-            currency: string;
-            /** Features */
-            features: components["schemas"]["PlanOfferFeature"][];
-            /** Id */
-            id: string;
-            /** Name */
-            name: string;
-        };
-        /** PlanOfferFeature */
-        PlanOfferFeature: {
-            /** Id */
-            id: string;
-            /** Name */
-            name: string;
-            /** Per Month */
-            per_month: number | null;
-            /** Unlimited */
-            unlimited: boolean;
-        };
-        /**
-         * Plans
-         * @description GET /v1/plans. `on_sale` is false, and `plans` empty, while subscriptions are off.
-         */
-        Plans: {
-            /** On Sale */
-            on_sale: boolean;
-            /** Plans */
-            plans: components["schemas"]["PlanOffer"][];
         };
         /** Playbook */
         Playbook: {
@@ -2756,97 +2649,6 @@ export interface components {
              */
             withdrawn: number;
         };
-        /** SubscribeIn */
-        SubscribeIn: {
-            /** Plan */
-            plan: string;
-        };
-        /** SubscriptionChargeInfo */
-        SubscriptionChargeInfo: {
-            /** Amount */
-            amount: number;
-            /** Currency */
-            currency: string;
-            /** Id */
-            id: string;
-            /** Paid At */
-            paid_at: string;
-            /** Period End */
-            period_end: string | null;
-            /** Period Start */
-            period_start: string | null;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "paid" | "held";
-        };
-        /**
-         * SubscriptionCheckout
-         * @description POST /v1/me/subscription: what Razorpay Checkout needs to start the subscription.
-         */
-        SubscriptionCheckout: {
-            /** Amount */
-            amount: number;
-            /** Currency */
-            currency: string;
-            /** Description */
-            description: string;
-            /** Key Id */
-            key_id: string;
-            /** Name */
-            name: string;
-            /** Plan */
-            plan: string;
-            /**
-             * Provider
-             * @constant
-             */
-            provider: "razorpay";
-            /** Provider Subscription Id */
-            provider_subscription_id: string;
-            /** Subscription Id */
-            subscription_id: string;
-        };
-        /**
-         * SubscriptionConfirmed
-         * @description POST /v1/me/subscription/confirm and /cancel: the subscription and the plan in force.
-         */
-        SubscriptionConfirmed: {
-            /** Plan */
-            plan: string;
-            /** Plan Expires At */
-            plan_expires_at: string | null;
-            subscription: components["schemas"]["SubscriptionInfo"] | null;
-        };
-        /** SubscriptionInfo */
-        SubscriptionInfo: {
-            /** Amount */
-            amount: number;
-            /** Cancel At Period End */
-            cancel_at_period_end: boolean;
-            /** Created At */
-            created_at: string;
-            /** Currency */
-            currency: string;
-            /** Ended At */
-            ended_at: string | null;
-            /** Id */
-            id: string;
-            /** Name */
-            name: string;
-            /** Next Charge At */
-            next_charge_at: string | null;
-            /** Paid Until */
-            paid_until: string | null;
-            /** Plan */
-            plan: string;
-            /**
-             * Status
-             * @enum {string}
-             */
-            status: "created" | "authenticated" | "active" | "pending" | "halted" | "paused" | "cancelled" | "completed" | "expired";
-        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -2859,30 +2661,6 @@ export interface components {
             msg: string;
             /** Error Type */
             type: string;
-        };
-        /**
-         * ConfirmIn
-         * @description What Razorpay Checkout hands the page on success, passed on unchanged.
-         */
-        holt_server__payments__ConfirmIn: {
-            /** Razorpay Order Id */
-            razorpay_order_id: string;
-            /** Razorpay Payment Id */
-            razorpay_payment_id: string;
-            /** Razorpay Signature */
-            razorpay_signature: string;
-        };
-        /**
-         * ConfirmIn
-         * @description What Razorpay Checkout hands the page on success, passed on unchanged.
-         */
-        holt_server__subscriptions__ConfirmIn: {
-            /** Razorpay Payment Id */
-            razorpay_payment_id: string;
-            /** Razorpay Signature */
-            razorpay_signature: string;
-            /** Razorpay Subscription Id */
-            razorpay_subscription_id: string;
         };
     };
     responses: never;
@@ -2906,6 +2684,7 @@ export type AnalysisIn = components['schemas']['AnalysisIn'];
 export type Ask = components['schemas']['Ask'];
 export type Catalogue = components['schemas']['Catalogue'];
 export type Checkout = components['schemas']['Checkout'];
+export type ConfirmIn = components['schemas']['ConfirmIn'];
 export type ConnectIn = components['schemas']['ConnectIn'];
 export type ContributionChoiceBody = components['schemas']['ContributionChoiceBody'];
 export type ContributionMetric = components['schemas']['ContributionMetric'];
@@ -2941,22 +2720,19 @@ export type LandingPath = components['schemas']['LandingPath'];
 export type Language = components['schemas']['Language'];
 export type LanguageCount = components['schemas']['LanguageCount'];
 export type Me = components['schemas']['Me'];
-export type MySubscription = components['schemas']['MySubscription'];
 export type NeverLanded = components['schemas']['NeverLanded'];
 export type Odds = components['schemas']['Odds'];
 export type Order = components['schemas']['Order'];
 export type OrderConfirmed = components['schemas']['OrderConfirmed'];
 export type OrderIn = components['schemas']['OrderIn'];
 export type Orders = components['schemas']['Orders'];
-export type Pack = components['schemas']['Pack'];
-export type PackOffer = components['schemas']['PackOffer'];
-export type Packs = components['schemas']['Packs'];
 export type PartialStats = components['schemas']['PartialStats'];
+export type Pass = components['schemas']['Pass'];
+export type PassFeature = components['schemas']['PassFeature'];
+export type PassOffer = components['schemas']['PassOffer'];
+export type Passes = components['schemas']['Passes'];
 export type Plan = components['schemas']['Plan'];
 export type PlanFeature = components['schemas']['PlanFeature'];
-export type PlanOffer = components['schemas']['PlanOffer'];
-export type PlanOfferFeature = components['schemas']['PlanOfferFeature'];
-export type Plans = components['schemas']['Plans'];
 export type Playbook = components['schemas']['Playbook'];
 export type PlaybookClosingReason = components['schemas']['PlaybookClosingReason'];
 export type PlaybookDone = components['schemas']['PlaybookDone'];
@@ -3002,14 +2778,7 @@ export type SavedState = components['schemas']['SavedState'];
 export type StarterIssue = components['schemas']['StarterIssue'];
 export type StarterIssues = components['schemas']['StarterIssues'];
 export type Stats = components['schemas']['Stats'];
-export type SubscribeIn = components['schemas']['SubscribeIn'];
-export type SubscriptionChargeInfo = components['schemas']['SubscriptionChargeInfo'];
-export type SubscriptionCheckout = components['schemas']['SubscriptionCheckout'];
-export type SubscriptionConfirmed = components['schemas']['SubscriptionConfirmed'];
-export type SubscriptionInfo = components['schemas']['SubscriptionInfo'];
 export type ValidationError = components['schemas']['ValidationError'];
-export type HoltServerPaymentsConfirmIn = components['schemas']['holt_server__payments__ConfirmIn'];
-export type HoltServerSubscriptionsConfirmIn = components['schemas']['holt_server__subscriptions__ConfirmIn'];
 export type $defs = Record<string, never>;
 export interface operations {
     badge_svg_badge__owner___repo__svg_get: {
@@ -4079,7 +3848,7 @@ export interface operations {
         };
         requestBody: {
             content: {
-                "application/json": components["schemas"]["holt_server__payments__ConfirmIn"];
+                "application/json": components["schemas"]["ConfirmIn"];
             };
         };
         responses: {
@@ -4497,148 +4266,6 @@ export interface operations {
             };
         };
     };
-    my_subscription_v1_me_subscription_get: {
-        parameters: {
-            query?: {
-                limit?: number;
-            };
-            header?: {
-                "x-holt-user"?: string | null;
-                "x-holt-client-ip"?: string | null;
-                "x-holt-internal-key"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["MySubscription"];
-                };
-            };
-            /** @description Default Response */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
-        };
-    };
-    subscribe_v1_me_subscription_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "x-holt-user"?: string | null;
-                "x-holt-client-ip"?: string | null;
-                "x-holt-internal-key"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["SubscribeIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SubscriptionCheckout"];
-                };
-            };
-            /** @description Default Response */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
-        };
-    };
-    cancel_v1_me_subscription_cancel_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "x-holt-user"?: string | null;
-                "x-holt-client-ip"?: string | null;
-                "x-holt-internal-key"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SubscriptionConfirmed"];
-                };
-            };
-            /** @description Default Response */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
-        };
-    };
-    confirm_v1_me_subscription_confirm_post: {
-        parameters: {
-            query?: never;
-            header?: {
-                "x-holt-user"?: string | null;
-                "x-holt-client-ip"?: string | null;
-                "x-holt-internal-key"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["holt_server__subscriptions__ConfirmIn"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["SubscriptionConfirmed"];
-                };
-            };
-            /** @description Default Response */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
-        };
-    };
     get_metric_v1_metrics_contributions_get: {
         parameters: {
             query?: {
@@ -4674,7 +4301,7 @@ export interface operations {
             };
         };
     };
-    get_packs_v1_packs_get: {
+    get_passes_v1_passes_get: {
         parameters: {
             query?: never;
             header?: {
@@ -4691,7 +4318,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Packs"];
+                    "application/json": components["schemas"]["Passes"];
                 };
             };
             /** @description Default Response */
@@ -4726,37 +4353,6 @@ export interface operations {
                     "application/json": {
                         [key: string]: unknown;
                     };
-                };
-            };
-            /** @description Default Response */
-            default: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["ErrorBody"];
-                };
-            };
-        };
-    };
-    get_plans_v1_plans_get: {
-        parameters: {
-            query?: never;
-            header?: {
-                "x-holt-internal-key"?: string | null;
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["Plans"];
                 };
             };
             /** @description Default Response */
