@@ -105,3 +105,93 @@ def test_details_fields_are_one_query_per_hundred(h):
     # No extra per-repo call: the README is an alias inside the same query.
     assert github.README_FIELDS.count("object(expression:") == len(github.README_PATHS)
     assert "languages(first: 3" in github.DETAILS_FIELDS
+
+
+class _Response:
+    def __init__(self, status, links=None, body=None):
+        self.status_code, self.links, self._body = status, links or {}, body
+
+    def json(self):
+        return self._body
+
+
+class _Http:
+    def __init__(self, response):
+        self.response, self.asked = response, []
+
+    def get(self, url, **kw):
+        self.asked.append((url, kw.get("params")))
+        return self.response
+
+
+def _counting(response):
+    lookup, _ = lookup_with(lambda v: {"r0": NODE})
+    lookup.http = _Http(response)
+    return lookup
+
+
+def test_contributors_are_the_last_page_of_a_one_per_page_list():
+    last = "https://api.github.com/repositories/1/contributors?per_page=1&anon=1&page=812"
+    lookup = _counting(_Response(200, {"last": {"url": last}}))
+    out = lookup._details_with_people([REPO])[REPO]
+    assert out["contributors"] == 812
+    url, params = lookup.http.asked[0]
+    assert url.endswith("/repos/pallets/flask/contributors") and params == {"per_page": 1, "anon": 1}
+
+
+def test_contributors_without_a_next_page_are_counted():
+    assert _counting(_Response(200, body=[{"login": "a"}]))._contributors(REPO) == 1
+    assert _counting(_Response(204))._contributors(REPO) == 0
+    assert _counting(_Response(500))._contributors(REPO) is None
+
+
+def test_rate_limited_contributors_leave_the_rest_of_the_details():
+    out = _counting(_Response(403))._details_with_people([REPO])[REPO]
+    assert out["contributors"] is None and out["open_issues"] == 5
+
+
+def test_a_missing_contributor_count_keeps_the_stored_one(h):
+    details = {REPO: {**lookup_with(lambda v: {"r0": NODE})[0]._details([REPO])[REPO], "contributors": 40}}
+    h.client.portal.call(lambda: discover.store_meta(h.svc, details))
+    details[REPO]["contributors"] = None
+    h.client.portal.call(lambda: discover.store_meta(h.svc, details))
+    add(h, Report(repo=REPO, repo_key=REPO, mode="rules", days=7,
+                  report=canned_report(REPO), created_at=now()))
+    assert _served(h)["contributors"] == 40
+
+
+def test_links_and_the_latest_release_are_read_and_served(h):
+    node = {**NODE, "hasDiscussionsEnabled": True,
+            "contributingGuidelines": {"url": "https://github.com/pallets/flask/blob/main/CONTRIBUTING.md"},
+            "latestRelease": {"tagName": "3.1.0", "publishedAt": "2026-09-01T00:00:00Z",
+                              "url": "https://github.com/pallets/flask/releases/tag/3.1.0"},
+            "readme0": {"text": "Chat: https://discord.gg/pallets and https://flask.readthedocs.io/"}}
+    lookup, _ = lookup_with(lambda v: {"r0": node})
+    details = lookup._details([REPO])
+    assert [x["kind"] for x in details[REPO]["links"]] == ["contributing", "discussions", "docs", "discord"]
+    add(h, Report(repo=REPO, repo_key=REPO, mode="rules", days=7,
+                  report=canned_report(REPO), created_at=now()))
+    h.client.portal.call(lambda: discover.store_meta(h.svc, details))
+    about = _served(h)
+    assert [x["kind"] for x in about["links"]] == ["contributing", "discussions", "docs", "discord"]
+    assert about["latest_release"] == {"tag": "3.1.0", "published_at": "2026-09-01T00:00:00Z",
+                                       "url": "https://github.com/pallets/flask/releases/tag/3.1.0"}
+
+
+def test_unsafe_or_repeated_links_are_dropped():
+    kept = discover._links([{"kind": "docs", "url": "javascript:alert(1)"},
+                            {"kind": "docs", "url": "https://a.dev"},
+                            {"kind": "docs", "url": "https://b.dev"},
+                            {"kind": "twitter", "url": "https://x.com/a"}, "junk", None])
+    assert kept == [{"kind": "docs", "url": "https://a.dev"}]
+    assert discover._release({"tag": "v1", "url": "ftp://x"}) is None
+    assert discover._release(None) is None
+
+
+def test_a_repo_without_links_or_releases_serves_empty(h):
+    lookup, _ = lookup_with(lambda v: {"r0": NODE})
+    add(h, Report(repo=REPO, repo_key=REPO, mode="rules", days=7,
+                  report=canned_report(REPO), created_at=now()))
+    h.client.portal.call(lambda: discover.store_meta(h.svc, lookup._details([REPO])))
+    about = _served(h)
+    assert about["links"] == [] and about["latest_release"] is None
