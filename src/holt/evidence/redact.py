@@ -28,7 +28,17 @@ MARKER = "[REDACTED-CREDENTIAL]"
 # Prefixed formats only. A pattern loose enough to catch unprefixed secrets is
 # loose enough to shred ordinary evidence.
 CREDENTIAL_PATTERNS = [
+    # GitHub App installation tokens in the "ghs_<app id>_<JWT>" form (since
+    # April 2026), before the classic form and the bare JWT so they go whole.
+    re.compile(r"ghs_[0-9]+_[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+"),
     re.compile(r"gh[pousr]_[A-Za-z0-9]{36,255}"),
+    # A JWT: three base64url parts, the first two JSON objects ("eyJ" is "{\"").
+    # Not when it is a link's `?jwt=`, `?token=` or `?signature=`: those are
+    # presigned image links in PR bodies (GitHub's attachments among them),
+    # expired within minutes and no key to anything.
+    # (The checks come after the literal "eyJ", so the scan stays fast.)
+    re.compile(r"eyJ(?<![?&]jwt=eyJ)(?<![?&]token=eyJ)(?<![?&]signature=eyJ)"
+               r"[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.[A-Za-z0-9_-]{10,}"),
     re.compile(r"github_pat_[A-Za-z0-9_]{22,255}"),
     re.compile(r"sk-proj-[A-Za-z0-9_-]{20,}"),
     re.compile(r"sk-ant-[A-Za-z0-9_-]{20,}"),

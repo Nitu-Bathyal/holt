@@ -2,6 +2,9 @@
 
     GITHUB_TOKEN=... uv run python server/scripts/build_seeds.py [--total 300]
 
+Without GITHUB_TOKEN it reads as the server does: the GitHub App if it is set
+up (GITHUB_APP_*), else GITHUB_TOKENS (server/README.md).
+
 Uses the same sourcing as `holt start` / `/v1/find` (holt.starter): repositories
 with the hacktoberfest topic, plus beginner-friendly repositories (open
 good-first-issue style issues, recently active, not archived or forks) in each
@@ -50,14 +53,25 @@ def build(total: int, token: str) -> tuple[list[str], dict[str, int]]:
     return picked, counts
 
 
+def server_token() -> str | None:
+    """A token from the server's own settings: the GitHub App's, else GITHUB_TOKENS."""
+    import httpx
+    from holt_server.github import build_pool
+    from holt_server.settings import get_settings
+
+    pool = build_pool(get_settings(), httpx.Client(timeout=30.0))
+    return pool.next() if pool else None
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     parser.add_argument("--total", type=int, default=300)
     parser.add_argument("--out", type=Path, default=OUT)
     args = parser.parse_args()
-    token = os.environ.get("GITHUB_TOKEN")
+    token = os.environ.get("GITHUB_TOKEN") or server_token()
     if not token:
-        print("GITHUB_TOKEN is not set", file=sys.stderr)
+        print("GITHUB_TOKEN is not set, and neither is the server's GitHub App "
+              "or GITHUB_TOKENS", file=sys.stderr)
         return 1
     repos, counts = build(args.total, token)
     args.out.parent.mkdir(parents=True, exist_ok=True)

@@ -50,7 +50,7 @@ if ! flock -w "$LOCK_WAIT" 9; then
 fi
 
 export HOLT_SRC="$STATE/src" HOLT_TAG="$sha" HOLT_PROD_HOME="$STATE" HOLT_PROD_PROJECT="$PROJECT"
-load_prod_env >/dev/null   # GITHUB_TOKENS for `compose run`
+load_prod_env >/dev/null   # the GitHub App or GITHUB_TOKENS, for `compose run`
 log "reading repository details (${sha:0:7})"
 docker rm -f "$PROJECT-warm-meta" >/dev/null 2>&1 || true   # a crashed run's leftover
 set +e

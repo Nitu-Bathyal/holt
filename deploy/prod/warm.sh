@@ -30,9 +30,9 @@ case "${1:-}" in
         docker logs --tail 15 "$NAME" 2>&1 || echo "(no warm container yet)"; exit 0 ;;
 esac
 
-# The same secrets and GitHub token as deploy.sh: `compose run` takes
-# GITHUB_TOKENS from this shell, and without one the server has no API
-# budget and the pass ends at once ("points left 0").
+# The same secrets and GitHub access as deploy.sh: `compose run` takes the
+# GitHub App's settings (or GITHUB_TOKENS) from this shell, and without them
+# the server has no API budget and the pass ends at once ("points left 0").
 load_prod_env
 
 if [[ "${1:-}" == --dry-run ]]; then

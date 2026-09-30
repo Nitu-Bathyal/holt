@@ -5,8 +5,9 @@ so retries, rate-limit handling and the typed errors are the engine's. The
 pool's transport (`PooledGraphQL`) also tells the pool what GitHub said about
 each token, so a dead or used-up token is skipped until it can work again.
 
-Tokens are only ever named in logs by their place in `GITHUB_TOKENS`
-("token #2"), never by value.
+The pool is the GitHub App when one is set up (github_app.py), else the
+tokens in `GITHUB_TOKENS`. Logs name them "the GitHub App" or by their place
+in `GITHUB_TOKENS` ("token #2"), never by value.
 """
 
 from __future__ import annotations
@@ -24,8 +25,9 @@ from typing import Any
 import httpx
 
 from holt.about import language_shares, license_name, readme_line
-from holt.evidence.errors import AuthError, RateLimited
+from holt.evidence.errors import AuthError, GitHubError, RateLimited
 from holt.evidence.github_graphql import GitHubGraphQL
+from holt_server import github_app
 from holt_server.errors import ApiError, github_rate_limited, upstream
 
 log = logging.getLogger("holt_server.github")
@@ -90,6 +92,22 @@ def check_stop() -> None:
         raise JobStopped
 
 
+class StaticToken:
+    """One token from `GITHUB_TOKENS`."""
+
+    renews = False
+
+    def __init__(self, token: str, label: str) -> None:
+        self._token = token
+        self.label = label
+
+    def token(self) -> str:
+        return self._token
+
+    def invalidate(self, token: str) -> None:
+        pass
+
+
 @dataclass
 class TokenState:
     remaining: int | None = None
@@ -99,17 +117,23 @@ class TokenState:
 
 
 class TokenPool:
-    """`GITHUB_TOKENS`, handed out round-robin, skipping the ones that can't work.
+    """`GITHUB_TOKENS` (or the GitHub App), handed out round-robin, skipping the
+    ones that can't work.
 
     A token is skipped while GitHub is refusing it (bad or revoked token, or a
     403), while it is rate-limited, and while its points-left (read from every
     reply, see `PooledGraphQL`) are below `LOW_POINTS` and its reset time has
     not come. When every token is out, the caller gets a plain "try again"
     error instead of a GitHub failure halfway through a job.
+
+    The GitHub App renews its own token: when GitHub refuses one, the app gets
+    a new one on the next lease, and is only left out when GitHub won't issue
+    one at all.
     """
 
-    def __init__(self, tokens: list[str], clock=time.time) -> None:
-        self._tokens = list(tokens)
+    def __init__(self, tokens: list, clock=time.time) -> None:
+        self._tokens = [t if hasattr(t, "renews") else StaticToken(t, f"token #{i + 1}")
+                        for i, t in enumerate(tokens)]
         self._state = [TokenState() for _ in self._tokens]
         self._cursor = 0
         self._lock = threading.Lock()
@@ -117,6 +141,12 @@ class TokenPool:
 
     def __bool__(self) -> bool:
         return bool(self._tokens)
+
+    def __len__(self) -> int:
+        return len(self._tokens)
+
+    def label(self, index: int) -> str:
+        return self._tokens[index].label
 
     def next(self) -> str:
         return self.lease()[1]
@@ -131,19 +161,45 @@ class TokenPool:
         with self._lock:
             now = self._clock()
             n = len(self._tokens)
+            chosen = None
             for step in range(n):
                 i = (self._cursor + step) % n
                 if self._usable(i, now):
                     self._cursor = (i + 1) % n
-                    return i, self._tokens[i]
-            waits = [self._back_at(i) - now for i in range(n)
-                     if self._state[i].reason != "refused"]
+                    chosen = i
+                    break
+            else:
+                waits = [self._back_at(i) - now for i in range(n)
+                         if self._state[i].reason != "refused"]
+        if chosen is not None:
+            # Outside the lock: the app may be fetching a new token.
+            return chosen, self.token(chosen)
         if waits:
             wait = max(60, round(min(waits)))
             log.warning("every GitHub token is rate-limited or used up; next back in %ds", wait)
             raise github_rate_limited(wait)
-        log.error("GitHub refused every token in GITHUB_TOKENS")
+        log.error("GitHub refused every token it was given (%s)",
+                  ", ".join(t.label for t in self._tokens))
         raise upstream()
+
+    def token(self, index: int) -> str:
+        """Token `index`'s current value. For the GitHub App this may fetch a
+        new one; if GitHub won't issue it, the app is left out like a refused
+        or rate-limited token and the caller gets the matching `ApiError`."""
+        try:
+            return self._tokens[index].token()
+        except AuthError as exc:
+            self._bench(index, "refused", DEAD_SECONDS)
+            log.error("GitHub won't issue a token to %s (%s); leaving it out for %d minutes",
+                      self.label(index), exc.detail, DEAD_SECONDS // 60)
+            raise upstream() from None
+        except RateLimited as exc:
+            self.note_rate_limited(index, exc.retry_after)
+            raise github_rate_limited(round(exc.retry_after or LIMITED_SECONDS)) from None
+        except GitHubError as exc:
+            log.warning("couldn't get a token for %s: %s", self.label(index),
+                        getattr(exc, "detail", type(exc).__name__))
+            raise upstream() from None
 
     def _usable(self, i: int, now: float) -> bool:
         st = self._state[i]
@@ -171,22 +227,13 @@ class TokenPool:
                 return None
             return sum(st.remaining or 0 for st in usable)
 
-    def all(self) -> list[str]:
-        return list(self._tokens)
-
-    def index(self, token: str) -> int | None:
-        try:
-            return self._tokens.index(token)
-        except ValueError:
-            return None
-
     def transport(self, http: httpx.Client | None = None,
                   index: int | None = None) -> PooledGraphQL:
         """A GraphQL client on the next usable token (or on token `index`)."""
         if index is None:
             index, token = self.lease()
         else:
-            token = self._tokens[index]
+            token = self.token(index)
         return PooledGraphQL(self, index, token, client=http)
 
     # --- what GitHub said ----------------------------------------------------
@@ -202,24 +249,32 @@ class TokenPool:
             was_low = st.remaining is not None and st.remaining < LOW_POINTS
             st.remaining, st.reset_at = left, reset
         if left < LOW_POINTS and not was_low:
-            log.warning("token #%d is nearly used up (%d points left); skipping it "
-                        "until it resets", index + 1, left)
+            log.warning("%s is nearly used up (%d points left); skipping it "
+                        "until it resets", self.label(index), left)
 
-    def note_refused(self, index: int, detail: str) -> None:
-        with self._lock:
-            st = self._state[index]
-            st.out_until = self._clock() + DEAD_SECONDS
-            st.reason = "refused"
-        log.error("GitHub refused token #%d (%s); leaving it out for %d minutes",
-                  index + 1, detail, DEAD_SECONDS // 60)
+    def note_refused(self, index: int, detail: str, token: str | None = None) -> None:
+        """GitHub refused token `index` (the value it refused, if known)."""
+        source = self._tokens[index]
+        if source.renews:
+            if token is not None:
+                source.invalidate(token)
+            log.warning("GitHub refused %s's token (%s); getting a new one",
+                        source.label, detail)
+            return
+        self._bench(index, "refused", DEAD_SECONDS)
+        log.error("GitHub refused %s (%s); leaving it out for %d minutes",
+                  source.label, detail, DEAD_SECONDS // 60)
 
     def note_rate_limited(self, index: int, retry_after: float | None) -> None:
         wait = retry_after if retry_after else LIMITED_SECONDS
+        self._bench(index, "limited", wait)
+        log.warning("%s is rate-limited; leaving it out for %ds", self.label(index), round(wait))
+
+    def _bench(self, index: int, reason: str, seconds: float) -> None:
         with self._lock:
             st = self._state[index]
-            st.out_until = self._clock() + wait
-            st.reason = "limited"
-        log.warning("token #%d is rate-limited; leaving it out for %ds", index + 1, round(wait))
+            st.out_until = self._clock() + seconds
+            st.reason = reason
 
 
 def _epoch(value: Any) -> float | None:
@@ -247,10 +302,12 @@ class PooledGraphQL(GitHubGraphQL):
     def query(self, document: str, *, timeout: float | None = None,
               **variables: object) -> dict[str, Any]:
         check_stop()
+        # The GitHub App's token is renewed while a long job runs.
+        self.token = self.pool.token(self.index)
         try:
             return super().query(document, timeout=timeout, **variables)
         except AuthError as exc:
-            self.pool.note_refused(self.index, str(exc)[:40])
+            self.pool.note_refused(self.index, str(exc)[:40], self.token)
             raise
         except RateLimited as exc:
             self.pool.note_rate_limited(self.index, exc.retry_after)
@@ -401,14 +458,34 @@ class GitHubLookup:
 
     def _remaining(self) -> int:
         counts = []
-        for index in range(len(self.pool.all())):
+        for index in range(len(self.pool)):
             try:
                 data = self.pool.transport(self.http, index=index).query(
                     RATE_LIMIT, timeout=LOOKUP_TIMEOUT_S)
             except AuthError:
+                continue
+            except ApiError as exc:  # the app couldn't get a token
+                if exc.code == "rate_limited":
+                    counts.append(0)
                 continue
             except RateLimited:
                 counts.append(0)
                 continue
             counts.append(int((data.get("rateLimit") or {}).get("remaining") or 0))
         return min(counts) if counts else 0
+
+
+def build_pool(settings, http: httpx.Client) -> TokenPool:
+    """The GitHub App when it is set up, else `GITHUB_TOKENS`.
+
+    A half-configured app raises `github_app.AppConfigError` (the server
+    doesn't start) rather than quietly reading with a person's tokens.
+    """
+    app = github_app.from_settings(settings, http)
+    if app is None:
+        return TokenPool(settings.token_list)
+    log.info("reading GitHub as %s (app %s, installation %s)",
+             app.label, app.app_id, app.installation_id)
+    if settings.token_list:
+        log.info("GITHUB_TOKENS is set but not used while the GitHub App is set up")
+    return TokenPool([app])
