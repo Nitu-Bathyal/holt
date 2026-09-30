@@ -614,6 +614,10 @@ class RepoMeta(Base):
     # again after that migration.
     forks: Mapped[int | None] = mapped_column(Integer, nullable=True)
     open_issues: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Pull requests ever opened, how many are open, and people who committed (0023).
+    pull_requests: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    open_pull_requests: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    contributors: Mapped[int | None] = mapped_column(Integer, nullable=True)
     license: Mapped[str | None] = mapped_column(String(80), nullable=True)
     homepage: Mapped[str | None] = mapped_column(String(500), nullable=True)
     # [{"name": "Python", "share": 0.92}, ...], biggest first, at most three.
