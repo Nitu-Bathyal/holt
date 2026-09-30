@@ -1233,8 +1233,6 @@ export interface components {
         Cost: {
             /** Input Tokens */
             input_tokens: number;
-            /** Model */
-            model: string;
             /** Output Tokens */
             output_tokens: number;
             /** Seconds */
@@ -1831,8 +1829,6 @@ export interface components {
             archived: boolean;
             /** Generated At */
             generated_at: string;
-            /** Model */
-            model: string | null;
             /** Note */
             note: string | null;
             /** Repo */
@@ -2164,8 +2160,6 @@ export interface components {
          * @description A short model-written summary, checked against the checks. No verdict.
          */
         PreflightSummary: {
-            /** Model */
-            model: string | null;
             /** Sentences */
             sentences: components["schemas"]["PreflightSentence"][];
         };

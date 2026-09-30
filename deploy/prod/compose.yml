@@ -97,6 +97,12 @@ services:
       GITHUB_APP_INSTALLATION_ID: ${GITHUB_APP_INSTALLATION_ID:-}
       GITHUB_APP_PRIVATE_KEY_FILE: ${GITHUB_APP_PRIVATE_KEY_FILE:+/run/secrets/github_app_key}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      # The model provider, base URL and model, from secrets.env; unset keeps
+      # the server's defaults.
+      OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-5-mini}
+      HOLT_MODEL_PROVIDER: ${HOLT_MODEL_PROVIDER:-}
+      HOLT_MODEL_REASONING_EFFORT: ${HOLT_MODEL_REASONING_EFFORT:-}
       # AI is OFF in production: a budget of 0. Only prod-named variables in
       # $HOLT_PROD_HOME/.env or secrets.env can change that (a
       # HOLT_AI_BUDGET_USD meant for staging never reaches here), and the

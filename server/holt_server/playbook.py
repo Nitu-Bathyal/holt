@@ -85,7 +85,6 @@ def from_pro(repo: str, body: dict[str, Any]) -> dict[str, Any]:
     out = {
         "repo": str(body.get("repo") or repo),
         "generated_at": str(body.get("generated_at") or iso(now())),
-        "model": body.get("model"),
         "note": body.get("note"),
         "window_days": window.get("days"),
         "archived": bool(body.get("archived")),
@@ -139,7 +138,7 @@ async def write(svc: Services, job: Job, emit) -> dict[str, Any]:
                                      request_id=job.id)
     except pro.ProError as err:
         raise pro_failure(err, job.repo) from None
-    svc.ai_costs[job.id] = budget.pro_cost(body)
+    budget.note_pro(svc, job.id, body)
     try:
         return from_pro(job.repo, body)
     except ValidationError:

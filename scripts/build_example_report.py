@@ -55,8 +55,8 @@ def build(repo: str = REPO) -> dict:
     report["generated_at"] = report["evidence_until"]
     if report["cost"]:
         report["cost"]["seconds"] = None
-        # The site never shows which model wrote a report, so the example doesn't name one.
-        report["cost"]["model"] = "ai"
+        # Which model wrote a report is internal: the API never sends it.
+        report["cost"].pop("model", None)
     problems = check_report(report)
     if problems:
         raise SystemExit("The example report is not fit to publish:\n- " + "\n- ".join(problems))

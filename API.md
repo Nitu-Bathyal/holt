@@ -110,7 +110,7 @@ responses. The server also accepts and normalises full URLs
               | "issue_first" | "ai_disclosure" | "duplicates",
               "url": "https://github.com/…", "link": "https://code.djangoproject.com" | null } ],
   "budget_independent": true,         // the verdict is the same for any `days` (see below)
-  "cost": { "model": "…", "input_tokens": 9000, "output_tokens": 6000,
+  "cost": { "input_tokens": 9000, "output_tokens": 6000,
             "usd": 0.0123, "seconds": 48.2 }, // ai only, else null
   "holt_users": { "people": 9, "pull_requests": 12, "merged": 7, "closed": 2,
                   "waiting": 3, "window_days": 365, "computed_at": "…" } | null,
@@ -135,7 +135,8 @@ null on AI reports cached before it existed. Show them as AI-written.
 `cost` is for operators, not the product: `usd` is what the model calls cost
 (from the engine's price table), `seconds` the whole run's wall time. Both are
 null on reports cached before they were recorded. Per-stage timings go to the
-server log, not the report.
+server log, not the report. Which model wrote a report, playbook or summary is
+never in a response; the server keeps it in its `ai_runs` table.
 
 `holt_users` is what connected Holt users' public pull requests to this
 repository came to (from My Contributions, the last `window_days`): counts only,
@@ -822,7 +823,7 @@ report's. It exists only when the server runs with its paid features
   and `GET /v1/playbook-jobs/{job_id}/events` (SSE, as for analyses; `done`
   carries `{"playbook": Playbook}`).
 
-`Playbook`: `{"repo", "generated_at", "model", "note", "window_days", "archived", "sections"}`.
+`Playbook`: `{"repo", "generated_at", "note", "window_days", "archived", "sections"}`.
 `note` is plain English to show once near the top when present (e.g. the counts
 cover everyone's pull requests because too few outside ones were merged).
 `sections` always has five lists, in display order; show nothing for an empty
@@ -973,7 +974,7 @@ kinds at once is 400 `invalid_request` with a plain message.
 - `note`: plain English to show once near the top when present (the
   comparison covers everyone's pull requests because too few outside ones were
   merged).
-- `summary` (when asked for): `{"model", "sentences": [{"text", "checks": ["issue"]}]}`,
+- `summary` (when asked for): `{"sentences": [{"text", "checks": ["issue"]}]}`,
   at most 3 sentences, each checked against the checks it cites; it never says
   whether the pull request will be merged.
 
