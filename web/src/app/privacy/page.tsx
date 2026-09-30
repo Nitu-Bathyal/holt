@@ -110,7 +110,7 @@ export default function PrivacyPage() {
         <li><strong>Access is limited to the Holt team.</strong> Only the <Link href="/contact#team" className="text-link">team</Link> can reach the server, the database and the backups. No third party has an account on the server.</li>
         <li><strong>Secrets are kept out of the code.</strong> Sign-in credentials, database passwords and encryption keys live in files on the server that are outside the source code and readable only by the Holt team. Holt&rsquo;s code is open source, and no secret is in it.</li>
         <li><strong>No keys or tokens to leak.</strong> Holt doesn&rsquo;t store API keys, or the GitHub and Google access tokens from sign-in.</li>
-        <li><strong>Backups are nightly and restricted.</strong> A copy of the database is taken every night, stored on the server with permissions that allow only the operator to read it, and deleted after 14 days. So after you delete your account, your details can remain in a backup for up to 14 days and are then gone.</li>
+        <li><strong>Backups are nightly and restricted.</strong> A copy of the database is taken every night, stored on the server with permissions that allow only the Holt team to read it, and deleted after 14 days. So after you delete your account, your details can remain in a backup for up to 14 days and are then gone.</li>
         <li><strong>What we don&rsquo;t claim:</strong> the database files themselves are not separately encrypted at rest beyond the protections above, and we don&rsquo;t promise that no system can ever fail. If you find a weakness, section 11 says how to tell us.</li>
       </ul>
       <h3>How to take it back</h3>
