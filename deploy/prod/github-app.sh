@@ -9,7 +9,7 @@
 # repository outside holt-oss the way a report does. Prints no token or key.
 # Without the App set up it says so (the server reads with GITHUB_TOKENS).
 # Exits non-zero when the App is set up but doesn't work.
-# docs/ops/github-app.md is the owner's guide.
+# The maintainers' ops notes are the owner's guide.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"
 # shellcheck source=env.sh

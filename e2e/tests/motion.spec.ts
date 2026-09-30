@@ -1,4 +1,4 @@
-// Motion and loading (docs/design/MOTION.md): no layout shift, skeletons only
+// Motion and loading (the motion plan): no layout shift, skeletons only
 // when a page is actually slow, menus that open and close, and nothing moving
 // for visitors who asked for reduced motion. Rules mode only.
 import { expect, test, type Page } from "@playwright/test";

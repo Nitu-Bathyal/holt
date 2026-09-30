@@ -1,6 +1,6 @@
 "use client";
 
-// "Watch Holt check a repo" (landing section 02, docs/design/EXPRESSIVE.md
+// "Watch Holt check a repo" (landing section 02, the expressive design plan
 // pattern 3). A recorded check plays when it's reached, in either of two
 // places: on the web (the progress log, then the report's verdict landing)
 // or in your terminal (`holt analyze`'s own output for the same run). The

@@ -1,6 +1,6 @@
 "use client";
 
-// Landing section 06, "four possible answers" (docs/design/EXPRESSIVE.md):
+// Landing section 06, "four possible answers" (the expressive design plan):
 // the four verdicts are the pane, as large as the screen allows, each with
 // what it means for you and what to do next. They slide in one after another
 // as the pane arrives (desktop; transform only, the words are never hidden).

@@ -1,4 +1,4 @@
-// The signed-in home (docs/design/DASHBOARD.md): your next move in open
+// The signed-in home (the dashboard plan): your next move in open
 // source, and why. The headline is the one thing to do now, over the loop
 // (find a repo → pick an issue → open a PR → get it merged), worked out from
 // the account by lib/home.ts. Below it, each hidden when empty: also for you,

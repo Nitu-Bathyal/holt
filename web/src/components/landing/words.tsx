@@ -1,4 +1,4 @@
-// Text that turns up as you scroll (docs/design/EXPRESSIVE.md): each word
+// Text that turns up as you scroll (the expressive design plan): each word
 // rises into place as it comes up the screen, tied to the scroll position by
 // a CSS view timeline (globals.css, .rw). No JS, and it works with Lenis and
 // on phones. Where view timelines aren't supported, and under reduced motion,

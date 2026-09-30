@@ -1,4 +1,4 @@
-// "Watch Holt check a repo" (landing section 02, docs/design/EXPRESSIVE.md
+// "Watch Holt check a repo" (landing section 02, the expressive design plan
 // pattern 3): what the replay plays, built from a real report (the cached live
 // one, or the recorded example when that can't be read), so its numbers are a
 // real run's and never made up.
