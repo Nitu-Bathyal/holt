@@ -74,6 +74,7 @@ def test_a_tier_pass_takes_the_oldest_report_first(th):
     th.wait(th.post("/v1/analyses", {"repo": "octo/one"}).json()["job_id"])
     th.svc.settings.warm_max_age_hours = 0  # everything is due
     th.engine.calls.clear()
-    th.client.portal.call(lambda: warm.warm_once(th.svc, seeds=SEEDS, tier="monthly"))
+    th.client.portal.call(lambda: warm.warm_once(th.svc, seeds=SEEDS, tier="monthly",
+                                                 parallel=1))
     assert [c["repo"] for c in th.engine.calls] == [
         "octo/two", "pallets/flask", "octo/three", "octo/one"]

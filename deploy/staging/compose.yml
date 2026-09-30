@@ -103,6 +103,10 @@ services:
       HOLT_PRO_URL: ${HOLT_PRO_URL:-}
       HOLT_PRO_KEY: ${HOLT_PRO_KEY:-}
       HOLT_JOB_CONCURRENCY: ${HOLT_JOB_CONCURRENCY:-1}
+      # Background workers (badges, warm passes) and the warm pass's reports
+      # in flight: two, inside the 512m below.
+      HOLT_BADGE_CONCURRENCY: ${HOLT_BADGE_CONCURRENCY:-2}
+      HOLT_WARM_PARALLEL: ${HOLT_WARM_PARALLEL:-2}
       # Warm pass (python -m holt_server.warm) fills this cache for a day.
       HOLT_STARTER_CACHE_HOURS: ${HOLT_STARTER_CACHE_HOURS:-24}
       # Every report's evidence (holt_server/evidence_store.py), in staging's
