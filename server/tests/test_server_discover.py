@@ -347,9 +347,10 @@ def test_details_query_is_one_request_with_one_alias_per_repo():
         "repo": "Pallets/Flask", "description": "Web", "language": "Python",
         "languages": ["Python"], "stars": 7,
         "topics": ["wsgi"], "pushed_at": "2026-09-01T00:00:00Z", "archived": False,
-        "fork": False, "forks": None, "open_issues": None, "license": None,
+        "fork": False, "forks": None, "open_issues": None, "pull_requests": None,
+        "open_pull_requests": None, "contributors": None, "license": None,
         "homepage": None, "language_shares": [], "created_at": None, "default_branch": None,
-        "fork_of": None, "readme_line": None}
+        "fork_of": None, "readme_line": None, "links": [], "latest_release": None}
     assert out["octo/gone"] is None and out["octo/secret"] is None
 
 

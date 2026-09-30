@@ -69,6 +69,8 @@ def test_report_serves_about_from_repo_meta(h):
     assert about["readme_line"].startswith("Flask is a lightweight")
     assert about["stars"] == 69_800 and about["forks"] == 16_300
     assert about["open_issues"] == 5 and about["license"] == "BSD-3-Clause"
+    assert about["pull_requests"] == 4_100 and about["open_pull_requests"] == 12
+    assert about["contributors"] is None  # `_details` alone doesn't ask REST
     assert about["topics"] == ["wsgi"] and about["languages"][0]["name"] == "Python"
     assert about["created_at"].startswith("2010-04-06") and about["pushed_at"].startswith("2026-09-27")
     assert about["default_branch"] == "main" and about["fork"] is True

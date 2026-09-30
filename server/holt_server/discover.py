@@ -81,6 +81,13 @@ class DiscoverRepo(VerdictView):
     # share of the code. Empty until the details are read.
     languages: list[str] = Field(default_factory=list)
     stars: int | None = None
+    # The whole repository, not Holt's sample: open issues, pull requests ever
+    # opened, how many of those are open, and people who committed. Null until
+    # the details are read again (and contributors when GitHub wouldn't say).
+    open_issues: int | None = None
+    pull_requests: int | None = None
+    open_pull_requests: int | None = None
+    contributors: int | None = None
     topics: list[str] = Field(default_factory=list)
     # When someone last pushed to the repository, per GitHub.
     pushed_at: str | None = None
@@ -166,6 +173,7 @@ def _card(row: tuple, views: dict[str, int]) -> DiscoverRepo | None:
         language=meta.language if meta else None,
         languages=list(meta.languages or []) if meta else [],
         stars=meta.stars if meta else None,
+        **counts(meta),
         topics=list(meta.topics or []) if meta else [],
         pushed_at=iso(meta.pushed_at) if meta else None,
         reason=verdict_line(verdict, st, decided_by, rule_codes), stats=st,
@@ -353,6 +361,11 @@ async def store_meta(svc: Services, details: dict[str, dict[str, Any] | None]) -
             row.fork = bool(d.get("fork"))
             row.forks = _int(d.get("forks"))
             row.open_issues = _int(d.get("open_issues"))
+            row.pull_requests = _int(d.get("pull_requests"))
+            row.open_pull_requests = _int(d.get("open_pull_requests"))
+            # A count GitHub wouldn't give this time keeps yesterday's.
+            if d.get("contributors") is not None:
+                row.contributors = _int(d.get("contributors"))
             row.license = (d.get("license") or "")[:80] or None
             row.homepage = _homepage(d.get("homepage"))
             row.language_shares = list(d.get("language_shares") or [])[:3]
@@ -369,17 +382,29 @@ async def store_meta(svc: Services, details: dict[str, dict[str, Any] | None]) -
     return written
 
 
+COUNTS = ("open_issues", "pull_requests", "open_pull_requests", "contributors")
+
+
+def counts(meta: RepoMeta | None) -> dict[str, int | None]:
+    """The repository's own counts for a card; all None until its details are read."""
+    return {name: getattr(meta, name, None) if meta else None for name in COUNTS}
+
+
 def about_view(meta: RepoMeta) -> schema.RepoAbout:
     return schema.RepoAbout(
         description=meta.description, readme_line=meta.readme_line, homepage=meta.homepage,
         stars=meta.stars, forks=meta.forks, open_issues=meta.open_issues,
+        pull_requests=meta.pull_requests, open_pull_requests=meta.open_pull_requests,
+        contributors=meta.contributors,
         license=meta.license, topics=list(meta.topics or []),
         languages=[lang for lang in meta.language_shares or []
                    if isinstance(lang, dict) and lang.get("name")],
         created_at=iso(meta.created_at),
         pushed_at=iso(meta.pushed_at),
         default_branch=meta.default_branch, archived=bool(meta.archived),
-        fork=bool(meta.fork), fork_of=meta.fork_of, fetched_at=iso(meta.fetched_at))
+        fork=bool(meta.fork), fork_of=meta.fork_of,
+        links=_links(meta.links), latest_release=_release(meta.latest_release),
+        fetched_at=iso(meta.fetched_at))
 
 
 async def about(svc: Services, repo: str) -> schema.RepoAbout | None:
