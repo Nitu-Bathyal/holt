@@ -24,7 +24,7 @@ function Bookmark({ filled, drop }: { filled: boolean; drop: boolean }) {
  * In a list, the list owns which repos are saved: it passes `saved` and hears
  * every change through `onChange`, so the card and its focus view agree.
  * `compact` leaves out the "see your saved repos" link, for a card; `small`
- * is a shorter button, for a card's top corner.
+ * is the bookmark alone, with no box, turning violet once saved.
  */
 export function SaveButton({ repo, saved: initial, onChange, compact = false, small = false, className = "" }: { repo: string; saved: boolean | null; onChange?: (saved: boolean) => void; compact?: boolean; small?: boolean; className?: string }) {
   const [saved, setSaved] = useState(Boolean(initial));
@@ -88,12 +88,17 @@ export function SaveButton({ repo, saved: initial, onChange, compact = false, sm
       aria-label={`${saved ? "Saved" : "Save"} ${repo} for later`}
       onClick={() => (signedIn ? send(!saved) : setAsking((a) => !a))}
       data-umami-event={signedIn ? (saved ? "unsave-repo" : "save-repo") : "save-repo-signed-out"}
-      className={`inline-flex items-center border transition-colors ${small ? "min-h-8 gap-1.5 px-2 text-[0.8rem]" : "min-h-11 gap-2 px-3 text-[0.87rem]"} ${
-        saved ? "border-blue bg-blue/10 text-blue" : "border-line-strong bg-panel text-muted hover:border-ink hover:text-ink"
-      }`}
+      title={small ? (saved ? "Saved" : "Save for later") : undefined}
+      className={
+        small
+          ? `grid size-11 items-center justify-items-end transition-colors [&>svg]:size-6 ${saved ? "text-hf" : "text-faint hover:text-ink"}`
+          : `inline-flex min-h-11 items-center gap-2 border px-3 text-[0.87rem] transition-colors ${
+              saved ? "border-blue bg-blue/10 text-blue" : "border-line-strong bg-panel text-muted hover:border-ink hover:text-ink"
+            }`
+      }
     >
       <Bookmark filled={saved} drop={saved && fresh} />
-      {label}
+      {!small && label}
     </button>
   );
 
