@@ -34,11 +34,14 @@ import time
 import uuid
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 from sqlalchemy import delete, func, select, update
 from sqlalchemy.exc import IntegrityError
+
+from holt.types import EvidenceRecord
 
 from holt_server import budget, entitlements, starter
 from holt_server.db import (
@@ -53,6 +56,7 @@ from holt_server.db import (
     find_key,
     now,
 )
+from holt_server.engine import RecordingProvider
 from holt_server.errors import ApiError
 from holt_server.github import JobStopped, job_stop
 from holt_server.meta_refresh import MetaRefresher
@@ -309,6 +313,7 @@ class JobRunner:
         log.info("job %s started: %s %s, %s lane, waited %.0fs", job.id, what,
                  job.repo or "", lane, waited)
         stop = threading.Event()
+        evidence: Evidence | None = None
         # One writer applies the job's progress steps in the order they were
         # emitted. A coroutine per step let a slow write land after a later
         # one, so the table and SSE subscribers saw progress go backwards.
@@ -339,8 +344,8 @@ class JobRunner:
                     # The key is only ever held in memory: the jobs table records
                     # where it came from, not what it is.
                     spec = await self.services.model_spec_for(job) if job.mode == "ai" else None
-                    result = await self._in_thread(stop, limit, self._analysis_sync, job,
-                                                   spec, emit)
+                    result, evidence = await self._in_thread(stop, limit, self._analysis_sync,
+                                                             job, spec, emit)
             finally:
                 # Steps emitted so far are written before the job ends, so
                 # `done` or `error` is the last event a subscriber hears.
@@ -362,7 +367,7 @@ class JobRunner:
                 "internal", "Something went wrong on our side. Please try again in a minute."))
         else:
             log.info("job %s done in %.1fs", job.id, time.monotonic() - started)
-            await self._finish(job, result)
+            await self._finish(job, result, evidence)
 
     async def _in_thread(self, stop: threading.Event, limit: float, fn, *args) -> Any:
         """`fn(*args)` on the runner's executor, for at most `limit` seconds.
@@ -395,19 +400,23 @@ class JobRunner:
             stop.set()
             raise JobTimedOut from None
 
-    def _analysis_sync(self, job: Job, spec, emit) -> dict[str, Any]:
+    def _analysis_sync(self, job: Job, spec, emit) -> tuple[dict[str, Any], Evidence]:
+        """The report, and the evidence it read (for the evidence store)."""
         svc = self.services
         as_of = datetime.now(UTC)
         provider = svc.provider_factory(job.repo, as_of)
+        cutoff = getattr(provider, "cutoff", as_of)
+        recorder = RecordingProvider(provider)
         model = None
         if job.mode == "ai":
             model = budget.Capped(svc.model_factory(spec), spec.model,
                                   budget.run_max_usd(svc.settings, budget.ANALYSIS))
             # What it has spent so far, for `_fail` if the run stops early.
             self._models[job.id] = model
-        return svc.analysis_fn(repo=job.repo, mode=job.mode, days=job.days,
-                              provider=provider, model=model, emit=emit,
-                              as_of=getattr(provider, "cutoff", as_of))
+        result = svc.analysis_fn(repo=job.repo, mode=job.mode, days=job.days,
+                                 provider=recorder, model=model, emit=emit, as_of=cutoff)
+        return result, Evidence(recorder.records, cutoff,
+                                getattr(provider, "judges_recency", True))
 
     def _find_sync(self, job: Job, emit, loop) -> dict[str, Any]:
         p = job.params
@@ -449,7 +458,8 @@ class JobRunner:
             await s.commit()
         self.hub.publish(job_id, "stage", {"stage": stage, "progress": progress})
 
-    async def _finish(self, job: Job, result: dict[str, Any]) -> None:
+    async def _finish(self, job: Job, result: dict[str, Any],
+                      evidence: Evidence | None = None) -> None:
         # Here, not at the top: these import the API module, which imports this one.
         from holt_server import discover, playbook, preflight
 
@@ -480,8 +490,19 @@ class JobRunner:
         self.hub.publish(job.id, "done", done_payload(job.kind, result))
         if job.kind == "analysis" and job.repo:
             self.meta.note(job.repo)
+            if evidence is not None and evidence.records:
+                await self._keep_evidence(job.repo, evidence)
         if job.kind == "find":
             await self._queue_found(result)
+
+    async def _keep_evidence(self, repo: str, evidence: Evidence) -> None:
+        """Write the report's evidence to the store, after the report itself.
+        Never fails the job: the store logs its own errors."""
+        try:
+            await asyncio.to_thread(self.services.evidence.save, repo, evidence.records,
+                                    evidence.cutoff, evidence.judges_recency)
+        except Exception:  # noqa: BLE001 -- the report is already stored and sent
+            log.exception("keeping the evidence of %s failed", repo)
 
     async def _queue_found(self, result: dict[str, Any]) -> None:
         """Queue a background rules report for the first few repositories a
@@ -574,6 +595,15 @@ class JobRunner:
 
 class JobTimedOut(Exception):
     pass
+
+
+@dataclass(frozen=True)
+class Evidence:
+    """What one analysis read from GitHub, for the evidence store."""
+
+    records: list[EvidenceRecord]
+    cutoff: datetime
+    judges_recency: bool = True
 
 
 def _aware(when: datetime) -> datetime:

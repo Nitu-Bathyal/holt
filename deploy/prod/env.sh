@@ -11,6 +11,7 @@
 #   GITHUB_APP_PRIVATE_KEY_FILE            -> the same names (the GitHub App,
 #                                             docs/ops/github-app.md)
 #   CONTACT_EMAIL / CONTACT_CITY           -> NEXT_PUBLIC_CONTACT_EMAIL / _CITY
+# and makes $STATE/evidence (HOLT_EVIDENCE_GID) for the server's snapshots.
 # Exported, so they win over .env for compose. An unset key stays empty and
 # the feature stays off (sign-in hidden, AI reports answer needs_key). The
 # one thing every run needs is a way to read GitHub: the GitHub App, else
@@ -67,6 +68,18 @@ load_prod_env() {
         export GITHUB_TOKENS
         [[ -n "$GITHUB_TOKENS" ]] || die "no GitHub token: put GITHUB_TOKENS in $SECRETS or run gh auth login"
     fi
+    # Evidence snapshots (server/holt_server/evidence_store.py): $STATE/evidence
+    # on /home, bind-mounted into the server (compose.yml). Made here, before
+    # compose, or Docker would create it as root. Group-writable and setgid;
+    # the server's user (uid 10001) writes through the directory's group.
+    local evidence="$STATE/evidence"
+    mkdir -p "$evidence"
+    chmod 2775 "$evidence" 2>/dev/null || log "WARNING: can't make $evidence group-writable; the server won't keep evidence"
+    HOLT_EVIDENCE_GID="$(stat -c %g "$evidence")"
+    # Compose refuses a group twice; the key's group already covers it (a
+    # leftover 65534, nogroup, stands in).
+    [[ "$HOLT_EVIDENCE_GID" == "${HOLT_GITHUB_APP_KEY_GID:-10001}" ]] && HOLT_EVIDENCE_GID=""
+    export HOLT_EVIDENCE_GID
     export NEXT_PUBLIC_CONTACT_EMAIL="${NEXT_PUBLIC_CONTACT_EMAIL:-${CONTACT_EMAIL:-}}"
     export NEXT_PUBLIC_CONTACT_CITY="${NEXT_PUBLIC_CONTACT_CITY:-${CONTACT_CITY:-}}"
 }
