@@ -8,9 +8,11 @@ import type {
 import type { FeedbackInput } from "../feedback";
 import { verdictView, withDerived } from "./derived";
 import { canonicalName, isMockNotFound, mockFindPool, mockIssues, mockReport, PRECACHED } from "./fixtures";
+import { mergePlanEvents } from "./merge-plan";
 import { playbookEvents } from "./playbook";
 import { preflightEvents } from "./preflight";
 
+export { mergePlanState, startMergePlan } from "./merge-plan";
 export { playbookState, unlockPlaybook } from "./playbook";
 export { preflightState, startPreflight } from "./preflight";
 
@@ -173,8 +175,9 @@ function sse(event: string, data: unknown) {
   return `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
 }
 
-export function jobEvents(kind: "analyses" | "find" | "playbook-jobs" | "preflight-jobs", id: string, signal: AbortSignal): Response {
+export function jobEvents(kind: "analyses" | "find" | "playbook-jobs" | "preflight-jobs" | "merge-plan-jobs", id: string, signal: AbortSignal): Response {
   if (kind === "find") return findEvents(id, signal);
+  if (kind === "merge-plan-jobs") return mergePlanEvents(id, signal);
   if (kind === "playbook-jobs") return playbookEvents(id, signal);
   if (kind === "preflight-jobs") return preflightEvents(id, signal);
   const job = state().jobs.get(id);

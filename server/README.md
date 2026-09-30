@@ -72,7 +72,7 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `HOLT_JOB_TIMEOUT_AI` | `480` | The same, for AI reports and PR pre-flight checks (refunded when stopped). |
 | `HOLT_JOB_TIMEOUT_FIND` | `300` | The same, for `/v1/find`. |
 | `HOLT_CACHE_HOURS` | `24` | How long a finished report is served instead of re-running. |
-| `HOLT_SIGNUP_AI_CREDITS` | `3` | Free AI reports every signed-in user gets once, on their first visit. |
+| `HOLT_SIGNUP_AI_CREDITS` | `0` | Free AI reports every signed-in user gets once, on their first visit. 0 since the 3 free merge plans replaced them: new accounts get none and no weekly claim; accounts welcomed before keep theirs. |
 | `HOLT_CLAIM_EVERY_DAYS` | `7` | After that, one more can be claimed each time this many days have passed since the last claim (or the welcome grant). |
 | `HOLT_PRICING_FILE` | the catalogue shipped in the package (`holt_server/pricing.json`) | Features, plans and Pro passes, with prices in INR and USD. See [Credits, plans and passes](#credits-plans-and-passes). A file that doesn't parse stops startup. |
 | `HOLT_PAYMENTS_ENABLED` | `0` | `1` switches the pass checkout on (it also needs the Razorpay keys and a pass on sale). See [Pass checkout](#pass-checkout). |

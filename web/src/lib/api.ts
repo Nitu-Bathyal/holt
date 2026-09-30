@@ -4,7 +4,7 @@ import "server-only";
 import { cache } from "react";
 import type {
   AnalysisStart, ApiError, Checkout, Contributions, Credits, DiscoverOut, DiscoverSort, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection,
-  HistoryItem, JobStatus, Me, Mode, Order, OrderConfirmed, Passes, PlaybookStart, PlaybookState, PreflightStart, PreflightState,
+  HistoryItem, JobStatus, Me, MergePlanStart, MergePlanState, Mode, Order, OrderConfirmed, Passes, PlaybookStart, PlaybookState, PreflightStart, PreflightState,
   ProfileOut, ProfilePrefs, RazorpaySuccess, Recommendations, Report, Result, SavedList, SavedState, StarterIssue,
 } from "./types";
 import type { FeedbackInput } from "./feedback";
@@ -92,7 +92,7 @@ export async function jobStatus(jobId: string): Promise<Result<JobStatus>> {
   return call(`/v1/analyses/${enc(jobId)}`);
 }
 
-export type JobKind = "analyses" | "find" | "playbook-jobs" | "preflight-jobs";
+export type JobKind = "analyses" | "find" | "playbook-jobs" | "preflight-jobs" | "merge-plan-jobs";
 
 /** Raw upstream SSE response for a job (analyses, find, a playbook or a PR pre-flight check). */
 export async function jobEvents(kind: JobKind, jobId: string, signal: AbortSignal): Promise<Response> {
@@ -179,6 +179,20 @@ export async function unlockPlaybook(repo: string, userId: string): Promise<Resu
   if (!repoOk(repo)) return BAD_REPO;
   if (MOCK) return mock.unlockPlaybook(repo, userId);
   return call(`/v1/me/playbook/${repoPath(repo)}`, { method: "POST", caller: { userId } });
+}
+
+/** The merge plan (API.md, Merge plan): whether one can be made here, and this user's latest for `repo`. */
+export async function mergePlanState(repo: string, caller: Caller): Promise<Result<MergePlanState>> {
+  if (!repoOk(repo)) return BAD_REPO;
+  if (MOCK) return mock.mergePlanState(repo, caller.userId ?? undefined);
+  return call(`/v1/merge-plan/${repoPath(repo)}`, { caller });
+}
+
+/** Make a merge plan: the server checks and charges the user, then queues it. */
+export async function startMergePlan(repo: string, userId: string): Promise<Result<MergePlanStart>> {
+  if (!repoOk(repo)) return BAD_REPO;
+  if (MOCK) return mock.startMergePlan(repo, userId);
+  return call(`/v1/me/merge-plan/${repoPath(repo)}`, { method: "POST", caller: { userId } });
 }
 
 /** What to pre-flight: a pull request link, or a repository and a branch (API.md, PR pre-flight). */
