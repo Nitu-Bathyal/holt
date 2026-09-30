@@ -1,6 +1,6 @@
 import { nextStep, timeAgo } from "@/lib/format";
 import type { StarterIssue } from "@/lib/types";
-import { SkeletonCard, SkeletonRegion } from "../skeleton";
+import { Skeleton, SkeletonRegion } from "../skeleton";
 
 export function StarterIssueCard({ issue, compact = false }: { issue: StarterIssue; compact?: boolean }) {
   return (
@@ -45,6 +45,37 @@ export function StarterIssueCard({ issue, compact = false }: { issue: StarterIss
   );
 }
 
+/**
+ * One issue as a thin row for the report: number, title, its labels, whether
+ * anyone is on it, and its age, on one line from `sm` up (two on a phone). The
+ * whole row is the link; the next step is in its tooltip and read out after it.
+ */
+export function StarterIssueRow({ issue }: { issue: StarterIssue }) {
+  const taken = Boolean(issue.people || issue.open_prs);
+  const step = nextStep(issue);
+  return (
+    <li className="group relative flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1.5 hover:bg-panel-2/50 sm:flex-nowrap" title={step}>
+      <span className="shrink-0 font-mono text-[0.82rem] text-blue">#{issue.number}</span>
+      <a href={issue.url} target="_blank" rel="noopener noreferrer" data-umami-event="starter-issue-click" className="min-w-0 flex-1 basis-full truncate font-sans text-[0.93rem] font-medium text-ink after:absolute after:inset-0 group-hover:text-blue sm:basis-auto">
+        {issue.title}
+        <span className="sr-only"> (opens GitHub). {step}</span>
+      </a>
+      {issue.labels.length > 0 && (
+        <span className="hidden shrink-0 gap-1.5 text-[0.74rem] text-faint md:flex">
+          {issue.labels.slice(0, 2).map((l) => (
+            <span key={l} className="max-w-[9rem] truncate">{l}</span>
+          ))}
+        </span>
+      )}
+      <span className={`shrink-0 font-sans text-[0.8rem] ${taken ? "text-amber" : "text-green"}`}>{issue.on_it ?? (taken ? "Someone is on it" : "Nobody on it yet")}</span>
+      <span className="shrink-0 font-sans text-[0.78rem] text-faint">
+        {issue.comments} comment{issue.comments === 1 ? "" : "s"}
+        {issue.created_at && <> · {timeAgo(issue.created_at)}</>}
+      </span>
+    </li>
+  );
+}
+
 /** null = still loading; "unavailable" = the server couldn't list them. */
 export type IssuesState = StarterIssue[] | null | "unavailable";
 
@@ -72,20 +103,23 @@ export function StarterIssues({ issues, repo }: { issues: IssuesState; repo: str
     );
   }
   return (
-    <ul className="grid gap-3 md:grid-cols-2">
+    <ul className="divide-y divide-line border-y border-line">
       {issues.map((i) => (
-        <StarterIssueCard key={i.number} issue={i} />
+        <StarterIssueRow key={i.number} issue={i} />
       ))}
     </ul>
   );
 }
 
-/** Two cards in the real grid, while the issues stream in. */
+/** Three thin rows, where the issues will stream in. */
 export function StarterIssuesSkeleton() {
   return (
-    <SkeletonRegion as="ul" label="Loading starter issues…" className="grid gap-3 md:grid-cols-2">
-      <SkeletonCard />
-      <SkeletonCard className="hidden md:block" />
+    <SkeletonRegion as="ul" label="Loading starter issues…" className="divide-y divide-line border-y border-line">
+      {[0, 1, 2].map((i) => (
+        <li key={i} className="py-1.5">
+          <Skeleton className="h-5 w-full" />
+        </li>
+      ))}
     </SkeletonRegion>
   );
 }
