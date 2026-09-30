@@ -78,7 +78,7 @@ def _github_login(svc: Services, github_id: int) -> str:
         raise ApiError("invalid_request", "We couldn't find that GitHub account. "
                        "It may have been deleted or renamed; try connecting again.")
     if res.status_code == 401:
-        svc.pool.note_refused(index, "401")
+        svc.pool.note_refused(index, "401", token)
         raise upstream()
     if res.status_code == 429 or (res.status_code == 403
                                   and res.headers.get("x-ratelimit-remaining") == "0"):

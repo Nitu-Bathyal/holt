@@ -53,7 +53,7 @@ n=$(cat "$STUB_DIR/containers" 2>/dev/null || echo 0)
 case " $* " in
     *" up "*)
         case " $* " in *" --scale "*) echo $((n + 1)) > "$STUB_DIR/containers" ;; esac
-        cp "$HOLT_STAGE_HOME/now.json" "$STUB_DIR/now-while-starting"; env | grep -E '^(STAGING_HOST|HOLT_WEB_URL|AUTH_|NEXT_PUBLIC_|GITHUB_TOKENS=|OPENROUTER_|HOLT_AI_|HOLT_PRO_MODEL_|HOLT_PRO_PLAYBOOK_)' | sort > "$STUB_DIR/compose.env" ;;
+        cp "$HOLT_STAGE_HOME/now.json" "$STUB_DIR/now-while-starting"; env | grep -E '^(STAGING_HOST|HOLT_WEB_URL|AUTH_|NEXT_PUBLIC_|GITHUB_TOKENS=|GITHUB_APP_|HOLT_GITHUB_APP_KEY_GID=|OPENROUTER_|HOLT_AI_|HOLT_PRO_MODEL_|HOLT_PRO_PLAYBOOK_)' | sort > "$STUB_DIR/compose.env" ;;
     *" ps "*) i=1; while [ "$i" -le "$n" ]; do echo "c$i"; i=$((i + 1)); done ;;
     *" config --hash "*) echo "$last stub-hash" ;;
     *" config "*)
@@ -403,6 +403,65 @@ def test_the_github_token_is_read_fresh_and_overrides_env_file(sandbox: Sandbox)
     logs = "".join(p.read_text(encoding="utf-8") for p in (sandbox.state / "logs").glob("*.log"))
     for text in (calls, done.stdout, done.stderr, logs):
         assert "ghp_fromsecrets" not in text
+
+
+def stub_key(tmp_path: Path, name: str) -> Path:
+    key = tmp_path / name
+    key.write_text("-----BEGIN PRIVATE KEY-----\nstub\n-----END PRIVATE KEY-----\n", encoding="utf-8")
+    key.chmod(0o640)
+    return key
+
+
+def test_stagings_own_github_app_replaces_the_tokens(sandbox: Sandbox, tmp_path: Path) -> None:
+    key = stub_key(tmp_path, "staging-app.pem")
+    sandbox.write_secrets(GITHUB_TOKENS="ghp_personal", STAGING_GITHUB_APP_ID="777",
+                          STAGING_GITHUB_APP_INSTALLATION_ID="888",
+                          STAGING_GITHUB_APP_PRIVATE_KEY_FILE=str(key))
+    done = sandbox.run()
+    assert done.returncode == 0, done.stdout + done.stderr
+    started = sandbox.live()
+    assert (started["GITHUB_APP_ID"], started["GITHUB_APP_INSTALLATION_ID"]) == ("777", "888")
+    assert started["GITHUB_APP_PRIVATE_KEY_FILE"] == str(key)  # compose mounts it read-only
+    assert started["HOLT_GITHUB_APP_KEY_GID"] == str(key.stat().st_gid)
+    assert started["GITHUB_TOKENS"] == ""  # nor the one make-env.sh wrote into .env
+    assert "reading as staging's GitHub App" in done.stdout
+    assert "stub" not in done.stdout + done.stderr
+    assert not sandbox.stub_lines("github_calls"), "no personal token is checked or used"
+
+
+def test_productions_github_app_never_reaches_staging(sandbox: Sandbox, tmp_path: Path) -> None:
+    prod = {"GITHUB_APP_ID": "123", "GITHUB_APP_INSTALLATION_ID": "456",
+            "GITHUB_APP_PRIVATE_KEY_FILE": str(stub_key(tmp_path, "prod-app.pem"))}
+    # Production's lines alone: staging stays on its tokens.
+    sandbox.write_secrets(**prod)
+    started = sandbox.live()
+    assert started["GITHUB_APP_ID"] == "" and started["GITHUB_APP_PRIVATE_KEY_FILE"] == ""
+    assert started["GITHUB_TOKENS"] == "stub-token"
+    # Nor from the environment of whoever runs the script.
+    started = sandbox.live(**prod)
+    assert started["GITHUB_APP_ID"] == "" and started["GITHUB_APP_PRIVATE_KEY_FILE"] == ""
+    # Production's app under the staging names is refused.
+    sandbox.write_secrets(**prod, STAGING_GITHUB_APP_ID="123", STAGING_GITHUB_APP_INSTALLATION_ID="456",
+                          STAGING_GITHUB_APP_PRIVATE_KEY_FILE=prod["GITHUB_APP_PRIVATE_KEY_FILE"])
+    done = sandbox.run()
+    assert done.returncode != 0
+    assert "is production's GitHub App" in done.stdout
+    assert not (sandbox.stub_dir / "compose.env").exists()
+
+
+def test_a_half_set_up_github_app_stops_the_build(sandbox: Sandbox, tmp_path: Path) -> None:
+    sandbox.write_secrets(STAGING_GITHUB_APP_ID="777")
+    done = sandbox.run()
+    assert done.returncode != 0
+    assert "only partly set up" in done.stdout
+    assert not (sandbox.stub_dir / "compose.env").exists()
+
+    sandbox.write_secrets(STAGING_GITHUB_APP_ID="777", STAGING_GITHUB_APP_INSTALLATION_ID="888",
+                          STAGING_GITHUB_APP_PRIVATE_KEY_FILE=str(tmp_path / "missing.pem"))
+    done = sandbox.run()
+    assert done.returncode != 0
+    assert "no file at" in done.stdout
+    assert not (sandbox.state / "fingerprint").exists()
 
 
 def test_a_refused_github_token_stops_the_build_loudly(sandbox: Sandbox) -> None:

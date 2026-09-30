@@ -34,6 +34,48 @@ def test_a_token_in_an_issue_body_does_not_survive_capture():
     assert MARKER in payload["body"]
 
 
+# GitHub App installation tokens: the classic 40-character form, and the longer
+# "ghs_<app id>_<JWT>" form rolling out since April 2026.
+CLASSIC_INSTALLATION_TOKEN = "ghs_" + "Z9y8X7w6V5u4T3s2R1q0P9o8N7m6L5k4J3i2"
+_JWT = ("eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9"
+        ".eyJpc3MiOiIxMjM0NTYiLCJpYXQiOjE3MDAwMDAwMDB9"
+        ".c2lnbmF0dXJlLWJ5dGVzLWdvLWhlcmUtX0FCQy0xMjM")
+NEW_INSTALLATION_TOKEN = "ghs_" + "1234567_" + _JWT
+
+
+@pytest.mark.parametrize("secret", [CLASSIC_INSTALLATION_TOKEN, NEW_INSTALLATION_TOKEN, _JWT],
+                         ids=["ghs-classic", "ghs-app-id-jwt", "bare-jwt"])
+def test_installation_tokens_and_jwts_do_not_survive_capture(secret):
+    payload, hits = redact_payload({"body": f"token: {secret} (from the CI log)"})
+    assert hits >= 1
+    assert secret not in payload["body"]
+    # Nothing of the token is left beside the marker.
+    assert "ghs_" not in payload["body"] and "eyJ" not in payload["body"]
+
+
+@pytest.mark.parametrize("text", [f"Authorization: Bearer {_JWT}", f"SUPABASE_KEY={_JWT}",
+                                  f"https://example.org/cb#access_token={_JWT}&x=1"])
+def test_a_jwt_as_a_header_env_value_or_access_token_goes(text):
+    payload, hits = redact_payload({"body": text})
+    assert hits >= 1 and _JWT not in payload["body"]
+
+
+def test_a_presigned_image_link_is_left_alone():
+    """GitHub puts a minutes-long viewing JWT in attachment links; it is evidence
+    (a screenshot was attached), not a credential."""
+    original = {"body": f"![shot](https://private-user-images.githubusercontent.com/1/2.png?jwt={_JWT}) "
+                        f"![b](https://app.example.ai/api/presigned_proxy?token={_JWT}) "
+                        f"![c](https://cdn.example.com/a/b?x=1&signature={_JWT})"}
+    payload, hits = redact_payload(dict(original))
+    assert hits == 0 and payload == original
+
+
+def test_a_word_starting_eyj_is_not_a_jwt():
+    original = {"body": "eyJ alone, or eyJhbGciOiJIUzI1NiJ9 without its other two parts"}
+    payload, hits = redact_payload(dict(original))
+    assert hits == 0 and payload == original
+
+
 def test_the_record_says_it_was_redacted():
     """A reader must be able to tell scrubbed evidence from evidence as captured."""
     payload, _ = redact_payload({"body": LIVE_LOOKING_PAT})

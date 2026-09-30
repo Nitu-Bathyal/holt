@@ -122,6 +122,14 @@ Then `FORCE=1 ~/.local/share/holt-staging/bin/preview.sh`; its log says
 
 ### The GitHub token
 
+When `~/.config/holt/secrets.env` sets up staging's own GitHub App (the
+three `STAGING_GITHUB_APP_*` lines,
+[docs/ops/github-app.md](../docs/ops/github-app.md)), staging reads as that
+App and uses no personal token: the `GITHUB_TOKENS` below is emptied. The
+run stops if only some of the three lines are set, if the key file isn't
+there, or if the lines name production's App. Production's `GITHUB_APP_*`
+is never read here. Otherwise:
+
 Every run reads the server's GitHub token fresh, as production does:
 `GITHUB_TOKENS` from `~/.config/holt/secrets.env`, else the current
 `gh auth token`. It overrides the `GITHUB_TOKENS` line `make-env.sh` wrote

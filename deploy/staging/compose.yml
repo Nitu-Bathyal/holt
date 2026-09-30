@@ -86,6 +86,12 @@ services:
       HOLT_SECRET_KEY: ${HOLT_SECRET_KEY:?run make-env.sh}
       HOLT_WEB_URL: https://${STAGING_HOST:-staging.githolt.com}
       GITHUB_TOKENS: ${GITHUB_TOKENS}
+      # The GitHub App (docs/ops/github-app.md): set up, the server reads
+      # GitHub as the app and GITHUB_TOKENS is not used. The key is mounted
+      # read-only below; the server's user reads it through its group.
+      GITHUB_APP_ID: ${GITHUB_APP_ID:-}
+      GITHUB_APP_INSTALLATION_ID: ${GITHUB_APP_INSTALLATION_ID:-}
+      GITHUB_APP_PRIVATE_KEY_FILE: ${GITHUB_APP_PRIVATE_KEY_FILE:+/run/secrets/github_app_key}
       # AI (preview.sh sets these from OPENAI_API_KEY): the model, and the
       # hard budget for all AI on staging, holt-pro's included. 0 = AI off.
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
@@ -100,6 +106,8 @@ services:
       # Warm pass (python -m holt_server.warm) fills this cache for a day.
       HOLT_STARTER_CACHE_HOURS: ${HOLT_STARTER_CACHE_HOURS:-24}
       LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    secrets: [github_app_key]
+    group_add: ["${HOLT_GITHUB_APP_KEY_GID:-10001}"]
     depends_on:
       db: { condition: service_healthy }
       migrate-server: { condition: service_completed_successfully }
@@ -190,3 +198,9 @@ services:
 
 volumes:
   pgdata:
+
+secrets:
+  # The GitHub App's private key on the host (GITHUB_APP_PRIVATE_KEY_FILE in
+  # the secrets file), at /run/secrets/github_app_key; /dev/null without one.
+  github_app_key:
+    file: ${GITHUB_APP_PRIVATE_KEY_FILE:-/dev/null}

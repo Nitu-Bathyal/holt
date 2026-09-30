@@ -517,8 +517,9 @@ async def fetch_starter_issues(svc: Services, repo: str) -> tuple[str, list[dict
 async def _fetch_and_store(svc: Services, repo: str) -> tuple[str, list[dict]]:
     canonical = await svc.canonical(repo)
     try:
+        # The token is taken in the thread: the GitHub App may fetch a new one.
         issues = await asyncio.to_thread(
-            starter.run_starter_issues, canonical, svc.pool.next(), STARTER_CACHE_LIMIT)
+            lambda: starter.run_starter_issues(canonical, svc.pool.next(), STARTER_CACHE_LIMIT))
     except ApiError:
         raise
     except Exception as exc:  # noqa: BLE001

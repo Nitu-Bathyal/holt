@@ -449,36 +449,59 @@ staging_oauth() {   # staging_oauth GITHUB|GOOGLE display-name
 staging_oauth GITHUB GitHub
 staging_oauth GOOGLE Google
 
-# The server's GitHub token, fresh on every run, as production does
-# (deploy/prod/env.sh): GITHUB_TOKENS from $SECRETS, else the current
-# `gh auth token`. Exported, so it wins over the copy make-env.sh wrote into
-# .env once (a token rotated since then would be revoked). Each token is
-# checked against GitHub first, sent on curl's stdin so it never shows in
-# `ps`; one that GitHub refuses stops the run here, not at the first
-# uncached report. That failure doesn't record the fingerprint, so the next
-# tick tries again once the token is fixed.
-GITHUB_TOKENS="$(secret GITHUB_TOKENS)"
-if [[ -n "$GITHUB_TOKENS" ]]; then
-    log "GITHUB_TOKENS: from $SECRETS"
+# How the server reads GitHub: as staging's own GitHub App when $SECRETS
+# sets up STAGING_GITHUB_APP_* (docs/ops/github-app.md), else with
+# GITHUB_TOKENS. Never production's app (GITHUB_APP_*): one app is one
+# budget, and staging's builds and warm passes would spend production's.
+# Stopping here on a problem doesn't record the fingerprint, so the next
+# tick tries again once it is fixed.
+github_fail() {
+    log "FAILED: $1"
+    buildinfo attempt failed "$1" "$preview_sha" || true
+    buildinfo now failed "the last build failed: $1" || true
+    exit 1
+}
+GITHUB_APP_ID="$(secret STAGING_GITHUB_APP_ID)"
+GITHUB_APP_INSTALLATION_ID="$(secret STAGING_GITHUB_APP_INSTALLATION_ID)"
+GITHUB_APP_PRIVATE_KEY_FILE="$(secret STAGING_GITHUB_APP_PRIVATE_KEY_FILE)"
+HOLT_GITHUB_APP_KEY_GID=""
+if [[ -n "$GITHUB_APP_ID$GITHUB_APP_INSTALLATION_ID$GITHUB_APP_PRIVATE_KEY_FILE" ]]; then
+    [[ -n "$GITHUB_APP_ID" && -n "$GITHUB_APP_INSTALLATION_ID" && -n "$GITHUB_APP_PRIVATE_KEY_FILE" ]] \
+        || github_fail "staging's GitHub App is only partly set up in $SECRETS: set STAGING_GITHUB_APP_ID, STAGING_GITHUB_APP_INSTALLATION_ID and STAGING_GITHUB_APP_PRIVATE_KEY_FILE, or none of them"
+    [[ "$GITHUB_APP_ID" != "$(secret GITHUB_APP_ID)" \
+        && "$GITHUB_APP_INSTALLATION_ID" != "$(secret GITHUB_APP_INSTALLATION_ID)" ]] \
+        || github_fail "STAGING_GITHUB_APP_* in $SECRETS is production's GitHub App; make a separate app for staging (docs/ops/github-app.md)"
+    [[ -f "$GITHUB_APP_PRIVATE_KEY_FILE" ]] \
+        || github_fail "STAGING_GITHUB_APP_PRIVATE_KEY_FILE in $SECRETS: no file at $GITHUB_APP_PRIVATE_KEY_FILE"
+    # The server's user reads the key through its group (compose.yml, group_add).
+    HOLT_GITHUB_APP_KEY_GID="$(stat -c %g "$GITHUB_APP_PRIVATE_KEY_FILE")"
+    GITHUB_TOKENS=""   # wins over the token make-env.sh wrote into .env
+    log "GitHub: reading as staging's GitHub App (app $GITHUB_APP_ID)"
 else
-    GITHUB_TOKENS="$(gh auth token 2>/dev/null || true)"
-    [[ -n "$GITHUB_TOKENS" ]] || fail "no GitHub token: put GITHUB_TOKENS in $SECRETS or run gh auth login"
-    log "GITHUB_TOKENS: using gh auth token (no $SECRETS entry)"
-fi
-export GITHUB_TOKENS
-n=0
-for t in ${GITHUB_TOKENS//,/ }; do
-    n=$((n + 1))
-    code="$(printf 'Authorization: Bearer %s\n' "$t" \
-        | curl -s -o /dev/null -w '%{http_code}' --max-time 15 -H @- https://api.github.com/rate_limit || true)"
-    if [[ "$code" == 401 ]]; then
-        msg="GitHub refused token $n in GITHUB_TOKENS (401: revoked or expired); update GITHUB_TOKENS in $SECRETS or run gh auth login"
-        log "FAILED: $msg"
-        buildinfo attempt failed "$msg" "$preview_sha" || true
-        buildinfo now failed "the last build failed: $msg" || true
-        exit 1
+    # GITHUB_TOKENS from $SECRETS, else the current `gh auth token`. Exported,
+    # so it wins over the copy make-env.sh wrote into .env once (a token
+    # rotated since then would be revoked). Each token is checked against
+    # GitHub first, sent on curl's stdin so it never shows in `ps`; one that
+    # GitHub refuses stops the run here, not at the first uncached report.
+    GITHUB_TOKENS="$(secret GITHUB_TOKENS)"
+    if [[ -n "$GITHUB_TOKENS" ]]; then
+        log "GITHUB_TOKENS: from $SECRETS"
+    else
+        GITHUB_TOKENS="$(gh auth token 2>/dev/null || true)"
+        [[ -n "$GITHUB_TOKENS" ]] || fail "no GitHub token: put GITHUB_TOKENS in $SECRETS or run gh auth login"
+        log "GITHUB_TOKENS: using gh auth token (no $SECRETS entry)"
     fi
-done
+    n=0
+    for t in ${GITHUB_TOKENS//,/ }; do
+        n=$((n + 1))
+        code="$(printf 'Authorization: Bearer %s\n' "$t" \
+            | curl -s -o /dev/null -w '%{http_code}' --max-time 15 -H @- https://api.github.com/rate_limit || true)"
+        if [[ "$code" == 401 ]]; then
+            github_fail "GitHub refused token $n in GITHUB_TOKENS (401: revoked or expired); update GITHUB_TOKENS in $SECRETS or run gh auth login"
+        fi
+    done
+fi
+export GITHUB_TOKENS GITHUB_APP_ID GITHUB_APP_INSTALLATION_ID GITHUB_APP_PRIVATE_KEY_FILE HOLT_GITHUB_APP_KEY_GID
 
 # The paid-features service needs its own key, STAGING_HOLT_PRO_KEY (never
 # production's HOLT_PRO_KEY; the same value is refused), and a holt_pro
