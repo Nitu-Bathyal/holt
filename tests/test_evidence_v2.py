@@ -381,20 +381,30 @@ def test_the_transport_adds_up_rate_limit_points():
 
 
 def test_every_query_asks_what_it_cost():
-    documents = [gql.REPO_META, gql.PR_SEARCH, gql.PR_SEARCH_SCREEN,
+    documents = [gql.REPO_META, gql.PR_SEARCH, gql.PR_SEARCH_SCREEN, gql.PR_PAGE,
                  gql.ISSUE_SEARCH, gql.REPO_SEARCH,
-                 gql.docs_query("0" * 40)[0]]
+                 gql.docs_query("0" * 40)[0], gql.opening_query(True)[0]]
     assert all("rateLimit { cost " in d for d in documents)
 
 
-def test_pr_page_stays_at_five_connections_per_pull_request():
+@pytest.mark.parametrize("document", [gql.PR_SEARCH, gql.PR_PAGE, gql.opening_query(True)[0]])
+def test_pr_page_stays_at_five_connections_per_pull_request(document):
     # 1 + 25 x 5 = 126 connections is one point a page; a sixth per-PR
     # connection makes it 151 and two points. See the note on PR_SEARCH.
-    body = gql.PR_SEARCH.split("... on PullRequest", 1)[1]
+    body = document.split("... on PullRequest", 1)[1]
     per_pr = sum(body.count(f"{field}(") for field in
                  ("files", "reviews", "comments", "labels", "timelineItems"))
     assert per_pr == 5
     assert body.count("(first:") + body.count("(last:") == 5
+
+
+def test_page_sizes_stay_at_one_point():
+    # GitHub rounds connections / 100 to the nearest point. A page of 29 is
+    # 1 + 29 x 5 = 146; the opening query's facts add about six more, so its
+    # page is 28 (147). One more pull request on either and it's two points.
+    assert 1 + gql.FETCH_SIZE * 5 < 150
+    assert 1 + gql.OPENING_SIZE * 5 + 6 < 150
+    assert "first:$first" in gql.PR_PAGE
 
 
 # --- the screening query ----------------------------------------------------
@@ -416,12 +426,15 @@ def test_discover_screens_without_the_timeline_and_reports_read_it(monkeypatch):
     def handler(request: httpx.Request) -> httpx.Response:
         document = json.loads(request.content)["query"]
         asked.append(document)
-        if "repository(" in document and "search(" not in document:
-            return httpx.Response(200, json={"data": {"repository": _meta()}})
-        return httpx.Response(200, json={"data": {"search": {
-            "issueCount": 1, "pageInfo": {"hasNextPage": False, "endCursor": None},
-            "nodes": [{k: v for k, v in _node([]).items() if k != "timelineItems"}],
-        }}})
+        data = {}
+        if "repository(" in document:
+            data["repository"] = _meta()
+        if "search(" in document:
+            data["search"] = {
+                "issueCount": 1, "pageInfo": {"hasNextPage": False, "endCursor": None},
+                "nodes": [{k: v for k, v in _node([]).items() if k != "timelineItems"}],
+            }
+        return httpx.Response(200, json={"data": data})
 
     transport = gql.GitHubGraphQL(
         token="t", client=httpx.Client(transport=httpx.MockTransport(handler))
@@ -433,7 +446,8 @@ def test_discover_screens_without_the_timeline_and_reports_read_it(monkeypatch):
 
     asked.clear()
     gql.LiveGitHubProvider(Window.PRE_T, cutoff=RECORDED_AT, transport=transport).fetch("a/b")
-    assert gql.PR_SEARCH in asked and gql.PR_SEARCH_SCREEN not in asked
+    assert gql.PR_SEARCH_SCREEN not in asked
+    assert asked[0] == gql.opening_query(docs=False)[0] and gql._PR_TIMELINE in asked[0]
 
 
 # --- helpers ------------------------------------------------------------------
