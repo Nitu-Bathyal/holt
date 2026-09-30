@@ -2087,7 +2087,7 @@
 /* 06: four answers (landing/answers.tsx). */
 .ls-answers {
   display: grid;
-  gap: clamp(0.5rem, 2svh, 1.5rem);
+  gap: clamp(1rem, 3.5svh, 2.5rem);
   margin-top: clamp(1.2rem, 4svh, 3rem);
 }
 .ls-answer {
@@ -2095,7 +2095,16 @@
   grid-template-columns: auto minmax(0, 1fr);
   align-items: start;
   gap: 0 clamp(0.75rem, 2vw, 2.5rem);
-  padding: clamp(0.6rem, 1.6svh, 1.2rem) 0 clamp(0.6rem, 1.6svh, 1.2rem) clamp(1rem, 1.6vw, 1.75rem);
+  padding: clamp(0.9rem, 2.4svh, 1.8rem) 0 clamp(0.9rem, 2.4svh, 1.8rem) clamp(1rem, 1.6vw, 1.75rem);
+}
+/* A quiet rule between answers, so each row reads as its own. */
+.ls-answer + .ls-answer::before {
+  content: "";
+  position: absolute;
+  top: calc(-0.5 * clamp(1rem, 3.5svh, 2.5rem));
+  left: 0;
+  right: 0;
+  border-top: 1px dashed var(--line);
 }
 .ls-answer-bar {
   transform-origin: left;
@@ -2111,15 +2120,19 @@
 }
 .ls-answer-word {
   /* Four answers share one screen. */
-  font-size: clamp(1.6rem, min(5vw, 6.4svh), 5.6rem);
+  font-size: clamp(1.25rem, min(2.3vw, 3.8svh), 2.25rem);
   line-height: 1;
 }
 .ls-answer-cat {
   padding-top: 0.3em;
-  font-size: clamp(1rem, min(2.4vw, 4svh), 2.8rem);
+  font-size: clamp(0.9rem, min(1.25vw, 2.1svh), 1.5rem);
 }
 .ls-answer-text {
-  font-size: clamp(0.95rem, min(1.15vw, 2.1svh), 1.2rem);
+  max-width: 62ch;
+  margin-top: clamp(1rem, 2.6svh, 1.75rem);
+  row-gap: 0.6rem;
+  font-size: clamp(0.9rem, min(1.05vw, 1.95svh), 1.1rem);
+  line-height: 1.55;
 }
 @media (prefers-reduced-motion: no-preference) and (min-width: 1024px) {
   .ls-answers[data-phase="wait"] .ls-answer-word {
