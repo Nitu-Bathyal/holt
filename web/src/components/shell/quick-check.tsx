@@ -1,7 +1,8 @@
 "use client";
 // A small repo box: type or paste a repo, press enter, read its report. In the
-// top bar on every app page ("bar", from md up), and on the home below md,
-// where the top bar has no room for it ("inline"). An unreadable entry gets a
+// top bar on every app page ("bar", from md up; find a project moves it into
+// its tab row, "band"), and on the home below md, where the top bar has no
+// room for it ("inline"). An unreadable entry gets a
 // hint that goes as soon as you type, leave the box or change page
 // (lib/quick-check.ts).
 import { usePathname, useRouter } from "next/navigation";
@@ -11,9 +12,9 @@ import { pasteHref } from "@/lib/gate";
 import { hintState, nextHint } from "@/lib/quick-check";
 import { parseRepoInput } from "@/lib/repo";
 
-export function QuickCheck({ variant = "bar" }: { variant?: "bar" | "inline" }) {
-  const bar = variant === "bar";
-  const id = bar ? "bar-repo" : "home-repo";
+export function QuickCheck({ variant = "bar", className = "" }: { variant?: "bar" | "band" | "inline"; className?: string }) {
+  const bar = variant !== "inline";
+  const id = `${variant === "inline" ? "home" : variant}-repo`;
   const router = useRouter();
   const [value, setValue] = useState("");
   const pathname = usePathname();
@@ -42,7 +43,7 @@ export function QuickCheck({ variant = "bar" }: { variant?: "bar" | "inline" }) 
       onKeyDown={(e) => {
         if (e.key === "Escape" && bad) send({ type: "leave" });
       }}
-      className={`relative w-full items-center border border-line-strong bg-panel transition-colors focus-within:border-blue ${bar ? "hidden max-w-xl md:flex" : "flex max-w-xl"}`}
+      className={`relative w-full items-center border border-line-strong bg-panel transition-colors focus-within:border-blue ${bar ? "hidden max-w-xl md:flex" : "flex max-w-xl"} ${className}`}
     >
       <label htmlFor={id} className="sr-only">Check a repo</label>
       <span aria-hidden="true" className="pl-3 text-amber">$</span>
@@ -58,7 +59,7 @@ export function QuickCheck({ variant = "bar" }: { variant?: "bar" | "inline" }) 
         placeholder={bar ? "check a repo: owner/name" : "owner/name or a GitHub link"}
         autoComplete="off"
         spellCheck={false}
-        className={`min-w-0 flex-1 bg-transparent px-2 outline-none placeholder:text-faint ${bar ? "py-2 text-[0.85rem]" : "py-3 text-[0.92rem]"}`}
+        className={`min-w-0 flex-1 bg-transparent px-2 outline-none placeholder:text-faint ${variant === "band" ? "py-1.5 text-[0.8rem]" : bar ? "py-2 text-[0.85rem]" : "py-3 text-[0.92rem]"}`}
       />
       {bar && !value && <kbd aria-hidden="true" className="mr-2 hidden border border-line-strong px-1.5 text-[0.72rem] leading-5 text-faint lg:block">/</kbd>}
       <button type="submit" className="self-stretch border-l border-line-strong px-3 text-[0.8rem] text-muted transition-colors hover:text-ink">check</button>
