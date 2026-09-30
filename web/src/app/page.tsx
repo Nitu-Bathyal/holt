@@ -187,10 +187,10 @@ export default async function Home() {
         </section>
 
         {/* 04 — the URL trick */}
-        <section data-cat-section="determined" className="pane border-t border-line">
+        <section data-cat-section="determined" className="pane pane--compact border-t border-line">
           <Grid>
             <Kicker n="04" label="the url trick" />
-            <h2 className="h2 mb-[clamp(1.5rem,5svh,3.5rem)]">
+            <h2 className="h2 ls-h2-sm mb-[clamp(2.5rem,8svh,5.5rem)]">
               <Words text="Already on GitHub? Swap hub for holt." />
             </h2>
             <div className="min-w-0" data-reveal>

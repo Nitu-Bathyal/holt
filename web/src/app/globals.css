@@ -1732,17 +1732,34 @@
 .swap[data-swapped="false"] .swap-sub {
   opacity: 0;
 }
+@supports not (overflow: clip) {
+  .swap-flap {
+    overflow: hidden;
+    vertical-align: bottom;
+  }
+}
+/* A tight wave, so the letters roll as one word. Delays belong to the state
+   being entered: to "holt", the tail makes room first; to "hub", the letters
+   land first and the tail then closes the gap. */
 @media (prefers-reduced-motion: no-preference) {
   .swap-from,
   .swap-to {
-    transition: transform 420ms var(--ease-expressive);
-    transition-delay: calc(var(--i) * 70ms);
+    transition: transform 380ms var(--ease-expressive);
+    transition-delay: calc(120ms + var(--i) * 15ms);
   }
   .swap-tail,
   .swap-sub {
     transition:
-      transform 420ms var(--ease-expressive) 200ms,
+      transform 300ms var(--ease-out),
       opacity 200ms var(--ease-out);
+  }
+  .swap[data-swapped="false"] .swap-from,
+  .swap[data-swapped="false"] .swap-to {
+    transition-delay: calc(var(--i) * 15ms);
+  }
+  .swap[data-swapped="false"] .swap-tail,
+  .swap[data-swapped="false"] .swap-sub {
+    transition-delay: 220ms, 0ms;
   }
 }
 
@@ -1966,8 +1983,13 @@
 }
 
 /* 04: the big hub → holt. */
+/* 04: two lines of content; a full screen left it mostly empty. */
+.pane.pane--compact {
+  min-height: 0;
+  padding-block: clamp(4rem, 13svh, 8.5rem);
+}
 .swap--big {
-  font-size: clamp(1.4rem, min(3.4vw, 6svh), 3.4rem);
+  font-size: clamp(1.2rem, min(2.4vw, 4.4svh), 2.4rem);
   font-weight: 600;
   letter-spacing: -0.03em;
   line-height: 1.3;
