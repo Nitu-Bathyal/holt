@@ -36,6 +36,7 @@ Start with the [README](../README.md). Everything else is here.
 | [research/BACKTEST.md](research/BACKTEST.md) | The backtest: the engine's answer on a past date against what happened to the outside PRs that came next, and its first results |
 | [research/EVALUATION.md](research/EVALUATION.md) | How the competition benchmark was built (retired as a gate), the numbers, and what they depend on |
 | [research/github-app-vs-machine-user.md](research/github-app-vs-machine-user.md) | GitHub's docs on App installation tokens vs a machine user: rate limits, public reads, terms |
+| [research/INDEXING.md](research/INDEXING.md) | Indexing thousands of repos on one GitHub budget: where a report's points go, what cheaper reads would change, and the recommended order |
 | [research/REPRODUCTION.md](research/REPRODUCTION.md) | Reproduce every published number from a clone, with no key and no spend |
 | [research/LIVE-AI-TEST-2026-09-28.md](research/LIVE-AI-TEST-2026-09-28.md) | First run of every AI feature on a real model: honesty checks, cost and latency, fixes |
 | [../golden/README.md](../golden/README.md) | The golden set: 62 recorded repositories, the engine's approved answer on each, and the before/after table every engine change is checked with |
