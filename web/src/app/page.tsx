@@ -111,31 +111,34 @@ export default async function Home() {
                 </p>
                 {hf && <HacktoberfestPill year={hf.year} short={hf.short} />}
               </div>
-              {/* Sized by the screen; the sub-line moves beside the headline where both fit. */}
-              <div className="hero-lede">
-                <h1 className="display hero-h1">
-                  <span className="headline-line"><span>Will this repo</span></span>
-                  <span className="headline-line"><span className="text-orange"><span className="marker">actually merge</span></span></span>
-                  <span className="headline-line"><span className="text-orange">your PR?</span></span>
-                </h1>
-                <p className="prose-sans fade-up hero-sub" style={{ ["--d" as string]: ".3s" }}>
-                  Holt checks what happened to the outsiders who tried before you: did anyone reply, and
-                  did anything get merged?
-                </p>
-              </div>
-              <div className="fade-up hero-act" style={{ ["--d" as string]: ".38s" }}>
-                <PasteBox signedIn={signedIn} />
-              </div>
-              <div className="fade-up hero-foot" style={{ ["--d" as string]: ".42s" }}>
-                <p className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                  <Link href="/find" className="bracket-link bracket-link--orange min-h-11 px-3 text-center sm:min-h-12 sm:px-5">
-                    [ find a project&nbsp;→&nbsp;]
-                  </Link>
-                </p>
-                <p className="font-sans text-faint">
-                  swap <strong className="text-muted">hub</strong> for <strong className="text-muted">holt</strong>:{" "}
-                  <SwapHost />
-                </p>
+              {/* One block: from 1280px the bar and its foot line span the headline plus the sub-line. */}
+              <div className="hero-stack">
+                {/* Sized by the screen; the sub-line moves beside the headline where both fit. */}
+                <div className="hero-lede">
+                  <h1 className="display hero-h1">
+                    <span className="headline-line"><span>Will this repo</span></span>
+                    <span className="headline-line"><span className="text-orange"><span className="marker">actually merge</span></span></span>
+                    <span className="headline-line"><span className="text-orange">your PR?</span></span>
+                  </h1>
+                  <p className="prose-sans fade-up hero-sub" style={{ ["--d" as string]: ".3s" }}>
+                    Holt checks what happened to the outsiders who tried before you: did anyone reply, and
+                    did anything get merged?
+                  </p>
+                </div>
+                <div className="fade-up hero-act" style={{ ["--d" as string]: ".38s" }}>
+                  <PasteBox signedIn={signedIn} />
+                </div>
+                <div className="fade-up hero-foot" style={{ ["--d" as string]: ".42s" }}>
+                  <p className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                    <Link href="/find" className="bracket-link bracket-link--orange min-h-11 px-3 text-center sm:min-h-12 sm:px-5">
+                      [ find a project&nbsp;→&nbsp;]
+                    </Link>
+                  </p>
+                  <p className="font-sans text-faint">
+                    swap <strong className="text-muted">hub</strong> for <strong className="text-muted">holt</strong>:{" "}
+                    <SwapHost />
+                  </p>
+                </div>
               </div>
               <div className="fade-up mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 low:mt-4" style={{ ["--d" as string]: ".5s" }}>
                 <span className="award-badge">
@@ -176,7 +179,7 @@ export default async function Home() {
         <section data-cat-section="thinking" className="pane border-t border-line bg-section-alt">
           <Grid>
             <Kicker n="03" label="who it's for" />
-            <h2 className="h2 ls-h2-wide mb-[clamp(1.5rem,5svh,3.5rem)]">
+            <h2 className="h2 ls-h2-wide ls-h2-sm mb-[clamp(2.5rem,8svh,5.5rem)]">
               <Words text="Don't write your PR into the void." quiet={["void"]} />
             </h2>
             <People people={people(report)} />
@@ -184,10 +187,10 @@ export default async function Home() {
         </section>
 
         {/* 04 — the URL trick */}
-        <section data-cat-section="determined" className="pane border-t border-line">
+        <section data-cat-section="determined" className="pane pane--compact border-t border-line">
           <Grid>
             <Kicker n="04" label="the url trick" />
-            <h2 className="h2 mb-[clamp(1.5rem,5svh,3.5rem)]">
+            <h2 className="h2 ls-h2-sm mb-[clamp(2.5rem,8svh,5.5rem)]">
               <Words text="Already on GitHub? Swap hub for holt." />
             </h2>
             <div className="min-w-0" data-reveal>
@@ -200,7 +203,7 @@ export default async function Home() {
         <section id="what-it-checks" data-cat-section="heartbroken" className="pane scroll-mt-[61px] border-t border-line bg-section-alt">
           <Grid>
             <Kicker n="05" label="what it checks" />
-            <h2 className="h2 mb-12">
+            <h2 className="h2 ls-h2-sm mb-12">
               <Words text="Stars won't tell you who gets merged." />
             </h2>
             <Receipts />
@@ -214,7 +217,7 @@ export default async function Home() {
         <section id="verdicts" data-cat-section="celebrating" className="pane scroll-mt-[61px] border-t border-line">
           <Grid>
             <Kicker n="06" label="four answers" />
-            <h2 className="h2 mb-4">
+            <h2 className="h2 ls-h2-sm mb-4">
               <Words text="Four possible answers. No hedging." />
             </h2>
             <Answers />
@@ -233,7 +236,7 @@ export default async function Home() {
           <div className="relative">
             <Grid>
               <Kicker n="07" label="open source" />
-              <h2 className="h2 mb-8">
+              <h2 className="h2 ls-h2-sm mb-8">
                 <Words text="Open source. We merge outsiders too." />
               </h2>
               <div className="ls-install grid max-w-[760px] grid-cols-[auto_1fr_auto] items-center border border-line-strong bg-bg" data-reveal>
