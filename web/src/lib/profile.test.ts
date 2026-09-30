@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { days, describe, fromForm, personalise, topics } from "./profile.ts";
+import { days, describe, fromForm, langName, personalise, topics } from "./profile.ts";
 import type { FindResult, StarterIssue } from "./types.ts";
 
 const issue = (number: number, beginner: boolean, areas: StarterIssue["areas"], people = 0): StarterIssue => ({
@@ -74,4 +74,11 @@ test("describe reads as plain English", () => {
   assert.equal(describe({ languages: ["python", "c++"], days: 3, level: "newcomer", contributions: ["docs"] }),
     "Python, C++ · a weekend · first-timer issues only, docs first");
   assert.equal(describe({ languages: [], days: 7, level: "experienced", contributions: [] }), "any language · a week · all starter issues");
+});
+
+test("a typed-in language shows with GitHub's spelling, else a leading capital", () => {
+  assert.equal(langName("c#"), "C#");
+  assert.equal(langName("objective-c"), "Objective-C");
+  assert.equal(langName("python"), "Python");
+  assert.equal(langName("mojo"), "Mojo");
 });
