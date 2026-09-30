@@ -2,7 +2,8 @@
 // and finished PRs, the alerts Holt would have made for them, and the email
 // that carries them. The repos are real; the PRs, titles and reviewer logins
 // are invented.
-import type { AlertItem, Access } from "@/components/alerts/types";
+import { dailyEmail, yourTurnEmail, type EmailAlert, type EmailFrame, type EmailTone, type RenderedEmail } from "@/components/alerts/email/templates";
+import { alertLine, type AlertItem, type Access } from "@/components/alerts/types";
 
 export const UNTIL = "14 Oct";
 export const EMAIL = "you@example.com";
@@ -57,76 +58,46 @@ export const PRS: MockPr[] = [
 
 export const WATCHING = PRS.filter((p) => (p.group === "turn" || p.group === "waiting") && !p.muted).length;
 
-// --- the two emails -----------------------------------------------------------------------
+// --- the two emails ----------------------------------------------------------------------
 
 /** "Your turn" goes out right away (within about 15 minutes of Holt noticing); the rest waits for 8:00. */
 export type EmailKind = "now" | "daily";
 const NOW_KINDS: AlertItem["kind"][] = ["changes", "reply"];
 
-/** What each email would carry today, from the unread alerts. */
-export function emailAlerts(kind: EmailKind): AlertItem[] {
-  return ALERTS.filter((a) => !a.read && NOW_KINDS.includes(a.kind) === (kind === "now"));
+const TONE: Record<AlertItem["kind"], EmailTone> = {
+  changes: "turn",
+  reply: "turn",
+  approved: "good",
+  late_reply: "late",
+  late_merge: "late",
+  stale_soon: "stale",
+  stale_marked: "stale",
+  merged: "good",
+  closed: "done",
+};
+
+const FRAME: EmailFrame = {
+  to: EMAIL,
+  status: `Alerts until ${UNTIL}. Your turn right away, the rest at 8:00.`,
+  prsUrl: "https://githolt.com/me/contributions",
+  settingsUrl: "https://githolt.com/settings/alerts",
+  unsubscribeUrl: "https://githolt.com/alerts/unsubscribe?t=example",
+  homeUrl: "https://githolt.com",
+};
+
+function toEmail(a: AlertItem): EmailAlert {
+  return {
+    line: alertLine(a),
+    pr: `${a.repo} #${a.number}`,
+    title: PRS.find((p) => p.repo === a.repo && p.number === a.number)?.title ?? "",
+    prUrl: `https://github.com/${a.repo}/pull/${a.number}`,
+    reportUrl: `https://githolt.com/${a.repo}`,
+    tone: TONE[a.kind],
+  };
 }
 
-const prUrl = (a: AlertItem) => `https://github.com/${a.repo}/pull/${a.number}`;
-const esc = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-const FOOTER = `Alerts until ${UNTIL}. Your turn right away, the rest at 8:00.`;
-
-export function emailSubject(kind: EmailKind, items: AlertItem[]): string {
-  if (kind === "now") {
-    return items.length === 1 ? `Your turn on ${items[0].repo.split("/")[1]} #${items[0].number}` : `Your turn on ${items.length} pull requests`;
-  }
-  return `${items.length} update${items.length === 1 ? "" : "s"} on your pull requests`;
-}
-
-/** The plain-text part: what most mail apps' previews and every screen reader get. */
-export function emailText(items: AlertItem[], line: (a: AlertItem) => string): string {
-  return [
-    ...items.flatMap((a) => [line(a), prUrl(a), ""]),
-    "Your pull requests: https://githolt.com/me/contributions",
-    "",
-    "—",
-    FOOTER,
-    "Change: https://githolt.com/settings/alerts",
-    "Stop these emails: https://githolt.com/alerts/unsubscribe?t=…",
-  ].join("\n");
-}
-
-/** The HTML part: the text part with links, in one column, no images and no tracking. */
-export function emailHtml(kind: EmailKind, items: AlertItem[], line: (a: AlertItem) => string): string {
-  const ink = "#111723";
-  const faint = "#5f6676";
-  const blue = "#1f48cf";
-  const rows = items
-    .map(
-      (a) => `
-      <tr><td style="padding:0 0 18px 0;">
-        <p style="margin:0;font-size:16px;line-height:1.45;color:${ink};">${esc(line(a))}</p>
-        <p style="margin:4px 0 0 0;font-size:14px;line-height:1.4;">
-          <a href="${prUrl(a)}" style="color:${blue};">open the PR</a>
-          <span style="color:${faint};">&nbsp;·&nbsp;</span>
-          <a href="https://githolt.com/${a.repo}" style="color:${blue};">Holt's report</a>
-        </p>
-      </td></tr>`,
-    )
-    .join("");
-  return `<!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><title>${esc(emailSubject(kind, items))}</title></head>
-<body style="margin:0;padding:0;background:#ffffff;">
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#ffffff;">
-    <tr><td style="padding:28px 20px;">
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:540px;font-family:-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif;">
-        <tr><td style="padding:0 0 22px 0;font-size:15px;font-weight:700;color:${ink};">Holt</td></tr>
-        ${rows}
-        <tr><td style="padding:4px 0 28px 0;font-size:15px;">
-          <a href="https://githolt.com/me/contributions" style="color:${blue};">Your pull requests</a>
-        </td></tr>
-        <tr><td style="border-top:1px solid #e3e0d9;padding:16px 0 0 0;font-size:13px;line-height:1.5;color:${faint};">
-          ${esc(FOOTER)}<br>
-          <a href="https://githolt.com/settings/alerts" style="color:${faint};">Change</a>&nbsp;·&nbsp;<a href="https://githolt.com/alerts/unsubscribe" style="color:${faint};">Stop these emails</a>
-        </td></tr>
-      </table>
-    </td></tr>
-  </table>
-</body></html>`;
+/** Each email as it would go out today, from the unread alerts. */
+export function mockEmail(kind: EmailKind): RenderedEmail {
+  const items = ALERTS.filter((a) => !a.read && NOW_KINDS.includes(a.kind) === (kind === "now")).map(toEmail);
+  return kind === "now" ? yourTurnEmail(items, FRAME) : dailyEmail(items, FRAME, "Wednesday 1 October");
 }

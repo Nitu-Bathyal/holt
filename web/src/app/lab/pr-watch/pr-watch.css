@@ -85,13 +85,24 @@
   background: var(--rule, var(--orange));
 }
 
-/* The email, as a mail app would show it: a white sheet whatever the theme. */
+/* The open email, sized to its content (email.tsx). */
 .lab-email {
   display: block;
   width: 100%;
-  height: 34rem;
   border: 1px solid var(--line-strong);
-  background: #ffffff;
+  background: var(--bg);
+}
+/* The email's row in an inbox list: sender, subject and preheader, time. */
+.lab-inbox-row {
+  display: grid;
+  grid-template-columns: 5rem minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: baseline;
+  border: 1px solid var(--line-strong);
+  background: var(--panel);
+  padding: 12px 14px;
+  font-family: var(--font-sans);
+  font-size: 0.88rem;
 }
 
 /* The lab's own switches: the app's tabs, lit by aria-pressed. */
