@@ -83,12 +83,12 @@ export function AnalysisProgress({ repo, stage, progress, mode, kicker, note, ah
           <div className="plog-bar h-full origin-left bg-blue" style={{ transform: `scaleX(${scale})` }} />
         </div>
         {estimate && (
-          <p aria-hidden="true" className="mt-1 h-[1.9em] text-right text-[0.8rem] tabular-nums text-faint">
+          <p aria-hidden="true" className="mt-1 h-[1.9em] text-right text-[0.76rem] tabular-nums text-faint">
             {left}
           </p>
         )}
       </div>
-      <p className="mt-8 border-t border-dashed border-line pt-4 font-sans text-[0.89rem] text-faint">
+      <p className="mt-5 border-t border-dashed border-line pt-3 font-sans text-[0.85rem] text-faint">
         {note ?? "The first check of a repo takes about 20 seconds. After that it's instant for everyone for a day."}
       </p>
     </div>
