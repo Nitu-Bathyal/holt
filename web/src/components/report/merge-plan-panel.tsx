@@ -6,13 +6,14 @@
 import Link from "next/link";
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import { MergePlanView } from "@/components/merge-plan/merge-plan-view";
-import { leftLabel, planOffer } from "@/lib/merge-plan-offer";
+import { failedMessage, leftLabel, planOffer } from "@/lib/merge-plan-offer";
 import type { ApiError, MergePlan, MergePlanState } from "@/lib/types";
 
 type Run =
   | { phase: "idle" }
   | { phase: "running"; stage: string; progress: number }
-  | { phase: "error"; error: ApiError };
+  // `failed`: a plan was being made and failed (its use is given back), not a refused request.
+  | { phase: "error"; error: ApiError; failed: boolean };
 
 const LOST: ApiError = { code: "upstream", message: "We lost the connection while your plan was being made. It may still finish, so reload in a minute." };
 const FAILED: ApiError = { code: "upstream", message: "Something broke on our side. Try again in a minute." };
@@ -58,7 +59,7 @@ export function MergePlanPanel({ repo }: { repo: string }) {
           error = JSON.parse(data).error ?? LOST;
         } catch {}
       }
-      setRun({ phase: "error", error });
+      setRun({ phase: "error", error, failed: true });
       void load();
     });
   }, [load]);
@@ -86,12 +87,12 @@ export function MergePlanPanel({ repo }: { repo: string }) {
     try {
       res = await fetch(`/api/merge-plan/${repo}`, { method: "POST" });
     } catch {
-      setRun({ phase: "error", error: LOST });
+      setRun({ phase: "error", error: LOST, failed: false });
       return;
     }
     const body = await res.json().catch(() => null);
     if (!res.ok) {
-      setRun({ phase: "error", error: body?.error ?? FAILED });
+      setRun({ phase: "error", error: body?.error ?? FAILED, failed: false });
       void load();
       return;
     }
@@ -102,6 +103,7 @@ export function MergePlanPanel({ repo }: { repo: string }) {
 
   const offer = planOffer(s);
   const running = run.phase === "running";
+  const failed = run.phase === "error" && run.failed;
   const actions = running ? (
     <Making stage={run.stage} progress={run.progress} />
   ) : offer.kind === "off" ? (
@@ -113,14 +115,14 @@ export function MergePlanPanel({ repo }: { repo: string }) {
   ) : (
     <div className="mt-6 flex flex-wrap items-center gap-3">
       <button type="button" onClick={make} className={plan ? "text-link text-[0.9rem]" : "btn-primary bg-blue"} data-merge-plan-make>
-        {plan ? "make a new one" : "make my merge plan"} <span aria-hidden="true">→</span>
+        {plan ? "make a new one" : failed ? "try again" : "make my merge plan"} <span aria-hidden="true">→</span>
       </button>
       {leftLabel(offer.left) && <span className="text-[0.82rem] text-faint">{leftLabel(offer.left)}</span>}
     </div>
   );
   const error = run.phase === "error" && (
     <p role="alert" className="mt-4 border border-orange/50 px-3 py-2 font-sans text-[0.9rem] text-orange" data-merge-plan-error>
-      {run.error.message}
+      {run.failed ? failedMessage(run.error.message) : run.error.message}
     </p>
   );
 
@@ -141,9 +143,11 @@ export function MergePlanPanel({ repo }: { repo: string }) {
   return (
     <section aria-labelledby="merge-plan" className="border border-line-strong bg-panel p-5 shadow-card sm:p-8" data-merge-plan-panel>
       <p className="text-[0.8rem] uppercase tracking-[0.08em] text-blue">Merge plan ✦ · {s.repo}</p>
-      <h1 id="merge-plan" className="mt-2 text-[1.6rem] font-semibold tracking-tight sm:text-[2rem]">Your merge plan</h1>
-      {actions}
+      <h1 id="merge-plan" className="mt-2 text-[1.6rem] font-semibold tracking-tight sm:text-[2rem]">
+        {failed ? "Your merge plan couldn't be made" : "Your merge plan"}
+      </h1>
       {error}
+      {actions}
     </section>
   );
 }

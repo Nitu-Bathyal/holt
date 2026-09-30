@@ -22,3 +22,16 @@ export function planOffer(s: Pick<MergePlanState, "available" | "access">): Plan
 export function leftLabel(left: number | null): string | null {
   return left == null ? null : `${left} left`;
 }
+
+const REFUNDED = "It didn't count against your merge plans.";
+
+/**
+ * What a person reads when a plan being made failed. Every failed job gives
+ * its use back; the server's own messages say so, and the job runner's
+ * general ones (a timeout, a crash) get the same line here.
+ */
+export function failedMessage(message: string): string {
+  const text = message.trim();
+  if (/count against|weren't charged|nothing was charged/i.test(text)) return text;
+  return `${text} ${REFUNDED}`.trim();
+}
