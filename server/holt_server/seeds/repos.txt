@@ -39,7 +39,7 @@ sharkdp/fd
 aquasecurity/trivy
 ldbumble/taskuary
 darshi1337/apogee
-furkanczay/better-payment
+czaydev/better-payment
 kestra-io/kestra
 milvus-io/milvus
 oven-sh/bun

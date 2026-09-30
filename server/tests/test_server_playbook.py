@@ -198,7 +198,7 @@ def test_unlocking_writes_the_playbook_and_charges_once(hp, fake):
     assert body["status"] == "done", body
     pb = body["playbook"]
     assert pb["repo"] == "pallets/flask" and pb["window_days"] == 365
-    assert pb["model"] == "openai/gpt-5-mini" and pb["note"].startswith("Only 5")
+    assert "model" not in pb and pb["note"].startswith("Only 5")
     must = pb["sections"]["must_do"]
     # The blank item is dropped; internal fact ids never leave the server.
     assert [m["text"][:10] for m in must] == ["Add or cha", "Pass `main"]

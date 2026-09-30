@@ -1,13 +1,14 @@
-"""Credit-pack checkout: Razorpay, INR, one-time payments (API.md, "Credit packs").
+"""Pro passes: Razorpay, INR, one-time payments (API.md, "Passes").
 
-Off by default. Packs are offered and orders created only when
-`HOLT_PAYMENTS_ENABLED=1`, the Razorpay keys are set, and the pack is on sale
-with a price in pricing.json. Everything about an order (pack, credits, price)
+A pass is one payment for a fixed number of days of Pro. It never renews.
+Off by default. Passes are offered and orders created only when
+`HOLT_PAYMENTS_ENABLED=1`, the Razorpay keys are set, and the pass is on sale
+with a price in pricing.json. Everything about an order (pass, days, price)
 comes from that file when the order is created, never from the browser.
 
 The flow:
 
-1. `POST /v1/me/orders {"pack"}` creates a Razorpay order for the pack's
+1. `POST /v1/me/orders {"pass"}` creates a Razorpay order for the pass's
    price and an `orders` row, and returns what Razorpay Checkout needs.
 2. The buyer pays in Checkout. It hands the page `razorpay_order_id`,
    `razorpay_payment_id` and `razorpay_signature`, which `web/` passes to
@@ -16,19 +17,23 @@ The flow:
    `order.paid`, `payment.failed`), which `web/` forwards, body untouched, to
    `POST /v1/payments/razorpay/webhook`.
 
-Nothing is credited on the browser's word. The confirm call checks the
+Nothing is given on the browser's word. The confirm call checks the
 payment signature (HMAC-SHA256 of `order_id|payment_id` with the key
 secret) and then asks Razorpay for the payment; the webhook checks its
 signature (HMAC-SHA256 of the raw body with the webhook secret). Either
-way, credits are added only for a captured payment whose amount and currency
+way, Pro is given only for a captured payment whose amount and currency
 match the order; an authorized one is captured first, and one that doesn't
 match puts the order on `held` for a person to look at.
 
-Crediting is one transaction: `UPDATE orders SET status='paid' WHERE status
-IN ('created', 'failed')` and, only if that took, a `CreditLot` whose
-`reference` is the payment id (unique). The confirm call and the webhook
-both arrive, in either order, sometimes more than once, sometimes at the same
-moment: exactly one of them credits.
+Giving the pass is one transaction: `UPDATE orders SET status='paid' WHERE
+status IN ('created', 'failed')` and, only if that took, the user's plan set
+to Pro for the pass's days, counted from when their current Pro ends if it
+hasn't yet (a `PlanEvent` whose `reference` is the payment id). The confirm
+call and the webhook both arrive, in either order, sometimes more than once,
+sometimes at the same moment: exactly one of them gives it.
+
+An order row keeps the pass id in `pack_id` and its days in `expires_days`
+(the columns date from credit packs; `credits` is 0).
 
 With payments switched off, confirm and the webhook still settle orders that
 already exist (someone may have paid just before the switch); no new order
@@ -44,7 +49,7 @@ import json
 import logging
 import re
 import uuid
-from datetime import timedelta
+from datetime import datetime, timedelta
 from typing import TYPE_CHECKING, Any
 
 import httpx
@@ -54,7 +59,7 @@ from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
 from holt_server import credits, entitlements, pricing, schema
-from holt_server.db import Order, iso, now
+from holt_server.db import Order, User, iso, now, utc
 from holt_server.deps import Caller, caller, internal, services, signed_in
 from holt_server.errors import ApiError, upstream
 
@@ -77,9 +82,9 @@ MAX_WEBHOOK_BYTES = 256 * 1024
 ORDER_ID = re.compile(r"^order_[A-Za-z0-9]{1,40}$")
 PAYMENT_ID = re.compile(r"^pay_[A-Za-z0-9]{1,40}$")
 
-OFF = "Credit packs aren't on sale yet. Everything free in Holt keeps working."
-UNCONFIRMED = ("We couldn't confirm that payment. If money left your account, your "
-               "credits will appear in a few minutes, or the payment will be refunded.")
+OFF = "Passes aren't on sale yet. Everything free in Holt keeps working."
+UNCONFIRMED = ("We couldn't confirm that payment. If money left your account, Pro "
+               "will start in a few minutes, or the payment will be refunded.")
 
 
 # --- Razorpay -------------------------------------------------------------------------
@@ -140,29 +145,6 @@ class Razorpay:
     def payment_signature_ok(self, order_id: str, payment_id: str, signature: str) -> bool:
         return same(sign(self._secret, f"{order_id}|{payment_id}"), signature)
 
-    # Subscriptions (subscriptions.py).
-
-    def fetch_plan(self, plan_id: str) -> dict:
-        return self._call("GET", f"/plans/{plan_id}")
-
-    def create_subscription(self, *, plan_id: str, total_count: int,
-                            notes: dict[str, str]) -> dict:
-        return self._call("POST", "/subscriptions", {"plan_id": plan_id,
-                                                      "total_count": total_count,
-                                                      "customer_notify": 1, "notes": notes})
-
-    def fetch_subscription(self, subscription_id: str) -> dict:
-        return self._call("GET", f"/subscriptions/{subscription_id}")
-
-    def cancel_subscription(self, subscription_id: str, *, at_cycle_end: bool) -> dict:
-        return self._call("POST", f"/subscriptions/{subscription_id}/cancel",
-                          {"cancel_at_cycle_end": 1 if at_cycle_end else 0})
-
-    def subscription_signature_ok(self, payment_id: str, subscription_id: str,
-                                  signature: str) -> bool:
-        # The reverse of an order's: payment first.
-        return same(sign(self._secret, f"{payment_id}|{subscription_id}"), signature)
-
     def webhook_signature_ok(self, body: bytes, signature: str | None) -> bool:
         return bool(self._webhook_secret) and same(sign(self._webhook_secret, body), signature)
 
@@ -193,30 +175,42 @@ def payments_on(svc: Services) -> bool:
     return svc.settings.payments_enabled and svc.razorpay is not None
 
 
-def price(pack: pricing.Pack) -> int | None:
-    """The pack's INR price when it is on sale, else None."""
-    amount = pack.price.inr_paise
-    if not pack.on_sale or amount is None or amount < MIN_AMOUNT:
+def price(p: pricing.Pass) -> int | None:
+    """The pass's INR price when it is on sale, else None."""
+    amount = p.price.inr_paise
+    if not p.on_sale or amount is None or amount < MIN_AMOUNT:
         return None
     return amount
 
 
-def packs_body(svc: Services) -> schema.Packs:
+def passes_body(svc: Services) -> schema.Passes:
     if not payments_on(svc):
-        return schema.Packs(on_sale=False, packs=[])
-    out = [schema.PackOffer(id=pid, name=p.name, credits=p.credits, expires_days=p.expires_days,
-                       amount=amount, currency=CURRENCY)
-           for pid, p in entitlements.catalogue(svc).packs.items()
-           if (amount := price(p)) is not None]
-    return schema.Packs(on_sale=bool(out), packs=out)
+        return schema.Passes(on_sale=False, passes=[], features=[])
+    cat = entitlements.catalogue(svc)
+    out = [schema.PassOffer(id=pid, name=p.name, days=p.days, amount=amount, currency=CURRENCY)
+           for pid, p in cat.passes.items() if (amount := price(p)) is not None]
+    if not out:
+        return schema.Passes(on_sale=False, passes=[], features=[])
+    features = [schema.PassFeature(id=f, name=cat.features[f].name, per_month=a.per_month,
+                                   unlimited=a.unlimited)
+                for f, a in cat.plans[pricing.PRO].features.items()]
+    return schema.Passes(on_sale=True, passes=out, features=features)
+
+
+def order_name(o: Order, p: pricing.Pass | None) -> str:
+    if p is not None:
+        return f"Pro, {p.name}"
+    if o.credits:  # a credit pack, from before passes
+        return f"{o.credits} credits"
+    return f"Pro, {o.expires_days} days"
 
 
 def order_body(svc: Services, o: Order) -> schema.Order:
-    pack = entitlements.catalogue(svc).packs.get(o.pack_id)
-    return schema.Order(id=o.id, pack=o.pack_id,
-                        name=pack.name if pack else f"{o.credits} credits",
-                        credits=o.credits, amount=o.amount, currency=o.currency,
-                        status=o.status, created_at=iso(o.created_at), paid_at=iso(o.paid_at))
+    p = entitlements.catalogue(svc).passes.get(o.pack_id)
+    return schema.Order(id=o.id, item=o.pack_id, name=order_name(o, p),
+                        days=None if o.credits else o.expires_days,
+                        amount=o.amount, currency=o.currency, status=o.status,
+                        created_at=iso(o.created_at), paid_at=iso(o.paid_at))
 
 
 # --- settling a payment ------------------------------------------------------------------
@@ -230,10 +224,24 @@ async def order_by_provider_id(svc: Services, provider_order_id: str | None) -> 
             Order.provider_order_id == provider_order_id))).scalar_one_or_none()
 
 
+def pass_ends(user: User | None, days: int, at: datetime) -> datetime | None:
+    """When Pro ends after adding a pass of `days`: from the end of the Pro
+    the user has now if it hasn't lapsed, else from `at`. None: they already
+    have Pro with no end (an admin grant), which a pass doesn't shorten."""
+    start = at
+    if user is not None and user.plan == pricing.PRO:
+        ends = utc(user.plan_expires_at)
+        if ends is None:
+            return None
+        start = max(ends, at)
+    return start + timedelta(days=days)
+
+
 async def credit(svc: Services, order_id: str, payment_id: str) -> bool:
-    """Mark the order paid by `payment_id` and add its credits, atomically.
-    True if this call did it; False if the order was already paid (or the
-    payment already paid another order, which is logged)."""
+    """Mark the order paid by `payment_id` and give what it bought,
+    atomically: a pass's days of Pro (or, for an order from before passes, its
+    credits). True if this call did it; False if the order was already paid
+    (or the payment already paid another order, which is logged)."""
     at = now()
     async with svc.db.session() as s:
         order = await s.get(Order, order_id)
@@ -246,18 +254,29 @@ async def credit(svc: Services, order_id: str, payment_id: str) -> bool:
             if took.rowcount != 1:
                 await s.rollback()
                 return False
-            expires = at + timedelta(days=order.expires_days) if order.expires_days else None
-            lot = await credits.add_lot(s, order.user_id, order.credits, origin="pack",
-                                        kind="purchase", pack_id=order.pack_id,
-                                        reference=payment_id, expires_at=expires)
-            await s.execute(update(Order).where(Order.id == order_id).values(lot_id=lot.id))
+            if order.credits:
+                expires = (at + timedelta(days=order.expires_days)
+                           if order.expires_days else None)
+                lot = await credits.add_lot(s, order.user_id, order.credits, origin="pack",
+                                            kind="purchase", pack_id=order.pack_id,
+                                            reference=payment_id, expires_at=expires)
+                await s.execute(update(Order).where(Order.id == order_id)
+                                .values(lot_id=lot.id))
+            else:
+                user = (await s.execute(select(User).where(User.id == order.user_id)
+                                        .with_for_update())).scalar_one()
+                ends = pass_ends(user, order.expires_days or 0, at)
+                if not (user.plan == pricing.PRO and ends is None):
+                    await entitlements.write_plan(
+                        s, svc, order.user_id, pricing.PRO, expires_at=ends,
+                        reason=f"pass {order.pack_id}", actor="payment", reference=payment_id)
             await s.commit()
         except IntegrityError:
             await s.rollback()
             log.error("payment %s is already recorded against another order; order %s "
                       "not credited", payment_id, order_id)
             return False
-    log.info("order %s paid by %s: %d credits to %s", order_id, payment_id, order.credits,
+    log.info("order %s (%s) paid by %s for %s", order_id, order.pack_id, payment_id,
              order.user_id)
     return True
 
@@ -316,7 +335,7 @@ async def settle(svc: Services, payment: dict[str, Any]) -> str:
 
 
 class OrderIn(BaseModel):
-    pack: str = Field(min_length=1, max_length=40)
+    pass_: str = Field(alias="pass", min_length=1, max_length=40)
 
 
 class ConfirmIn(BaseModel):
@@ -327,9 +346,9 @@ class ConfirmIn(BaseModel):
     razorpay_signature: str = Field(max_length=200)
 
 
-@router.get("/packs", dependencies=[Depends(internal)])
-async def get_packs(request: Request) -> schema.Packs:
-    return packs_body(services(request))
+@router.get("/passes", dependencies=[Depends(internal)])
+async def get_passes(request: Request) -> schema.Passes:
+    return passes_body(services(request))
 
 
 @router.post("/me/orders")
@@ -339,18 +358,19 @@ async def create_order(body: OrderIn, request: Request,
     user_id = signed_in(who)
     if not payments_on(svc):
         raise ApiError("payments_off", OFF)
-    pack = entitlements.catalogue(svc).packs.get(body.pack)
-    amount = price(pack) if pack else None
-    if pack is None or amount is None:
-        raise ApiError("invalid_request", "That credit pack isn't on sale.")
+    pid = body.pass_
+    p = entitlements.catalogue(svc).passes.get(pid)
+    amount = price(p) if p else None
+    if p is None or amount is None:
+        raise ApiError("invalid_request", "That pass isn't on sale.")
     svc.limiter.hit(who.rate_key, who.limit(svc))
     await credits.ensure_user(svc, user_id)
-    row = Order(id=uuid.uuid4().hex, user_id=user_id, pack_id=body.pack, credits=pack.credits,
-                expires_days=pack.expires_days, amount=amount, currency=CURRENCY,
+    row = Order(id=uuid.uuid4().hex, user_id=user_id, pack_id=pid, credits=0,
+                expires_days=p.days, amount=amount, currency=CURRENCY,
                 provider="razorpay", status="created")
     rz = svc.razorpay
     made = await call(rz.create_order, amount=amount, currency=CURRENCY, receipt=row.id,
-                      notes={"holt_order": row.id, "pack": body.pack})
+                      notes={"holt_order": row.id, "pass": pid})
     if made.get("amount") != amount or not ORDER_ID.match(str(made.get("id") or "")):
         log.error("razorpay order for %s came back as %r", row.id,
                   {k: made.get(k) for k in ("id", "amount", "currency")})
@@ -363,8 +383,8 @@ async def create_order(body: OrderIn, request: Request,
         await s.commit()
     return schema.Checkout(order_id=row.id, provider="razorpay", key_id=rz.key_id,
                            provider_order_id=row.provider_order_id, amount=amount,
-                           currency=CURRENCY, name="Holt", description=pack.name,
-                           pack=body.pack, credits=pack.credits)
+                           currency=CURRENCY, name="Holt", description=f"Pro, {p.name}",
+                           item=pid, days=p.days)
 
 
 @router.post("/me/orders/confirm")
@@ -392,9 +412,12 @@ async def confirm_order(body: ConfirmIn, request: Request,
         log.info("confirm %s %s -> %s", oid, pid, result)
     async with svc.db.session() as s:
         order = await s.get(Order, order.id)
-    return schema.OrderConfirmed(order=order_body(svc, order),
-                                 credits=await credits.credits_body(
-                                     svc, await credits.get_user(svc, user_id)))
+    user = await credits.get_user(svc, user_id)
+    cat = entitlements.catalogue(svc)
+    plan = entitlements.effective_plan(cat, user)
+    return schema.OrderConfirmed(
+        order=order_body(svc, order), plan=plan,
+        plan_expires_at=iso(user.plan_expires_at) if plan != pricing.FREE else None)
 
 
 @router.get("/me/orders")
@@ -449,13 +472,6 @@ async def razorpay_webhook(
         payment = ((data.get("payload") or {}).get("payment") or {}).get("entity")
     except (ValueError, AttributeError) as exc:
         raise ApiError("invalid_request", "Malformed webhook body.") from exc
-    if event.startswith("subscription."):
-        from holt_server import subscriptions
-
-        result = (await subscriptions.webhook_event(svc, event, data)
-                  if event in subscriptions.EVENTS else "ignored")
-        log.info("razorpay webhook %s -> %s", event, result)
-        return {"ok": True, "result": result}
     if event not in PAYMENT_EVENTS or not isinstance(payment, dict):
         return {"ok": True, "result": "ignored"}
     result = await settle(svc, payment)

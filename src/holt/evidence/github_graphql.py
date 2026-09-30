@@ -24,6 +24,7 @@ import time
 from collections import deque
 from collections.abc import Callable, Iterable, Iterator
 from concurrent.futures import Future, ThreadPoolExecutor
+from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 from typing import Any
 from urllib.parse import quote
@@ -65,10 +66,7 @@ MAX_RATE_LIMIT_WAIT_S = 60.0
 # on the record so a reader is never silently shown a partial quote.
 MAX_BODY_CHARS = 4000
 
-REPO_META = """
-query($owner:String!, $name:String!, $until:GitTimestamp!) {
-  rateLimit { cost remaining resetAt }
-  repository(owner:$owner, name:$name) {
+_REPO_FIELDS = """\
     createdAt pushedAt isArchived isMirror isFork stargazerCount
     hasPullRequestsEnabled pullRequestCreationPolicy
     description homepageUrl primaryLanguage { name }
@@ -86,6 +84,12 @@ query($owner:String!, $name:String!, $until:GitTimestamp!) {
     }
     forkCount licenseInfo { spdxId name } issues(states:OPEN) { totalCount }
     languages(first:3, orderBy:{field:SIZE, direction:DESC}) { totalSize edges { size node { name } } }
+"""
+REPO_META = """
+query($owner:String!, $name:String!, $until:GitTimestamp!) {
+  rateLimit { cost remaining resetAt }
+  repository(owner:$owner, name:$name) {
+""" + _REPO_FIELDS + """\
   }
 }
 """
@@ -122,19 +126,25 @@ DOC_CANDIDATES = {"readme": README_CANDIDATES, "contributing": CONTRIBUTING_CAND
                   "ai_policy": AI_POLICY_CANDIDATES}
 
 
-def docs_query(oid: str) -> tuple[str, dict[str, tuple[str, str]]]:
-    """A query asking for every candidate path, and alias -> (kind, path)."""
+def _doc_fields(rev: str) -> tuple[list[str], dict[str, tuple[str, str]]]:
+    """An aliased blob lookup per candidate path at `rev`, and alias -> (kind, path)."""
     aliases: dict[str, tuple[str, str]] = {}
     fields = []
     for kind, paths in DOC_CANDIDATES.items():
         for i, path in enumerate(paths):
             alias = f"{kind}{i}"
             aliases[alias] = (kind, path)
-            # oid is a hex sha and paths are our own constants: nothing here
-            # comes from the user, so interpolating is safe.
+            # rev is a hex sha or HEAD and paths are our own constants: nothing
+            # here comes from the user, so interpolating is safe.
             fields.append(
-                f'{alias}: object(expression:"{oid}:{path}") {{ ... on Blob {{ text }} }}'
+                f'{alias}: object(expression:"{rev}:{path}") {{ ... on Blob {{ text }} }}'
             )
+    return fields, aliases
+
+
+def docs_query(oid: str) -> tuple[str, dict[str, tuple[str, str]]]:
+    """A query asking for every candidate path, and alias -> (kind, path)."""
+    fields, aliases = _doc_fields(oid)
     document = (
         "query($owner:String!, $name:String!) {\n"
         "  rateLimit { cost remaining resetAt }\n"
@@ -143,6 +153,16 @@ def docs_query(oid: str) -> tuple[str, dict[str, tuple[str, str]]]:
         + "\n  }\n}\n"
     )
     return document, aliases
+
+
+def _found_docs(repo: dict[str, Any], aliases: dict[str, tuple[str, str]]) -> dict[str, Any]:
+    """`{"readme": {"text", "path"} | None, ...}`: the first candidate that exists."""
+    found: dict[str, Any] = {kind: None for kind in DOC_CANDIDATES}
+    for alias, (kind, path) in aliases.items():  # dicts keep candidate order
+        blob = repo.get(alias)
+        if found[kind] is None and blob and blob.get("text"):
+            found[kind] = {"text": blob["text"], "path": path}
+    return found
 
 
 # Date filtering happens server-side. Ordering by newest and paging until the
@@ -178,14 +198,7 @@ _PR_TIMELINE = """\
           }
         }
 """
-PR_SEARCH = """
-query($q:String!, $cursor:String) {
-  rateLimit { cost remaining resetAt }
-  search(query:$q, type:ISSUE, first:25, after:$cursor) {
-    issueCount
-    pageInfo { hasNextPage endCursor }
-    nodes {
-      ... on PullRequest {
+_PR_FIELDS = """\
         number title createdAt mergedAt closedAt merged
         additions deletions changedFiles isDraft authorAssociation
         author { login __typename }
@@ -198,21 +211,94 @@ query($q:String!, $cursor:String) {
         comments(first:30) {
           nodes { createdAt body authorAssociation author { login __typename } }
         }
-""" + _PR_TIMELINE + """\
+""" + _PR_TIMELINE
+PR_SEARCH = """
+query($q:String!, $cursor:String) {
+  rateLimit { cost remaining resetAt }
+  search(query:$q, type:ISSUE, first:25, after:$cursor) {
+    issueCount
+    pageInfo { hasNextPage endCursor }
+    nodes {
+      ... on PullRequest {
+""" + _PR_FIELDS + """\
       }
     }
   }
 }
 """
 PR_SEARCH_SCREEN = PR_SEARCH.replace(_PR_TIMELINE, "")
-PAGE_SIZE = 25  # PR_SEARCH's `first:25`
+# The sample's unit. A report keeps the newest `max_pages` x 25 pull requests,
+# and the settle-window read stops at a multiple of 25 read (`_settled`). These
+# were PR_SEARCH's page size; they stay the sample's boundaries whatever size
+# the pages are read in, so the evidence doesn't depend on it.
+PAGE_SIZE = 25
+
+# A full report reads its pages in PR_PAGE, whose size is a variable, 29 at a
+# time: 1 + 29 x 5 = 146 connections still rounds to one point, where 30 would
+# be 151 and two (measured with `rateLimit(dryRun:true)`). The newest 200 then
+# take 7 queries instead of 8, and the settle-window read a point less when it
+# runs long. The screen keeps PR_SEARCH_SCREEN's 25: its recorded runs replay
+# by query text.
+PR_PAGE = """
+query($q:String!, $cursor:String, $first:Int!) {
+  rateLimit { cost remaining resetAt }
+  search(query:$q, type:ISSUE, first:$first, after:$cursor) {
+    issueCount
+    pageInfo { hasNextPage endCursor }
+    nodes {
+      ... on PullRequest {
+""" + _PR_FIELDS + """\
+      }
+    }
+  }
+}
+"""
+FETCH_SIZE = 29
+
+# A report's first query: the repository facts, its docs at HEAD and the first
+# page of pull requests, together, for the point each of the three used to cost.
+# The facts add about six connections, so this page holds 28 (1 + 28 x 5 + 6 =
+# 147, one point; 29 measured two).
+#
+# The docs are asked for at HEAD because the cutoff commit isn't known until
+# this query answers. `LiveGitHubProvider` uses them only when HEAD is the
+# cutoff commit (`oid` below is HEAD's); otherwise, as on a read as of a past
+# date or after a push since the cutoff, it reads them at the cutoff commit as
+# before.
+OPENING_SIZE = 28
+# How recent a cutoff must be for the opening query to ask for the docs at HEAD.
+LIVE_WITHIN = timedelta(days=1)
+
+
+def opening_query(docs: bool) -> tuple[str, dict[str, tuple[str, str]]]:
+    """The first query of a full report, and its docs' alias -> (kind, path)."""
+    fields, aliases = _doc_fields("HEAD") if docs else ([], {})
+    repo_fields = _REPO_FIELDS.replace("... on Commit { history", "... on Commit { oid history")
+    document = (
+        "query($owner:String!, $name:String!, $until:GitTimestamp!, $q:String!, $first:Int!) {\n"
+        "  rateLimit { cost remaining resetAt }\n"
+        "  repository(owner:$owner, name:$name) {\n"
+        + repo_fields
+        + "".join(f"    {f}\n" for f in fields)
+        + "  }\n"
+        "  search(query:$q, type:ISSUE, first:$first) {\n"
+        "    issueCount\n"
+        "    pageInfo { hasNextPage endCursor }\n"
+        "    nodes {\n"
+        "      ... on PullRequest {\n"
+        + _PR_FIELDS
+        + "      }\n    }\n  }\n}\n"
+    )
+    return document, aliases
+
 
 # A pull request page takes GitHub three to five seconds to build, and a report
-# reads eight to sixteen of them: read one after another, they were nearly the
+# reads seven to fourteen of them: read one after another, they were nearly the
 # whole of a check's minute. GitHub's search cursors are page offsets
-# (`base64("cursor:25")` is the second page of 25), so once the first page
-# confirms that, the rest are asked for this many at a time. Bounded, because
-# GitHub asks clients not to hammer it with concurrent requests on one token.
+# (`base64("cursor:28")` is the page after the first 28), so once the first
+# page confirms that, the rest are asked for this many at a time. Bounded,
+# because GitHub asks clients not to hammer it with concurrent requests on one
+# token.
 PAGE_CONCURRENCY = 4
 
 
@@ -330,6 +416,16 @@ def _not_found_name(errors: list[dict[str, Any]]) -> str:
     return "that repository"
 
 
+@dataclass
+class Opening:
+    """What a report's first query read (`GitHubGraphQL.opening`)."""
+
+    meta: dict[str, Any]  # as `repo_meta` returns it, plus HEAD's oid
+    search: dict[str, Any] | None  # the first page of the pull request search
+    docs: dict[str, Any] | None  # as `docs_at` returns them, read at HEAD
+    head: str | None  # HEAD's commit, which `docs` were read at
+
+
 class GitHubGraphQL:
     """Thin transport. Knows about auth, retries, pagination and rate limits.
 
@@ -416,6 +512,12 @@ class GitHubGraphQL:
         if "RATE_LIMITED" in types:
             raise RateLimited(None)
         content = {k: v for k, v in (data or {}).items() if k != "rateLimit"}
+        # A report's opening query asks for a search beside the repository,
+        # and the search still answers (empty) when the repository is missing.
+        if content.get("repository", True) is None and any(
+            e.get("type") == "NOT_FOUND" and e.get("path") == ["repository"] for e in errors
+        ):
+            raise RepoNotFound(_not_found_name(errors))
         if errors and (not content or all(v is None for v in content.values())):
             if "NOT_FOUND" in types:
                 raise RepoNotFound(_not_found_name(errors))
@@ -450,12 +552,7 @@ class GitHubGraphQL:
         """
         document, aliases = docs_query(oid)
         repo = self.query(document, owner=owner, name=name).get("repository") or {}
-        found: dict[str, Any] = {kind: None for kind in DOC_CANDIDATES}
-        for alias, (kind, path) in aliases.items():  # dicts keep candidate order
-            blob = repo.get(alias)
-            if found[kind] is None and blob and blob.get("text"):
-                found[kind] = {"text": blob["text"], "path": path}
-        return found
+        return _found_docs(repo, aliases)
 
     def search_issues(self, q: str, max_pages: int = 6) -> Iterator[dict[str, Any]]:
         cursor: str | None = None
@@ -477,84 +574,130 @@ class GitHubGraphQL:
                 return
             cursor = page["endCursor"]
 
+    def opening(
+        self, owner: str, name: str, until: datetime, q: str, size: int, docs: bool,
+    ) -> Opening:
+        """A report's first query: facts, docs at HEAD and the first `size` pull
+        requests of search `q` (see OPENING_SIZE)."""
+        document, aliases = opening_query(docs)
+        data = self.query(document, timeout=HEAVY_TIMEOUT_S, owner=owner, name=name,
+                          until=until.isoformat(), q=q, first=size)
+        repo = data.get("repository")
+        if repo is None:
+            raise RepoNotFound(f"{owner}/{name}")
+        meta = {k: v for k, v in repo.items() if k not in aliases}
+        target = (meta.get("defaultBranchRef") or {}).get("target") or {}
+        return Opening(
+            meta=meta, search=data.get("search"),
+            docs=_found_docs(repo, aliases) if docs else None, head=target.get("oid"),
+        )
+
     def search_pull_requests(
         self, q: str, max_pages: int = 8, timeline: bool = True,
         wanted: Callable[[], int] | None = None, first: Future | None = None,
     ) -> Iterator[dict[str, Any]]:
-        """Pull request pages; `timeline=False` is the faster screening query.
+        """The first `max_pages` x PAGE_SIZE results of a pull request search.
 
-        The nodes come back in the order one-page-at-a-time paging would give
-        them, however many pages are in flight. `wanted`, asked after each page
-        is read, says how many more pages are worth asking for ahead of the
-        reader (by default, as many as PAGE_CONCURRENCY allows): a reader that
-        may stop early uses it to keep unread pages, each a point, to a few.
-        `first` is the first page already asked for, by `first_page`.
+        `timeline=False` is the faster screening query. The nodes come back in
+        the order one-page-at-a-time paging would give them, however many
+        pages are in flight and whatever size they are read in. `wanted`,
+        asked after each page is read, says how many more PAGE_SIZE steps are
+        worth asking for ahead of the reader (by default, as many pages as
+        PAGE_CONCURRENCY allows): a reader that may stop early uses it to keep
+        unread pages, each a point, to a few. `first` is the first page,
+        already asked for (by `first_page` or `opening`).
         """
-        document = PR_SEARCH if timeline else PR_SEARCH_SCREEN
-        for search in self._pages(document, q, max_pages, wanted, first):
-            yield from (n for n in search["nodes"] if n)
+        limit = max_pages * PAGE_SIZE
+        pages = (self._pages(PR_PAGE, q, limit, FETCH_SIZE, wanted, first) if timeline
+                 else self._pages(PR_SEARCH_SCREEN, q, limit, None, wanted, first))
+        for nodes in pages:
+            yield from (n for n in nodes if n)
 
     def first_page(self, q: str) -> Future:
         """Start reading a search's first page now, for `search_pull_requests(first=)`."""
-        return in_background(self._page, PR_SEARCH, q, None)
+        return in_background(self._page, PR_PAGE, q, None, FETCH_SIZE)
 
-    def _page(self, document: str, q: str, cursor: str | None) -> dict[str, Any]:
-        return self.query(document, timeout=HEAVY_TIMEOUT_S, q=q, cursor=cursor)["search"]
+    def _page(self, document: str, q: str, cursor: str | None,
+              first: int | None) -> dict[str, Any]:
+        sized = {} if first is None else {"first": first}
+        return self.query(
+            document, timeout=HEAVY_TIMEOUT_S, q=q, cursor=cursor, **sized
+        )["search"]
 
     def _pages(
-        self, document: str, q: str, max_pages: int, wanted: Callable[[], int] | None,
-        first: Future | None = None,
-    ) -> Iterator[dict[str, Any]]:
-        def page(cursor: str | None) -> dict[str, Any]:
-            return self._page(document, q, cursor)
+        self, document: str, q: str, limit: int, size: int | None,
+        wanted: Callable[[], int] | None, first: Future | None = None,
+    ) -> Iterator[list[dict[str, Any] | None]]:
+        """The search's results at offsets [0, limit), a page's nodes at a time.
 
-        head = first.result() if first is not None else page(None)
-        yield head
+        `size` is how many a page asks for (PR_PAGE's `$first`), or None for a
+        document whose size is fixed at PAGE_SIZE. The first page's size is
+        whatever was asked for; each page after it starts where the one before
+        ended, so the offsets read are the same for any sizes.
+        """
+        step = size or PAGE_SIZE
+
+        def page(start: int, cursor: str | None) -> dict[str, Any]:
+            return self._page(document, q, cursor, min(size, limit - start) if size else None)
+
+        head = first.result() if first is not None else page(0, None)
+        yield head["nodes"][:limit]
         info = head["pageInfo"]
-        if not info["hasNextPage"] or max_pages <= 1:
+        read = len(head["nodes"])
+        if not info["hasNextPage"] or read >= limit:
             return
-        read, cursor = 1, info["endCursor"]
-        if cursor == offset_cursor(PAGE_SIZE):
+        cursor = info["endCursor"]
+        if cursor == offset_cursor(read):
             # GitHub's count, when it has one, keeps a small repository from
             # being asked for pages it doesn't have. When the count runs short,
             # the paging below carries on from the last page.
             total = head.get("issueCount") or 0
-            planned = min(max_pages, max(2, math.ceil(total / PAGE_SIZE)))
-            offsets = deque(PAGE_SIZE * i for i in range(1, planned))
-            pending: deque[Future] = deque()
+            starts = deque(range(read, min(limit, max(total, read + 1)), step))
+            pending: deque[tuple[int, Future]] = deque()
             pool = ThreadPoolExecutor(PAGE_CONCURRENCY, thread_name_prefix="holt-page")
 
             def top_up() -> None:
-                ahead = PAGE_CONCURRENCY if wanted is None else wanted()
-                while offsets and len(pending) < max(1, min(PAGE_CONCURRENCY, ahead)):
+                ahead = (PAGE_CONCURRENCY if wanted is None
+                         else math.ceil(wanted() * PAGE_SIZE / step))
+                while starts and len(pending) < max(1, min(PAGE_CONCURRENCY, ahead)):
                     # Each page runs in a copy of the reader's context: the
                     # server stops a timed-out job through a context variable.
                     run = contextvars.copy_context().run
-                    pending.append(pool.submit(run, page, offset_cursor(offsets.popleft())))
+                    start = starts.popleft()
+                    pending.append((start, pool.submit(run, page, start, offset_cursor(start))))
 
             try:
                 top_up()
                 while pending:
-                    search = pending.popleft().result()
-                    read += 1
-                    yield search
-                    if not search["pageInfo"]["hasNextPage"]:
+                    start, future = pending.popleft()
+                    search = future.result()
+                    read = start + len(search["nodes"])
+                    yield search["nodes"][:limit - start]
+                    if not search["pageInfo"]["hasNextPage"] or read >= limit:
                         return
                     cursor = search["pageInfo"]["endCursor"]
                     top_up()
             finally:
                 # A reader that stopped early leaves pages not yet started.
-                for future in pending:
+                for _, future in pending:
                     future.cancel()
                 pool.shutdown(wait=False)
         # One at a time: cursors that aren't offsets, or pages past the count.
-        while read < max_pages:
-            search = page(cursor)
-            read += 1
-            yield search
+        while read < limit:
+            search = page(read, cursor)
+            if not search["nodes"]:
+                return
+            yield search["nodes"][:limit - read]
+            read += len(search["nodes"])
             if not search["pageInfo"]["hasNextPage"]:
                 return
             cursor = search["pageInfo"]["endCursor"]
+
+def done(value: Any) -> Future:
+    """A future that already holds `value`."""
+    future: Future = Future()
+    future.set_result(value)
+    return future
 
 
 def in_background(fn: Callable[..., Any], /, *args: Any) -> Future:
@@ -1058,32 +1201,41 @@ class LiveGitHubProvider(EvidenceProvider):
 
     def _fetch_raw(self, request: str, /, **params: object) -> Iterable[EvidenceRecord]:
         owner, _, name = request.partition("/")
-        meta = self.transport.repo_meta(owner, name, self.cutoff)
+        opening = self._open(owner, name, request)
+        meta = opening.meta if opening else self.transport.repo_meta(owner, name, self.cutoff)
         records: list[EvidenceRecord] = [project_repo_meta(request, meta)]
         records.extend(project_releases(request, meta))
 
         branch = meta.get("defaultBranchRef") or {}
         history = ((branch.get("target") or {}).get("history") or {}).get("nodes") or []
-        # The README and CONTRIBUTING are read while the pull requests are.
-        docs = (in_background(self.transport.docs_at, owner, name, history[0]["oid"])
-                if history else None)
+        # The README and CONTRIBUTING are read while the pull requests are,
+        # unless the opening query read them already at the same commit.
+        docs: Future | None = None
+        if history and opening and opening.docs is not None and opening.head == history[0]["oid"]:
+            docs = done(opening.docs)
+        elif history:
+            docs = in_background(self.transport.docs_at, owner, name, history[0]["oid"])
         # A search under a repository's old name finds nothing, although
         # GitHub answers the lookup above under either name and redirects its
         # pages: facebook/react-native, now react/react-native, read as a
         # project with no pull requests at all. So the search uses the name
-        # GitHub gives back. The evidence ids keep the name asked for, which
-        # is the one every caller looks them up by.
+        # GitHub gives back (and the opening's page, searched under the name
+        # asked for, is dropped when they differ). The evidence ids keep the
+        # name asked for, which is the one every caller looks them up by.
         home = meta.get("nameWithOwner") or request
         query = search_query(home, self.window, self.cutoff)
+        head = opening.search if opening and home == request else None
         nodes: list[dict[str, Any]] = []
         early: tuple[str, Future] | None = None
-        # The keyword only when screening, so a transport written before it
-        # existed (the tests have several) still serves full fetches.
-        for node in (
-            self.transport.search_pull_requests(query, self.max_pages)
-            if self.timeline
-            else self.transport.search_pull_requests(query, self.max_pages, timeline=False)
-        ):
+        # The keywords only when used, so a transport written before them
+        # (the tests have several) still serves full fetches.
+        if head is not None:
+            pages = self.transport.search_pull_requests(query, self.max_pages, first=done(head))
+        elif self.timeline:
+            pages = self.transport.search_pull_requests(query, self.max_pages)
+        else:
+            pages = self.transport.search_pull_requests(query, self.max_pages, timeline=False)
+        for node in pages:
             nodes.append(node)
             if len(nodes) == PAGE_SIZE:
                 early = self._settled_early(home, nodes)
@@ -1098,6 +1250,17 @@ class LiveGitHubProvider(EvidenceProvider):
         kept = [r for r in records if self._in_window(r)]
         self._seen.update({r.evidence_id: r for r in kept})
         return kept
+
+    def _open(self, owner: str, name: str, request: str) -> Opening | None:
+        """A full report's first query (see OPENING_SIZE), on the real transport."""
+        if not self.timeline or not isinstance(self.transport, GitHubGraphQL):
+            return None
+        return self.transport.opening(
+            owner, name, self.cutoff, search_query(request, self.window, self.cutoff),
+            min(OPENING_SIZE, self.max_pages * PAGE_SIZE),
+            # A cutoff in the past is rarely HEAD; don't fetch docs to drop them.
+            docs=self.cutoff >= datetime.now(UTC) - LIVE_WITHIN,
+        )
 
     def _settled_early(
         self, home: str, page: list[dict[str, Any]]
@@ -1143,11 +1306,11 @@ class LiveGitHubProvider(EvidenceProvider):
         start, read = have, 0
 
         def wanted() -> int:
-            """Pages still needed, at the rate the pages read so far found them."""
+            """PAGE_SIZE steps still needed, at the rate the ones read so far found them."""
             if have >= SETTLED_TARGET:
                 return 0
-            per_page = (have - start) / max(1, math.ceil(read / PAGE_SIZE))
-            return math.ceil((SETTLED_TARGET - have) / max(per_page, 1.0))
+            per_step = (have - start) / max(1.0, read / PAGE_SIZE)
+            return math.ceil((SETTLED_TARGET - have) / max(per_step, 1.0))
 
         # Only the real transport reads pages ahead; the tests' fakes predate it.
         ahead: dict[str, Any] = (

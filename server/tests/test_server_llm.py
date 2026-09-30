@@ -93,6 +93,9 @@ def test_a_cut_off_answer_raises_and_is_an_upstream_error(client):
     ("https://openrouter.ai/api/v1", "openrouter"),
     ("https://api.openai.com/v1", "openai"),
     ("https://generativelanguage.googleapis.com/v1beta/openai/", "gemini"),
+    ("https://holt.openai.azure.com/openai/v1/", "openai"),
+    ("https://holt.services.ai.azure.com/openai/v1/", "openai"),
+    ("https://holt.cognitiveservices.azure.com/openai/v1/", "openai"),
     (None, "openrouter"),
 ])
 def test_the_provider_is_read_from_the_endpoint(url, provider):

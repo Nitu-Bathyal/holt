@@ -31,12 +31,12 @@ CATALOGUE = {
     },
     "plans": {
         "free": {"name": "Free", "features": {}},
-        "pro": {"name": "Pro", "period_days": 30, "features": {
+        "pro": {"name": "Pro", "features": {
             "playbook": {"per_month": 2}, "recommendations": {"unlimited": True}}},
     },
-    "packs": {
-        "credits_10": {"name": "10 credits", "credits": 10},
-        "credits_5_90d": {"name": "5 credits", "credits": 5, "expires_days": 90},
+    "passes": {
+        "pro_1m": {"name": "1 month", "days": 30},
+        "pro_3m": {"name": "3 months", "days": 90},
     },
 }
 
@@ -125,13 +125,27 @@ def ai(h, repo: str, user: str):
 # --- the catalogue --------------------------------------------------------------------
 
 
-def test_the_shipped_catalogue_loads_with_nothing_on_sale_and_prices_tbd():
+def test_the_shipped_catalogue_sells_pro_passes_with_nothing_on_sale():
     cat = pricing.load()
-    assert cat.tbd and "free" in cat.plans and "ai_report" in cat.features
+    assert "free" in cat.plans and "ai_report" in cat.features
     assert cat.features["ai_report"].free_credits is True
-    for thing in (*cat.plans.values(), *cat.packs.values()):
-        assert thing.on_sale is False
-        assert thing.price.inr_paise is None and thing.price.usd_cents is None
+    assert set(cat.plans["pro"].features) == {"merge_plan", "pr_watch", "repo_watch",
+                                              "issue_watch"}
+    assert {pid: (p.days, p.price.inr_paise, p.price.usd_cents)
+            for pid, p in cat.passes.items()} == {
+        "pro_1m": (30, 9900, 700), "pro_3m": (90, 24900, 1500), "pro_12m": (365, 79900, 3900)}
+    assert not any(p.on_sale for p in cat.passes.values())
+    assert not any(cat.sold(f) for f in cat.features)
+
+
+def test_sold_means_a_pass_on_sale_unlocks_it():
+    raw = json.loads(json.dumps(CATALOGUE))
+    cat = pricing.Catalogue.model_validate(raw)
+    assert not cat.sold("playbook")
+    raw["passes"]["pro_1m"]["on_sale"] = True
+    cat = pricing.Catalogue.model_validate(raw)
+    assert cat.sold("playbook") and cat.sold("recommendations")
+    assert not cat.sold("ai_report") and not cat.sold("guidance")
 
 
 @pytest.mark.parametrize("change, error", [
@@ -139,7 +153,9 @@ def test_the_shipped_catalogue_loads_with_nothing_on_sale_and_prices_tbd():
     (lambda c: c["plans"]["pro"]["features"].update(nope={"unlimited": True}), "unknown"),
     (lambda c: c["plans"]["pro"]["features"].update(
         playbook={"per_month": 3, "unlimited": True}), "exactly one"),
-    (lambda c: c["packs"]["credits_10"].update(credits=0), "credits"),
+    (lambda c: c["passes"]["pro_1m"].update(days=0), "days"),
+    (lambda c: c["plans"].pop("pro"), "passes sell"),
+    (lambda c: c.update(packs={}), "packs"),
     (lambda c: c.update(surprise=1), "surprise"),
 ])
 def test_a_broken_catalogue_is_refused(tmp_path, change, error):
@@ -269,26 +285,6 @@ def test_concurrent_spends_across_both_pools_never_overdraw(hp):
     b = balance(hp, "race")
     assert (b["free"], b["purchased"]) == (0, 0)
     assert_ledger_matches(hp, "race")
-
-
-# --- purchases ------------------------------------------------------------------------
-
-
-def test_a_pack_purchase_is_added_once_per_payment(hp):
-    lot, added = call(hp, credits.purchase_pack, hp.svc, "buyer", "credits_10", "pay_1")
-    assert added and lot.granted == 10 and lot.expires_at is None
-    again, added = call(hp, credits.purchase_pack, hp.svc, "buyer", "credits_10", "pay_1")
-    assert not added and again.id == lot.id
-    with pytest.raises(ValueError, match="already used"):
-        call(hp, credits.purchase_pack, hp.svc, "someone", "credits_10", "pay_1")
-    with pytest.raises(ValueError, match="no pack"):
-        call(hp, credits.purchase_pack, hp.svc, "buyer", "nope", "pay_2")
-    lot, _ = call(hp, credits.purchase_pack, hp.svc, "buyer", "credits_5_90d", "pay_3")
-    assert timedelta(days=89) < lot.expires_at.replace(tzinfo=None) - now().replace(
-        tzinfo=None) <= timedelta(days=90)
-    assert balance(hp, "buyer")["purchased"] == 15
-    assert ledger(hp, "buyer").count(("purchase", "purchased", 10)) == 1
-    assert_ledger_matches(hp, "buyer")
 
 
 # --- plans and entitlements -----------------------------------------------------------
@@ -443,7 +439,7 @@ def test_admin_view_shows_balances_ledger_and_plans(hp):
     assert [(u["id"], u["free"], u["purchased"]) for u in listed] == [("v", 3, 2)]
     assert hp.get("/v1/admin/users/ghost", user=ADMIN).status_code == 404
     cat = hp.get("/v1/admin/pricing", user=ADMIN).json()
-    assert cat["tbd"] is True and set(cat["packs"]) == {"credits_10", "credits_5_90d"}
+    assert cat["tbd"] is True and set(cat["passes"]) == {"pro_1m", "pro_3m"}
 
 
 def test_me_reports_both_pools(hp):

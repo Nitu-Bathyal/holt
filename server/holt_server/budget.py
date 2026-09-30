@@ -141,9 +141,11 @@ async def start(svc: Services, job: Job) -> None:
         await s.commit()
 
 
-async def settle(s: AsyncSession, job_id: str, usd: float | None) -> None:
-    """Record what the job's run cost and give back the rest of its hold, in
-    the job's finishing transaction. `usd=None`: not known, keep the hold."""
+async def settle(s: AsyncSession, job_id: str, usd: float | None,
+                 model: str | None = None) -> None:
+    """Record what the job's run cost, and the model it ran on, and give back
+    the rest of its hold, in the job's finishing transaction. `usd=None`: not
+    known, keep the hold."""
     run = (await s.execute(
         select(AiRun).where(AiRun.job_id == job_id, AiRun.started_at.is_not(None),
                             AiRun.settled_at.is_(None))
@@ -153,7 +155,8 @@ async def settle(s: AsyncSession, job_id: str, usd: float | None) -> None:
     cost = run.reserved_micros if usd is None else to_micros(max(usd, 0.0))
     marked = await s.execute(
         update(AiRun).where(AiRun.id == run.id, AiRun.settled_at.is_(None))
-        .values(cost_micros=cost, estimated=usd is None, settled_at=now()))
+        .values(cost_micros=cost, estimated=usd is None, settled_at=now(),
+                model=model[:200] if model else None))
     if marked.rowcount != 1:
         return
     # Can go up as well as down: a run a little over its estimate is counted in full.
@@ -185,6 +188,26 @@ def pro_cost(body: dict[str, Any]) -> float | None:
             + int(usage.get("completion_tokens") or 0) * rates[1]) / MICROS
 
 
+def pro_model(body: dict[str, Any]) -> str | None:
+    """The model a service answer says it used, for `ai_runs.model`: the id
+    its usage was priced at, else the playbook's or the summary's model."""
+    usage = body.get("usage")
+    summary = body.get("summary")
+    for found in ((usage or {}).get("model") if isinstance(usage, dict) else None,
+                  body.get("model"),
+                  summary.get("model") if isinstance(summary, dict) else None):
+        if isinstance(found, str) and found:
+            return found
+    return None
+
+
+def note_pro(svc: Services, job_id: str, body: dict[str, Any]) -> None:
+    """Keep what a service answer cost and which model wrote it, for the
+    job's `settle`."""
+    svc.ai_costs[job_id] = pro_cost(body)
+    svc.ai_models[job_id] = pro_model(body)
+
+
 # --- one AI report's model calls ----------------------------------------------------------
 
 
@@ -202,6 +225,7 @@ class Capped:
 
     def __init__(self, inner: Any, model: str, limit: float) -> None:
         self.inner = inner
+        self.model = model
         self.limit = limit
         rates, _ = resolve_price(model)
         if rates is None:

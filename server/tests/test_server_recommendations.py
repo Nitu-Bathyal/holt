@@ -4,7 +4,10 @@ repo the user is already in, with reasons, and a free taste of the list."""
 
 from __future__ import annotations
 
+import json
 from datetime import timedelta
+
+import pytest
 
 from conftest import STATS, canned_report
 from holt.starter import RULES_VERSION
@@ -22,6 +25,21 @@ from holt_server.db import (
 )
 
 URL = "/v1/me/recommendations"
+
+# The shipped Pro doesn't cover recommendations (nothing sells them now), so
+# these tests bring a catalogue where it does.
+CATALOGUE = {
+    "features": {"recommendations": {"name": "Repository recommendations", "credits": None}},
+    "plans": {"free": {"name": "Free", "features": {}},
+              "pro": {"name": "Pro", "features": {"recommendations": {"unlimited": True}}}},
+}
+
+
+@pytest.fixture
+def h(make_harness, tmp_path):
+    path = tmp_path / "pricing.json"
+    path.write_text(json.dumps(CATALOGUE), encoding="utf-8")
+    return make_harness(HOLT_PRICING_FILE=str(path))
 
 
 def add(h, *items):

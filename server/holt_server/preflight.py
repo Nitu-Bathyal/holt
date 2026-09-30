@@ -213,7 +213,6 @@ def from_pro(repo: str, body: dict[str, Any]) -> dict[str, Any]:
             "why": str(similar.get("why") or ""),
         } if similar and similar.get("url") else None,
         "summary": {
-            "model": summary.get("model"),
             "sentences": [{"text": str(x.get("text")), "checks": [str(i) for i in x.get("checks") or []]}
                           for x in summary.get("sentences") or []
                           if isinstance(x, dict) and x.get("text")][:3],
@@ -263,7 +262,7 @@ async def run(svc: Services, job: Job, emit) -> dict[str, Any]:
                                       user_id=job.user_id, request_id=job.id)
     except pro.ProError as err:
         raise pro_failure(err, job.repo) from None
-    svc.ai_costs[job.id] = budget.pro_cost(body)
+    budget.note_pro(svc, job.id, body)
     try:
         result = from_pro(job.repo, body)
     except ValueError:  # pydantic's ValidationError included
@@ -313,11 +312,7 @@ async def active(svc: Services, key: str) -> Job | None:
 
 
 def on_sale(svc: Services) -> bool:
-    cat = entitlements.catalogue(svc)
-    spec = cat.features[FEATURE]
-    plan = any(p.on_sale and FEATURE in p.features for p in cat.plans.values())
-    pack = spec.credits is not None and any(p.on_sale for p in cat.packs.values())
-    return plan or pack
+    return entitlements.catalogue(svc).sold(FEATURE)
 
 
 async def job_state(svc: Services, job: Job) -> schema.PreflightJob:

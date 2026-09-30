@@ -1,7 +1,8 @@
 """GitHub access for the server: the token pool and a cheap repo lookup.
 
-Both go through the engine's own transport (`holt.evidence.github_graphql`),
-so retries, rate-limit handling and the typed errors are the engine's. The
+GraphQL goes through the engine's own transport (`holt.evidence.github_graphql`),
+so retries, rate-limit handling and the typed errors are the engine's; the
+lookup tries one REST request first, and falls back to GraphQL. The
 pool's transport (`PooledGraphQL`) also tells the pool what GitHub said about
 each token, so a dead or used-up token is skipped until it can work again.
 
@@ -21,6 +22,7 @@ import time
 from dataclasses import dataclass
 from datetime import datetime
 from typing import Any
+from urllib.parse import quote
 
 import httpx
 
@@ -37,6 +39,11 @@ query($owner:String!, $name:String!) {
   repository(owner:$owner, name:$name) { nameWithOwner isPrivate }
 }
 """
+# The same lookup over REST, which has a budget of its own: Holt reads GitHub
+# almost entirely through GraphQL, so this takes a GraphQL point off every
+# uncached report. GitHub redirects a renamed repository's old name here.
+REPO_URL = "https://api.github.com/repos/{owner}/{name}"
+REST_HEADERS = {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
 
 RATE_LIMIT = "query { rateLimit { remaining resetAt } }"
 
@@ -375,8 +382,9 @@ class RepoInfo:
 class GitHubLookup:
     """Checks a repository exists and returns GitHub's casing for its name.
 
-    One GraphQL point per call. Done before a job is queued, so a typo gets
-    `not_found` at once instead of a failed job a minute later.
+    One REST request per call (no GraphQL points). Done before a job is
+    queued, so a typo gets `not_found` at once instead of a failed job a minute
+    later.
     """
 
     def __init__(self, pool: TokenPool, http: httpx.Client) -> None:
@@ -389,9 +397,47 @@ class GitHubLookup:
         return await asyncio.to_thread(self._repo, repo)
 
     def _repo(self, repo: str) -> RepoInfo:
+        owner, _, name = repo.partition("/")
+        found = self._repo_rest(owner, name)
+        if found is None:
+            found = self._repo_graphql(repo, owner, name)
+        if not found or found.get("isPrivate"):
+            from holt_server.errors import not_found_repo
+
+            raise not_found_repo(repo)
+        return RepoInfo(name_with_owner=found["nameWithOwner"])
+
+    def _repo_rest(self, owner: str, name: str) -> dict[str, Any] | None:
+        """`{"nameWithOwner", "isPrivate"}`, `{}` when GitHub says there's no
+        such repository, or None when REST didn't answer (rate-limited, down,
+        or the token refused): then the GraphQL lookup decides."""
+        index, token = self.pool.lease()
+        try:
+            response = self.http.get(
+                REPO_URL.format(owner=quote(owner, safe=""), name=quote(name, safe="")),
+                headers={**REST_HEADERS, "Authorization": f"Bearer {token}"},
+                timeout=LOOKUP_TIMEOUT_S, follow_redirects=True)
+        except httpx.HTTPError as exc:
+            log.warning("REST repository lookup failed (%s); asking GraphQL", type(exc).__name__)
+            return None
+        if response.status_code == 404:
+            return {}
+        if response.status_code == 401:
+            self.pool.note_refused(index, "401 Unauthorized", token)
+        if response.status_code != 200:
+            log.warning("REST repository lookup answered %d; asking GraphQL",
+                        response.status_code)
+            return None
+        try:
+            body = response.json()
+            return {"nameWithOwner": body["full_name"], "isPrivate": bool(body.get("private"))}
+        except (ValueError, KeyError, TypeError):
+            log.warning("REST repository lookup sent an unexpected answer; asking GraphQL")
+            return None
+
+    def _repo_graphql(self, repo: str, owner: str, name: str) -> dict[str, Any] | None:
         from holt_server.engine import translate
 
-        owner, _, name = repo.partition("/")
         try:
             data = self.pool.transport(self.http).query(
                 LOOKUP, timeout=LOOKUP_TIMEOUT_S, owner=owner, name=name)
@@ -399,12 +445,7 @@ class GitHubLookup:
             raise
         except Exception as exc:  # noqa: BLE001
             raise translate(exc, repo) from exc
-        found = data.get("repository")
-        if not found or found.get("isPrivate"):
-            from holt_server.errors import not_found_repo
-
-            raise not_found_repo(repo)
-        return RepoInfo(name_with_owner=found["nameWithOwner"])
+        return data.get("repository")
 
     async def details(self, repos: list[str]) -> dict[str, dict[str, Any] | None]:
         """Description, language, stars, topics, last push and the rest of the

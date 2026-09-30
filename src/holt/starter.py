@@ -205,9 +205,13 @@ fragment LinkedPR on PullRequest {
 # (search, so label spelling is case-insensitive), and the most recently active
 # open issues, where unlabelled small fixes and odd label spellings turn up.
 # `mergers` is who merged recent pull requests: the team, even members whose
-# association reads CONTRIBUTOR to a token outside a private org.
+# association reads CONTRIBUTOR to a token outside a private org. `assigned` is
+# the open issues search says are assigned: GraphQL leaves an assignee whose
+# account GitHub hides out of `assignees`, but search still counts them. It
+# must be `assignee:*`: search ignores `-no:assignee` and `has:assignee` and
+# answers every open issue.
 REPO_ISSUES = ISSUE_FIELDS + """
-query($owner:String!, $name:String!, $q:String!) {
+query($owner:String!, $name:String!, $q:String!, $assigned:String!) {
   rateLimit { remaining resetAt }
   repository(owner:$owner, name:$name) {
     nameWithOwner isArchived
@@ -220,6 +224,9 @@ query($owner:String!, $name:String!, $q:String!) {
   }
   labelled: search(query:$q, type:ISSUE, first:50) {
     nodes { ...StarterFields }
+  }
+  assigned: search(query:$assigned, type:ISSUE, first:100) {
+    nodes { ... on Issue { number } }
   }
 }
 """
@@ -268,7 +275,7 @@ SOURCE_LABELS = ('"good first issue"', '"good-first-issue"', '"first-timers-only
 # Bump when a change alters which issues are listed, or their order, for the
 # same GitHub answer. The server stores it with every cached list and fetches
 # lists from older rules again instead of serving them.
-RULES_VERSION = 2
+RULES_VERSION = 3
 
 # Only issues touched this recently count as alive.
 ACTIVE_DAYS = 180
@@ -805,7 +812,9 @@ def _scored_issues(repo: str, transport: GitHubGraphQL, as_of: datetime, limit: 
     labels = ",".join(SEARCH_LABELS)
     q = (f"repo:{owner}/{name} is:issue is:open no:assignee label:{labels} "
          f"created:>{_oldest_issue_date(as_of)}")
-    data = transport.query(REPO_ISSUES, owner=owner, name=name, q=q)
+    data = transport.query(REPO_ISSUES, owner=owner, name=name, q=q,
+                           assigned=f"repo:{owner}/{name} is:issue is:open assignee:* "
+                                    "sort:updated-desc")
     repository = data.get("repository")
     if repository is None:  # the search half answered, so the base class did not raise
         raise RepoNotFound(f"{owner}/{name}")
@@ -813,8 +822,20 @@ def _scored_issues(repo: str, transport: GitHubGraphQL, as_of: datetime, limit: 
         return []
     nodes = [*((data.get("labelled") or {}).get("nodes") or []),
              *((repository.get("issues") or {}).get("nodes") or [])]
+    assigned = {n["number"] for n in (data.get("assigned") or {}).get("nodes") or []
+                if n and "number" in n}
+    nodes = [_hidden_assignee(n) if n and n.get("number") in assigned else n for n in nodes]
     return rank(nodes, as_of, landing=landing, hacktoberfest=hacktoberfest, limit=limit,
                 team={*team, *mergers(repository)})
+
+
+def _hidden_assignee(node: dict[str, Any]) -> dict[str, Any]:
+    """An issue search calls assigned whose `assignees` read empty: the assignee
+    is an account GitHub hides. Who they are and when they were assigned are
+    hidden too, so it reads as taken (`on_it`)."""
+    if (node.get("assignees") or {}).get("totalCount"):
+        return node
+    return {**node, "assignees": {"totalCount": 1, "nodes": []}}
 
 
 def mergers(repository: dict[str, Any]) -> set[str]:

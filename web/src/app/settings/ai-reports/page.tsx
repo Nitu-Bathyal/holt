@@ -2,9 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
-import { cancelSubscription, claimCredit, me, mySubscription, orders, packs, plans } from "@/lib/api";
+import { claimCredit, me, orders, passes } from "@/lib/api";
 import { shortDate } from "@/lib/format";
-import { canCancel, creditsLabel, formatPrice, STATUS_LABEL, subscriptionLabel, subscriptionLine } from "@/lib/payments";
+import { formatPrice, STATUS_LABEL } from "@/lib/payments";
 import { currentUser } from "@/lib/session";
 import { AI_SETTINGS } from "@/lib/settings";
 import { WELCOME_AI_CREDITS } from "@/lib/site";
@@ -23,26 +23,12 @@ async function claim() {
   redirect(r.ok ? `${AI_SETTINGS}?claimed=1` : r.error.code === "claim_not_ready" ? `${AI_SETTINGS}?error=early` : `${AI_SETTINGS}?error=claim`);
 }
 
-async function cancelPlan() {
-  "use server";
-  const user = await currentUser();
-  if (!user) redirect(`/signin?callbackUrl=${AI_SETTINGS}`);
-  const r = await cancelSubscription(user.id);
-  revalidatePath("/settings", "layout");
-  redirect(r.ok ? `${AI_SETTINGS}?cancelled=1#plan` : `${AI_SETTINGS}?error=cancel#plan`);
-}
-
 export default async function AiReportSettings({ searchParams }: PageProps<"/settings/ai-reports">) {
   const user = await currentUser();
   if (!user) redirect(`/signin?callbackUrl=${AI_SETTINGS}`);
   const sp = await searchParams;
-  const [account, bought, sale, subscription, monthly] = await Promise.all([
-    me(user.id), orders(user.id), packs(), mySubscription(user.id), plans(),
-  ]);
+  const [account, bought, sale] = await Promise.all([me(user.id), orders(user.id), passes()]);
   const m = account.ok ? account.data : null;
-  const sub = subscription.ok ? subscription.data.subscription : null;
-  const charges = subscription.ok ? subscription.data.charges : [];
-  const plansOnSale = monthly.ok && monthly.data.on_sale;
   const purchases = bought.ok ? bought.data.orders : [];
   const onSale = sale.ok && sale.data.on_sale;
   const c = m?.credits;
@@ -50,9 +36,6 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
 
   const notice: { tone: "good" | "bad"; text: string } | null =
     sp.claimed ? { tone: "good", text: "Claimed. One more free AI report is yours." }
-    : sp.subscribed ? { tone: "good", text: "Thanks! Your plan is below. It can take a minute to go active." }
-    : sp.cancelled ? { tone: "good", text: "Cancelled. You won't be charged again." }
-    : sp.error === "cancel" ? { tone: "bad", text: "That didn't cancel, and nothing changed. Try again in a minute." }
     : sp.error === "early" ? { tone: "bad", text: `Not yet. Your next free AI report is ready on ${nextClaim}.` }
     : sp.error ? { tone: "bad", text: "That didn't go through. Try again in a minute." }
     : null;
@@ -105,65 +88,20 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
       </details>
 
       <Block id="plan" title="Your plan" className="mt-10">
-        {!sub ? (
-          <p className="prose-sans text-[0.95rem]">
-            Free.{" "}
-            {plansOnSale ? <Link href="/pricing#plans" className="text-link">See paid plans</Link> : <Link href="/pricing" className="text-link">See pricing</Link>}.
-          </p>
-        ) : (
-          <>
-            <p className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-              <span className="text-[1.05rem] font-semibold">{sub.name}</span>
-              <span className="text-muted">{formatPrice(sub.amount, sub.currency)} a month</span>
-              <span className={`chip ${sub.status === "active" && !sub.cancel_at_period_end ? "border-green/60 text-green" : sub.status === "pending" ? "border-orange/60 text-orange" : "border-line-strong text-muted"}`}>
-                {subscriptionLabel(sub)}
-              </span>
-            </p>
-            <p className="prose-sans mt-2 text-[0.95rem]">{subscriptionLine(sub, m?.plan_expires_at ?? null)}</p>
-            {canCancel(sub) && (
-              <details className="mt-4 font-sans text-[0.9rem]">
-                <summary className="inline-flex min-h-11 cursor-pointer items-center text-muted hover:text-ink">Cancel plan</summary>
-                <div className="mt-1 border border-line p-4">
-                  <p>
-                    {sub.status === "active"
-                      ? `You won't be charged again, and you keep the plan until ${sub.paid_until ? shortDate(sub.paid_until) : "the end of this month"}.`
-                      : "The plan stops now and nothing more is charged."}
-                  </p>
-                  <form action={cancelPlan} className="mt-3">
-                    <button type="submit" className="btn-ghost">yes, cancel my plan</button>
-                  </form>
-                </div>
-              </details>
-            )}
-          </>
-        )}
-        {charges.length > 0 && (
-          <>
-            <h4 className="mt-6 text-[0.89rem] text-faint">Payments</h4>
-            <ul className="mt-2 divide-y divide-line border-y border-line">
-              {charges.map((ch) => (
-                <li key={ch.id} className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 py-3 text-[0.9rem]">
-                  <span className="min-w-0">
-                    <span className="font-semibold">{formatPrice(ch.amount, ch.currency)}</span>
-                    <span className="text-muted"> · {shortDate(ch.paid_at)}</span>
-                  </span>
-                  <span className={ch.status === "paid" ? "text-green" : "text-amber"}>
-                    {ch.status === "paid"
-                      ? ch.period_start && ch.period_end ? `${shortDate(ch.period_start)} to ${shortDate(ch.period_end)}` : "Paid"
-                      : "Being checked"}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
+        <p className="prose-sans text-[0.95rem]">
+          {m?.plan === "pro" ? (
+            <>Pro{m.plan_expires_at && <>, until {shortDate(m.plan_expires_at)}</>}.</>
+          ) : (
+            <>Free. <Link href="/pricing" className="text-link">See pricing</Link>.</>
+          )}
+        </p>
       </Block>
 
       {(purchases.length > 0 || onSale) && (
         <Block id="purchases" title="Purchases" className="mt-10">
           {purchases.length === 0 ? (
             <p className="prose-sans text-[0.95rem]">
-              Nothing bought yet. <Link href="/pricing#packs" className="text-link">See credit packs</Link>.
+              Nothing bought yet. <Link href="/pricing#passes" className="text-link">See Pro passes</Link>.
             </p>
           ) : (
             <ul className="divide-y divide-line border-b border-line">
@@ -174,14 +112,14 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
                     <span className="text-muted"> · {formatPrice(o.amount, o.currency)} · {shortDate(o.paid_at ?? o.created_at)}</span>
                   </span>
                   <span className={o.status === "paid" ? "text-green" : o.status === "held" ? "text-amber" : "text-muted"}>
-                    {o.status === "paid" ? `${creditsLabel(o.credits)} added` : STATUS_LABEL[o.status]}
+                    {STATUS_LABEL[o.status]}
                   </span>
                 </li>
               ))}
             </ul>
           )}
           {onSale && purchases.length > 0 && (
-            <p className="mt-4 text-[0.89rem]"><Link href="/pricing#packs" className="text-link">Buy more credits →</Link></p>
+            <p className="mt-4 text-[0.89rem]"><Link href="/pricing#passes" className="text-link">add another pass →</Link></p>
           )}
         </Block>
       )}
