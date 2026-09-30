@@ -169,6 +169,16 @@ const FIELD_LABELS: Record<string, string> = {
   prs_closed: "Who can open pull requests",
 };
 
+/** "Merged after review" for an engine outcome value. */
+export function outcomeLabel(value: string): string {
+  return OUTCOME_LABELS[value] ?? humanize(value);
+}
+
+/** "Contributor guide" for an engine field. */
+export function fieldLabel(kind: string): string {
+  return FIELD_LABELS[kind] ?? humanize(kind);
+}
+
 /**
  * Label and tone for an evidence item. Rules mode lists newcomer PRs as
  * kind "outsider_pr" (value "merged" | "no_reply"); AI mode uses "outcome"

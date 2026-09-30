@@ -5,9 +5,10 @@ import { PageHead } from "@/components/page-head";
 import { VerdictPill } from "@/components/report/verdict-pill";
 import { getReport } from "@/lib/api";
 import { compact } from "@/lib/discover";
-import { EXAMPLE_PATH, EXAMPLE_REPORT } from "@/lib/example-report";
+import { EXAMPLE_PATH } from "@/lib/example-report";
 import { EXAMPLES, EXAMPLES_PATH } from "@/lib/examples";
 import { HOME } from "@/lib/home";
+import { EXAMPLE_PLAN } from "@/lib/merge-plan";
 import { currentUser } from "@/lib/session";
 import type { Tone } from "@/lib/types";
 
@@ -33,7 +34,7 @@ interface Row {
 // starts no checks.
 export default async function ExamplesPage() {
   const [reports, user] = await Promise.all([Promise.all(EXAMPLES.map((e) => getReport(e.repo))), currentUser()]);
-  const aiRepo = EXAMPLES.find((e) => e.repo === EXAMPLE_REPORT.repo);
+  const aiRepo = EXAMPLES.find((e) => e.repo === EXAMPLE_PLAN.repo);
   const rows: Row[] = [
     ...EXAMPLES.map((e, i) => {
       const r = reports[i];
@@ -41,12 +42,12 @@ export default async function ExamplesPage() {
     }),
     {
       href: EXAMPLE_PATH,
-      repo: EXAMPLE_REPORT.repo,
+      repo: EXAMPLE_PLAN.repo,
       ai: true,
-      verdict: EXAMPLE_REPORT,
+      verdict: EXAMPLE_PLAN.verdict,
       language: aiRepo?.language,
       stars: aiRepo?.stars,
-      why: "The evidence in plain English, citing each thread.",
+      why: "A plan for your first pull request, citing the PRs behind each step.",
     },
   ];
 

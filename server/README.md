@@ -52,7 +52,7 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `HOLT_INTERNAL_KEY` | *(empty)* | Shared secret with `web/`. Every `/v1` request must send it as `X-Holt-Internal-Key`. Empty means every `/v1` request is refused. |
 | `HOLT_SECRET_KEY` | *(empty)* | Server secret for keyed hashes (usage counting). Use 32 random bytes, base64: `python -c "import os,base64;print(base64.b64encode(os.urandom(32)).decode())"`. |
 | `HOLT_WEB_URL` | `https://githolt.com` | The badge links to `{HOLT_WEB_URL}/{owner}/{repo}`. |
-| `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID` | *(empty)* | The Holt GitHub App and its installation on `holt-oss`. With these and a private key set, the server reads GitHub as the app: it signs a 9-minute JWT, trades it for an installation token, and fetches the next one 10 minutes before the hour is up (`holt_server/github_app.py`). `GITHUB_TOKENS` is then not used. Set all of them or none: a partial setup stops the server at startup. `python -m holt_server.github_app` prints the app, its points left and whether it can read public repositories, never a secret. Setup: [docs/ops/github-app.md](../docs/ops/github-app.md); why: [docs/adr/0001](../docs/adr/0001-read-github-as-a-github-app.md). |
+| `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID` | *(empty)* | The Holt GitHub App and its installation on `holt-oss`. With these and a private key set, the server reads GitHub as the app: it signs a 9-minute JWT, trades it for an installation token, and fetches the next one 10 minutes before the hour is up (`holt_server/github_app.py`). `GITHUB_TOKENS` is then not used. Set all of them or none: a partial setup stops the server at startup. `python -m holt_server.github_app` prints the app, its points left and whether it can read public repositories, never a secret. Setup and the reasons for an App are in the maintainers' ops notes. |
 | `GITHUB_APP_PRIVATE_KEY_FILE` | *(empty)* | Path to the app's `.pem` private key (in the deploys, mounted read-only). `GITHUB_APP_PRIVATE_KEY` takes the key itself instead, with `\n` for line breaks if it is on one line. Never logged. |
 | `GITHUB_TOKENS` | *(empty)* | Used when the GitHub App isn't set up. Comma-separated GitHub tokens, used round-robin, one per analysis. A token GitHub refuses is left out for 10 minutes, and one that is rate-limited or nearly used up (points left, read from every reply) until it resets; logs name tokens by position (`token #2`), or "the GitHub App", never by value. Read-only public access is enough (a fine-grained token with no extra permissions). |
 | `HOLT_PRO_URL` | *(empty)* | Base URL of the optional internal service that runs paid features (a separate program on the server's private network, e.g. `http://pro:8000`). Empty means paid features are off and answer "not available yet". At startup the server pings it once and logs one line, `holt-pro: ok at ...` or `holt-pro: not working at ...`; `python -m holt_server.pro` does the same on demand. |
@@ -86,17 +86,19 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `HOLT_STARTER_CACHE_HOURS` | `1` | How long starter issues per repository are served from the cache. |
 | `HOLT_BADGE_RATE_PER_IP` | `20` | Rules checks a single client can trigger per hour by loading badges (client = `CF-Connecting-IP`, else the socket address). |
 | `HOLT_BADGE_RATE_TOTAL` | `60` | The same, across all clients. |
-| `HOLT_BADGE_CONCURRENCY` | `1` | Background lane: workers of their own, on top of `HOLT_JOB_CONCURRENCY`, for badge refreshes and warm-pass jobs. They take a waiting person's job before any badge work. `0` turns badge and warm work off. |
+| `HOLT_BADGE_CONCURRENCY` | `1` (production: `3`) | Background lane: workers of their own, on top of `HOLT_JOB_CONCURRENCY`, for badge refreshes and warm-pass jobs. They take a waiting person's job before any badge work. `0` turns badge and warm work off. |
 | `HOLT_FIND_CACHE_HOURS` | `6` | How long a finished `/v1/find` search is served to anyone asking the same thing. |
 | `HOLT_WARM_INTERVAL_HOURS` | `0` (off) | Run a warm pass in the API process every N hours (one process at a time; Postgres advisory lock). Each pass also refreshes Discover's repository details (`repo_meta`) once a day, about one GraphQL point per hundred repos. |
 | `HOLT_CONTRIBUTIONS_REFRESH_HOURS` | `24` | Re-read connected users' public pull requests (My Contributions) every N hours in the API process; stops when GitHub points drop below `HOLT_WARM_MIN_POINTS`. `0` = off. |
 | `HOLT_WARM_SEEDS` | the list shipped in the package (`holt_server/seeds/repos.txt`) | The warm pass's seed list. |
 | `HOLT_WARM_MAX_AGE_HOURS` | `20` | A warm pass skips repos whose report is younger than this. |
-| `HOLT_WARM_MIN_POINTS` | `1500` | A warm pass stops when any GitHub token has fewer GraphQL points left. |
+| `HOLT_WARM_MIN_POINTS` | `1500` | A warm pass stops when any GitHub token has fewer GraphQL points left, counting 20 for each report still in flight. |
+| `HOLT_WARM_PARALLEL` | `3` | Report jobs a warm pass keeps in flight at once (`--parallel N` for one pass). They run in the background lane, so keep `HOLT_BADGE_CONCURRENCY` at least this. |
+| `HOLT_REFRESH_WEEKLY_HOURS`, `HOLT_REFRESH_MONTHLY_HOURS` | `168`, `720` | The refresh tiers' ages, as `deploy/prod/warm-refresh.sh` uses them. `warm --stale-only` reuses a snapshot up to its repo's tier age. |
 | `HOLT_MAX_PAGES` | `8` | Pull-request pages crawled per analysis (25 PRs a page). |
 | `HOLT_EVIDENCE_DIR` | empty (off) | Keep every report's evidence here, one gzipped file per report (`<owner>__<name>/<UTC time>.json.gz`, the shape of a golden recording). See [Evidence snapshots](#evidence-snapshots). |
 | `HOLT_EVIDENCE_KEEP_DAYS` | `0` (keep all) | Delete a repo's snapshots older than N days when it gets a new one; its newest always stays. |
-| `HOLT_EVIDENCE_REUSE_HOURS` | `168` | `warm --stale-only` makes an outdated report again from a snapshot younger than this, without GitHub. `0` = always read GitHub. |
+| `HOLT_EVIDENCE_REUSE_HOURS` | `168` | `warm --stale-only` makes an outdated report again from a snapshot younger than its repo's refresh tier (a week or a month), or than this if longer, without GitHub. `0` = always read GitHub. |
 | `HOST`, `PORT` | `127.0.0.1`, `8000` | Where `holt-server` listens. |
 | `LOG_LEVEL` | `INFO` | |
 
@@ -317,15 +319,34 @@ traffic mostly costs no GitHub quota at request time:
    Hacktoberfest (23 searches, 7-day budget). Reports go first because a find
    screens repositories through the report cache.
 
-Everything goes through the normal job queue at badge priority (user requests
-always run first; one warm job at a time) and the pass checks the GitHub
-points left before each step, stopping under `HOLT_WARM_MIN_POINTS`.
+Everything goes through the normal job queue at badge priority, so user
+requests always run first. The pass keeps `HOLT_WARM_PARALLEL` (3) report jobs
+in flight, queueing the next seed's as one finishes; starter issues ride along
+with each seed's report (one GraphQL query each), and repository details and
+finds stay one step at a time. Before every report job the pass checks the
+GitHub points left, less 20 for each report still in flight, and stops under
+`HOLT_WARM_MIN_POINTS` (the reports in flight finish first);
+`--wait-for-budget` waits for the points to come back instead, for a long
+sweep left on its own.
+
+Seeds that can't take outside work right now go last: their last report was
+decided by the repository being archived, closed to outside pull requests in
+GitHub's settings, or inactive, or `repo_meta` says archived or no push in 90
+days. A pass that runs out of budget has done the useful ones first. This
+reads only what Holt already has, never GitHub; the summary counts them.
 
 ```sh
-uv run python -m holt_server.warm --dry-run           # what would run
+uv run python -m holt_server.warm --dry-run           # what would run, and its GitHub points
 uv run python -m holt_server.warm                     # the whole thing
 uv run python -m holt_server.warm --limit 50 --no-find
 ```
+
+A report takes about 45 seconds, mostly waiting on GitHub, and about 12
+points on average, so three in flight do a cold sweep of the ~1,550 seeds in
+roughly 6–7 hours at about 2,900 points an hour (under GitHub's 5,000). With
+starter issues too, add about 5 points a seed, about 4,100 points an hour: the
+pass meets `HOLT_WARM_MIN_POINTS` within the hour, so run a long sweep with
+`--no-starter` or `--wait-for-budget`.
 
 Or set `HOLT_WARM_INTERVAL_HOURS` to run it inside the API on a schedule.
 
@@ -358,11 +379,13 @@ Size, measured on the 73 golden recordings: 123 KB a snapshot on average
 they are all read.
 
 `python -m holt_server.warm --stale-only` (after an `ENGINE_VERSION` bump)
-uses them: a repo whose newest snapshot is younger than
-`HOLT_EVIDENCE_REUSE_HOURS`, and not older than the report it replaces, gets
-its report made again from the snapshot in the warm process, with no GitHub
-call. The new report is dated like the evidence behind it, so the refresh
-tiers still see its real age. Otherwise the repo is read from GitHub as before.
+uses them: a repo whose newest snapshot is younger than its refresh tier (a
+week for repos someone saved or viewed lately, a month for the other seeds; at
+least `HOLT_EVIDENCE_REUSE_HOURS`), and not older than the report it replaces,
+gets its report made again from the snapshot in the warm process, with no
+GitHub call. The tier's age is how stale its report may get anyway. The new
+report is dated like the evidence behind it, so the refresh tiers still see
+its real age. Otherwise the repo is read from GitHub as before.
 
 **GitHub cost, measured** (GraphQL points; a token has 5,000 an hour): a rules
 report ~10 (up to ~20 for very busy repositories), starter issues ~5, a find

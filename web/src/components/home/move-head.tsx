@@ -1,4 +1,4 @@
-// The home's head (docs/design/DASHBOARD.md): the next move as one sentence
+// The home's head (the dashboard plan): the next move as one sentence
 // that lands word by word, the cat reacting to it, one fact, the one primary
 // action, and the loop with where you are lit.
 import { CatFace } from "@/components/cat-face";

@@ -1,6 +1,6 @@
 "use client";
 
-// A running check, printed as a log (docs/design/EXPRESSIVE.md, pattern 8):
+// A running check, printed as a log (the expressive design plan, pattern 8):
 // each stage Holt reaches prints a line, a finished one gets a tick and how
 // long it took, and the cat thinks while it works. The box keeps one height
 // from the start (the last six lines show), so nothing below it moves. Screen

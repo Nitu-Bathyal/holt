@@ -1,6 +1,7 @@
 # Holt documentation
 
-Start with the [README](../README.md). Everything else is here.
+Start with the [README](../README.md). Everything else is here. The
+maintainers' research, strategy, design and ops notes are kept privately.
 
 ## Using Holt
 
@@ -23,7 +24,6 @@ Start with the [README](../README.md). Everything else is here.
 | [../e2e/README.md](../e2e/README.md) | Playwright smoke tests against a deployed Holt |
 | [../deploy/README.md](../deploy/README.md) | Container images and the staging preview |
 | [RELEASING.md](RELEASING.md) | How a PyPI release is cut (maintainers) |
-| [ops/github-app.md](ops/github-app.md) | Setting up the GitHub App the server reads GitHub as (owner), checking it, undoing it |
 | [adr/](adr/) | Decisions and why, e.g. [0001: the server reads GitHub as a GitHub App](adr/0001-read-github-as-a-github-app.md) |
 | [../GOVERNANCE.md](../GOVERNANCE.md), [../SECURITY.md](../SECURITY.md), [../CODE_OF_CONDUCT.md](../CODE_OF_CONDUCT.md) | How the project is run |
 
@@ -32,25 +32,13 @@ Start with the [README](../README.md). Everything else is here.
 | Page | What it is for |
 |---|---|
 | [DESIGN.md](DESIGN.md) | Why the verdict is a pipeline of rules and not a prompt |
-| [research/REVIEW-2026-09-30.md](research/REVIEW-2026-09-30.md) | The verdict rules in plain English, the evidence for each threshold, and the 30 Sep go/no-go review |
-| [research/BACKTEST.md](research/BACKTEST.md) | The backtest: the engine's answer on a past date against what happened to the outside PRs that came next, and its first results |
 | [research/EVALUATION.md](research/EVALUATION.md) | How the competition benchmark was built (retired as a gate), the numbers, and what they depend on |
-| [research/GH-ARCHIVE.md](research/GH-ARCHIVE.md) | Can GH Archive backfill PR history for free? Yes before May 2025, no after; what it would cost |
-| [research/github-app-vs-machine-user.md](research/github-app-vs-machine-user.md) | GitHub's docs on App installation tokens vs a machine user: rate limits, public reads, terms |
 | [research/REPRODUCTION.md](research/REPRODUCTION.md) | Reproduce every published number from a clone, with no key and no spend |
-| [research/LIVE-AI-TEST-2026-09-28.md](research/LIVE-AI-TEST-2026-09-28.md) | First run of every AI feature on a real model: honesty checks, cost and latency, fixes |
 | [../golden/README.md](../golden/README.md) | The golden set: 62 recorded repositories, the engine's approved answer on each, and the before/after table every engine change is checked with |
 | [../eval/](../eval/) | The benchmark itself: pools, labels, recorded runs and their pre-registration notes |
 
-## Plans and drafts
+## Hacktoberfest
 
 | Page | What it is for |
 |---|---|
-| [launch/posts.md](launch/posts.md) | Launch post drafts |
 | [launch/good-first-issues.md](launch/good-first-issues.md) | Issues to open for Hacktoberfest |
-| [design/MOTION.md](design/MOTION.md) | The web app's motion and loading plan |
-| [design/EXPRESSIVE.md](design/EXPRESSIVE.md) | Expressive Holt: motion and scale patterns, and their rollout |
-| [design/VOICE.md](design/VOICE.md) | How the site sounds: voice, do/don't lines, words we use and avoid |
-| [design/SIGNED-IN-HOME.md](design/SIGNED-IN-HOME.md) | Where sign-in lands and what the signed-in home (`/me`) shows |
-| [design/DASHBOARD.md](design/DASHBOARD.md) | The signed-in app: the audit, what similar tools do, five places, one visual system, and the rollout |
-| [strategy/BUSINESS.md](strategy/BUSINESS.md) | Costs, pricing and the break-even plan |

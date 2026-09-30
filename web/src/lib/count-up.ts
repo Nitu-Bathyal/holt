@@ -1,4 +1,4 @@
-// Numbers that count into place (docs/design/EXPRESSIVE.md, patterns 4 and 11).
+// Numbers that count into place (the expressive design plan, patterns 4 and 11).
 // A stat's text ("3 of 12", "58%", "2.5 days") splits into words and numbers;
 // each number counts from zero, keeping the decimals its final value shows.
 

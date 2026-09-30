@@ -1,5 +1,5 @@
 // The app shell's page parts, so every signed-in page reads as one product
-// (docs/design/DASHBOARD.md): one frame (`.app-page`: same left edge and
+// (the dashboard plan): one frame (`.app-page`: same left edge and
 // width everywhere), a page head in the landing's display type with the cat
 // reacting on the right, and a section heading with one quiet link.
 import Link from "next/link";
@@ -23,7 +23,7 @@ export function AppPageHeader({ title, lead, mood, children }: { title: React.Re
 
 /**
  * Nothing to show: the cat, one sentence, and the one next thing to do
- * (DASHBOARD.md, "Empty states"). The first action is the loud one; any
+ * (the dashboard plan, "Empty states"). The first action is the loud one; any
  * others should be quiet text links. The cat lands once (globals.css).
  */
 export function EmptyState({ title, mood = "thinking", children }: { title: React.ReactNode; mood?: CatMood; children?: React.ReactNode }) {

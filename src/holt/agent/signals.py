@@ -320,7 +320,7 @@ class Signals:
     # closed, or still open after FIRST_PR_OPEN_DAYS), and how many were merged. The question a reader has is "will *my* pull request get
     # in?", and they send one. Counted per pull request, one prolific author
     # weighs as much as twenty people who each tried once. The backtest
-    # (docs/research/BACKTEST.md) found this share predicts what happens to
+    # (the maintainers' backtest notes) found this share predicts what happens to
     # the next newcomers better than any per-pull-request rate.
     first_pr_people: int = 0
     first_pr_merged: int = 0
@@ -377,7 +377,7 @@ class Signals:
 # are still open and will land, and counting them as failures read kubernetes
 # at 12% of newcomers merged when 49% of the next ones got in. Leaving them out
 # until 60 days made the rate predict the next newcomers better on both
-# backtest dates (docs/research/BACKTEST.md); 30 and 45 days did nearly as well.
+# backtest dates (the maintainers' backtest notes); 30 and 45 days did nearly as well.
 FIRST_PR_OPEN_DAYS = 60
 
 

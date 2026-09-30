@@ -71,7 +71,7 @@ What they check:
   failure names the elements that stick out), the viewport meta is
   device-width, and on desktop the OPEN / SOURCE band moves as you scroll.
 - `/`, `/pallets/flask`, `/find`, `/pricing` and `/how-it-works` log no console errors.
-- Motion (`tests/motion.spec.ts`, see `docs/design/MOTION.md`): no layout
+- Motion (`tests/motion.spec.ts`, see the motion plan): no layout
   shift on `/`, `/pallets/flask`, `/find?go=1…` and `/pricing`, cold and
   after a client navigation; a slow page (its response held 600ms) shows the
   loading skeleton and keeps it at least 300ms; a fast one (server under

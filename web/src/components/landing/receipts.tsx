@@ -1,6 +1,6 @@
 "use client";
 
-// Landing section 05, "read the receipts" (docs/design/EXPRESSIVE.md pattern
+// Landing section 05, "read the receipts" (the expressive design plan pattern
 // 6). Both threads say "closed" on GitHub; a highlighter in the verdict's
 // colour runs under the words that decide it as you scroll past, the thread's
 // bar draws and Holt's reading nudges in. Tied to scroll where the browser has

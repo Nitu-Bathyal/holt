@@ -9,11 +9,16 @@
 #                                       re-run only reports an older engine made
 #                                       (from kept evidence where it is fresh)
 #   deploy/prod/warm.sh --tier weekly   one refresh tier (warm-refresh.sh runs both)
+#   deploy/prod/warm.sh --no-find --wait-for-budget
+#                                       a long sweep: when GitHub points run low,
+#                                       wait for them instead of stopping
 #   deploy/prod/warm.sh --logs          follow the running pass
 #   deploy/prod/warm.sh --status        is it running? last lines
 #
-# Jobs go through the normal queue at badge priority, one at a time
-# (HOLT_BADGE_CONCURRENCY=1 in the server), so user requests always run first.
+# Jobs go through the normal queue at badge priority, HOLT_WARM_PARALLEL (3)
+# in flight at once (--parallel N to change it), so user requests always run
+# first. Only one pass runs at a time (the pass's advisory lock), so a pass
+# started by an older deploy keeps going until it ends or is stopped.
 # Run it after the first deploy (an empty cache) and after a long outage.
 set -euo pipefail
 here="$(cd "$(dirname "$0")" && pwd)"

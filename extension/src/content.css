@@ -76,7 +76,7 @@ a.holt-chip[data-holt-state="loading"] .holt-chip__dot {
   margin-right: 6px;
 }
 
-/* Loading: a skeleton chip (docs/design/MOTION.md §4). The label and stat keep
+/* Loading: a skeleton chip (the motion plan §4). The label and stat keep
    their real text ("Holt · checking…") but show as flat blocks, so the pill has
    the width and height of a real chip, and the swap to the verdict never moves
    the title row. Text stays readable to assistive tech. */

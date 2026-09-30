@@ -16,7 +16,7 @@ pause it, and `deploy.sh` still works by hand.
 | `install-follow.sh` | One-time: the timer that runs `follow.sh` every 2 minutes (`--remove` takes it out). |
 | `deploy.sh` | One deploy: build main's images, migrate, swap, health-check, roll back on failure, prune only this stack's images, stop the builder container. |
 | `env.sh` | Sourced by `deploy.sh` and `warm.sh`: state paths, `secrets.env`, the GitHub App's settings and the GitHub token fallback (`load_prod_env`); makes the evidence directory. |
-| `github-app.sh` | Who production reads GitHub as (the GitHub App or `GITHUB_TOKENS`), its points left, and a test read of a public repository. Prints no secret. See [docs/ops/github-app.md](../../docs/ops/github-app.md). |
+| `github-app.sh` | Who production reads GitHub as (the GitHub App or `GITHUB_TOKENS`), its points left, and a test read of a public repository. Prints no secret. Setup is in the maintainers' ops notes. |
 | `make-env.sh` | Writes `~/.local/share/holt-prod/.env` once: fresh `AUTH_SECRET`, `HOLT_INTERNAL_KEY`, `HOLT_SECRET_KEY`, db password. Nothing shared with staging. |
 | `install.sh` | One-time: the env file plus the nightly backup timer and the daily repo-details timer; writes the report refresh timer, off until `--refresh-on`. The deploy timer is `install-follow.sh`. |
 | `backup.sh` | `pg_dump` of both databases to `~/backups/holt/<stamp>/`, keeps 14 days. |
@@ -56,7 +56,7 @@ lines, `chmod 600`), read by `deploy.sh` and `warm.sh` on every run (`env.sh`) a
 | `GOOGLE_OAUTH_ID`, `GOOGLE_OAUTH_SECRET` | `AUTH_GOOGLE_ID/SECRET` | Google sign-in shows "isn't set up here" |
 | `OPENROUTER_API_KEY` | the same | AI reports answer `needs_key`; BYOK still works |
 | `HOLT_PROD_AI_BUDGET_USD`, `HOLT_PROD_AI_BUDGET_OWNER_OK` | `HOLT_AI_BUDGET_USD`, `HOLT_AI_BUDGET_OWNER_OK` | AI is off (budget 0), whatever key is set. A budget without `HOLT_PROD_AI_BUDGET_OWNER_OK=1` stops the deploy, and the server ignores one without `HOLT_AI_BUDGET_OWNER_OK`. `HOLT_AI_BUDGET_USD` itself (staging's) is never read here. See `server/README.md`, "AI budget" |
-| `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID`, `GITHUB_APP_PRIVATE_KEY_FILE` | the same; the key file (a host path, `chmod 640`) is mounted read-only at `/run/secrets/github_app_key` | the server reads with `GITHUB_TOKENS`. With all three set, it reads as the GitHub App and `GITHUB_TOKENS` is not used; with only some, the run stops. Setup and rollback: [docs/ops/github-app.md](../../docs/ops/github-app.md) |
+| `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID`, `GITHUB_APP_PRIVATE_KEY_FILE` | the same; the key file (a host path, `chmod 640`) is mounted read-only at `/run/secrets/github_app_key` | the server reads with `GITHUB_TOKENS`. With all three set, it reads as the GitHub App and `GITHUB_TOKENS` is not used; with only some, the run stops. Setup and rollback are in the maintainers' ops notes. |
 | `GITHUB_TOKENS` | the same | falls back to `gh auth token`; with neither (and no GitHub App), the run stops (the server would have no API budget and a warm pass would end at "points left 0") |
 | `CONTACT_EMAIL`, `CONTACT_CITY` | `NEXT_PUBLIC_CONTACT_EMAIL/CITY` (build arg and env) | **the deploy stops**: the policy pages must not show placeholders |
 
@@ -316,15 +316,25 @@ so keep `.env` with the backups (it is not in them).
 
 Production starts with an empty cache. `deploy/prod/warm.sh` runs
 `python -m holt_server.warm` in a detached container (`holt-prod-warm`) with
-the server's environment; jobs go through the queue at badge priority, one
-at a time, so people's requests always run first. Costs roughly 5,000 to
-10,000 GitHub GraphQL points (about two token-hours); it stops by itself
-under `HOLT_WARM_MIN_POINTS` and picks up where it left off next time.
+the server's environment; jobs go through the queue at badge priority,
+`HOLT_WARM_PARALLEL` (3) in flight at once, so people's requests always run
+first. Seeds that are closed to outside pull requests or dormant go last. A
+report costs about 12 GitHub GraphQL points, so a cold sweep of the ~1,550
+seeds is about 19,000 points over 6–7 hours. It stops by itself under
+`HOLT_WARM_MIN_POINTS` (counting the reports in flight) and picks up where it
+left off next time; with `--wait-for-budget` it waits for the points to come
+back instead.
 
 ```sh
 deploy/prod/warm.sh --dry-run
-deploy/prod/warm.sh                 # then --status or --logs
+deploy/prod/warm.sh --no-find --wait-for-budget   # then --status or --logs
 ```
+
+Only one pass runs at a time (an advisory lock, and `warm.sh` checks for the
+container). A deploy doesn't touch a running pass unless the engine changed:
+it keeps its old image and settings until it ends. To restart it on the new
+image, `docker stop holt-prod-warm` (a report it was running is queued again
+and finished by the server), then `warm.sh` again.
 
 **After a deploy that changes the engine** (`ENGINE_VERSION` in
 `src/holt/engine_version.py` went up), every stored report from the old
@@ -339,8 +349,10 @@ deploy/prod/warm.sh --dry-run --stale-only   # "would analyse …" / "would make
 deploy/prod/warm.sh --stale-only             # then --status or --logs
 ```
 
-A seed whose evidence was kept in the last `HOLT_EVIDENCE_REUSE_HOURS` (168)
-is made again from that snapshot, with no GitHub points; the summary line
+A seed whose evidence was kept within its refresh tier's age (a week for repos
+someone saved or viewed lately, a month for the rest; at least
+`HOLT_EVIDENCE_REUSE_HOURS`, 168) is made again from that snapshot, with no
+GitHub points; the summary line
 counts them ("N made again from kept evidence"). The rest are read from
 GitHub as before.
 

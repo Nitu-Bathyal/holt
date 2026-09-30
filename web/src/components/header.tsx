@@ -1,4 +1,4 @@
-// The two top bars (docs/design/SIGNED-IN-HOME.md). The marketing header
+// The two top bars (the signed-in home plan). The marketing header
 // jumps between the landing page's sections; the app top bar is the logo, a
 // repo box, the theme and your account, with the sidebar doing the rest.
 import Link from "next/link";

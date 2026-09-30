@@ -28,7 +28,7 @@ beginners (college students first). Every change should be judged by
 | `e2e/` | Playwright smoke tests against a deployed Holt (staging by default) — `e2e/README.md` | TypeScript |
 | `deploy/` | Dockerfiles and the staging preview stack — `deploy/README.md` | |
 | `website/` | Legacy static landing page. Still serves the live site until `web/` launches; don't extend it. | |
-| `docs/` | All documentation; `docs/README.md` is the index. `docs/research/` holds the evaluation and reproduction guides. | |
+| `docs/` | User and contributor documentation; `docs/README.md` is the index. `docs/research/` holds only the published benchmark's evaluation and reproduction guides. Research, strategy, design and ops notes go in `holt-pro/docs/`. | |
 | `eval/`, `fixtures/`, `trajectories/`, `scripts/` | Research/benchmark material from the competition. Large. Don't touch unless the task is about evaluation. | |
 | `golden/` | The golden set: ~50 recorded repos and the engine's approved verdict on each. Engine changes must show and approve their diff (`uv run python -m golden diff`) — `golden/README.md` | |
 | `tests/` | pytest suite (runs from fixtures, no network) | |
@@ -61,6 +61,8 @@ Server: see `server/README.md`. Extension: `cd extension && npm ci && npm test`.
   thresholds they read, or the report's fields and wording). The server then
   stops serving reports from the old engine; the auto-deploy then starts
   `warm.sh --stale-only` by itself (`deploy/prod/README.md`).
+- Research, strategy, design and ops notes go in the private repo's `docs/`
+  (`holt-oss/holt-pro`), never here; code comments name them without linking.
 - Holt is read-only toward GitHub. It never posts, opens PRs, or contacts anyone.
 - User-facing text is plain English for beginners. No internal enum names
   (`not_viable`), no statistics jargon (MCC, p-values) in product output.
