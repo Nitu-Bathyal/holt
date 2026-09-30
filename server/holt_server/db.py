@@ -628,6 +628,10 @@ class RepoMeta(Base):
     fork_of: Mapped[str | None] = mapped_column(String(200), nullable=True)
     # The README's first sentence (holt/about.py), not the README.
     readme_line: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # Where a newcomer finds help (0024): [{"kind": "contributing", "url": …}, …].
+    links: Mapped[list | None] = mapped_column(JSON, nullable=True)
+    # {"tag", "published_at", "url"} of GitHub's latest release, or null.
+    latest_release: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     fetched_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
