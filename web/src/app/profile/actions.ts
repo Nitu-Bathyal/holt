@@ -72,6 +72,27 @@ export async function saveStep(p: Prefs): Promise<{ ok: true } | { ok: false; ad
   return { ok: false, adult: r.status === 400 && r.error.message.includes("18") };
 }
 
+/**
+ * "save as my profile" on /find: the picks become the profile, so later
+ * visits start from them. Only for people who already have a profile (the
+ * 18+ box was ticked then); `adult` says the API still wants it.
+ */
+export async function saveFromFind(p: Pick<Prefs, "languages" | "topics" | "days" | "level" | "contributions">): Promise<{ ok: true } | { ok: false; adult: boolean }> {
+  const user = await currentUser();
+  if (!user) return { ok: false, adult: false };
+  // Through the profile form's own cleaning, so only valid values reach the API.
+  const form = new FormData();
+  for (const l of p.languages) form.append("lang", l);
+  form.set("topics", p.topics.join(","));
+  form.set("days", String(p.days));
+  form.set("level", p.level);
+  for (const c of p.contributions) form.append("type", c);
+  const r = await saveProfile(user.id, { ...fromForm(form), adult_confirmed: false });
+  if (!r.ok) return { ok: false, adult: r.status === 400 && r.error.message.includes("18") };
+  revalidatePath("/", "layout");
+  return { ok: true };
+}
+
 /** The end of the flow: the picks on /find start from the profile now, then on to the picks. */
 export async function finish() {
   revalidatePath("/", "layout");
