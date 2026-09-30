@@ -1180,6 +1180,9 @@ class Access(Model):
     # When not allowed: the error the request would get.
     code: str | None
     message: str | None
+    # The plan's allowance left, monthly or in all (the free merge plans);
+    # null when unlimited or the plan has none.
+    left: int | None = None
 
 
 class Entitlements(Model):
@@ -1619,6 +1622,201 @@ class PlaybookJobStatus(Model):
     stage: str | None = None
     progress: float
     playbook: Playbook | None
+    error: Error | None
+
+
+# --- Merge plan (merge_plan.py) -----------------------------------------------------
+#
+# The paid AI report: what to do in one repository, written by the
+# paid-features service from this server's report and starter issues. Rules
+# build it; a model words the call and the steps, and every claim it makes is
+# checked against its sources. The verdict is the report's, never the model's,
+# and no field names the model.
+
+
+class PlanNumber(Model):
+    value: str  # "5 of 8", "4.4 h"
+    label: str
+
+
+class PlanVerdict(Model):
+    """The report's verdict, with its numbers."""
+
+    verdict: Verdict
+    headline: str
+    tone: Tone
+    line: str
+    numbers: list[PlanNumber] = Field(default_factory=list)
+
+
+class PlanCall(Model):
+    """What to do here, in one sentence (may contain Markdown code spans)."""
+
+    text: str
+    sources: list[PlaybookSource] = Field(default_factory=list)
+
+
+class PlanLink(Model):
+    label: str
+    url: str
+
+
+class PlanCopy(Model):
+    """A comment to post on GitHub, as written."""
+
+    label: str
+    text: str
+
+
+class PlanStep(Model):
+    title: str  # may contain Markdown code spans
+    detail: str | None = None
+    link: PlanLink | None = None
+    copy_: PlanCopy | None = Field(None, alias="copy")
+    sources: list[PlaybookSource] = Field(default_factory=list)
+
+    model_config = ConfigDict(extra="ignore", json_schema_serialization_defaults_required=True,
+                              populate_by_name=True, serialize_by_alias=True)
+
+
+class PlanFact(Model):
+    """One thing merged pull requests have in common ("72 lines")."""
+
+    value: str
+    unit: str
+    label: str  # may contain Markdown code spans
+    seen: int | None = None
+    of: int | None = None
+    sources: list[PlaybookSource] = Field(default_factory=list)
+
+
+class PlanQuote(Model):
+    text: str
+    # The project member who wrote it.
+    who: str
+    url: str
+    number: int
+
+
+class PlanExample(Model):
+    number: int
+    url: str
+
+
+class PlanClosing(Model):
+    """Why outside pull requests get closed, in the maintainers' words."""
+
+    reason: str
+    seen: int
+    of: int
+    quote: PlanQuote | None = None
+    examples: list[PlanExample] = Field(default_factory=list)
+
+
+class PlanReviewer(Model):
+    login: str
+    reviewed: int
+    of: int
+    # The folders they review most.
+    areas: list[str] = Field(default_factory=list)
+
+
+class PlanReviewers(Model):
+    people: list[PlanReviewer] = Field(default_factory=list)
+    sources: list[PlaybookSource] = Field(default_factory=list)
+
+
+class PlanSignal(Model):
+    kind: str  # outsider_posture | onboarding | repo_kind
+    value: str
+    headline: str
+    text: str
+    tone: Tone
+    url: str | None = None
+
+
+class PlanOutcome(Model):
+    value: str  # the engine's outcome value, for the web to word
+    count: int
+
+
+class PlanThreadQuote(Model):
+    text: str
+    url: str
+    number: int
+    outcome: str
+
+
+class PlanAi(Model):
+    """What the AI found reading the pull request threads (from an AI report)."""
+
+    read_on: str
+    threads: int
+    signals: list[PlanSignal] = Field(default_factory=list)
+    outcomes: list[PlanOutcome] = Field(default_factory=list)
+    quotes: list[PlanThreadQuote] = Field(default_factory=list)
+
+
+class PlanWindow(Model):
+    # The window asked for, and the day the oldest pull request the counts
+    # read was opened (say "since" with this date, never with `days`).
+    days: int
+    since: str
+
+
+class PlanSample(Model):
+    merged: int
+    closed: int
+    merged_outside: int
+    closed_outside: int
+
+
+class MergePlan(Model):
+    repo: str
+    # When the pull requests were read from GitHub, and when the plan was written.
+    recorded_on: str
+    generated_at: str
+    window: PlanWindow
+    sample: PlanSample
+    # Say once, near the top, when present.
+    note: str | None = None
+    verdict: PlanVerdict
+    call: PlanCall
+    steps: list[PlanStep] = Field(default_factory=list)
+    merged: list[PlanFact] = Field(default_factory=list)
+    closed: list[PlanClosing] = Field(default_factory=list)
+    reviewers: PlanReviewers = Field(default_factory=PlanReviewers)
+    # Null unless the plan was written from an AI report.
+    ai: PlanAi | None = None
+
+
+class MergePlanJob(Model):
+    job_id: str
+    status: JobState
+    stage: str
+    progress: float
+
+
+class MergePlanState(Model):
+    """GET /v1/merge-plan/{owner}/{repo}."""
+
+    repo: str
+    # False when merge plans can't be made here (no paid-features service, or
+    # AI switched off): hide them.
+    available: bool
+    # Signed in: whether this user can have a plan made now, and how it's paid.
+    access: Access | None
+    # Signed in: this user's latest plan for this repository.
+    plan: MergePlan | None
+    # Signed in: a plan for this repository still being made for this user.
+    job: MergePlanJob | None
+
+
+class MergePlanJobStatus(Model):
+    status: JobState
+    stage: str | None = None
+    progress: float
+    plan: MergePlan | None
     error: Error | None
 
 

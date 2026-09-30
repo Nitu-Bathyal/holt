@@ -284,8 +284,9 @@ class PlanEvent(Base):
 
 
 class PlanUsage(Base):
-    """Uses of a plan's monthly allowance: one counter per user, feature and
-    UTC month ("YYYY-MM"), raised by a guarded UPDATE."""
+    """Uses of a plan's allowance: one counter per user, feature and UTC
+    month ("YYYY-MM"), or `total` for an allowance in all (the free plan's
+    taste of a feature), raised by a guarded UPDATE."""
 
     __tablename__ = "plan_usage"
 
@@ -300,7 +301,7 @@ class Job(Base):
 
     id: Mapped[str] = mapped_column(String(32), primary_key=True,
                                     default=lambda: uuid.uuid4().hex)
-    kind: Mapped[str] = mapped_column(String(20), default="analysis")  # analysis | find | playbook | preflight
+    kind: Mapped[str] = mapped_column(String(20), default="analysis")  # analysis | find | playbook | preflight | merge_plan
     repo: Mapped[str | None] = mapped_column(String(200), nullable=True)
     repo_key: Mapped[str | None] = mapped_column(String(200), nullable=True)
     mode: Mapped[str] = mapped_column(String(10), default="rules")
@@ -695,6 +696,21 @@ class PlaybookUnlock(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
     __table_args__ = (Index("ix_playbook_unlocks_job", "job_id"),)
+
+
+class MergePlan(Base):
+    """A user's latest merge plan for one repository (merge_plan.py), as the
+    paid-features service wrote it and mapped to the public shape. Replaced
+    when they ask for a newer one; a paid result, so it is kept until then."""
+
+    __tablename__ = "merge_plans"
+
+    user_id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    repo_key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    repo: Mapped[str] = mapped_column(String(200))
+    plan: Mapped[dict] = mapped_column(JSON)
+    job_id: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
 class Preflight(Base):

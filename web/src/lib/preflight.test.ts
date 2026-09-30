@@ -4,7 +4,7 @@ import { checkOffer, codeSpans, countsLine, parsePrLink, preflightHref, showPref
 import { EXAMPLE_PREFLIGHT } from "./preflight-example.ts";
 
 const access = (over: Record<string, unknown> = {}) => ({
-  feature: "preflight", name: "PR pre-flight check", allowed: true, via: "credits" as const, cost: 1, left_this_month: null, code: null, message: null, ...over,
+  feature: "preflight", name: "PR pre-flight check", allowed: true, via: "credits" as const, cost: 1, left_this_month: null, left: null, code: null, message: null, ...over,
 });
 
 test("pull request links are recognised, other links aren't", () => {

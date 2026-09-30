@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { codeSpans, isGitHubLink, linkLabel, seenLabel, showPlaybook, unlockOffer } from "./playbook.ts";
 
-const access = { feature: "playbook", name: "Contribution playbook", allowed: true, via: "credits" as const, cost: 1, left_this_month: null, code: null, message: null };
+const access = { feature: "playbook", name: "Contribution playbook", allowed: true, via: "credits" as const, cost: 1, left_this_month: null, left: null, code: null, message: null };
 
 test("seen in N of M, or nothing for a document", () => {
   assert.equal(seenLabel({ seen: 34, of: 44 }), "seen in 34 of 44 pull requests");

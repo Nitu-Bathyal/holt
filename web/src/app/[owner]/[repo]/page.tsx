@@ -5,9 +5,9 @@ import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
 import { after } from "next/server";
 import { ErrorPanel } from "@/components/error-panel";
-import { AiStart } from "@/components/report/ai-start";
 import { AnalysisRunner } from "@/components/report/analysis-runner";
 import { BudgetPicker } from "@/components/report/budget-picker";
+import { MergePlanPanel } from "@/components/report/merge-plan-panel";
 import { PartialReport } from "@/components/report/partial-report";
 import { ReportTeaser } from "@/components/report/report-teaser";
 import { ReportView } from "@/components/report/report-view";
@@ -16,7 +16,7 @@ import { StarterIssues, StarterIssuesSkeleton } from "@/components/report/starte
 import { LinkHint } from "@/components/motion/link-hint";
 import { SkeletonReveal } from "@/components/motion/reveal";
 import { isBot, mintTicket } from "@/lib/anon-check";
-import { getReport, me, recordView, savedState, starterIssues } from "@/lib/api";
+import { getReport, recordView, savedState, starterIssues } from "@/lib/api";
 import { authSecret } from "@/lib/auth-secret";
 import { budgetFrom, reportHref } from "@/lib/budget";
 import { EXAMPLES_PATH } from "@/lib/examples";
@@ -25,17 +25,11 @@ import { isValidRepo } from "@/lib/repo";
 import { caller, currentUser, type SessionUser } from "@/lib/session";
 import { humanHours } from "@/lib/format";
 import { SITE_URL } from "@/lib/site";
-import type { Credits, Mode, Report } from "@/lib/types";
+import type { Mode, Report } from "@/lib/types";
 import { PageTransition } from "@/components/motion/page-transition";
 import { SaveButton } from "@/components/save-button";
 
 type Props = PageProps<"/[owner]/[repo]">;
-
-/** The signed-in user's AI credits, for the note on the AI tab's start card. */
-async function aiCredits(userId: string): Promise<Credits | null> {
-  const r = await me(userId);
-  return r.ok ? r.data.credits : null;
-}
 
 /** Signed out, a report nobody has made yet: a ticket to run the free check here, for people only (lib/anon-check.ts). */
 async function anonTicket(repo: string, days: number): Promise<string | null> {
@@ -103,8 +97,9 @@ export default async function RepoPage({ params, searchParams }: Props) {
 
   // Only the report (and, signed in, whether it's saved: one database read)
   // blocks the page; starter issues (a live GitHub call) stream in.
+  // The AI tab is the merge plan, made from the free report: its header reads that.
   const [report, saved] = await Promise.all([
-    getReport(name, mode, days),
+    getReport(name, "rules", days),
     user ? savedState(user.id, name) : null,
   ]);
 
@@ -197,7 +192,17 @@ export default async function RepoPage({ params, searchParams }: Props) {
         {/* Switching between the free and AI tabs crossfades the report, not the page. */}
         <ViewTransition key={mode} name="report-body" share="swap" enter="swap" exit="swap" default="none">
           <div>
-            {teaser ? (
+            {mode === "ai" ? (
+              report.ok ? (
+                <MergePlanPanel repo={report.data.repo} />
+              ) : report.error.code === "not_found" ? (
+                <p className="border border-line-strong bg-panel p-5 font-sans sm:p-8" data-merge-plan-no-report>
+                  <Link href={reportHref(name, days)} className="text-link">check this repo first →</Link>
+                </p>
+              ) : (
+                <ErrorPanel error={report.error} repo={name} retryHref={reportHref(name, days, mode)} />
+              )
+            ) : teaser ? (
               report.ok ? (
                 <PartialReport report={report.data} back={reportHref(display, days)} />
               ) : (
@@ -219,11 +224,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
                 }
               />
             ) : report.error.code === "not_found" ? (
-              mode === "ai" && user ? (
-                <AiStart repo={name} days={days} signedIn={signedIn} credits={await aiCredits(user.id)} />
-              ) : (
-                <AnalysisRunner repo={name} mode={mode} days={days} signedIn={signedIn} ticket={ticket ?? undefined} />
-              )
+              <AnalysisRunner repo={name} mode={mode} days={days} signedIn={signedIn} ticket={ticket ?? undefined} />
             ) : (
               <ErrorPanel error={report.error} repo={name} retryHref={reportHref(name, days, mode)} />
             )}

@@ -49,15 +49,22 @@ class Feature(Strict):
 
 
 class PlanFeature(Strict):
-    # Uses per calendar month (UTC), or unlimited.
+    # Uses per calendar month (UTC), uses in all (never renewed: the free
+    # plan's taste of a feature), or unlimited.
     per_month: int | None = Field(None, ge=1)
+    total: int | None = Field(None, ge=1)
     unlimited: bool = False
 
     @model_validator(mode="after")
     def _one(self) -> PlanFeature:
-        if (self.per_month is None) == (not self.unlimited):
-            raise ValueError("give exactly one of per_month or unlimited: true")
+        if [self.per_month is not None, self.total is not None, self.unlimited].count(True) != 1:
+            raise ValueError("give exactly one of per_month, total or unlimited: true")
         return self
+
+    @property
+    def limit(self) -> int | None:
+        """Uses the allowance holds (this month's, or in all); None when unlimited."""
+        return self.per_month if self.per_month is not None else self.total
 
 
 class Plan(Strict):

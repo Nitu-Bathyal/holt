@@ -303,7 +303,7 @@ class JobRunner:
 
     async def _run(self, job: Job, lane: str = USER_LANE) -> None:
         # Here, not at the top: these import the API module, which imports this one.
-        from holt_server import playbook, preflight
+        from holt_server import merge_plan, playbook, preflight
 
         loop = asyncio.get_running_loop()
         self.hub.publish(job.id, "stage", {"stage": "Starting", "progress": 0.01})
@@ -339,6 +339,10 @@ class JobRunner:
                 elif job.kind == "preflight":
                     # An HTTP call to the paid-features service: no thread needed.
                     result = await self._in_loop(stop, limit, preflight.run(
+                        self.services, job, emit))
+                elif job.kind == "merge_plan":
+                    # An HTTP call to the paid-features service: no thread needed.
+                    result = await self._in_loop(stop, limit, merge_plan.run(
                         self.services, job, emit))
                 else:
                     # The key is only ever held in memory: the jobs table records
@@ -461,7 +465,7 @@ class JobRunner:
     async def _finish(self, job: Job, result: dict[str, Any],
                       evidence: Evidence | None = None) -> None:
         # Here, not at the top: these import the API module, which imports this one.
-        from holt_server import discover, playbook, preflight
+        from holt_server import discover, merge_plan, playbook, preflight
 
         model_id = self._ai_model(job)
         cost = self._ai_cost(job, result)
@@ -484,6 +488,8 @@ class JobRunner:
                 await playbook.store(s, job, result)
             elif job.kind == "preflight":
                 await preflight.store(s, job, result)
+            elif job.kind == "merge_plan":
+                await merge_plan.store(s, job, result)
             if budget.kind_of(job):
                 await budget.settle(s, job.id, cost, model_id)
             await s.commit()
@@ -661,6 +667,8 @@ def done_payload(kind: str, result: dict[str, Any] | None) -> dict[str, Any]:
         return {"playbook": without_model(result)}
     if kind == "preflight":
         return {"preflight": without_model(result, "summary")}
+    if kind == "merge_plan":
+        return {"plan": result}
     return {"report": without_model(result, "cost")}
 
 

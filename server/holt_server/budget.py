@@ -1,10 +1,10 @@
 """A hard cap on what this environment spends on AI models.
 
 `HOLT_AI_BUDGET_USD` is the most this server may ever spend on models: AI
-reports on its own key, and the playbooks and pre-flight summaries the
-paid-features service writes for it (that service is only reached through
-this server's jobs, so its spend is counted here too). 0, the default, turns
-AI off.
+reports on its own key, and the merge plans, playbooks and pre-flight
+summaries the paid-features service writes for it (that service is only
+reached through this server's jobs, so its spend is counted here too). 0, the
+default, turns AI off.
 
 How it holds:
 
@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 log = logging.getLogger("holt_server.budget")
 
 MICROS = 1_000_000
-ANALYSIS, PLAYBOOK, PREFLIGHT = "analysis", "playbook", "preflight"
+ANALYSIS, PLAYBOOK, PREFLIGHT, MERGE_PLAN = "analysis", "playbook", "preflight", "merge_plan"
 
 
 def to_micros(usd: float) -> int:
@@ -86,6 +86,8 @@ def kind_of(job: Job) -> str | None:
         return ANALYSIS if job.mode == "ai" else None
     if job.kind == "playbook":
         return PLAYBOOK
+    if job.kind == "merge_plan":
+        return MERGE_PLAN
     if job.kind == "preflight":
         return PREFLIGHT if (job.params or {}).get("summary") else None
     return None
@@ -199,6 +201,20 @@ def pro_model(body: dict[str, Any]) -> str | None:
         if isinstance(found, str) and found:
             return found
     return None
+
+
+# Service answers that come before any model call (CONTRACT.md): a bad
+# request, a wrong key, no such repository, or 503 (no model key, no GitHub
+# token, its database down).
+PRO_BEFORE_MODEL = frozenset({400, 401, 404, 405, 503})
+
+
+def note_pro_error(svc: Services, job_id: str, err: Exception) -> None:
+    """A service error that came before any model call cost nothing: the
+    job's `settle` gives its whole hold back. A timeout, a lost connection, a
+    500 or a 502 (the model may have run) keeps the hold."""
+    if getattr(err, "pro_status", None) in PRO_BEFORE_MODEL:
+        svc.ai_costs[job_id] = 0.0
 
 
 def note_pro(svc: Services, job_id: str, body: dict[str, Any]) -> None:

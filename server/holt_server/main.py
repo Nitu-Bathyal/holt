@@ -20,6 +20,7 @@ from holt_server import (
     entitlements,
     errors,
     feedback,
+    merge_plan,
     payments,
     playbook,
     preflight,
@@ -94,6 +95,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(recommendations.router)
     app.include_router(saved.router)
     app.include_router(preflight.router)
+    app.include_router(merge_plan.router)
     return app
 
 
