@@ -1,6 +1,6 @@
 "use client";
 
-// The hooks the expressive patterns share (docs/design/EXPRESSIVE.md).
+// The hooks the expressive patterns share (the expressive design plan).
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import { onMotionChange, prefersReducedMotion } from "@/lib/motion";
 

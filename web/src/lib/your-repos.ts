@@ -1,4 +1,4 @@
-// Your repos (/me/repos, docs/design/DASHBOARD.md): the repos you saved and
+// Your repos (/me/repos, the dashboard plan): the repos you saved and
 // the repos you checked, as one list with today's verdict on each. Pure, so
 // it runs under `node --test`.
 import type { HistoryItem, SavedItem, Stats, Tone } from "./types";

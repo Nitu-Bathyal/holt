@@ -2,7 +2,7 @@
 
 // Smooth wheel scrolling for the whole site: one Lenis instance, driven by
 // GSAP's ticker, with ScrollTrigger updated on every Lenis scroll so the
-// landing page's scroll reveals and the cat stay in sync (docs/design/MOTION.md §5).
+// landing page's scroll reveals and the cat stay in sync (the motion plan §5).
 //
 // What made the old landing-only Lenis feel laggy, and what this does instead:
 // - It loaded once the page was idle, so scrolling changed feel a couple of

@@ -6,7 +6,9 @@ import { track } from "@/lib/analytics";
 import { defaultPicks, PICKS_COOKIE, picksQuery, searchKey, widen, type Picks, type PicksSource } from "@/lib/find-picks";
 import { signInHref } from "@/lib/gate";
 import { personalise } from "@/lib/profile";
-import type { FindResult, FindStart, Result } from "@/lib/types";
+import type { ApiError, FindResult, FindStart, Result } from "@/lib/types";
+import type { Prefs } from "@/lib/profile-flow";
+import { saveFromFind } from "@/app/profile/actions";
 import { CatFace } from "../cat-face";
 import { ErrorPanel } from "../error-panel";
 import { EmptyState } from "../shell/app-page";
@@ -27,7 +29,7 @@ type Shown = { key: string; result: Result<FindStart> };
  * Signed out, `initial` is the shared default search (`searched`), and any
  * other search asks for sign-in instead of running.
  */
-export function FindView({ initialPicks, searched = initialPicks, initial, source, hf, saved, signedIn = true }: {
+export function FindView({ initialPicks, searched = initialPicks, initial, source, hf, saved, signedIn = true, profile = null, notice }: {
   initialPicks: Picks;
   /** The picks `initial` was searched with, when not `initialPicks`. */
   searched?: Picks;
@@ -36,6 +38,10 @@ export function FindView({ initialPicks, searched = initialPicks, initial, sourc
   hf: { note: string; on: boolean } | null;
   saved: string[] | null;
   signedIn?: boolean;
+  /** The saved profile, for "save as my profile"; null without one. */
+  profile?: Prefs | null;
+  /** A one-off note (profile saved), just under the filters. */
+  notice?: React.ReactNode;
 }) {
   const [picks, setPicks] = useState(initialPicks);
   const [shown, setShown] = useState<Shown>({ key: searchKey(searched), result: initial });
@@ -99,55 +105,98 @@ export function FindView({ initialPicks, searched = initialPicks, initial, sourc
   const fit = { level: picks.level, contributions: picks.types };
   const isDefault = q === picksQuery(defaultPicks(hf?.on ?? false));
   const untouched = picks === initialPicks;
+  const locked = pending && !signedIn ? `/find?${q}` : null;
 
-  return (
+  // The search's state, lifted here so its one-line summary sits in the tray.
+  const r = shown.result;
+  const job = useFindJob(r.ok && r.data.status === "queued" ? r.data.job_id : null);
+  const raw: FindResult[] | null = !r.ok ? null : r.data.status === "done" ? r.data.results : job.results;
+  const error = !r.ok ? r.error : job.error;
+  const list = raw ? personalise(raw, fit) : null;
+  const status = locked || error ? "" : !list ? "Checking which repos reply to outsiders. A new search takes up to a minute." : list.length ? `${list.length} repo${list.length === 1 ? "" : "s"} that merge outside PRs, best starter issues first` : "";
+
+  // "save as my profile": only with a profile to update, and picks that differ from it.
+  const [saving, setSaving] = useState<"idle" | "saving" | "saved" | "adult" | "error">("idle");
+  const [savedAs, setSavedAs] = useState<Picks | null>(null);
+  const differs = profile !== null && !sameAsProfile(picks, savedAs ? { languages: savedAs.langs, topics: savedAs.topics, days: savedAs.days, level: savedAs.level, contributions: savedAs.types } : profile);
+  const saveAsProfile = async () => {
+    setSaving("saving");
+    const res = await saveFromFind({ languages: picks.langs, topics: picks.topics, days: picks.days, level: picks.level, contributions: picks.types }).catch(() => ({ ok: false as const, adult: false }));
+    if (res.ok) setSavedAs(picks);
+    setSaving(res.ok ? "saved" : res.adult ? "adult" : "error");
+  };
+
+  const footer = (
     <>
-      <FindFilters picks={picks} onChange={setPicks} hf={hf} />
-      <Results shown={shown} pending={pending} locked={pending && !signedIn ? `/find?${q}` : null} fit={fit} days={picks.days} saved={saved} picks={picks} setPicks={setPicks} onRetry={retryNow}>
+      <p aria-live="polite" className="flex items-center gap-x-2">
+        {pending && !locked ? (
+          <>
+            <span aria-hidden="true" className="inline-block size-2 animate-pulse rounded-full bg-blue" />
+            Updating…
+          </>
+        ) : (
+          status
+        )}
+      </p>
+      <p className="flex flex-wrap items-baseline gap-x-4">
         {source === "profile" && untouched && (
           <span>
             Started from your profile. <Link href="/settings/profile" className="text-link">edit it</Link>
           </span>
         )}
-        {source === "last" && untouched && <span>Your last search.</span>}
+        {source === "last" && untouched && !differs && <span>Your last search.</span>}
+        {saving === "saved" && !differs && <span role="status" className="text-green">Saved as your profile.</span>}
+        {saving === "adult" && <Link href="/settings/profile" className="text-link">finish your profile in settings</Link>}
+        {saving === "error" && <span role="status" className="text-orange">Couldn&apos;t save. Try again.</span>}
+        {differs && saving !== "adult" && (
+          <button type="button" onClick={saveAsProfile} disabled={saving === "saving"} className="min-h-6 text-muted underline decoration-dotted underline-offset-4 hover:text-ink disabled:opacity-60">
+            {saving === "saving" ? "saving…" : "save as my profile"}
+          </button>
+        )}
         {!isDefault && (
           <button type="button" onClick={() => setPicks(defaultPicks(hf?.on ?? false))} className="min-h-6 text-muted underline decoration-dotted underline-offset-4 hover:text-ink">
             reset filters
           </button>
         )}
-      </Results>
+      </p>
+    </>
+  );
+
+  return (
+    <>
+      <FindFilters picks={picks} onChange={setPicks} hf={hf} footer={footer} />
+      {notice}
+      <Results pending={pending} locked={locked} list={list} error={error} progress={job.stage.progress} days={picks.days} saved={saved} picks={picks} setPicks={setPicks} onRetry={retryNow} />
     </>
   );
 }
 
-function Results({ shown, pending, locked, fit, days, saved, picks, setPicks, onRetry, children }: {
-  shown: Shown;
+function sameAsProfile(p: Picks, prof: Pick<Prefs, "languages" | "topics" | "days" | "level" | "contributions">): boolean {
+  const same = (a: string[], b: string[]) => a.length === b.length && a.every((x) => b.includes(x));
+  return same(p.langs, prof.languages) && same(p.topics, prof.topics) && same(p.types, prof.contributions) && p.days === prof.days && p.level === prof.level;
+}
+
+function Results({ pending, locked, list, error, progress, days, saved, picks, setPicks, onRetry }: {
   pending: boolean;
   /** Signed out and the picks changed: where to come back to after signing in. */
   locked: string | null;
-  fit: { level: Picks["level"]; contributions: Picks["types"] };
+  /** The personalised results, or null while the search runs. */
+  list: FindResult[] | null;
+  error: ApiError | null;
+  progress: number;
   days: number;
   saved: string[] | null;
   picks: Picks;
   setPicks: (p: Picks) => void;
   onRetry: () => void;
-  /** Notes about the picks, at the end of the status line. */
-  children: React.ReactNode;
 }) {
-  const r = shown.result;
-  const job = useFindJob(r.ok && r.data.status === "queued" ? r.data.job_id : null);
-  const raw: FindResult[] | null = !r.ok ? null : r.data.status === "done" ? r.data.results : job.results;
-  const error = !r.ok ? r.error : job.error;
-
   let body: React.ReactNode;
-  let status = "";
   if (locked) {
     body = <SignInToSearch back={locked} />;
   } else if (error) {
     body = <ErrorPanel error={error} onRetry={onRetry} />;
-  } else if (!raw) {
-    const pct = Math.round(Math.min(1, Math.max(0.05, job.stage.progress)) * 100);
-    status = "Checking which repos reply to outsiders. A new search takes up to a minute.";
+  } else if (!list) {
+    const pct = Math.round(Math.min(1, Math.max(0.05, progress)) * 100);
     body = (
       <>
         <div className="mb-5 h-1 bg-panel-2" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Search progress">
@@ -156,31 +205,14 @@ function Results({ shown, pending, locked, fit, days, saved, picks, setPicks, on
         <FindResultsSkeleton count={3} />
       </>
     );
+  } else if (!list.length) {
+    body = <Empty picks={picks} setPicks={setPicks} />;
   } else {
-    const list = personalise(raw, fit);
-    if (!list.length) {
-      body = <Empty picks={picks} setPicks={setPicks} />;
-    } else {
-      status = `${list.length} repo${list.length === 1 ? "" : "s"} that merge outside PRs, best starter issues first`;
-      body = <FindResults results={list} days={days} saved={saved} />;
-    }
+    body = <FindResults results={list} days={days} saved={saved} />;
   }
 
   return (
-    <section aria-label="Results" aria-busy={!locked && (pending || (!raw && !error))} className="mt-5">
-      <div className="mb-4 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-[0.87rem] text-faint">
-        <p aria-live="polite" className="flex items-center gap-x-2">
-          {pending && !locked ? (
-            <>
-              <span aria-hidden="true" className="inline-block size-2 animate-pulse rounded-full bg-blue" />
-              Updating…
-            </>
-          ) : (
-            status
-          )}
-        </p>
-        <p className="flex flex-wrap items-baseline gap-x-4">{children}</p>
-      </div>
+    <section aria-label="Results" aria-busy={!locked && (pending || (!list && !error))} className="mt-5">
       <div className={`transition-opacity duration-200 ${pending && !locked ? "pointer-events-none opacity-40" : ""}`}>{body}</div>
     </section>
   );

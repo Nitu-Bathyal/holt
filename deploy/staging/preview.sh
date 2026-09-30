@@ -461,7 +461,7 @@ staging_oauth GITHUB GitHub
 staging_oauth GOOGLE Google
 
 # How the server reads GitHub: as staging's own GitHub App when $SECRETS
-# sets up STAGING_GITHUB_APP_* (docs/ops/github-app.md), else with
+# sets up STAGING_GITHUB_APP_*, else with
 # GITHUB_TOKENS. Never production's app (GITHUB_APP_*): one app is one
 # budget, and staging's builds and warm passes would spend production's.
 # Stopping here on a problem doesn't record the fingerprint, so the next
@@ -481,7 +481,7 @@ if [[ -n "$GITHUB_APP_ID$GITHUB_APP_INSTALLATION_ID$GITHUB_APP_PRIVATE_KEY_FILE"
         || github_fail "staging's GitHub App is only partly set up in $SECRETS: set STAGING_GITHUB_APP_ID, STAGING_GITHUB_APP_INSTALLATION_ID and STAGING_GITHUB_APP_PRIVATE_KEY_FILE, or none of them"
     [[ "$GITHUB_APP_ID" != "$(secret GITHUB_APP_ID)" \
         && "$GITHUB_APP_INSTALLATION_ID" != "$(secret GITHUB_APP_INSTALLATION_ID)" ]] \
-        || github_fail "STAGING_GITHUB_APP_* in $SECRETS is production's GitHub App; make a separate app for staging (docs/ops/github-app.md)"
+        || github_fail "STAGING_GITHUB_APP_* in $SECRETS is production's GitHub App; make a separate app for staging"
     [[ -f "$GITHUB_APP_PRIVATE_KEY_FILE" ]] \
         || github_fail "STAGING_GITHUB_APP_PRIVATE_KEY_FILE in $SECRETS: no file at $GITHUB_APP_PRIVATE_KEY_FILE"
     # The server's user reads the key through its group (compose.yml, group_add).

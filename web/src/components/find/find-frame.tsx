@@ -1,32 +1,44 @@
-// Find a project's one frame (docs/design/DASHBOARD.md): the page head, the
-// tabs, then the tab. /find, /discover and /hacktoberfest each render it, so
-// their public URLs stay and they read as one place.
+// Find a project's one frame (the dashboard plan): the tabs, then the
+// tab. /find, /discover and /hacktoberfest each render it, so their public
+// URLs stay and they read as one place. There's no visible page head: the tab
+// row and each tab's filter tray (.find-tray) continue the top bar as one band
+// (globals.css), so the results start near the top of a page used every day.
+// Signed in, the top bar's repo box moves into the tab row, on the right
+// before Hacktoberfest.
 import Link from "next/link";
 import { findTabs, type FindTab } from "@/lib/find-tabs";
-import type { CatMood } from "@/lib/cat";
 import { hacktoberfest } from "@/lib/site";
-import { AppPageHeader } from "../shell/app-page";
+import { QuickCheck } from "../shell/quick-check";
 import { Skeleton } from "../skeleton";
 
-export function FindFrame({ tab, title, mood = "ready", signedIn, children }: {
+export function FindFrame({ tab, title, signedIn, children }: {
   tab: FindTab;
+  /** The page's name for screen readers and the outline; not shown. */
   title: React.ReactNode;
-  mood?: CatMood;
   signedIn: boolean;
   children: React.ReactNode;
 }) {
   const tabs = findTabs({ signedIn, season: hacktoberfest() !== null, current: tab });
+  const link = (t: (typeof tabs)[number]) => (
+    <Link key={t.id} href={t.href} aria-current={t.id === tab ? "page" : undefined} className="find-tab" data-tab={t.id}>
+      {t.label}
+    </Link>
+  );
+  const main = tabs.filter((t) => t.id !== "hacktoberfest");
+  const hf = tabs.find((t) => t.id === "hacktoberfest");
   return (
     <div className="app-page" data-frame="wide">
-      <AppPageHeader title={title} mood={mood} />
-      <nav aria-label="Find a project" className="app-tabs">
-        {tabs.map((t) => (
-          <Link key={t.id} href={t.href} aria-current={t.id === tab ? "page" : undefined} className="app-tab">
-            {t.label}
-          </Link>
-        ))}
-      </nav>
-      <div className="pt-6">{children}</div>
+      <div className="find-band">
+        <h1 className="sr-only">{title}</h1>
+        <nav aria-label="Find a project" className="find-tabs">
+          {main.map(link)}
+          <span className="find-tabs-end">
+            {signedIn && <QuickCheck variant="band" className="w-72 lg:w-96" />}
+            {hf && link(hf)}
+          </span>
+        </nav>
+      </div>
+      {children}
     </div>
   );
 }
@@ -35,19 +47,16 @@ export function FindFrame({ tab, title, mood = "ready", signedIn, children }: {
 export function FindFrameSkeleton({ tabs = 3, children }: { tabs?: number; children: React.ReactNode }) {
   return (
     <div className="app-page" data-frame="wide">
-      <div className="app-head">
-        <span className="flex h-[clamp(2.09rem,3.96vw,3.3rem)] items-center">
-          <Skeleton className="h-[62%] w-[min(30rem,90%)]" />
-        </span>
+      <div className="find-band">
+        <div className="find-tabs">
+          {Array.from({ length: tabs }, (_, i) => (
+            <span key={i} className={`flex min-h-9 items-center px-3 ${i === tabs - 1 && tabs > 2 ? "ml-auto" : ""}`}>
+              <Skeleton className="h-3 w-16" />
+            </span>
+          ))}
+        </div>
       </div>
-      <div className="app-tabs">
-        {Array.from({ length: tabs }, (_, i) => (
-          <span key={i} className="flex min-h-11 items-center px-3">
-            <Skeleton className="h-3 w-16" />
-          </span>
-        ))}
-      </div>
-      <div className="pt-6">{children}</div>
+      {children}
     </div>
   );
 }

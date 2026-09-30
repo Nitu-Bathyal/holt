@@ -60,7 +60,7 @@
     "date": "2026-09-28",
     "from": null,
     "to": "viable",
-    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see the maintainers' 30 Sep review notes"
    },
    {
     "date": "2026-09-29",
@@ -207,7 +207,7 @@
     "date": "2026-09-29",
     "from": "not_viable",
     "to": "catalogue",
-    "reason": "engine 5: a catalogue or list gets its own answer, 'A list, not code', instead of Not worth your time: entries get merged easily (every false red on both backtest dates was a catalogue; docs/research/BACKTEST.md)"
+    "reason": "engine 5: a catalogue or list gets its own answer, 'A list, not code', instead of Not worth your time: entries get merged easily (every false red on both backtest dates was a catalogue; the maintainers' backtest notes)"
    }
   ]
  },
@@ -283,7 +283,7 @@
     "date": "2026-09-29",
     "from": "not_viable",
     "to": "catalogue",
-    "reason": "engine 5: a catalogue or list gets its own answer, 'A list, not code', instead of Not worth your time: entries get merged easily (every false red on both backtest dates was a catalogue; docs/research/BACKTEST.md)"
+    "reason": "engine 5: a catalogue or list gets its own answer, 'A list, not code', instead of Not worth your time: entries get merged easily (every false red on both backtest dates was a catalogue; the maintainers' backtest notes)"
    }
   ]
  },
@@ -745,7 +745,7 @@
     "date": "2026-09-28",
     "from": null,
     "to": "insufficient_evidence",
-    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see the maintainers' 30 Sep review notes"
    }
   ]
  },
@@ -879,7 +879,7 @@
     "date": "2026-09-29",
     "from": "viable",
     "to": "long_shot",
-    "reason": "engine 5: fewer than 3 in 10 of at least 8 people got their first pull request merged, counting a still-open first PR only after 60 days; the backtest found this share predicts the next newcomers best (docs/research/BACKTEST.md)"
+    "reason": "engine 5: fewer than 3 in 10 of at least 8 people got their first pull request merged, counting a still-open first PR only after 60 days; the backtest found this share predicts the next newcomers best (the maintainers' backtest notes)"
    }
   ]
  },
@@ -945,7 +945,7 @@
     "date": "2026-09-28",
     "from": null,
     "to": "viable",
-    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see the maintainers' 30 Sep review notes"
    },
    {
     "date": "2026-09-29",
@@ -1374,7 +1374,7 @@
     "date": "2026-09-29",
     "from": "not_viable",
     "to": "catalogue",
-    "reason": "engine 5: a catalogue or list gets its own answer, 'A list, not code', instead of Not worth your time: entries get merged easily (every false red on both backtest dates was a catalogue; docs/research/BACKTEST.md)"
+    "reason": "engine 5: a catalogue or list gets its own answer, 'A list, not code', instead of Not worth your time: entries get merged easily (every false red on both backtest dates was a catalogue; the maintainers' backtest notes)"
    }
   ]
  },
@@ -1440,7 +1440,7 @@
     "date": "2026-09-28",
     "from": null,
     "to": "viable",
-    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see the maintainers' 30 Sep review notes"
    }
   ]
  },
@@ -1641,7 +1641,7 @@
     "date": "2026-09-29",
     "from": "not_viable",
     "to": "catalogue",
-    "reason": "engine 5: a catalogue or list gets its own answer, 'A list, not code', instead of Not worth your time: entries get merged easily (every false red on both backtest dates was a catalogue; docs/research/BACKTEST.md)"
+    "reason": "engine 5: a catalogue or list gets its own answer, 'A list, not code', instead of Not worth your time: entries get merged easily (every false red on both backtest dates was a catalogue; the maintainers' backtest notes)"
    }
   ]
  },
@@ -1853,7 +1853,7 @@
     "date": "2026-09-29",
     "from": "not_viable",
     "to": "catalogue",
-    "reason": "engine 5: a catalogue or list gets its own answer, 'A list, not code', instead of Not worth your time: entries get merged easily (every false red on both backtest dates was a catalogue; docs/research/BACKTEST.md)"
+    "reason": "engine 5: a catalogue or list gets its own answer, 'A list, not code', instead of Not worth your time: entries get merged easily (every false red on both backtest dates was a catalogue; the maintainers' backtest notes)"
    }
   ]
  },
@@ -2048,7 +2048,7 @@
     "date": "2026-09-28",
     "from": null,
     "to": "insufficient_evidence",
-    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see the maintainers' 30 Sep review notes"
    },
    {
     "date": "2026-09-28",
@@ -2183,7 +2183,7 @@
     "date": "2026-09-28",
     "from": null,
     "to": "viable",
-    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see the maintainers' 30 Sep review notes"
    }
   ]
  },
@@ -2416,7 +2416,7 @@
     "date": "2026-09-29",
     "from": "viable",
     "to": "long_shot",
-    "reason": "engine 5: fewer than 3 in 10 of at least 8 people got their first pull request merged, counting a still-open first PR only after 60 days; the backtest found this share predicts the next newcomers best (docs/research/BACKTEST.md)"
+    "reason": "engine 5: fewer than 3 in 10 of at least 8 people got their first pull request merged, counting a still-open first PR only after 60 days; the backtest found this share predicts the next newcomers best (the maintainers' backtest notes)"
    }
   ]
  },
@@ -2558,7 +2558,7 @@
     "date": "2026-09-29",
     "from": "not_viable",
     "to": "catalogue",
-    "reason": "engine 5: a catalogue or list gets its own answer, 'A list, not code', instead of Not worth your time: entries get merged easily (every false red on both backtest dates was a catalogue; docs/research/BACKTEST.md)"
+    "reason": "engine 5: a catalogue or list gets its own answer, 'A list, not code', instead of Not worth your time: entries get merged easily (every false red on both backtest dates was a catalogue; the maintainers' backtest notes)"
    }
   ]
  },
@@ -2825,13 +2825,13 @@
     "date": "2026-09-28",
     "from": null,
     "to": "viable",
-    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see the maintainers' 30 Sep review notes"
    },
    {
     "date": "2026-09-29",
     "from": "viable",
     "to": "long_shot",
-    "reason": "engine 5: fewer than 3 in 10 of at least 8 people got their first pull request merged, counting a still-open first PR only after 60 days; the backtest found this share predicts the next newcomers best (docs/research/BACKTEST.md)"
+    "reason": "engine 5: fewer than 3 in 10 of at least 8 people got their first pull request merged, counting a still-open first PR only after 60 days; the backtest found this share predicts the next newcomers best (the maintainers' backtest notes)"
    }
   ]
  },
@@ -3026,7 +3026,7 @@
     "date": "2026-09-28",
     "from": null,
     "to": "not_viable",
-    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see the maintainers' 30 Sep review notes"
    }
   ]
  },
@@ -3350,7 +3350,7 @@
     "date": "2026-09-28",
     "from": null,
     "to": "viable",
-    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see the maintainers' 30 Sep review notes"
    }
   ]
  },
@@ -3410,13 +3410,13 @@
     "date": "2026-09-28",
     "from": null,
     "to": "not_viable",
-    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see docs/research/REVIEW-2026-09-30.md"
+    "reason": "added (ticket 08): a student favourite, checked by the ticket 08 worker; see the maintainers' 30 Sep review notes"
    },
    {
     "date": "2026-09-29",
     "from": "not_viable",
     "to": "catalogue",
-    "reason": "engine 5: a catalogue or list gets its own answer, 'A list, not code', instead of Not worth your time: entries get merged easily (every false red on both backtest dates was a catalogue; docs/research/BACKTEST.md)"
+    "reason": "engine 5: a catalogue or list gets its own answer, 'A list, not code', instead of Not worth your time: entries get merged easily (every false red on both backtest dates was a catalogue; the maintainers' backtest notes)"
    }
   ]
  },
@@ -3921,7 +3921,7 @@
     "date": "2026-09-29",
     "from": "viable",
     "to": "long_shot",
-    "reason": "engine 5: fewer than 3 in 10 of at least 8 people got their first pull request merged, counting a still-open first PR only after 60 days; the backtest found this share predicts the next newcomers best (docs/research/BACKTEST.md)"
+    "reason": "engine 5: fewer than 3 in 10 of at least 8 people got their first pull request merged, counting a still-open first PR only after 60 days; the backtest found this share predicts the next newcomers best (the maintainers' backtest notes)"
    }
   ]
  },
@@ -4236,7 +4236,7 @@
     "date": "2026-09-29",
     "from": "not_viable",
     "to": "catalogue",
-    "reason": "engine 5: a catalogue or list gets its own answer, 'A list, not code', instead of Not worth your time: entries get merged easily (every false red on both backtest dates was a catalogue; docs/research/BACKTEST.md)"
+    "reason": "engine 5: a catalogue or list gets its own answer, 'A list, not code', instead of Not worth your time: entries get merged easily (every false red on both backtest dates was a catalogue; the maintainers' backtest notes)"
    }
   ]
  },
@@ -4438,7 +4438,7 @@
     "date": "2026-09-29",
     "from": "viable",
     "to": "long_shot",
-    "reason": "engine 5: fewer than 3 in 10 of at least 8 people got their first pull request merged, counting a still-open first PR only after 60 days; the backtest found this share predicts the next newcomers best (docs/research/BACKTEST.md)"
+    "reason": "engine 5: fewer than 3 in 10 of at least 8 people got their first pull request merged, counting a still-open first PR only after 60 days; the backtest found this share predicts the next newcomers best (the maintainers' backtest notes)"
    }
   ]
  },
@@ -4767,7 +4767,7 @@
     "date": "2026-09-29",
     "from": "viable",
     "to": "long_shot",
-    "reason": "engine 5: fewer than 3 in 10 of at least 8 people got their first pull request merged, counting a still-open first PR only after 60 days; the backtest found this share predicts the next newcomers best (docs/research/BACKTEST.md)"
+    "reason": "engine 5: fewer than 3 in 10 of at least 8 people got their first pull request merged, counting a still-open first PR only after 60 days; the backtest found this share predicts the next newcomers best (the maintainers' backtest notes)"
    }
   ]
  }

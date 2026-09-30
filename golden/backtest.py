@@ -5,7 +5,7 @@ read on the as-of date ("before") and the pull requests opened in the window
 after it, with everything that happened to them up to the capture ("after").
 `run` replays the engine on "before" under each way of counting, measures what
 happened to "after", and scores the answers. The definitions, fixed before the
-first run, are in docs/research/BACKTEST.md.
+first run, are in the maintainers' backtest notes.
 
     python -m golden.backtest record [REPO ...] [--as-of 2026-06-15]   needs GITHUB_TOKEN
     python -m golden.backtest run [--json]                             offline
@@ -56,7 +56,7 @@ AFTER_PAGES = 8
 # a recording run never takes the token below it.
 MIN_POINTS = 1500
 
-# --- the outcome (docs/research/BACKTEST.md) ------------------------------------
+# --- the outcome (the maintainers' backtest notes) ------------------------------------
 
 # Fewer people than this in the window, and the answer was never tested.
 MIN_PEOPLE = 8
@@ -227,7 +227,7 @@ class _BeforeProvider(EvidenceProvider):
         return self._by_id.get(evidence_id)
 
 
-# --- ways of counting (docs/research/BACKTEST.md, "Counting methods") ----------
+# --- ways of counting (the maintainers' backtest notes, "Counting methods") ----------
 
 
 def _outside(threads: dict[str, Thread]) -> list[Thread]:

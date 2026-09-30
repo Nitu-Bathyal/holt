@@ -32,11 +32,12 @@ export default async function FindPage({ searchParams }: PageProps<"/find">) {
 
   return (
     <PageTransition>
-      <FindFrame tab="find" title="Find a project that will merge your work." signedIn={Boolean(user)}>
-        {sp.profile === "saved" && (
-          <p role="status" className="mb-5 border border-green/50 bg-green/10 px-4 py-2.5 font-sans text-[0.9rem] text-green">Profile saved.</p>
-        )}
-        <FindView initialPicks={picks} searched={searched} initial={result} source={source} hf={hf} saved={saved} signedIn={Boolean(user)} />
+      <FindFrame tab="find" title="Find a project" signedIn={Boolean(user)}>
+        <FindView
+          notice={sp.profile === "saved" && (
+            <p role="status" className="mt-5 border border-green/50 bg-green/10 px-4 py-2.5 font-sans text-[0.9rem] text-green">Profile saved.</p>
+          )}
+          initialPicks={picks} searched={searched} initial={result} source={source} hf={hf} saved={saved} signedIn={Boolean(user)} profile={profile} />
       </FindFrame>
     </PageTransition>
   );

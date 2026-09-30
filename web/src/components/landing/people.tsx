@@ -1,6 +1,6 @@
 "use client";
 
-// Landing section 03, "who it's for" (docs/design/EXPRESSIVE.md): three
+// Landing section 03, "who it's for" (the expressive design plan): three
 // people, each with their own cat, and a fourth card that's you, starting from
 // zero, carrying the section's call to action. The cards step in one after
 // another as the pane arrives (transform only; the text is never hidden).

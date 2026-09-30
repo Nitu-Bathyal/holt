@@ -1,7 +1,7 @@
 "use client";
 
 // The site footer: a sign-off, one last action, the links, and the repos Holt
-// checked most recently (docs/design/EXPRESSIVE.md, pattern 7).
+// checked most recently (the expressive design plan, pattern 7).
 // - One cat carries it, top right: its eyes follow the pointer across the footer, it
 //   reads along as you type a repo, cheers when it looks right, puzzles when
 //   it can't be one, and goes soft over the open-source links. Tap to pet.

@@ -86,7 +86,7 @@ services:
       HOLT_SECRET_KEY: ${HOLT_SECRET_KEY:?run make-env.sh}
       HOLT_WEB_URL: https://${STAGING_HOST:-staging.githolt.com}
       GITHUB_TOKENS: ${GITHUB_TOKENS}
-      # The GitHub App (docs/ops/github-app.md): set up, the server reads
+      # The GitHub App (the maintainers' ops notes): set up, the server reads
       # GitHub as the app and GITHUB_TOKENS is not used. The key is mounted
       # read-only below; the server's user reads it through its group.
       GITHUB_APP_ID: ${GITHUB_APP_ID:-}

@@ -40,7 +40,7 @@ export function Section({ n, title, id, children, note, reveal }: { n: string; t
 }
 
 /**
- * `land`: the answer just arrived on this page (docs/design/EXPRESSIVE.md,
+ * `land`: the answer just arrived on this page (the expressive design plan,
  * pattern 4): the verdict's bar draws, the headline stamps down (desktop only;
  * it's the largest paint, so it never fades and never moves on phones) and the
  * cat reacts. A report read again is still.

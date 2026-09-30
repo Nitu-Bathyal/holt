@@ -70,7 +70,7 @@
   --hf-line: #c9b5f2;
   color-scheme: light;
 
-  /* Motion (docs/design/MOTION.md). Short, decelerating, tiny distances;
+  /* Motion (the motion plan). Short, decelerating, tiny distances;
      exits about two thirds of entrances. */
   --dur-press: 80ms; /* :active scale */
   --dur-fast: 120ms; /* hover, colour, small exits */
@@ -863,7 +863,7 @@
   }
 }
 /* The reacting cat (components/reactive-cat.tsx) and the footer (footer.tsx),
-   docs/design/EXPRESSIVE.md. Transform and opacity only; nothing moves under
+   the expressive design plan. Transform and opacity only; nothing moves under
    reduced motion, and every element's resting state is its final state. */
 @layer components {
   .rcat {
@@ -1037,7 +1037,7 @@
 }
 
 
-/* The report page (docs/design/EXPRESSIVE.md, patterns 4 and 8): the answer
+/* The report page (the expressive design plan, patterns 4 and 8): the answer
    lands when a check finishes on the page (report-view.tsx), and a running
    check prints as a log (analysis-progress.tsx). Transform and opacity only;
    under reduced motion everything is simply in its final state. */
@@ -1107,7 +1107,7 @@
 
 
 /* ------------------------------------------------------------------------
- * Motion (docs/design/MOTION.md). Everything here is progressive: without
+ * Motion (the motion plan). Everything here is progressive: without
  * view transitions, @starting-style or allow-discrete, things just swap.
  * ---------------------------------------------------------------------- */
 
@@ -1401,6 +1401,16 @@
     translate: 0 var(--shift);
   }
 }
+@keyframes odds-fill {
+  from {
+    scale: 0 1;
+  }
+}
+@keyframes odds-flag {
+  from {
+    opacity: 0;
+  }
+}
 @keyframes reveal-move {
   from {
     translate: 0 var(--shift);
@@ -1468,7 +1478,7 @@
   }
 }
 
-/* Landing at full scale (docs/design/EXPRESSIVE.md, pattern 1). Each pane is
+/* Landing at full scale (the expressive design plan, pattern 1). Each pane is
    one screen tall (.pane), so its content is sized by the screen too: type by
    the smaller of width and height (min(vw, svh)), so it fills 1440x900 and
    still fits 1280x720; rem floors keep phones readable. No side rail: each
@@ -1765,7 +1775,7 @@
   }
 }
 
-/* The landing story (docs/design/EXPRESSIVE.md, patterns 3 and 6, and the
+/* The landing story (the expressive design plan, patterns 3 and 6, and the
    redesigned panes): transform and opacity only, and every rule that moves
    something sits under prefers-reduced-motion: no-preference, so reduced
    motion gets the finished state. */
@@ -2183,7 +2193,7 @@
 }
 
 /* ------------------------------------------------------------------------
-   The app shell (docs/design/SIGNED-IN-HOME.md, "One system"): what a
+   The app shell (the signed-in home plan, "One system"): what a
    signed-in person sees on app pages. A top bar, a sidebar rail on desktop
    (a drawer below lg), and one look for nav items, section headings and
    page headers. The selected mark is the same one the settings tabs use:
@@ -2613,7 +2623,7 @@
     display: block;
   }
 
-  /* One frame for every app page (docs/design/DASHBOARD.md, "The frame"):
+  /* One frame for every app page (the dashboard plan, "The frame"):
      the page sits in the column beside the rail, fills it up to its width
      and centres once the screen is wider, so there's no dead band on one
      side. Two widths: the default for your things, rows, forms and reading,
@@ -2737,6 +2747,112 @@
     padding-top: 6px;
     font-size: clamp(1.5rem, 2.6vw, 2.3rem);
     line-height: 1;
+  }
+  /* Find a project has no page head: the tabs (.find-band) and the filter
+     tray (.find-tray) carry on from the top bar in its colour, edge to edge
+     of the column, and one line closes the band. Content stays in the frame,
+     so the chips line up under the check box. */
+  .find-band,
+  .find-tray {
+    background: var(--header);
+    box-shadow: 0 0 0 100vmax var(--header);
+    clip-path: inset(0 -100vmax);
+  }
+  .find-tray,
+  .app-page:not(:has(.find-tray)) .find-band {
+    box-shadow: 0 0 0 100vmax var(--header), 0 1px 0 100vmax var(--line-strong);
+    clip-path: inset(0 -100vmax -1px);
+  }
+  /* Suggestions under a box (suggest-input.tsx): the menus' panel, border and
+     shadow, at most six rows so it never scrolls. Placed by script. */
+  .suggest[popover] {
+    position: fixed;
+    inset: auto;
+    margin: 0;
+    padding: 4px;
+    border: 1px solid var(--line-strong);
+    background: var(--panel);
+    box-shadow: var(--shadow);
+    color: var(--ink);
+    overflow: hidden;
+  }
+  .suggest-option {
+    display: flex;
+    min-height: 36px;
+    cursor: pointer;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    color: var(--muted);
+  }
+  .suggest-option[aria-selected="true"] {
+    background: var(--panel-2);
+    color: var(--ink);
+  }
+
+  /* The tab row: the places as quiet pills on the left; the repo box and
+     Hacktoberfest on the right. */
+  .find-tabs {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    overflow-x: auto;
+    border-bottom: 1px solid var(--line);
+    padding: 8px 0;
+    scrollbar-width: none;
+  }
+  .find-tabs-end {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 12px;
+    margin-left: auto;
+    padding-left: 12px;
+  }
+  .find-tab {
+    display: inline-flex;
+    min-height: 44px;
+    flex-shrink: 0;
+    align-items: center;
+    border: 1px solid transparent;
+    padding: 0 12px;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    color: var(--muted);
+    transition:
+      color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out);
+  }
+  @media (min-width: 640px) {
+    .find-tab {
+      min-height: 36px;
+    }
+  }
+  .find-tab:hover {
+    background: var(--panel-2);
+    color: var(--ink);
+  }
+  .find-tab[aria-current="page"] {
+    border-color: var(--line-strong);
+    background: var(--panel);
+    color: var(--ink);
+    font-weight: 600;
+  }
+  .find-tab[data-tab="hacktoberfest"] {
+    color: var(--hf);
+  }
+  .find-tab[data-tab="hacktoberfest"]:hover,
+  .find-tab[data-tab="hacktoberfest"][aria-current="page"] {
+    border-color: var(--hf-line);
+    background: var(--hf-bg);
+  }
+  .find-band + :not(.find-tray) {
+    margin-top: 24px;
+  }
+  /* The band's colour stops at the column, not over the rail. */
+  #app-column:has(.find-band) {
+    overflow-x: clip;
   }
 
   /* Your things as rows: an optional state colour on the left (--rule),
@@ -2964,6 +3080,20 @@
     }
   }
 
+  /* A card's odds bar fills from the left as the card appears (after the card's
+     own reveal, on its --i stagger), then its "% merged" flag and tick fade in. */
+  @media (prefers-reduced-motion: no-preference) {
+    .odds-meter .odds-fill {
+      transform-origin: left;
+      animation: odds-fill 700ms var(--ease-out) both;
+      animation-delay: calc(150ms + min(var(--i, 0), 6) * var(--stagger));
+    }
+    .odds-meter .odds-flag {
+      animation: odds-flag var(--dur-slow) var(--ease-out) both;
+      animation-delay: calc(650ms + min(var(--i, 0), 6) * var(--stagger));
+    }
+  }
+
   /* /compare: one table, a column per repo, a row per number, so the eye runs
      straight across. Each row is a subgrid of the table, so cells line up
      however much a column says. Phones: the row's label sits above its
@@ -3176,5 +3306,28 @@
     outline: 2px solid transparent;
     outline-offset: 8px;
     box-shadow: 0 0 0 0 transparent;
+  }
+}
+
+/* Find a project: the top bar runs straight into the tabs and filters
+   (.find-band), so it drops its bottom line, and takes it back once the page
+   scrolls. Unlayered, to win over the header's border utility. */
+:root:has(.find-band) .site-header {
+  border-bottom-color: transparent;
+}
+/* The repo box lives in the tab row there, so the top bar's copy steps aside. */
+:root:has(.find-band [data-check-target="band"]) .app-bar-frame [data-check-target="bar"] {
+  display: none;
+}
+@supports (animation-timeline: scroll()) {
+  :root:has(.find-band) .site-header {
+    animation: header-line linear both;
+    animation-timeline: scroll(root);
+    animation-range: 0 24px;
+  }
+}
+@keyframes header-line {
+  to {
+    border-bottom-color: var(--line);
   }
 }
