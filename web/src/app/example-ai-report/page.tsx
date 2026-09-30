@@ -4,16 +4,14 @@ import { MergePlanView } from "@/components/merge-plan/merge-plan-view";
 import { PageTransition } from "@/components/motion/page-transition";
 import { RepoAvatar } from "@/components/repo-card/repo-avatar";
 import { EXAMPLE_PATH } from "@/lib/example-report";
-import type { MergePlan } from "@/lib/merge-plan";
-import data from "@/lib/example-merge-plan.json";
+import { EXAMPLE_PLAN as plan, planRecordedOn } from "@/lib/merge-plan";
 
-// A recorded merge plan for pallets/click: the counts, quotes and links are
-// real (holt-pro's playbook replayed from its test fixture, the free report
-// and starter issue from the live API, the AI findings from Holt's recorded
-// model run); the call and step wording stand in for the model until holt-pro
-// writes merge plans.
-const plan = data as MergePlan;
-const recorded = new Date(plan.recorded_on).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
+// A recorded merge plan for processing/p5.js. The counts, quotes and links are
+// real: holt-pro's playbook facts from the repo's recorded pull requests, the
+// free report from the public API, and maintainers' comments on those pull
+// requests. The call, the step wording and the reading of the threads stand in
+// for the AI until holt-pro writes merge plans.
+const recorded = planRecordedOn(plan);
 const [owner, repo] = plan.repo.split("/");
 
 export const metadata: Metadata = {
@@ -31,7 +29,7 @@ export default async function ExampleAiReportPage({ searchParams }: PageProps<"/
         <div className="report-wide relative py-8 sm:py-12">
           <aside className="mb-6 border border-blue/50 bg-blue/[0.06] p-4 sm:p-5" data-example-banner>
             <p className="text-[0.8rem] uppercase tracking-[0.08em] text-blue">Example AI report (recorded {recorded})</p>
-            <p className="mt-2 max-w-3xl font-sans text-[0.95rem] text-ink">A recorded example, not a live report. Free to read.</p>
+            <p className="mt-2 max-w-3xl font-sans text-[0.95rem] text-ink">Real counts, quotes and links. The plan&apos;s wording stands in for the AI&apos;s.</p>
             <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1">
               <Link href="/" className="bracket-link">[ get one for your repo → ]</Link>
               <Link href={locked ? EXAMPLE_PATH : `${EXAMPLE_PATH}?view=locked`} className="text-link font-sans text-[0.89rem]">

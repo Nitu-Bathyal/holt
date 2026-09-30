@@ -53,4 +53,5 @@ Start with the [README](../README.md). Everything else is here.
 | [design/VOICE.md](design/VOICE.md) | How the site sounds: voice, do/don't lines, words we use and avoid |
 | [design/SIGNED-IN-HOME.md](design/SIGNED-IN-HOME.md) | Where sign-in lands and what the signed-in home (`/me`) shows |
 | [design/DASHBOARD.md](design/DASHBOARD.md) | The signed-in app: the audit, what similar tools do, five places, one visual system, and the rollout |
+| [design/MERGE-PLAN.md](design/MERGE-PLAN.md) | The merge plan (the AI report): its data shape for holt-pro, and how the example was recorded |
 | [strategy/BUSINESS.md](strategy/BUSINESS.md) | Costs, pricing and the break-even plan |

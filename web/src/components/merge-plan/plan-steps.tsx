@@ -64,9 +64,7 @@ export function PlanSteps({ repo, steps, show = steps.length }: { repo: string; 
   return (
     <div>
       <div className="mb-8 flex flex-wrap items-center justify-between gap-x-6 gap-y-2">
-        <p className="font-sans text-[0.95rem] text-muted">
-          {locked ? `${steps.length} steps. The first one is free.` : `${steps.length} steps, in order. Pick one to see what to do.`}
-        </p>
+        {locked && <p className="font-sans text-[0.95rem] text-muted">{steps.length} steps. The first one is free.</p>}
         {!locked && (
           <p className="text-[0.8rem] uppercase tracking-[0.08em] text-faint" aria-live="polite">
             {count === steps.length ? "all done · open your PR" : `${count} of ${steps.length} done`}

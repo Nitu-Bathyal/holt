@@ -106,9 +106,9 @@ export function MergePlanView({ plan, locked = false }: { plan: MergePlan; locke
             </div>
 
             <p className="border-t border-dashed border-line-strong pt-4 font-sans text-[0.85rem] leading-relaxed text-faint">
-              Counted from {plan.sample.merged} merged and {plan.sample.closed} closed pull requests since {dateLabel(plan.window.since)}
-              {plan.ai && <>; {plan.ai.threads} threads read by {plan.ai.model}</>}. Written by {plan.model}, then every sentence was checked against the
-              counts and anything that didn&apos;t match was cut. The rules picked the verdict, not the model. Cites {cited} pull requests.
+              Counted from {plan.sample.merged} merged and {plan.sample.closed} closed {plan.note ? "" : "outside "}pull requests since {dateLabel(plan.window.since)}
+              {plan.ai && <>; the AI read {plan.ai.threads} of their threads</>}. The rules picked the verdict, not the AI. Cites {cited} pull
+              requests.
               {plan.note && <> {plan.note}</>}
             </p>
           </>
@@ -251,7 +251,7 @@ function LockedRest({ plan }: { plan: MergePlan }) {
         <button type="button" className="btn-primary">
           unlock the merge plan <span aria-hidden="true">→</span>
         </button>
-        <span className="font-sans text-[0.88rem] text-faint">1 credit for this repo · yours to keep · a plan that fails costs nothing</span>
+        <span className="font-sans text-[0.88rem] text-faint">1 credit</span>
       </div>
     </section>
   );

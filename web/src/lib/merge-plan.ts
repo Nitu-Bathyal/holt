@@ -1,7 +1,9 @@
-// The merge plan: the redesigned AI report (paid, written by holt-pro).
-// DRAFT shape for the design review. The contract goes into API.md with the
-// holt-pro endpoint that fills it; until then only the example page uses it.
-import type { PlaybookSource, Tone, Verdict } from "./types";
+// The merge plan: the AI report (paid, written by holt-pro's POST
+// /v1/merge-plan). This file is the one source of the MergePlan shape;
+// docs/design/MERGE-PLAN.md describes it for holt-pro. Until the endpoint
+// lands, only /example-ai-report renders one, from the example below.
+import data from "./example-merge-plan.json" with { type: "json" };
+import type { PlaybookSource, Tone, Verdict } from "./types.ts";
 
 export type PlanSource = PlaybookSource;
 
@@ -32,7 +34,6 @@ export type PlanClosing = {
 
 /** What the model found by reading the pull request threads (the AI part of the plan). */
 export type PlanAi = {
-  model: string;
   read_on: string;
   threads: number;
   /** One per engine field: how outsiders are treated, the contributor guide, the kind of project. */
@@ -46,7 +47,7 @@ export type MergePlan = {
   repo: string;
   recorded_on: string;
   generated_at: string;
-  model: string;
+  /** `since`: the oldest pull request the counts read, not the start of the search window. */
   window: { days: number; since: string };
   sample: { merged: number; closed: number; merged_outside: number; closed_outside: number };
   note: string | null;
@@ -75,4 +76,12 @@ export function citedLinks(plan: MergePlan): string[] {
 export function share(seen: number | null, of: number | null): number {
   if (seen == null || !of) return 0;
   return Math.round((Math.min(seen, of) / of) * 100);
+}
+
+/** The recorded example at /example-ai-report (processing/p5.js). */
+export const EXAMPLE_PLAN = data as MergePlan;
+
+/** "30 September 2026": when the example's evidence was recorded. */
+export function planRecordedOn(plan: MergePlan = EXAMPLE_PLAN): string {
+  return new Date(plan.recorded_on).toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
 }

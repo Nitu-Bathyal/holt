@@ -1,19 +1,18 @@
 {
-  "repo": "pallets/click",
-  "recorded_on": "2026-09-27T20:04:55+00:00",
-  "generated_at": "2026-09-28T20:13:33+00:00",
-  "model": "openai/gpt-5-mini",
+  "repo": "processing/p5.js",
+  "recorded_on": "2026-09-30T12:01:07+00:00",
+  "generated_at": "2026-09-30T12:01:07+00:00",
   "window": {
     "days": 365,
-    "since": "2025-09-27"
+    "since": "2026-08-07"
   },
   "sample": {
-    "merged": 50,
-    "closed": 25,
-    "merged_outside": 5,
-    "closed_outside": 25
+    "merged": 26,
+    "closed": 18,
+    "merged_outside": 26,
+    "closed_outside": 18
   },
-  "note": "Only 5 merged pull requests from people outside the project turned up in the last 365 days, too few to count on their own, so these counts cover pull requests from everyone except bots.",
+  "note": null,
   "verdict": {
     "verdict": "viable",
     "headline": "Worth your time",
@@ -21,161 +20,193 @@
     "line": "Outside contributors get real replies here, and their work gets merged.",
     "numbers": [
       {
-        "value": "5 of 8",
+        "value": "35 of 77",
         "label": "outside PRs merged"
       },
       {
-        "value": "4.4 h",
+        "value": "44.8 h",
         "label": "typical first reply"
       },
       {
-        "value": "1 of 8",
+        "value": "4 of 77",
         "label": "got no reply"
       }
     ]
   },
   "call": {
-    "text": "Go for it, but write it yourself: a small, tested change lands here, and pull requests written with AI tools get closed.",
+    "text": "Go for it, but get assigned first: pull requests that skip the guidelines or the template get closed here.",
     "sources": [
       {
-        "statement": "3 of 5 outside pull requests that touched tests/ were merged.",
-        "seen": 3,
-        "of": 5,
-        "links": []
+        "statement": "11 of 18 closed outside pull requests were closed for skipping the contributor guidelines.",
+        "seen": 11,
+        "of": 18,
+        "links": [
+          "https://github.com/processing/p5.js/pull/9061",
+          "https://github.com/processing/p5.js/pull/9060",
+          "https://github.com/processing/p5.js/pull/9059",
+          "https://github.com/processing/p5.js/pull/9058",
+          "https://github.com/processing/p5.js/pull/9057",
+          "https://github.com/processing/p5.js/pull/9056",
+          "https://github.com/processing/p5.js/pull/9054",
+          "https://github.com/processing/p5.js/pull/9052",
+          "https://github.com/processing/p5.js/pull/9051",
+          "https://github.com/processing/p5.js/pull/9050",
+          "https://github.com/processing/p5.js/pull/9047"
+        ]
       },
       {
-        "statement": "8 of 25 closed outside pull requests were closed for being written with AI tools.",
-        "seen": 8,
-        "of": 25,
+        "statement": "23 of 26 merged pull requests from people outside the project kept the sections of the pull request template; of those closed without merging, 5 of 18 did.",
+        "seen": 23,
+        "of": 26,
         "links": [
-          "https://github.com/pallets/click/pull/3874",
-          "https://github.com/pallets/click/pull/3870",
-          "https://github.com/pallets/click/pull/3868",
-          "https://github.com/pallets/click/pull/3867",
-          "https://github.com/pallets/click/pull/3864"
+          "https://github.com/processing/p5.js/pull/9220",
+          "https://github.com/processing/p5.js/pull/9210",
+          "https://github.com/processing/p5.js/pull/9201",
+          "https://github.com/processing/p5.js/pull/9198",
+          "https://github.com/processing/p5.js/pull/9193",
+          "https://github.com/processing/p5.js/pull/9192",
+          "https://github.com/processing/p5.js/pull/9191",
+          "https://github.com/processing/p5.js/pull/9188"
         ]
       }
     ]
   },
   "steps": [
     {
-      "title": "Pick #3696, or a small fix in `tests/`",
-      "detail": "“Increasing utilities quality and documentation” is open and labelled docs, typing. Outside work lands most often in `tests/`: 3 of 5 merged.",
+      "title": "Pick an issue nobody is assigned to",
+      "detail": "Good first issues go fast here: #9176 is assigned and #8154 already has a pull request. Look for one with no assignee and no open pull request.",
       "link": {
-        "label": "#3696 on GitHub",
-        "url": "https://github.com/pallets/click/issues/3696"
+        "label": "Unassigned good first issues",
+        "url": "https://github.com/processing/p5.js/issues?q=is%3Aissue%20is%3Aopen%20label%3A%22Good%20First%20Issue%22%20no%3Aassignee"
       },
       "copy": null,
-      "sources": [
-        {
-          "statement": "3 of 5 outside pull requests that touched tests/ were merged.",
-          "seen": 3,
-          "of": 5,
-          "links": []
-        }
-      ]
-    },
-    {
-      "title": "Ask before you start",
-      "detail": "Someone asked for this issue 49 days ago. Check it's still free, and say what you plan to change.",
-      "link": null,
-      "copy": {
-        "label": "Comment to post",
-        "text": "Hi! I'd like to work on this. My plan: <one line on what you'll change>. Is it still free, or is someone already on it?"
-      },
       "sources": []
     },
     {
-      "title": "Write the code yourself",
-      "detail": "The maintainers close pull requests written with AI tools and link their policy when they do.",
+      "title": "Ask to be assigned before you write code",
+      "detail": "The guidelines say: first assigned, first served, and work starts once the issue is approved. Pull requests that skip this get closed.",
       "link": {
-        "label": "Their AI policy",
-        "url": "https://palletsprojects.com/contributing/llm-ai"
+        "label": "Contributor guidelines",
+        "url": "https://github.com/processing/p5.js/blob/HEAD/CONTRIBUTING.md#get-assigned-before-working-on-an-issue"
+      },
+      "copy": {
+        "label": "Comment to post on the issue",
+        "text": "Hi! I'd like to work on this. My plan: <one or two lines on what you'll change and where>. Could I be assigned?"
+      },
+      "sources": [
+        {
+          "statement": "11 of 18 closed outside pull requests were closed for skipping the contributor guidelines.",
+          "seen": 11,
+          "of": 18,
+          "links": [
+            "https://github.com/processing/p5.js/pull/9061",
+            "https://github.com/processing/p5.js/pull/9060",
+            "https://github.com/processing/p5.js/pull/9059",
+            "https://github.com/processing/p5.js/pull/9058",
+            "https://github.com/processing/p5.js/pull/9057",
+            "https://github.com/processing/p5.js/pull/9056",
+            "https://github.com/processing/p5.js/pull/9054",
+            "https://github.com/processing/p5.js/pull/9052",
+            "https://github.com/processing/p5.js/pull/9051",
+            "https://github.com/processing/p5.js/pull/9050",
+            "https://github.com/processing/p5.js/pull/9047"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Write the code yourself",
+      "detail": "p5.js doesn't accept fully AI-generated contributions. You should understand every line you change.",
+      "link": {
+        "label": "Their AI usage policy",
+        "url": "https://github.com/processing/p5.js/blob/HEAD/AI_USAGE_POLICY.md"
+      },
+      "copy": null,
+      "sources": []
+    },
+    {
+      "title": "Fill in the pull request template",
+      "detail": "23 of 26 merged outside pull requests kept its sections; only 5 of 18 closed ones did. Link the issue you were assigned.",
+      "link": {
+        "label": "The template",
+        "url": "https://github.com/processing/p5.js/blob/HEAD/.github/PULL_REQUEST_TEMPLATE.md"
       },
       "copy": null,
       "sources": [
         {
-          "statement": "8 of 25 closed outside pull requests were closed for this.",
-          "seen": 8,
+          "statement": "23 of 26 merged pull requests from people outside the project kept the sections of the pull request template; of those closed without merging, 5 of 18 did.",
+          "seen": 23,
+          "of": 26,
+          "links": [
+            "https://github.com/processing/p5.js/pull/9220",
+            "https://github.com/processing/p5.js/pull/9210",
+            "https://github.com/processing/p5.js/pull/9201",
+            "https://github.com/processing/p5.js/pull/9198",
+            "https://github.com/processing/p5.js/pull/9193",
+            "https://github.com/processing/p5.js/pull/9192",
+            "https://github.com/processing/p5.js/pull/9191",
+            "https://github.com/processing/p5.js/pull/9188"
+          ]
+        }
+      ]
+    },
+    {
+      "title": "Add a test and pass `lint`",
+      "detail": "19 of 23 merged pull requests that changed code also changed tests. Run `npm test` before you push; `lint` passed on every merged one.",
+      "link": null,
+      "copy": null,
+      "sources": [
+        {
+          "statement": "19 of 23 merged pull requests from people outside the project that changed code also added or changed tests. Of those closed without merging, 10 of 17 did.",
+          "seen": 19,
+          "of": 23,
+          "links": [
+            "https://github.com/processing/p5.js/pull/9220",
+            "https://github.com/processing/p5.js/pull/9210",
+            "https://github.com/processing/p5.js/pull/9198",
+            "https://github.com/processing/p5.js/pull/9193",
+            "https://github.com/processing/p5.js/pull/9191",
+            "https://github.com/processing/p5.js/pull/9188",
+            "https://github.com/processing/p5.js/pull/9186",
+            "https://github.com/processing/p5.js/pull/9170"
+          ]
+        },
+        {
+          "statement": "These checks passed on all 25 merged pull requests from people outside the project that ran checks: \"Continuous Releases\", \"lint\", \"publish\". Expect them to be required: make them pass before asking for a review.",
+          "seen": 25,
           "of": 25,
           "links": [
-            "https://github.com/pallets/click/pull/3874",
-            "https://github.com/pallets/click/pull/3870",
-            "https://github.com/pallets/click/pull/3868",
-            "https://github.com/pallets/click/pull/3867",
-            "https://github.com/pallets/click/pull/3864"
+            "https://github.com/processing/p5.js/pull/9220",
+            "https://github.com/processing/p5.js/pull/9210",
+            "https://github.com/processing/p5.js/pull/9201",
+            "https://github.com/processing/p5.js/pull/9198",
+            "https://github.com/processing/p5.js/pull/9193",
+            "https://github.com/processing/p5.js/pull/9192",
+            "https://github.com/processing/p5.js/pull/9191",
+            "https://github.com/processing/p5.js/pull/9188"
           ]
         }
       ]
     },
     {
-      "title": "Keep it to about 70 lines in 3 files",
-      "detail": "That's a typical merged pull request here. 38 of 50 changed 239 lines or fewer.",
+      "title": "Expect @perminder-17 or @limzykenneth to review",
+      "detail": "They reviewed most merged outside work. The first reply typically comes within 2 days; answer on the same pull request.",
       "link": null,
       "copy": null,
       "sources": [
         {
-          "fact_id": "size-4",
-          "statement": "A typical merged pull request changed about 72 lines in 3 files; 38 of 50 changed 239 lines or fewer. Those closed without merging typically changed about 52 lines.",
-          "seen": 38,
-          "of": 50,
+          "statement": "19 of 26 merged pull requests from people outside the project had a review or comment from the project. The most active reviewers: @perminder-17 (11), @limzykenneth (7), @ksen0 (3).",
+          "seen": 19,
+          "of": 26,
           "links": [
-            "https://github.com/pallets/click/pull/3793",
-            "https://github.com/pallets/click/pull/3685",
-            "https://github.com/pallets/click/pull/3817",
-            "https://github.com/pallets/click/pull/3787",
-            "https://github.com/pallets/click/pull/3801",
-            "https://github.com/pallets/click/pull/3656",
-            "https://github.com/pallets/click/pull/3671",
-            "https://github.com/pallets/click/pull/3829"
-          ]
-        }
-      ]
-    },
-    {
-      "title": "Make `main` and the docs build pass",
-      "detail": "Both checks passed on every merged pull request. Get them green before you ask for a review.",
-      "link": null,
-      "copy": null,
-      "sources": [
-        {
-          "fact_id": "checks-1",
-          "statement": "These checks passed on all 50 merged pull requests that ran checks: \"docs/readthedocs.org:pallets-click\", \"main\". Expect them to be required: make them pass before asking for a review.",
-          "seen": 50,
-          "of": 50,
-          "links": [
-            "https://github.com/pallets/click/pull/3876",
-            "https://github.com/pallets/click/pull/3866",
-            "https://github.com/pallets/click/pull/3865",
-            "https://github.com/pallets/click/pull/3861",
-            "https://github.com/pallets/click/pull/3860",
-            "https://github.com/pallets/click/pull/3858",
-            "https://github.com/pallets/click/pull/3851",
-            "https://github.com/pallets/click/pull/3850"
-          ]
-        }
-      ]
-    },
-    {
-      "title": "Expect @Rowlando13 to review",
-      "detail": "The first reply usually comes within about 4 hours. Answer review comments on the same thread.",
-      "link": null,
-      "copy": null,
-      "sources": [
-        {
-          "fact_id": "reviewers_by_path-8",
-          "statement": "@Rowlando13 reviewed 27 of 50 merged pull requests that touched tests/, files at the top level, src/, docs/ or .github/: 17 of 34 for tests/, 16 of 31 for files at the top level, 17 of 31 for src/, 14 of 20 for docs/, 2 of 3 for .github/",
-          "seen": 27,
-          "of": 50,
-          "links": [
-            "https://github.com/pallets/click/pull/3866",
-            "https://github.com/pallets/click/pull/3865",
-            "https://github.com/pallets/click/pull/3861",
-            "https://github.com/pallets/click/pull/3860",
-            "https://github.com/pallets/click/pull/3858",
-            "https://github.com/pallets/click/pull/3821",
-            "https://github.com/pallets/click/pull/3808",
-            "https://github.com/pallets/click/pull/3805"
+            "https://github.com/processing/p5.js/pull/9201",
+            "https://github.com/processing/p5.js/pull/9198",
+            "https://github.com/processing/p5.js/pull/9192",
+            "https://github.com/processing/p5.js/pull/9191",
+            "https://github.com/processing/p5.js/pull/9188",
+            "https://github.com/processing/p5.js/pull/9186",
+            "https://github.com/processing/p5.js/pull/9170",
+            "https://github.com/processing/p5.js/pull/9166"
           ]
         }
       ]
@@ -183,76 +214,73 @@
   ],
   "merged": [
     {
-      "value": "72",
-      "unit": "lines",
-      "label": "typical merged pull request, in about 3 files",
-      "seen": 38,
-      "of": 50,
+      "value": "23",
+      "unit": "of 26",
+      "label": "kept the pull request template's sections",
+      "seen": 23,
+      "of": 26,
       "sources": [
         {
-          "fact_id": "size-4",
-          "statement": "A typical merged pull request changed about 72 lines in 3 files; 38 of 50 changed 239 lines or fewer. Those closed without merging typically changed about 52 lines.",
-          "seen": 38,
-          "of": 50,
+          "statement": "23 of 26 merged pull requests from people outside the project kept the sections of the pull request template; of those closed without merging, 5 of 18 did.",
+          "seen": 23,
+          "of": 26,
           "links": [
-            "https://github.com/pallets/click/pull/3793",
-            "https://github.com/pallets/click/pull/3685",
-            "https://github.com/pallets/click/pull/3817",
-            "https://github.com/pallets/click/pull/3787",
-            "https://github.com/pallets/click/pull/3801",
-            "https://github.com/pallets/click/pull/3656",
-            "https://github.com/pallets/click/pull/3671",
-            "https://github.com/pallets/click/pull/3829"
+            "https://github.com/processing/p5.js/pull/9220",
+            "https://github.com/processing/p5.js/pull/9210",
+            "https://github.com/processing/p5.js/pull/9201",
+            "https://github.com/processing/p5.js/pull/9198",
+            "https://github.com/processing/p5.js/pull/9193",
+            "https://github.com/processing/p5.js/pull/9192",
+            "https://github.com/processing/p5.js/pull/9191",
+            "https://github.com/processing/p5.js/pull/9188"
           ]
         }
       ]
     },
     {
-      "value": "50",
-      "unit": "of 50",
-      "label": "passed `main` and the docs build",
-      "seen": 50,
-      "of": 50,
+      "value": "19",
+      "unit": "of 23",
+      "label": "that changed code also changed tests",
+      "seen": 19,
+      "of": 23,
       "sources": [
         {
-          "fact_id": "checks-1",
-          "statement": "These checks passed on all 50 merged pull requests that ran checks: \"docs/readthedocs.org:pallets-click\", \"main\". Expect them to be required: make them pass before asking for a review.",
-          "seen": 50,
-          "of": 50,
+          "statement": "19 of 23 merged pull requests from people outside the project that changed code also added or changed tests. Of those closed without merging, 10 of 17 did.",
+          "seen": 19,
+          "of": 23,
           "links": [
-            "https://github.com/pallets/click/pull/3876",
-            "https://github.com/pallets/click/pull/3866",
-            "https://github.com/pallets/click/pull/3865",
-            "https://github.com/pallets/click/pull/3861",
-            "https://github.com/pallets/click/pull/3860",
-            "https://github.com/pallets/click/pull/3858",
-            "https://github.com/pallets/click/pull/3851",
-            "https://github.com/pallets/click/pull/3850"
+            "https://github.com/processing/p5.js/pull/9220",
+            "https://github.com/processing/p5.js/pull/9210",
+            "https://github.com/processing/p5.js/pull/9198",
+            "https://github.com/processing/p5.js/pull/9193",
+            "https://github.com/processing/p5.js/pull/9191",
+            "https://github.com/processing/p5.js/pull/9188",
+            "https://github.com/processing/p5.js/pull/9186",
+            "https://github.com/processing/p5.js/pull/9170"
           ]
         }
       ]
     },
     {
       "value": "38",
-      "unit": "of 50",
-      "label": "had a review or comment from the project",
-      "seen": 38,
-      "of": 50,
+      "unit": "lines",
+      "label": "typical merged pull request, in about 2 files",
+      "seen": 20,
+      "of": 26,
       "sources": [
         {
-          "fact_id": "reviewers-7",
-          "statement": "38 of 50 merged pull requests had a review or comment from the project. The most active reviewers: @Rowlando13 (27), @davidism (15), @kdeldycke (9).",
-          "seen": 38,
-          "of": 50,
+          "statement": "A typical merged pull request from people outside the project changed about 38 lines in 2 files; 20 of 26 changed 232 lines or fewer. Those closed without merging typically changed about 28 lines.",
+          "seen": 20,
+          "of": 26,
           "links": [
-            "https://github.com/pallets/click/pull/3866",
-            "https://github.com/pallets/click/pull/3865",
-            "https://github.com/pallets/click/pull/3861",
-            "https://github.com/pallets/click/pull/3860",
-            "https://github.com/pallets/click/pull/3858",
-            "https://github.com/pallets/click/pull/3829",
-            "https://github.com/pallets/click/pull/3821",
-            "https://github.com/pallets/click/pull/3820"
+            "https://github.com/processing/p5.js/pull/9165",
+            "https://github.com/processing/p5.js/pull/9140",
+            "https://github.com/processing/p5.js/pull/9102",
+            "https://github.com/processing/p5.js/pull/9192",
+            "https://github.com/processing/p5.js/pull/9166",
+            "https://github.com/processing/p5.js/pull/9162",
+            "https://github.com/processing/p5.js/pull/9198",
+            "https://github.com/processing/p5.js/pull/9220"
           ]
         }
       ]
@@ -260,56 +288,104 @@
   ],
   "closed": [
     {
-      "reason": "Written with AI tools",
-      "seen": 8,
-      "of": 25,
+      "reason": "Skipped the contributor guidelines",
+      "seen": 11,
+      "of": 18,
       "quote": {
-        "text": "https://palletsprojects.com/contributing/llm-ai",
-        "who": "davidism",
-        "url": "https://github.com/pallets/click/pull/3874",
-        "number": 3874
+        "text": "I noticed you opened 14 PRs in two days. None of these followed the guidelines.",
+        "who": "ksen0",
+        "url": "https://github.com/processing/p5.js/pull/9061",
+        "number": 9061
       },
       "examples": [
         {
-          "number": 3874,
-          "url": "https://github.com/pallets/click/pull/3874"
+          "number": 9061,
+          "url": "https://github.com/processing/p5.js/pull/9061"
         },
         {
-          "number": 3870,
-          "url": "https://github.com/pallets/click/pull/3870"
+          "number": 9060,
+          "url": "https://github.com/processing/p5.js/pull/9060"
         },
         {
-          "number": 3868,
-          "url": "https://github.com/pallets/click/pull/3868"
+          "number": 9059,
+          "url": "https://github.com/processing/p5.js/pull/9059"
         },
         {
-          "number": 3867,
-          "url": "https://github.com/pallets/click/pull/3867"
+          "number": 9058,
+          "url": "https://github.com/processing/p5.js/pull/9058"
         },
         {
-          "number": 3864,
-          "url": "https://github.com/pallets/click/pull/3864"
+          "number": 9057,
+          "url": "https://github.com/processing/p5.js/pull/9057"
+        },
+        {
+          "number": 9056,
+          "url": "https://github.com/processing/p5.js/pull/9056"
+        },
+        {
+          "number": 9054,
+          "url": "https://github.com/processing/p5.js/pull/9054"
+        },
+        {
+          "number": 9052,
+          "url": "https://github.com/processing/p5.js/pull/9052"
+        },
+        {
+          "number": 9051,
+          "url": "https://github.com/processing/p5.js/pull/9051"
+        },
+        {
+          "number": 9050,
+          "url": "https://github.com/processing/p5.js/pull/9050"
+        },
+        {
+          "number": 9047,
+          "url": "https://github.com/processing/p5.js/pull/9047"
         }
       ]
     },
     {
-      "reason": "Practice pull requests",
-      "seen": 2,
-      "of": 25,
+      "reason": "Not needed, or someone else was on it",
+      "seen": 3,
+      "of": 18,
       "quote": {
-        "text": "This is not a playground. Use your own repos to learn how to use Git/GitHub",
-        "who": "ThiefMaster",
-        "url": "https://github.com/pallets/click/pull/3873",
-        "number": 3873
+        "text": "There is an existing PR for this issue at #9142, I will prioritise that instead. Thanks.",
+        "who": "limzykenneth",
+        "url": "https://github.com/processing/p5.js/pull/9187",
+        "number": 9187
       },
       "examples": [
         {
-          "number": 3873,
-          "url": "https://github.com/pallets/click/pull/3873"
+          "number": 9207,
+          "url": "https://github.com/processing/p5.js/pull/9207"
         },
         {
-          "number": 3872,
-          "url": "https://github.com/pallets/click/pull/3872"
+          "number": 9203,
+          "url": "https://github.com/processing/p5.js/pull/9203"
+        },
+        {
+          "number": 9187,
+          "url": "https://github.com/processing/p5.js/pull/9187"
+        }
+      ]
+    },
+    {
+      "reason": "Closed with no reply",
+      "seen": 3,
+      "of": 18,
+      "quote": null,
+      "examples": [
+        {
+          "number": 9184,
+          "url": "https://github.com/processing/p5.js/pull/9184"
+        },
+        {
+          "number": 9183,
+          "url": "https://github.com/processing/p5.js/pull/9183"
+        },
+        {
+          "number": 9182,
+          "url": "https://github.com/processing/p5.js/pull/9182"
         }
       ]
     }
@@ -317,125 +393,127 @@
   "reviewers": {
     "people": [
       {
-        "login": "Rowlando13",
-        "reviewed": 27,
-        "of": 50,
+        "login": "perminder-17",
+        "reviewed": 11,
+        "of": 26,
         "areas": [
-          "tests/",
           "src/",
-          "docs/"
+          "test/"
         ]
       },
       {
-        "login": "davidism",
-        "reviewed": 15,
-        "of": 50,
+        "login": "limzykenneth",
+        "reviewed": 7,
+        "of": 26,
         "areas": []
       },
       {
-        "login": "kdeldycke",
-        "reviewed": 9,
-        "of": 50,
-        "areas": []
+        "login": "ksen0",
+        "reviewed": 3,
+        "of": 26,
+        "areas": [
+          "utils/"
+        ]
       }
     ],
     "sources": [
       {
-        "fact_id": "reviewers-7",
-        "statement": "38 of 50 merged pull requests had a review or comment from the project. The most active reviewers: @Rowlando13 (27), @davidism (15), @kdeldycke (9).",
-        "seen": 38,
-        "of": 50,
+        "statement": "19 of 26 merged pull requests from people outside the project had a review or comment from the project. The most active reviewers: @perminder-17 (11), @limzykenneth (7), @ksen0 (3).",
+        "seen": 19,
+        "of": 26,
         "links": [
-          "https://github.com/pallets/click/pull/3866",
-          "https://github.com/pallets/click/pull/3865",
-          "https://github.com/pallets/click/pull/3861",
-          "https://github.com/pallets/click/pull/3860",
-          "https://github.com/pallets/click/pull/3858",
-          "https://github.com/pallets/click/pull/3829",
-          "https://github.com/pallets/click/pull/3821",
-          "https://github.com/pallets/click/pull/3820"
+          "https://github.com/processing/p5.js/pull/9201",
+          "https://github.com/processing/p5.js/pull/9198",
+          "https://github.com/processing/p5.js/pull/9192",
+          "https://github.com/processing/p5.js/pull/9191",
+          "https://github.com/processing/p5.js/pull/9188",
+          "https://github.com/processing/p5.js/pull/9186",
+          "https://github.com/processing/p5.js/pull/9170",
+          "https://github.com/processing/p5.js/pull/9166"
         ]
       },
       {
-        "fact_id": "reviewers_by_path-8",
-        "statement": "@Rowlando13 reviewed 27 of 50 merged pull requests that touched tests/, files at the top level, src/, docs/ or .github/: 17 of 34 for tests/, 16 of 31 for files at the top level, 17 of 31 for src/, 14 of 20 for docs/, 2 of 3 for .github/",
-        "seen": 27,
-        "of": 50,
+        "statement": "@perminder-17 reviewed 10 of 20 merged pull requests from people outside the project that touched src/ or test/: 9 of 19 for src/, 9 of 19 for test/",
+        "seen": 10,
+        "of": 20,
         "links": [
-          "https://github.com/pallets/click/pull/3866",
-          "https://github.com/pallets/click/pull/3865",
-          "https://github.com/pallets/click/pull/3861",
-          "https://github.com/pallets/click/pull/3860",
-          "https://github.com/pallets/click/pull/3858",
-          "https://github.com/pallets/click/pull/3821",
-          "https://github.com/pallets/click/pull/3808",
-          "https://github.com/pallets/click/pull/3805"
+          "https://github.com/processing/p5.js/pull/9198",
+          "https://github.com/processing/p5.js/pull/9191",
+          "https://github.com/processing/p5.js/pull/9188",
+          "https://github.com/processing/p5.js/pull/9186",
+          "https://github.com/processing/p5.js/pull/9170",
+          "https://github.com/processing/p5.js/pull/9163",
+          "https://github.com/processing/p5.js/pull/9162",
+          "https://github.com/processing/p5.js/pull/9142"
         ]
       }
     ]
   },
   "ai": {
-    "model": "gpt-5-mini",
-    "read_on": "2026-08-31T01:06:53.358758Z",
-    "threads": 11,
+    "read_on": "2026-09-30T12:01:07+00:00",
+    "threads": 44,
     "signals": [
       {
         "kind": "outsider_posture",
         "value": "welcoming",
         "headline": "Welcoming",
-        "text": "Most contributions are accepted and merged, and maintainers give actionable review requests (tests, naming, or minor changes) and guidance on how to proceed.",
+        "text": "Reviewers answer outside pull requests and ask for specific things: a test, a screenshot of the fix working, or a clearer reason for the change.",
         "tone": "good",
-        "url": "https://github.com/pallets/click/pull/3637"
+        "url": "https://github.com/processing/p5.js/pull/9191"
       },
       {
         "kind": "onboarding",
         "value": "substantive",
-        "headline": "Clear enough to follow",
-        "text": "The README includes a clear \"Contributing\" section that directs newcomers to detailed contributing documentation and explicitly mentions ways to contribute.",
+        "headline": "Clear, and enforced",
+        "text": "The guide asks you to get assigned and have your approach approved before you start. Maintainers close pull requests that skip it, and link the guide when they do.",
         "tone": "good",
-        "url": "https://github.com/pallets/click/blob/36baa15ff831b939a22bc527cd76ce653ef6f66d/README.md"
+        "url": "https://github.com/processing/p5.js/blob/HEAD/CONTRIBUTING.md"
       },
       {
         "kind": "repo_kind",
         "value": "real_software",
         "headline": "A software project",
-        "text": "The repository is a Python package for building command-line interfaces (README and metadata describe it as a Python CLI toolkit) and merged pull requests modify runnable source files and tests.",
+        "text": "A JavaScript library for creative coding in the browser. Merged pull requests change the library in src/ and its tests in test/.",
         "tone": "neutral",
-        "url": "https://github.com/pallets/click"
+        "url": "https://github.com/processing/p5.js"
       }
     ],
     "outcomes": [
       {
         "value": "merged_after_review",
-        "count": 8
+        "count": 19
       },
       {
         "value": "merged_without_engagement",
-        "count": 2
+        "count": 7
       },
       {
         "value": "closed_with_guidance",
-        "count": 1
+        "count": 15
+      },
+      {
+        "value": "ignored",
+        "count": 3
       }
     ],
     "quotes": [
       {
-        "text": "I'm fine with some manual testing on a Windows machine/VM, then merging this in and letting it develop from there.",
-        "url": "https://github.com/pallets/click/pull/3637",
-        "number": 3637,
+        "text": "Do you have any test results, a short video or screenshot of the fallback running with WebGPU disabled?",
+        "url": "https://github.com/processing/p5.js/pull/9191",
+        "number": 9191,
         "outcome": "merged_after_review"
       },
       {
-        "text": "Push a revert commit, then open a PR from a separate branch.",
-        "url": "https://github.com/pallets/click/pull/3701",
-        "number": 3701,
+        "text": "It needs to be clearer when and why a user might want to revoke a URL object manually like this and what the consequence of this would be.",
+        "url": "https://github.com/processing/p5.js/pull/9155",
+        "number": 9155,
+        "outcome": "merged_after_review"
+      },
+      {
+        "text": "The proposed fix does not fix the original issue and still links to 404 pages.",
+        "url": "https://github.com/processing/p5.js/pull/9098",
+        "number": 9098,
         "outcome": "closed_with_guidance"
-      },
-      {
-        "text": "If we can leave the renaming of test files alone, I will merge this so we are all ready as splitting test files does not need a change log.",
-        "url": "https://github.com/pallets/click/pull/3697",
-        "number": 3697,
-        "outcome": "merged_after_review"
       }
     ]
   }
