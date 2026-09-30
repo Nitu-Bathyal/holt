@@ -57,6 +57,43 @@ export function readmeShown(a: RepoAbout): string | null {
   return d && (plain(line) === d || d.includes(plain(line))) ? null : line;
 }
 
+export type Fact = { label: string; value: string; /** A date to show as "3 days ago" after `value`. */ since?: string; href?: string };
+
+/** The project in numbers a newcomer can read: who's here, how busy, how alive (the licence, start year and branch are in the report's header). Only what GitHub gave. */
+export function projectFacts(a: RepoAbout): Fact[] {
+  const out: Fact[] = [];
+  if (a.contributors != null) out.push({ label: a.contributors === 1 ? "person has contributed" : "people have contributed", value: compactCount(a.contributors) });
+  if (a.open_pull_requests != null) {
+    const ever = a.pull_requests != null && a.pull_requests >= a.open_pull_requests ? ` of ${compactCount(a.pull_requests)} ever` : "";
+    out.push({ label: a.open_pull_requests === 1 ? `pull request open${ever}` : `pull requests open${ever}`, value: compactCount(a.open_pull_requests) });
+  }
+  if (a.pushed_at) out.push({ label: "last change", value: "", since: a.pushed_at });
+  const rel = a.latest_release;
+  if (rel) out.push({ label: "latest release", value: rel.tag, since: rel.published_at ?? undefined, href: rel.url });
+  return out;
+}
+
+export type HelpLink = { label: string; note: string; url: string };
+
+const HELP: Record<RepoAbout["links"][number]["kind"], { label: string; note: string }> = {
+  contributing: { label: "Contributing guide", note: "how this project wants changes sent" },
+  docs: { label: "Documentation", note: "how it works and how to set it up" },
+  discussions: { label: "GitHub Discussions", note: "ask a question" },
+  discord: { label: "Discord chat", note: "talk to the people who work on it" },
+  slack: { label: "Slack chat", note: "talk to the people who work on it" },
+  gitter: { label: "Gitter chat", note: "talk to the people who work on it" },
+  matrix: { label: "Matrix chat", note: "talk to the people who work on it" },
+  zulip: { label: "Zulip chat", note: "talk to the people who work on it" },
+};
+
+/** Where to read the rules and ask for help: the guide first, then docs, then somewhere to talk, then the project's own site. */
+export function helpLinks(a: RepoAbout): HelpLink[] {
+  const order = ["contributing", "docs", "discussions", "discord", "slack", "gitter", "matrix", "zulip"];
+  const found = [...(a.links ?? [])].sort((x, y) => order.indexOf(x.kind) - order.indexOf(y.kind)).map((l) => ({ ...HELP[l.kind], url: l.url }));
+  if (a.homepage && !found.some((l) => l.url === a.homepage)) found.push({ label: siteLabel(a.homepage), note: "the project's own site", url: a.homepage });
+  return found;
+}
+
 export type Flag = { kind: "archived" | "fork"; text: string; repo?: string };
 
 export function flags(a: RepoAbout): Flag[] {

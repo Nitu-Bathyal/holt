@@ -8,7 +8,7 @@ const issue = (number: number, beginner: boolean, areas: StarterIssue["areas"], 
   people, open_prs: 0, on_it: null,
 });
 const repo = (name: string, issues: StarterIssue[]): FindResult => ({
-  repo: name, headline: "Worth your time", tone: "good", verdict: "viable", description: null, language: null, languages: [], stars: null, stats: {}, issues,
+  repo: name, headline: "Worth your time", tone: "good", verdict: "viable", description: null, language: null, languages: [], stars: null, open_issues: null, pull_requests: null, open_pull_requests: null, contributors: null, stats: {}, issues,
 });
 
 const results = [

@@ -19,6 +19,14 @@ export interface CardStats {
   replyHours: number | null;
 }
 
+/** The whole repository, from GitHub, not Holt's sample. Null when not known. */
+export interface RepoCounts {
+  openIssues: number | null;
+  pullRequests: number | null;
+  openPullRequests: number | null;
+  contributors: number | null;
+}
+
 export interface CardRepo {
   repo: string;
   description: string | null;
@@ -36,6 +44,7 @@ export interface CardRepo {
   numbersLine: string | null;
   odds: Odds | null;
   checkedThisWeek: number | null;
+  counts: RepoCounts;
 }
 
 /** The primary language, and the second one when the server names one. */
@@ -49,8 +58,8 @@ export function fromFind(r: FindResult): CardRepo {
   const s = r.stats;
   return {
     repo: r.repo, description: r.description, language: r.language, languageLabel: languageLabel(r.language, r.languages), stars: r.stars, headline: r.headline, tone: r.tone,
-    stats: { attempts: n(s.outsider_attempts), merged: n(s.outsider_merged), noReply: n(s.no_reply), closedSilently: null, closedOther: null, stillOpen: null, firstTimers: n(s.first_time_merged_authors), replyHours: n(s.median_first_response_hours) },
-    issues: r.issues, topics: [], why: [], reason: null, numbersLine: null, odds: null, checkedThisWeek: null,
+    stats: { attempts: n(s.outsider_attempts), merged: n(s.outsider_merged), noReply: n(s.no_reply), closedSilently: n(s.closed_silently), closedOther: s.closed_by_bot == null && s.withdrawn == null ? null : (s.closed_by_bot ?? 0) + (s.withdrawn ?? 0), stillOpen: n(s.still_open), firstTimers: n(s.first_time_merged_authors), replyHours: n(s.median_first_response_hours) },
+    issues: r.issues, topics: [], why: [], reason: null, numbersLine: null, odds: null, checkedThisWeek: null, counts: countsOf(r),
   };
 }
 
@@ -59,17 +68,22 @@ export function fullStats(s: Recommendation["stats"]): CardStats {
   return { attempts: s.outsider_attempts, merged: s.outsider_merged, noReply: s.no_reply, closedSilently: s.closed_silently, closedOther: (s.closed_by_bot ?? 0) + (s.withdrawn ?? 0), stillOpen: s.still_open, firstTimers: s.first_time_merged_authors, replyHours: n(s.median_first_response_hours) };
 }
 
+function countsOf(r: Pick<DiscoverRepo, "open_issues" | "pull_requests" | "open_pull_requests" | "contributors">): RepoCounts {
+  return { openIssues: n(r.open_issues), pullRequests: n(r.pull_requests), openPullRequests: n(r.open_pull_requests), contributors: n(r.contributors) };
+}
+
 export function fromPick(p: Recommendation): CardRepo {
   return {
     repo: p.repo, description: p.description, language: p.language, languageLabel: languageLabel(p.language, p.languages), stars: p.stars, headline: p.headline, tone: p.tone,
-    stats: fullStats(p.stats), issues: p.issues, topics: p.topics, why: p.why, reason: p.reason, numbersLine: p.numbers_line, odds: p.odds, checkedThisWeek: null,
+    stats: fullStats(p.stats), issues: p.issues, topics: p.topics, why: p.why, reason: p.reason, numbersLine: p.numbers_line, odds: p.odds, checkedThisWeek: null, counts: countsOf(p),
   };
 }
 
 export function fromDiscover(d: DiscoverRepo): CardRepo {
   return {
     repo: d.repo, description: d.description, language: d.language, languageLabel: languageLabel(d.language, d.languages), stars: d.stars, headline: d.headline, tone: d.tone,
-    stats: fullStats(d.stats), issues: [], topics: d.topics, why: [], reason: d.reason, numbersLine: null, odds: null, checkedThisWeek: d.checked_this_week,
+    stats: fullStats(d.stats), issues: d.issues ?? [], topics: d.topics, why: [], reason: d.reason, numbersLine: null, odds: null, checkedThisWeek: d.checked_this_week,
+    counts: countsOf(d),
   };
 }
 

@@ -36,6 +36,16 @@ type Card = (r: CardRepo) => React.ReactNode;
 const changed = new Map<string, boolean>();
 
 const PARAM = "focus";
+
+const NAV_BTN = "grid size-11 place-items-center border border-line-strong bg-panel text-muted transition-colors hover:border-blue hover:text-ink disabled:pointer-events-none disabled:opacity-30 sm:size-8";
+
+function Icon({ d }: { d: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d={d} />
+    </svg>
+  );
+}
 const reportHref = (repo: string, days?: number) => `/${repo}${days && days !== 7 ? `?days=${days}` : ""}`;
 
 function withFocus(repo: string | null): string {
@@ -178,22 +188,28 @@ function Focusable({ repos, layout, days, topicBase, card, actionsFor }: ListPro
           const dy = e.changedTouches[0].clientY - t.y;
           if (Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy)) go(dx < 0 ? nb.next : nb.prev);
         }}
-        className="bg-bg text-ink backdrop:bg-black/60 backdrop:backdrop-blur-[2px] max-sm:m-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:max-w-none sm:m-auto sm:max-h-[90vh] sm:w-[min(48rem,calc(100%-3rem))] sm:border sm:border-line-strong sm:shadow-soft"
+        className="bg-bg text-ink backdrop:bg-black/60 backdrop:backdrop-blur-[2px] max-sm:m-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:max-w-none sm:m-auto sm:max-h-[90vh] sm:w-[min(40rem,calc(100%-3rem))] sm:border sm:border-line-strong sm:shadow-soft"
       >
         {current && nb && (
           <div className="flex h-full flex-col sm:h-auto sm:max-h-[90vh]">
-            <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-2.5 text-[0.85rem] text-muted sm:px-6">
+            <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-1.5 font-sans text-[0.85rem] text-muted sm:px-5">
               <span className="tabular-nums">{nb.index + 1} of {repos.length}</span>
-              <div className="flex items-center gap-1">
-                <button type="button" onClick={() => go(nb.prev)} disabled={!nb.prev} aria-label="Previous repo" className="grid size-11 place-items-center sm:size-10 hover:text-ink disabled:opacity-30">←</button>
-                <button type="button" onClick={() => go(nb.next)} disabled={!nb.next} aria-label="Next repo" className="grid size-11 place-items-center sm:size-10 hover:text-ink disabled:opacity-30">→</button>
-                <button type="button" onClick={close} aria-label="Close" className="ml-2 grid size-11 place-items-center sm:size-10 text-[1.1rem] hover:text-ink">✕</button>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={() => go(nb.prev)} disabled={!nb.prev} aria-label="Previous repo" className={NAV_BTN}>
+                  <Icon d="M15 5l-7 7 7 7" />
+                </button>
+                <button type="button" onClick={() => go(nb.next)} disabled={!nb.next} aria-label="Next repo" className={NAV_BTN}>
+                  <Icon d="M9 5l7 7-7 7" />
+                </button>
+                <button type="button" onClick={close} aria-label="Close" className={`${NAV_BTN} ml-1`}>
+                  <Icon d="M6 6l12 12M18 6L6 18" />
+                </button>
               </div>
             </div>
-            <div data-scroll className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:flex-initial sm:p-6">
-              <RepoFocus key={current.repo} r={current} report={reportHref(current.repo, days)} actions={actionsFor(current.repo, false)} topicBase={topicBase} />
+            <div data-scroll className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:flex-initial sm:px-5 sm:py-4">
+              <RepoFocus key={current.repo} r={current} report={reportHref(current.repo, days)} actions={actionsFor(current.repo, true)} topicBase={topicBase} />
             </div>
-            <p className="hidden border-t border-line px-6 py-2 text-[0.8rem] text-faint sm:block">← → to move between repos · Esc to close</p>
+            <p className="hidden border-t border-line px-5 py-1.5 font-sans text-[0.8rem] text-faint sm:block">← → to move between repos · Esc to close</p>
           </div>
         )}
       </dialog>

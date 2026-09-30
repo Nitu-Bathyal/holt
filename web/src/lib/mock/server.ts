@@ -8,7 +8,7 @@ import type {
 import type { FeedbackInput } from "../feedback";
 import type { Timing } from "../api-schema";
 import { verdictView, withDerived } from "./derived";
-import { canonicalName, isMockNotFound, mockFindPool, mockIssues, mockReport, PRECACHED } from "./fixtures";
+import { canonicalName, isMockNotFound, mockAbout, mockFindPool, mockIssues, mockReport, PRECACHED } from "./fixtures";
 import { mergePlanEvents } from "./merge-plan";
 import { playbookEvents } from "./playbook";
 import { preflightEvents } from "./preflight";
@@ -220,15 +220,22 @@ export async function listReports(limit: number): Promise<Result<{ reports: { re
   return { ok: true, data: { reports: rows.slice(0, limit) } };
 }
 
-/** Discover over the cached reports. The mock has no GitHub details, so language and stars are empty. */
+const counts = (a: ReturnType<typeof mockAbout>) => ({
+  open_issues: a?.open_issues ?? null, pull_requests: a?.pull_requests ?? null,
+  open_pull_requests: a?.open_pull_requests ?? null, contributors: a?.contributors ?? null,
+});
+
+/** Discover over the cached reports. The mock has no GitHub details, so language and stars are empty; the counts are the made-up "About". */
 export async function discover(sort: DiscoverSort, language: string | null, topic: string | null, limit: number, hacktoberfest = false): Promise<Result<DiscoverOut>> {
   const tagged = new Set(mockFindPool().filter(({ seed }) => seed.hacktoberfest).map(({ seed }) => seed.repo));
   const cards: DiscoverRepo[] = [...state().cache.values()]
     .filter((r) => r.mode === "rules" && r.days === 7)
     .filter((r) => !hacktoberfest || tagged.has(r.repo))
     .map((r) => ({
+      ...counts(mockAbout(r.repo)),
       repo: r.repo, verdict: r.verdict, headline: r.headline, tone: r.tone, reason: r.verdict_line, stats: r.stats,
       description: null, language: null, languages: [], stars: null, topics: [], pushed_at: null, checked_this_week: null, generated_at: r.generated_at,
+      issues: mockIssues(r.repo).slice(0, 5),
     }));
   const chosen = language || topic || sort === "trending" ? [] : sort === "welcoming" ? cards.filter((c) => c.verdict === "viable") : cards;
   return { ok: true, data: { sort, language, topic, hacktoberfest, repos: chosen.slice(0, limit), languages: [], trending_min: 5 } };
@@ -318,6 +325,7 @@ function findResults(q: FindQuery): FindResult[] {
       language: seed.language,
       languages: [seed.language],
       stars: seed.stars,
+      ...counts(mockAbout(seed.repo)),
       stats: {
         outsider_attempts: seed.stats.outsider_attempts,
         outsider_merged: seed.stats.outsider_merged,
@@ -543,7 +551,7 @@ function mockPicks(): Recommendation[] {
   });
   const pick = (repo: string, language: string, description: string, stars: number, topics: string[], s: Stats, why: string[], issues: StarterIssue[]): Recommendation => {
     const r = withDerived({ ...mockReport(repo, "rules", 7), stats: s });
-    return { repo, ...verdictView("viable"), verdict: "viable", odds: r.odds, reason: r.verdict_line, numbers_line: r.numbers_line, why, stats: s, description, language, languages: [language], stars, topics, issues, checked_at: at(5) };
+    return { repo, ...counts(mockAbout(repo)), ...verdictView("viable"), verdict: "viable", odds: r.odds, reason: r.verdict_line, numbers_line: r.numbers_line, why, stats: s, description, language, languages: [language], stars, topics, issues, checked_at: at(5) };
   };
   return [
     pick("pallets/click", "Python", "Python composable command line interface toolkit", 16_200, ["cli", "python"], stats(42, 19, 3, 6, 9), [

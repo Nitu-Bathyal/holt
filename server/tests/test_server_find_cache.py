@@ -10,7 +10,9 @@ from datetime import timedelta
 
 import pytest
 from holt.starter import RULES_VERSION
-from holt_server.db import FindCache, RepoMeta, now
+from conftest import STATS, canned_report
+from holt_server import discover
+from holt_server.db import FindCache, RepoMeta, Report, now
 from sqlalchemy import update
 
 LANGS = ["python", "javascript", "typescript", "go", "rust"]
@@ -137,7 +139,9 @@ def add(h, *items):
 
 def meta(repo, **kw):
     return RepoMeta(repo_key=repo.lower(), repo=repo, description=kw.get("description"),
-                    language=kw.get("language"), stars=kw.get("stars", 0), topics=[])
+                    language=kw.get("language"), stars=kw.get("stars", 0), topics=[],
+                    open_issues=kw.get("open_issues"), pull_requests=kw.get("pull_requests"),
+                    open_pull_requests=kw.get("open_pull_requests"), contributors=kw.get("contributors"))
 
 
 def details(results):
@@ -155,6 +159,15 @@ def test_results_carry_the_repo_details_holt_already_has(h, finder):
     }
     assert details(find(h, languages=["go"]).json()["results"])["octo/go-0"] == (
         "A tool.", "Go", 321)
+
+
+def test_results_carry_the_repo_counts(h, finder):
+    add(h, meta("Octo/Go-0", open_issues=57, pull_requests=4100, open_pull_requests=12, contributors=812))
+    for results in (h.wait(find(h, languages=["go"]).json()["job_id"], kind="find")["results"],
+                    find(h, languages=["go"]).json()["results"]):
+        by = {r["repo"]: r for r in results}
+        assert [by["octo/go-0"][k] for k in ("open_issues", "pull_requests", "open_pull_requests", "contributors")] == [57, 4100, 12, 812]
+        assert by["octo/go-1"]["contributors"] is None  # not read yet
 
 
 def test_a_cached_search_picks_up_details_that_arrived_later(h, finder):
@@ -247,3 +260,22 @@ def test_found_repos_without_a_report_get_one_queued(h, finder):
     # The same search again (from the cache) queues nothing new.
     find(h, languages=["go"])
     assert len(h.client.portal.call(queued)) == 2
+
+
+def test_results_borrow_the_reports_breakdown_so_the_bar_matches_discover(h):
+    full = {**STATS, "closed_silently": 4, "closed_by_bot": 1, "withdrawn": 0, "still_open": 3}
+    add(h, Report(repo="octo/a", repo_key="octo/a", mode="rules", days=7, created_at=now(),
+                  report={**canned_report("octo/a"), "stats": full}))
+    screen = {"outsider_attempts": 20, "outsider_merged": 8}
+    found = [
+        {"repo": "octo/a", "stats": screen},
+        {"repo": "octo/a", "stats": {**screen, "outsider_merged": 9}},  # another window: not the same pull requests
+        {"repo": "octo/nope", "stats": screen},
+    ]
+
+    async def run():
+        async with h.svc.db.session() as s:
+            return await discover.with_meta(s, found)
+    same, other, unknown = h.client.portal.call(run)
+    assert same["stats"]["closed_silently"] == 4 and same["stats"]["still_open"] == 3
+    assert "closed_silently" not in other["stats"] and "closed_silently" not in unknown["stats"]

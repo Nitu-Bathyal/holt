@@ -15,13 +15,13 @@ export function StatsGrid({ stats, limit, reveal, land }: { stats: Partial<Stats
         const t = TONE[s.tone];
         const delay = 120 + Math.min(i, 5) * 90;
         return (
-          <li key={s.key} className={`bg-panel p-5 ${reveal ? "reveal" : ""}`} style={reveal ? { ["--d0" as string]: "60ms", ["--i" as string]: i } : undefined}>
-            <p className={`text-[1.6rem] font-semibold leading-tight tracking-tight ${s.tone === "neutral" ? "text-ink" : t.text}`}>
+          <li key={s.key} className={`bg-panel p-4 ${reveal ? "reveal" : ""}`} style={reveal ? { ["--d0" as string]: "60ms", ["--i" as string]: i } : undefined}>
+            <p className={`text-[1.3rem] font-semibold leading-tight tracking-tight ${s.tone === "neutral" ? "text-ink" : t.text}`}>
               {land ? <CountUp text={s.big} delay={delay} /> : s.big}
             </p>
-            <p className="mt-1 font-sans text-[0.9rem] leading-snug text-muted">{s.label}</p>
+            <p className="mt-0.5 font-sans text-[0.85rem] leading-snug text-muted">{s.label}</p>
             {s.meter != null && (
-              <div className="meter mt-3" aria-hidden="true">
+              <div className="meter mt-2" aria-hidden="true">
                 <span className={t.bg} style={{ width: `${Math.max(2, Math.round(s.meter * 100))}%`, ...(land ? { ["--d" as string]: `${delay}ms` } : {}) }} />
               </div>
             )}

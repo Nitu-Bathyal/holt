@@ -129,11 +129,17 @@ responses. The server also accepts and normalises full URLs
   "about": {                          // what the repo is; null until its details are read
     "description": "string | null", "readme_line": "string | null",
     "homepage": "https://… | null", "stars": 91234, "forks": 1200 | null,
-    "open_issues": 57 | null, "license": "MIT | null", "topics": ["cli"],
+    "open_issues": 57 | null, "pull_requests": 4100 | null,
+    "open_pull_requests": 12 | null, "contributors": 812 | null,
+    "license": "MIT | null", "topics": ["cli"],
     "languages": [ { "name": "Python", "share": 0.92 } ],
     "created_at": "…Z | null", "pushed_at": "…Z | null",
     "default_branch": "main | null", "archived": false, "fork": false,
-    "fork_of": "owner/repo | null", "fetched_at": "…Z"
+    "fork_of": "owner/repo | null",
+    "links": [ { "kind": "contributing" | "discussions" | "docs" | "discord" | "slack"
+                 | "gitter" | "matrix" | "zulip", "url": "https://…" } ],
+    "latest_release": { "tag": "v3.1.0", "published_at": "…Z | null", "url": "https://…" } | null,
+    "fetched_at": "…Z"
   } | null
 }
 ```
@@ -168,8 +174,18 @@ many repositories per GraphQL query, never on the request path. Like
 `holt_users` it is filled only by `GET /v1/reports/{owner}/{repo}` and never
 stored with the report; it is null until the details have been read, and the
 fields added with it (`forks` onwards, `readme_line`) are null on rows read
-before they existed. `languages` holds up to three, biggest first, `share` in
-0..1. `homepage` is always an `http(s)` URL. Nothing in it feeds the verdict.
+before they existed. `pull_requests` counts every pull request ever opened
+(`open_pull_requests` those open now) and `contributors` the people who
+committed, anonymous committers included, as GitHub's contributors list
+counts them; all three are the whole repository, not Holt's sample.
+`contributors` comes from one REST request per repository after the details
+query and stays at its last value when that request fails. `languages` holds up to three, biggest first, `share` in
+0..1. `homepage` is always an `http(s)` URL. `links` is where a newcomer
+finds the rules and help, one per kind, in the order listed above: GitHub's
+contributing guide, Discussions when the repository has them, then the docs and
+chat rooms the README links to (never a badge's image); it is empty until the
+details are read again, and every URL is `http(s)`. `latest_release` is GitHub's
+latest release, null when there is none. Nothing in it feeds the verdict.
 The public extension proxy passes it on.
 
 ### Engine version and `outdated`
@@ -438,12 +454,17 @@ a cache hit costs no GitHub call and no rate limit. A miss counts against the
 Body: `{"languages": ["python"], "topics": [], "days": 7, "hacktoberfest": true, "limit": 20}`
 Returns `{"results": [ { "repo": "owner/repo", "headline": "…", "tone": "good", "verdict": "…",
 "description": "string | null", "language": "string | null", "stars": 123 | null,
-"stats": {…subset}, "issues": [StarterIssue] } ]}` (`description`, `language`
-and `stars` come from `repo_meta`, the same details Discover shows, read when
+"open_issues": 57 | null, "pull_requests": 4100 | null,
+"open_pull_requests": 12 | null, "contributors": 812 | null,
+"stats": {…subset}, "issues": [StarterIssue] } ]}` (`description`, `language`,
+`stars` and the four counts (as on Discover) come from `repo_meta`, the same details Discover shows, read when
 the search finishes and again each time a cached search is served; no GitHub
 call. They are null for a repo the warm pass hasn't read yet, and the warm
 pass reads every repo in a search from the last day. `stats` leaves out
-counts it doesn't have rather than sending null), only repos whose rules
+counts it doesn't have rather than sending null; when a fresh 7-day report
+counted the same pull requests, `closed_silently`, `closed_by_bot`,
+`withdrawn` and `still_open` come from it, so the odds bar is drawn as on
+Discover, and without them the bar has one "weren't merged" segment), only repos whose rules
 verdict is `viable`, ordered by starter-issue quality.
 
 - **Cached** (same search, finished within 6 hours): `200
@@ -512,14 +533,22 @@ people. Reads only the database: no GitHub call and no rate limit.
   "repos": [ { "repo": "owner/repo", "verdict": "viable", "headline": "Worth your time",
     "tone": "good", "reason": "…the report's verdict_line…", "stats": Stats,
     "description": "…"|null, "language": "Python"|null, "stars": 123|null,
+    "open_issues": 57|null, "pull_requests": 4100|null,
+    "open_pull_requests": 12|null, "contributors": 812|null,  // as in `about`
     "topics": ["cli"], "pushed_at": "…"|null,
     "checked_this_week": 12|null,     // null below trending_min
-    "generated_at": "…" } ],
+    "generated_at": "…",
+    "issues": [StarterIssue] } ],     // cached only; [] when none, see below
   "languages": [ { "name": "Python", "repos": 40 } ] }  // filter chips, most repos first
 ```
 
-`description`, `language`, `stars`, `topics` (all of them, up to GitHub's 20)
-and `pushed_at` come from `repo_meta`, read from GitHub right after a
+`issues` are the repo's starter issues as `GET /v1/repos/{o}/{r}/starter-issues`
+(or the warm pass) last cached them (at most 5, nobody-on-it first), when that
+was within 72 hours and by the current starter rules; otherwise `[]`. Discover
+never reads GitHub for them.
+
+`description`, `language`, `stars`, the four counts, `topics` (all of them,
+up to GitHub's 20) and `pushed_at` come from `repo_meta`, read from GitHub right after a
 repository's report is stored (when it has none, or they are more than a day
 old) and again once a day for every reported repository. The read after a
 report is best effort and happens a few seconds after the report is done, so
@@ -1072,6 +1101,8 @@ only the database: no GitHub call, no model, no rate limit, never charged.
             "6 people had their first pull request merged here recently."],
     "stats": Stats, "description": "…"|null, "language": "Python"|null,
     "stars": 123|null, "topics": ["cli"],
+    "open_issues": 57|null, "pull_requests": 4100|null,
+    "open_pull_requests": 12|null, "contributors": 812|null,  // as on Discover
     "issues": [StarterIssue],     // up to 3, fitted to level and contribution types; [] when none known
     "checked_at": "…"|null } ],
   "locked": 3, "full": false,

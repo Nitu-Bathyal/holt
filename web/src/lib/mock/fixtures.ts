@@ -450,7 +450,7 @@ function fromSeed(seed: Seed, mode: "rules" | "ai", days: number): Report {
 }
 
 // "About this repo": made up from the name, except where a real-looking one reads better.
-function mockAbout(repo: string): Report["about"] {
+export function mockAbout(repo: string): Report["about"] {
   if (repo.toLowerCase().includes("no-about")) return null;
   const r = rng(`${repo}:about`);
   const stars = Math.floor(r() * 90_000);
@@ -462,6 +462,9 @@ function mockAbout(repo: string): Report["about"] {
     stars,
     forks: Math.floor(stars / 6),
     open_issues: Math.floor(r() * 900),
+    pull_requests: Math.floor(stars / 8) + 40,
+    open_pull_requests: Math.floor(r() * 120),
+    contributors: Math.floor(stars / 90) + 3,
     license: r() > 0.2 ? "MIT" : null,
     topics: ["hacktoberfest", "cli", "python"].slice(0, 1 + Math.floor(r() * 3)),
     languages: [{ name: "Python", share: main }, { name: "Shell", share: (1 - main) * 0.7 }, { name: "HTML", share: (1 - main) * 0.3 }],
@@ -471,6 +474,12 @@ function mockAbout(repo: string): Report["about"] {
     archived: repo.toLowerCase().includes("archived"),
     fork: false,
     fork_of: null,
+    links: [
+      { kind: "contributing", url: `https://github.com/${repo}/blob/main/CONTRIBUTING.md` },
+      { kind: "docs", url: `https://${repo.split("/")[1]}.readthedocs.io` },
+      { kind: "discord", url: "https://discord.gg/mock" },
+    ],
+    latest_release: { tag: "v1.4.0", published_at: hoursAgo(24 * 20), url: `https://github.com/${repo}/releases/tag/v1.4.0` },
     fetched_at: hoursAgo(3),
   };
 }
