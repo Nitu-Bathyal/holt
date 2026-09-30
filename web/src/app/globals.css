@@ -2090,26 +2090,21 @@
 }
 
 /* 06: four answers (landing/answers.tsx). */
+/* One column grid for all four: the cats' column is as wide as the widest
+   face, so every answer's words start at the same x. */
 .ls-answers {
   display: grid;
-  gap: clamp(1rem, 3.5svh, 2.5rem);
+  grid-template-columns: auto minmax(0, 1fr);
+  row-gap: clamp(1rem, 3.5svh, 2.5rem);
   margin-top: clamp(1.2rem, 4svh, 3rem);
 }
 .ls-answer {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: start;
   gap: 0 clamp(0.75rem, 2vw, 2.5rem);
   padding: clamp(0.9rem, 2.4svh, 1.8rem) 0 clamp(0.9rem, 2.4svh, 1.8rem) clamp(1rem, 1.6vw, 1.75rem);
-}
-/* A quiet rule between answers, so each row reads as its own. */
-.ls-answer + .ls-answer::before {
-  content: "";
-  position: absolute;
-  top: calc(-0.5 * clamp(1rem, 3.5svh, 2.5rem));
-  left: 0;
-  right: 0;
-  border-top: 1px dashed var(--line);
 }
 .ls-answer-bar {
   transform-origin: left;
@@ -2138,6 +2133,15 @@
   row-gap: 0.6rem;
   font-size: clamp(0.9rem, min(1.05vw, 1.95svh), 1.1rem);
   line-height: 1.55;
+}
+/* Wide screens: each "what it means" / "what to do" on one line. */
+@media (min-width: 1024px) {
+  .ls-answer-text {
+    max-width: none;
+  }
+  .ls-answer-text dd {
+    white-space: nowrap;
+  }
 }
 @media (prefers-reduced-motion: no-preference) and (min-width: 1024px) {
   .ls-answers[data-phase="wait"] .ls-answer-word {
