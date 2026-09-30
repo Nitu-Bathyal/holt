@@ -14,6 +14,7 @@ import { HoltUsersLine } from "./holt-users-line";
 import { PreflightLink } from "../preflight/preflight-link";
 import { LandingMap } from "./landing-map";
 import { PlaybookSection } from "./playbook-section";
+import { ProjectSection } from "./project-section";
 import { ShareBar } from "./share-bar";
 import { StatsGrid } from "./stats-grid";
 import { TONE, TONE_MOOD } from "./tone";
@@ -25,13 +26,13 @@ import { VerdictFeedback } from "./verdict-feedback";
 const step = (reveal: boolean | undefined, ms: number) =>
   reveal ? { className: "reveal", style: { ["--d0" as string]: `${ms}ms` } } : { className: "", style: undefined };
 
-export function Section({ n, title, id, children, note, reveal }: { n: string; title: string; id: string; children: React.ReactNode; note?: React.ReactNode; reveal?: number }) {
+export function Section({ n, title, id, children, note, reveal }: { n?: string; title: string; id: string; children: React.ReactNode; note?: React.ReactNode; reveal?: number }) {
   const r = step(reveal != null, reveal ?? 0);
   return (
-    <section aria-labelledby={id} className={`border-t border-line pt-8 ${r.className}`} style={r.style}>
-      <div className="mb-5 flex flex-wrap items-baseline gap-x-4 gap-y-1">
-        <span className="text-[0.8rem] text-blue">{n}</span>
-        <h2 id={id} className="text-[1.25rem] font-semibold tracking-tight sm:text-[1.4rem]">{title}</h2>
+    <section aria-labelledby={id} className={`border-t border-line pt-5 ${r.className}`} style={r.style}>
+      <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
+        {n && <span className="text-[0.78rem] text-blue">{n}</span>}
+        <h2 id={id} className="text-[1.05rem] font-semibold tracking-tight sm:text-[1.15rem]">{title}</h2>
         {note && <span className="font-sans text-[0.89rem] text-faint">{note}</span>}
       </div>
       {children}
@@ -218,26 +219,26 @@ export function ReportView({
           </div>
         )}
 
-        <PlaybookSection repo={repo} signedIn={signedIn} />
-
-        <Section n="01" id="issues" title={viable ? "Your first contribution" : "Starter issues"} note="open and unclaimed, best first" reveal={reveal ? 180 : undefined}>
+        <Section id="issues" title={viable ? "Your first contribution" : "Starter issues"} note="open and unclaimed, best first" reveal={reveal ? 180 : undefined}>
           {issues}
         </Section>
 
+        <PlaybookSection repo={repo} signedIn={signedIn} />
+
         {!example && <PreflightLink repo={repo} />}
 
-        <Section n="02" id="numbers" title="What happened to outsiders">
+        <Section id="numbers" title="What happened to outsiders">
           <StatsGrid stats={report.stats} reveal={reveal} land={land} />
           <HoltUsersLine stats={report.holt_users} />
         </Section>
 
-        <Section n="03" id="landing" title="Where newcomer work lands" reveal={reveal ? 230 : undefined}>
+        <Section id="landing" title="Where newcomer work lands" reveal={reveal ? 230 : undefined}>
           <LandingMap landing={report.landing} neverLanded={report.never_landed} />
         </Section>
 
         {!example && <VerdictFeedback report={report} />}
 
-        <Section n="04" id="evidence" title="The evidence" note="every claim links to GitHub" reveal={reveal ? 280 : undefined}>
+        <Section id="evidence" title="The evidence" note="every claim links to GitHub" reveal={reveal ? 280 : undefined}>
           <EvidenceList evidence={report.evidence} />
         </Section>
 
