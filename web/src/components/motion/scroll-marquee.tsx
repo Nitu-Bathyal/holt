@@ -91,7 +91,7 @@ export function ScrollMarquee({ text }: { text: string }) {
         ref={band}
         data-marquee
         data-text={text}
-        className="marquee w-max whitespace-nowrap text-[clamp(2.2rem,7vw,7rem)] font-bold leading-none tracking-[-0.06em] text-blue opacity-[0.09] will-change-transform before:content-[attr(data-text)]"
+        className="marquee w-max whitespace-nowrap text-[clamp(1.6rem,min(4.2vw,7svh),4.2rem)] font-bold leading-none tracking-[-0.06em] text-blue opacity-[0.09] will-change-transform before:content-[attr(data-text)]"
       />
     </div>
   );

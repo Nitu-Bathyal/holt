@@ -1954,10 +1954,10 @@
 }
 .ls-person-title {
   padding-top: clamp(1rem, 4svh, 2.5rem);
-  font-size: clamp(1.25rem, min(1.9vw, 3.4svh), 2rem);
+  font-size: clamp(1.1rem, min(1.6vw, 2.9svh), 1.7rem);
 }
 .ls-person-body {
-  font-size: clamp(0.95rem, min(1.05vw, 2svh), 1.1rem);
+  font-size: clamp(0.88rem, min(0.92vw, 1.75svh), 0.98rem);
 }
 /* Pointing at a card lights its border (and lifts it 2px, above). */
 @media (hover: hover) {
