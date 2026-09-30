@@ -1,4 +1,4 @@
-// Your pull requests (docs/design/DASHBOARD.md): is each one going anywhere?
+// Your pull requests (the dashboard plan): is each one going anywhere?
 // Grouped by next move: needs you (waiting longer than the repo usually takes
 // to reply), waiting, merged, closed. Any repo can be left out of your numbers
 // (a friend's project, your team's repo, a hackathon); those collect, undoable,

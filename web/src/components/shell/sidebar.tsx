@@ -1,6 +1,6 @@
 "use client";
 // The app shell's sidebar: the five places a signed-in person goes
-// (docs/design/DASHBOARD.md). A full-height rail on desktop with Holt's cat at
+// (the dashboard plan). A full-height rail on desktop with Holt's cat at
 // the top and you at the foot, and the same list in a drawer on phones and
 // tablets. The rail folds to icons (rail-toggle.tsx); folded, each label
 // becomes its item's tooltip (so it stays the link's name) and badges become

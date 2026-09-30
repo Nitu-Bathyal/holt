@@ -5,8 +5,7 @@
 > engine's blind spot (its label counted maintainers as outsiders too). What
 > gates an engine change now is the golden set (`golden/README.md`): 52
 > recorded repositories, 10 of them hand-checked, replayed offline in CI.
-> The verdict rules and the evidence for each threshold are in
-> [REVIEW-2026-09-30.md](REVIEW-2026-09-30.md). This page is kept as the
+> The verdict rules are in `src/holt/agent/verdict.py`. This page is kept as the
 > history and method of the competition result.
 
 ## Verdict tiers (engine 4, 29 Sep 2026)
@@ -75,8 +74,8 @@ maintenance mode. A year covers a full release cycle and a Hacktoberfest; on
 the golden set it changes no verdict except monica (its 8 merges were older;
 0 of 41 in the last year) and moment.
 
-**Floor from 20 attempts (5%).** The 5% floor is unchanged
-(REVIEW-2026-09-30.md). It used to wait for 2 merges, so 1 of 30 read "Not
+**Floor from 20 attempts (5%).** The 5% floor is unchanged.
+It used to wait for 2 merges, so 1 of 30 read "Not
 enough evidence" while 2 of 41 read "Not worth". 20 decided attempts is the
 smallest sample where one merge is already the floor (1 in 20), so no sample
 under 20 is judged by it, and the ignored rule's 8 stays for the zero-merge,

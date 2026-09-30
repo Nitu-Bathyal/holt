@@ -483,7 +483,7 @@ def test_every_reason_is_plain_english():
 def test_few_newcomers_merged_is_a_long_shot_and_its_reason_comes_first():
     """microsoft/vscode: 1 of 18 people's first pull request merged, while the
     pull request count (28%) cleared every other line. The backtest found this
-    share predicts the next newcomers best (docs/research/BACKTEST.md)."""
+    share predicts the next newcomers best (the maintainers' backtest notes)."""
     s = live(first_pr_people=18, first_pr_merged=1, outsider_ignored=60)
     v, trace = classify(findings(), s)
     assert v is Verdict.LONG_SHOT

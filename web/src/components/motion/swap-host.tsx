@@ -1,6 +1,6 @@
 "use client";
 
-// "Swap hub for holt", acted out (docs/design/EXPRESSIVE.md, pattern 2): the
+// "Swap hub for holt", acted out (the expressive design plan, pattern 2): the
 // letters of "hub" in github.com flip over to "holt" like a split-flap board,
 // and back, only while the line is on screen. Click to flip it yourself. The
 // server HTML shows the answer (this site's host). Reduced motion: before and

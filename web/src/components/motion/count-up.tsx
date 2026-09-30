@@ -1,6 +1,6 @@
 "use client";
 
-// Numbers that count into place (docs/design/EXPRESSIVE.md, patterns 4 and
+// Numbers that count into place (the expressive design plan, patterns 4 and
 // 11). <CountUpGroup> starts every <CountUp> inside it once it's on screen,
 // and marks itself data-count="wait" | "go" | "done" so CSS can hold meters
 // until then. Only for content that arrives on the client (a report that just
@@ -105,7 +105,7 @@ function startFor(id: string, value: number): number | null {
 const noop = () => () => {};
 
 /**
- * A number that counts into place when it's new to this visitor (EXPRESSIVE.md,
+ * A number that counts into place when it's new to this visitor (the expressive design plan,
  * pattern 11): from what they saw last time, or from 0 the first time. An
  * unchanged number stays still. Server HTML is never wound back: on a full
  * page load the number only gets remembered, and it counts when it arrives

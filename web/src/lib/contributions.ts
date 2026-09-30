@@ -43,7 +43,7 @@ export function foundViaHoltLine(n: number): string | null {
     : `${n} of them you opened within 30 days of checking the repo on Holt.`;
 }
 
-// --- Your pull requests, grouped by next move (docs/design/DASHBOARD.md) ------------------
+// --- Your pull requests, grouped by next move (the dashboard plan) ------------------
 
 /** A repo left out of your numbers, and why: you chose so, or it's your own or your team's project. */
 export interface NotCounted {

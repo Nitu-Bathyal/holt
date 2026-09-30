@@ -1,4 +1,4 @@
-// The cat as a face that reacts (docs/design/EXPRESSIVE.md). A mood change
+// The cat as a face that reacts (the expressive design plan). A mood change
 // re-keys the face, so its squash (.rcat-face in globals.css) replays; `look`
 // (-1..1) turns the eyes and mouth toward something. Decorative: always
 // aria-hidden, never the only sign of anything.

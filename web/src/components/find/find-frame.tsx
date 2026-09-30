@@ -1,4 +1,4 @@
-// Find a project's one frame (docs/design/DASHBOARD.md): the page head, the
+// Find a project's one frame (the dashboard plan): the page head, the
 // tabs, then the tab. /find, /discover and /hacktoberfest each render it, so
 // their public URLs stay and they read as one place.
 import Link from "next/link";

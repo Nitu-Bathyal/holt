@@ -5,13 +5,11 @@ When `GITHUB_APP_ID`, `GITHUB_APP_INSTALLATION_ID` and a private key
 the server signs a short JWT with the key, trades it for an installation
 access token (good for an hour), and hands that token out until shortly before
 it expires. Without them the server reads with `GITHUB_TOKENS`, as before.
-Why an App and not a machine user: docs/adr/0001-read-github-as-an-app.md.
 
 Neither the key, the JWT nor a token is ever put in a log or an error.
 
 `python -m holt_server.github_app` prints who the server reads GitHub as, the
-points it has left, and whether it can read public repositories
-(docs/ops/github-app.md).
+points it has left, and whether it can read public repositories.
 """
 
 from __future__ import annotations

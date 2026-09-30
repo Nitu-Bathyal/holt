@@ -86,6 +86,6 @@ the visitor picks one with the header toggle; a small inline script sets it
 before first paint. Motion is CSS-first. GSAP, ScrollTrigger and Lenis load
 only on desktop (mouse or trackpad) and never with `prefers-reduced-motion`:
 Lenis smooths wheel scrolling site-wide from hydration, and the landing cat
-starts once the page is idle. See `docs/design/MOTION.md` §5.
+starts once the page is idle. See the motion plan §5.
 
 `screenshots/` holds PR screenshots (both themes, phone and desktop, mock mode).

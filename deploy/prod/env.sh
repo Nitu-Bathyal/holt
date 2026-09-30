@@ -8,8 +8,7 @@
 #   GOOGLE_OAUTH_ID / GOOGLE_OAUTH_SECRET  -> AUTH_GOOGLE_ID / AUTH_GOOGLE_SECRET
 #   OPENROUTER_API_KEY, GITHUB_TOKENS      -> the same names
 #   GITHUB_APP_ID, GITHUB_APP_INSTALLATION_ID,
-#   GITHUB_APP_PRIVATE_KEY_FILE            -> the same names (the GitHub App,
-#                                             docs/ops/github-app.md)
+#   GITHUB_APP_PRIVATE_KEY_FILE            -> the same names (the GitHub App)
 #   CONTACT_EMAIL / CONTACT_CITY           -> NEXT_PUBLIC_CONTACT_EMAIL / _CITY
 # and makes $STATE/evidence (HOLT_EVIDENCE_GID) for the server's snapshots.
 # Exported, so they win over .env for compose. An unset key stays empty and
