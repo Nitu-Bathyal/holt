@@ -24,13 +24,18 @@ export function AnalysisRunner({ repo, mode, days, signedIn, fallback, ticket }:
   const [issues, setIssues] = useState<IssuesState>(null);
   const showFallback = state.phase === "error" && fallback !== undefined;
 
+  // Read alongside the check, not after it, so the issues are there when the report lands.
   useEffect(() => {
-    if (ticket || (state.phase !== "done" && !showFallback) || issues) return;
+    if (ticket) return;
+    let cancelled = false;
     fetch(`/api/repos/${repo}/starter-issues`)
       .then((r) => (r.ok ? r.json() : null))
-      .then((d) => setIssues(d?.issues ?? "unavailable"))
-      .catch(() => setIssues("unavailable"));
-  }, [state.phase, showFallback, repo, issues, ticket]);
+      .then((d) => !cancelled && setIssues(d?.issues ?? "unavailable"))
+      .catch(() => !cancelled && setIssues("unavailable"));
+    return () => {
+      cancelled = true;
+    };
+  }, [repo, ticket]);
 
   if (ticket && state.phase === "done")
     return (

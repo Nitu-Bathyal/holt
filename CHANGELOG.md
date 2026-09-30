@@ -99,6 +99,10 @@ evidence** were reworked. Some repositories get a different answer than in
   `docs/research/`, the usage and release guides under `docs/`, with
   `docs/README.md` as the index.
 - A model call records a trajectory only when `HOLT_RECORD_TRAJECTORIES=1`. (#7)
+- A live check is two to three times faster: pull request pages are read four
+  at a time instead of one after another, the README is read alongside them,
+  and on the busiest repositories the older pull requests start loading early.
+  What a report says is unchanged.
 
 ### Fixed
 

@@ -5,6 +5,7 @@ No network: GitHub replies come from an `httpx.MockTransport`.
 
 from __future__ import annotations
 
+import base64
 import json
 import logging
 import threading
@@ -123,6 +124,34 @@ def test_a_stopped_job_makes_no_more_github_calls():
         stop.set()
         with pytest.raises(JobStopped):
             transport.query("query { viewer { login } }")
+    finally:
+        job_stop.reset(token)
+    assert len(calls) == 1
+
+
+def test_a_stopped_job_reads_no_more_pull_request_pages():
+    # Pages after the first are read on other threads; they see the stop too.
+    calls = []
+
+    def handler(request):
+        calls.append(request)
+        cursor = json.loads(request.content)["variables"]["cursor"]
+        offset = int(base64.b64decode(cursor).decode().split(":")[1]) if cursor else 0
+        end = base64.b64encode(f"cursor:{offset + 25}".encode()).decode()
+        return httpx.Response(200, json={"data": {"search": {
+            "issueCount": 200, "pageInfo": {"hasNextPage": True, "endCursor": end},
+            "nodes": [{"number": offset + i} for i in range(25)]}}})
+
+    pool = TokenPool(["tok1"])
+    transport = pool.transport(httpx.Client(transport=httpx.MockTransport(handler)))
+    stop = threading.Event()
+    token = job_stop.set(stop)
+    try:
+        pages = transport.search_pull_requests("repo:a/b is:pr", 8)
+        next(pages)
+        stop.set()
+        with pytest.raises(JobStopped):
+            list(pages)
     finally:
         job_stop.reset(token)
     assert len(calls) == 1

@@ -24,7 +24,7 @@ export function BadgeLive({ repo, site }: { repo: string; site: string }) {
       <div className="mt-3 h-1 bg-panel-2">
         <div className="h-full bg-blue transition-[width] duration-500" style={{ width: `${Math.max(3, p * 100)}%` }} />
       </div>
-      <p className="mt-3 font-sans text-[0.87rem] text-faint">A first check takes about a minute.</p>
+      <p className="mt-3 font-sans text-[0.87rem] text-faint">A first check takes about 20 seconds.</p>
     </div>
   );
 }
