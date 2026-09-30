@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 from holt_server import engine, evidence_store, warm
-from holt_server.db import ENGINE_VERSION, Report
+from holt_server.db import ENGINE_VERSION, Report, SavedRepo
 from holt_server.evidence_store import EvidenceStore
 
 from holt.evidence.fixtures import FixtureProvider
@@ -172,7 +172,7 @@ def test_stale_only_remakes_a_report_from_a_fresh_snapshot_without_github(warm_h
 
 
 def test_stale_only_reads_github_when_the_snapshot_is_too_old(warm_h):
-    read_at = datetime.now(UTC) - timedelta(days=10)  # past HOLT_EVIDENCE_REUSE_HOURS (7 days)
+    read_at = datetime.now(UTC) - timedelta(days=40)  # past the monthly tier (30 days)
     warm_h.svc.evidence.save(REPO, fixture_records(), read_at, judges_recency=False)
     old_report(warm_h, REPO, read_at)
 
@@ -180,6 +180,29 @@ def test_stale_only_reads_github_when_the_snapshot_is_too_old(warm_h):
 
     assert [c["repo"] for c in warm_h.engine.calls] == [REPO]
     assert (result.reports_rederived, result.reports_run) == (0, 1)
+
+
+def test_stale_only_reuses_a_snapshot_as_old_as_the_repos_refresh_tier(warm_h):
+    # Ten days: past HOLT_EVIDENCE_REUSE_HOURS (a week), inside the monthly
+    # tier, so a seed nobody saved or viewed is made again from it...
+    read_at = datetime.now(UTC).replace(microsecond=0) - timedelta(days=10)
+    for repo in (REPO, "NixOS/other"):
+        warm_h.svc.evidence.save(repo, fixture_records(), read_at, judges_recency=False)
+        old_report(warm_h, repo, read_at)
+    # ...but one someone saved is in the weekly tier, and is read again.
+    async def save():
+        async with warm_h.svc.db.session() as s:
+            s.add(SavedRepo(user_id="u1", repo_key="nixos/other", repo="NixOS/other"))
+            await s.commit()
+    warm_h.client.portal.call(save)
+
+    result = stale_pass(warm_h, [REPO, "NixOS/other"])
+
+    assert [c["repo"] for c in warm_h.engine.calls] == ["NixOS/other"]
+    assert (result.reports_rederived, result.reports_run) == (1, 1)
+    remade = reports(warm_h, REPO)[-1]
+    assert remade.engine_version == ENGINE_VERSION
+    assert remade.report == evidence_store.rederive(warm_h.svc.evidence.newest(REPO), days=7)
 
 
 def test_stale_only_reads_github_without_a_snapshot(warm_h):

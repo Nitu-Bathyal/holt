@@ -117,6 +117,13 @@ class Settings(BaseSettings):
     warm_max_age_hours: float = Field(20, alias="HOLT_WARM_MAX_AGE_HOURS")
     # Stop a warm pass when any GitHub token has fewer GraphQL points left.
     warm_min_points: int = Field(1500, alias="HOLT_WARM_MIN_POINTS")
+    # Report jobs a warm pass keeps in flight at once. They run in the
+    # background lane, so HOLT_BADGE_CONCURRENCY should be at least this.
+    warm_parallel: int = Field(3, ge=1, alias="HOLT_WARM_PARALLEL")
+    # The refresh tiers' ages (deploy/prod/warm-refresh.sh): repos someone
+    # saved or viewed lately, and the rest of the seed list.
+    refresh_weekly_hours: float = Field(168, gt=0, alias="HOLT_REFRESH_WEEKLY_HOURS")
+    refresh_monthly_hours: float = Field(720, gt=0, alias="HOLT_REFRESH_MONTHLY_HOURS")
     # My Contributions: re-read connected users' pull requests this often, in
     # the background (contributions.py). 0 = no background refresh.
     contributions_refresh_hours: float = Field(24, alias="HOLT_CONTRIBUTIONS_REFRESH_HOURS")
@@ -131,7 +138,8 @@ class Settings(BaseSettings):
     # stays). 0 = keep every one.
     evidence_keep_days: float = Field(0, ge=0, alias="HOLT_EVIDENCE_KEEP_DAYS")
     # `warm --stale-only` makes a report again from a snapshot younger than
-    # this instead of reading GitHub. 0 = always read GitHub.
+    # its repo's refresh tier (above), or than this if it is longer, instead
+    # of reading GitHub. 0 = always read GitHub.
     evidence_reuse_hours: float = Field(168, ge=0, alias="HOLT_EVIDENCE_REUSE_HOURS")
 
     @property

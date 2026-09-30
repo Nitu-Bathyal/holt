@@ -109,11 +109,14 @@ services:
       # server ignores a budget without the owner's explicit OWNER_OK=1.
       HOLT_AI_BUDGET_USD: ${HOLT_PROD_AI_BUDGET_USD:-0}
       HOLT_AI_BUDGET_OWNER_OK: ${HOLT_PROD_AI_BUDGET_OWNER_OK:-0}
-      # Six people's jobs at once, plus one background worker for badges
-      # and warm passes (it takes a waiting person's job first). Each job is
-      # a thread holding one crawl; mem_limit below is sized for seven.
+      # Six people's jobs at once, plus three background workers for badges
+      # and warm passes (each takes a waiting person's job first); a warm
+      # pass keeps HOLT_WARM_PARALLEL reports in flight. Each job is a thread
+      # holding one crawl, ~50 MB at most (the largest golden recording
+      # peaks at 44 MB); mem_limit below is sized for nine.
       HOLT_JOB_CONCURRENCY: ${HOLT_JOB_CONCURRENCY:-6}
-      HOLT_BADGE_CONCURRENCY: ${HOLT_BADGE_CONCURRENCY:-1}
+      HOLT_BADGE_CONCURRENCY: ${HOLT_BADGE_CONCURRENCY:-3}
+      HOLT_WARM_PARALLEL: ${HOLT_WARM_PARALLEL:-3}
       # Per-job time limits, in seconds (rules, AI, find).
       HOLT_JOB_TIMEOUT_RULES: ${HOLT_JOB_TIMEOUT_RULES:-180}
       HOLT_JOB_TIMEOUT_AI: ${HOLT_JOB_TIMEOUT_AI:-480}
