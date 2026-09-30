@@ -203,6 +203,20 @@ def pro_model(body: dict[str, Any]) -> str | None:
     return None
 
 
+# Service answers that come before any model call (CONTRACT.md): a bad
+# request, a wrong key, no such repository, or 503 (no model key, no GitHub
+# token, its database down).
+PRO_BEFORE_MODEL = frozenset({400, 401, 404, 405, 503})
+
+
+def note_pro_error(svc: Services, job_id: str, err: Exception) -> None:
+    """A service error that came before any model call cost nothing: the
+    job's `settle` gives its whole hold back. A timeout, a lost connection, a
+    500 or a 502 (the model may have run) keeps the hold."""
+    if getattr(err, "pro_status", None) in PRO_BEFORE_MODEL:
+        svc.ai_costs[job_id] = 0.0
+
+
 def note_pro(svc: Services, job_id: str, body: dict[str, Any]) -> None:
     """Keep what a service answer cost and which model wrote it, for the
     job's `settle`."""

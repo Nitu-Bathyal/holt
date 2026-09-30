@@ -51,12 +51,15 @@ NOT_YET = "This feature isn't available yet."
 class ProError(ApiError):
     """A paid-feature call that failed. `pro_code` is what the service said
     (or `unavailable` when it could not be reached); `code` and `message`
-    are what this API returns to the web app."""
+    are what this API returns to the web app. `pro_status` is the HTTP
+    status the service answered with; None when it didn't answer (a lost
+    connection, a timeout) or answered with something unreadable."""
 
     def __init__(self, pro_code: str, code: str, message: str,
-                 status: int | None = None) -> None:
+                 status: int | None = None, pro_status: int | None = None) -> None:
         super().__init__(code, message, status=status)
         self.pro_code = pro_code
+        self.pro_status = pro_status
 
 
 def not_available() -> ApiError:
@@ -211,16 +214,17 @@ class ProClient:
         where = f"holt-pro {method} {path}: {status} {code}"
         if status == 401:
             log.error("%s (HOLT_PRO_KEY does not match the service's key) %s", where, message)
-            return ProError(code, "upstream", UNAVAILABLE)
+            return ProError(code, "upstream", UNAVAILABLE, pro_status=status)
         if status in (400, 405):
             log.error("%s (a bug in the client) %s", where, message)
             return ProError(code, "internal",
-                            "Something went wrong on our side. Please try again in a minute.")
+                            "Something went wrong on our side. Please try again in a minute.",
+                            pro_status=status)
         if status == 404:
             log.warning("%s %s", where, message)
-            return ProError(code, "not_found", "There is nothing here.")
+            return ProError(code, "not_found", "There is nothing here.", pro_status=status)
         log.warning("%s %s", where, message)
-        return ProError(code, "upstream", UNAVAILABLE)
+        return ProError(code, "upstream", UNAVAILABLE, pro_status=status)
 
 
 def build(settings: Settings) -> ProClient | None:

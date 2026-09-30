@@ -239,13 +239,15 @@ def test_a_new_account_gets_three_free_merge_plans_and_no_ai_credits(make_harnes
     assert r.status_code == 409 and r.json()["error"]["code"] == "claim_not_ready"
 
 
-def test_existing_users_keep_their_ai_credits_and_get_the_free_plans(make_harness, fake):
-    h = with_pro(make_harness(HOLT_PRO_URL=URL, HOLT_PRO_KEY=KEY), fake)
-    h.get("/v1/me", user="old")  # welcomed under the old rules: 3 AI credits
-    h = with_pro(make_harness(HOLT_PRO_URL=URL, HOLT_PRO_KEY=KEY, HOLT_SIGNUP_AI_CREDITS=0),
-                 fake)
-    assert h.get("/v1/me/credits", user="old").json()["balance"] == 3
-    assert state(h, user="old")["access"]["left"] == 3
+def test_existing_users_keep_their_ai_credits_and_get_the_free_plans(hp):
+    # Same database, settings changed in place: a second harness would reset
+    # the tables on Postgres.
+    hp.get("/v1/me", user="old")  # welcomed under the old rules: 3 AI credits
+    hp.svc.settings.signup_ai_credits = 0  # the new release
+    got = hp.get("/v1/me/credits", user="old").json()
+    assert (got["balance"], got["next_claim_at"] is not None) == (3, True)
+    assert state(hp, user="old")["access"]["left"] == 3
+    assert hp.get("/v1/me/credits", user="new").json()["balance"] == 0
 
 
 def test_the_three_free_plans_run_out(hp, fake):
@@ -462,10 +464,10 @@ def test_a_new_plan_replaces_the_old_one_and_costs_a_use(hp, fake):
     assert len(rows(hp, MergePlan)) == 1
 
 
-def test_a_kept_plan_still_shows_when_ai_is_switched_off(hp, make_harness, fake):
+def test_a_kept_plan_still_shows_when_ai_is_switched_off(hp):
     made(hp)
-    h = with_pro(make_harness(HOLT_PRO_URL=URL, HOLT_PRO_KEY=KEY, HOLT_AI_BUDGET_USD=0), fake)
-    got = state(h)
+    hp.svc.settings.ai_budget_usd = 0
+    got = state(hp)
     assert got["available"] is False and got["plan"]["repo"] == "pallets/flask"
 
 
@@ -513,3 +515,35 @@ def test_an_allowance_is_monthly_in_all_or_unlimited_never_two():
     shipped = pricing.load()
     assert shipped.plans["free"].features["merge_plan"].total == 3
     assert shipped.plans["pro"].features["merge_plan"].per_month == 30
+
+
+# --- the AI budget's hold on a failure ---------------------------------------------------
+
+HOLD = 50_000  # HOLT_AI_PRO_RUN_MAX_USD's default, in micro-dollars
+
+
+def committed(h) -> int:
+    return rows(h, AiBudget)[0].committed_micros
+
+
+@pytest.mark.parametrize("status,code,held", [
+    (400, "invalid_request", 0),
+    (401, "unauthorized", 0),
+    (404, "not_found", 0),
+    (503, "unavailable", 0),   # no model key, no GitHub token: before any model call
+    (500, "internal", HOLD),   # it may have called the model
+    (502, "upstream", HOLD),
+])
+def test_an_error_before_any_model_call_gives_the_hold_back(hp, fake, status, code, held):
+    fake.answer = httpx.Response(status, json={"error": {"code": code, "message": "m"}})
+    assert wait(hp, ask(hp).json()["job_id"])["status"] == "error"
+    assert committed(hp) == held
+
+
+def test_a_timeout_keeps_the_hold(hp):
+    async def slow(request):
+        raise httpx.ReadTimeout("slow", request=request)
+
+    hp.svc.pro = pro.ProClient(URL, KEY, transport=httpx.MockTransport(slow), retry_delay=0)
+    assert wait(hp, ask(hp).json()["job_id"])["status"] == "error"
+    assert committed(hp) == HOLD

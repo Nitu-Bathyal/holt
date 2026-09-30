@@ -183,6 +183,7 @@ async def run(svc: Services, job: Job, emit) -> dict[str, Any]:
         body = await client.merge_plan(job.repo, report_for_pro(report), issues, job.days,
                                        user_id=job.user_id, request_id=job.id)
     except pro.ProError as err:
+        budget.note_pro_error(svc, job.id, err)
         raise pro_failure(err, job.repo) from None
     budget.note_pro(svc, job.id, body)
     try:
