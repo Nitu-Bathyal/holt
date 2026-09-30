@@ -26,7 +26,7 @@ from urllib.parse import quote
 
 import httpx
 
-from holt.about import language_shares, license_name, readme_line
+from holt.about import help_links, language_shares, license_name, readme_line
 from holt.evidence.errors import AuthError, GitHubError, RateLimited
 from holt.evidence.github_graphql import GitHubGraphQL
 from holt_server import github_app
@@ -350,6 +350,27 @@ def main_languages(node: dict[str, Any]) -> list[str]:
     return out[:2]
 
 
+def _links(node: dict[str, Any]) -> list[dict[str, str]]:
+    """Where a newcomer finds the rules and help: the contributing guide,
+    GitHub Discussions, then the README's docs and chat links."""
+    out = []
+    contributing = (node.get("contributingGuidelines") or {}).get("url")
+    if contributing:
+        out.append({"kind": "contributing", "url": contributing})
+    if node.get("hasDiscussionsEnabled") and node.get("nameWithOwner"):
+        out.append({"kind": "discussions", "url": f"https://github.com/{node['nameWithOwner']}/discussions"})
+    readme = next((text for i in range(len(README_PATHS))
+                   if (text := (node.get(f"readme{i}") or {}).get("text"))), None)
+    return out + help_links(readme)
+
+
+def _release(node: dict[str, Any]) -> dict[str, Any] | None:
+    r = node.get("latestRelease") or {}
+    if not r.get("tagName") or not r.get("url"):
+        return None
+    return {"tag": r["tagName"], "published_at": r.get("publishedAt"), "url": r["url"]}
+
+
 def _details(node: dict[str, Any]) -> dict[str, Any]:
     topics = [((t or {}).get("topic") or {}).get("name")
               for t in ((node.get("repositoryTopics") or {}).get("nodes") or [])]
@@ -378,6 +399,8 @@ def _details(node: dict[str, Any]) -> dict[str, Any]:
         "readme_line": next((line for i in range(len(README_PATHS))
                              if (line := readme_line((node.get(f"readme{i}") or {}).get("text")))),
                             None),
+        "links": _links(node),
+        "latest_release": _release(node),
     }
 
 
