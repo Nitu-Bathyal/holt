@@ -1639,6 +1639,8 @@ class PlanAi(Model):
 
 
 class PlanWindow(Model):
+    # The window asked for, and the day the oldest pull request the counts
+    # read was opened (say "since" with this date, never with `days`).
     days: int
     since: str
 

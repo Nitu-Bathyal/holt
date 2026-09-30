@@ -939,6 +939,9 @@ nothing charged.
 - `call.text`, step titles and details, `merged[].label` and `closed[].reason`
   are plain English and may contain Markdown code spans, never HTML.
   `recorded_on` is when the pull requests were read from GitHub.
+- `window.days` is the window asked for; `window.since` is the date the oldest
+  pull request the counts read was opened (on a busy repository, well inside
+  the window). Say "since" with this date, never with `days`.
 
 ### Recommendations for you
 

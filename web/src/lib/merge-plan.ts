@@ -1,64 +1,12 @@
 // The merge plan: the AI report (paid, written by holt-pro's POST
-// /v1/merge-plan). This file is the one source of the MergePlan shape;
-// the merge plan design notes describe it for holt-pro. Until the endpoint
-// lands, only /example-ai-report renders one, from the example below.
+// /v1/merge-plan and served by the server's GET /v1/merge-plan). Its shape is
+// API.md's `MergePlan`, generated into api-schema.ts; this file re-exports it
+// with the helpers the plan's components share, and the recorded example.
 import data from "./example-merge-plan.json" with { type: "json" };
-import type { PlaybookSource, Tone, Verdict } from "./types.ts";
+import type { MergePlan, PlanAi, PlanClosing, PlanFact, PlanStep, PlaybookSource } from "./api-schema.ts";
 
+export type { MergePlan, PlanAi, PlanClosing, PlanFact, PlanStep };
 export type PlanSource = PlaybookSource;
-
-export type PlanStep = {
-  title: string; // may contain Markdown code spans
-  detail: string | null;
-  link: { label: string; url: string } | null;
-  copy: { label: string; text: string } | null;
-  sources: PlanSource[];
-};
-
-export type PlanFact = {
-  value: string;
-  unit: string;
-  label: string; // may contain Markdown code spans
-  seen: number | null;
-  of: number | null;
-  sources: PlanSource[];
-};
-
-export type PlanClosing = {
-  reason: string;
-  seen: number;
-  of: number;
-  quote: { text: string; who: string; url: string; number: number } | null;
-  examples: { number: number; url: string }[];
-};
-
-/** What the model found by reading the pull request threads (the AI part of the plan). */
-export type PlanAi = {
-  read_on: string;
-  threads: number;
-  /** One per engine field: how outsiders are treated, the contributor guide, the kind of project. */
-  signals: { kind: string; value: string; headline: string; text: string; tone: Tone | "neutral"; url: string | null }[];
-  /** How the threads it read ended, by the engine's outcome values, most common first. */
-  outcomes: { value: string; count: number }[];
-  quotes: { text: string; url: string; number: number; outcome: string }[];
-};
-
-export type MergePlan = {
-  repo: string;
-  recorded_on: string;
-  generated_at: string;
-  /** `since`: the oldest pull request the counts read, not the start of the search window. */
-  window: { days: number; since: string };
-  sample: { merged: number; closed: number; merged_outside: number; closed_outside: number };
-  note: string | null;
-  verdict: { verdict: Verdict; headline: string; tone: Tone; line: string; numbers: { value: string; label: string }[] };
-  call: { text: string; sources: PlanSource[] };
-  steps: PlanStep[];
-  merged: PlanFact[];
-  closed: PlanClosing[];
-  reviewers: { people: { login: string; reviewed: number; of: number; areas: string[] }[]; sources: PlanSource[] };
-  ai: PlanAi | null;
-};
 
 /** Every GitHub link a plan cites, deduplicated: "checked against N pull requests". */
 export function citedLinks(plan: MergePlan): string[] {
