@@ -274,7 +274,7 @@ async def stale_meta(svc: Services, extra: list[str] = ()) -> list[str]:
 
 
 async def with_meta(s, results: list[dict[str, Any]]) -> list[dict[str, Any]]:
-    """Find results with the description, language and stars `repo_meta` has
+    """Find results with the description, language, stars and counts `repo_meta` has
     for them: the finder screens repos without reading those. A repo with no
     details yet keeps what its result had (null). No GitHub call."""
     keys = {repos.key(r["repo"]) for r in results if isinstance(r, dict) and r.get("repo")}
@@ -282,14 +282,48 @@ async def with_meta(s, results: list[dict[str, Any]]) -> list[dict[str, Any]]:
         return results
     metas = {m.repo_key: m for m in (await s.execute(
         select(RepoMeta).where(RepoMeta.repo_key.in_(keys)))).scalars()}
+    breakdowns = await _breakdowns(s, keys)
     out = []
     for r in results:
-        m = metas.get(repos.key(r.get("repo") or "")) if isinstance(r, dict) else None
-        out.append(r if m is None else {
-            **r, "description": m.description or r.get("description"),
-            "language": m.language or r.get("language"),
-            "languages": list(m.languages or []), "stars": m.stars})
+        if not isinstance(r, dict):
+            out.append(r)
+            continue
+        key = repos.key(r.get("repo") or "")
+        m = metas.get(key)
+        if m is not None:
+            r = {**r, "description": m.description or r.get("description"),
+                 "language": m.language or r.get("language"),
+                 "languages": list(m.languages or []), "stars": m.stars, **counts(m)}
+        if (extra := breakdowns.get(key)) and _same_sample(r.get("stats"), extra):
+            r = {**r, "stats": {**r["stats"], **{k: extra[k] for k in BREAKDOWN}}}
+        out.append(r)
     return out
+
+
+# What became of the pull requests that weren't merged: a find screen doesn't
+# count these, a report does, and the odds bar draws them.
+BREAKDOWN = ("closed_silently", "closed_by_bot", "withdrawn", "still_open")
+
+
+async def _breakdowns(s, keys: set[str]) -> dict[str, dict[str, Any]]:
+    """repo_key -> the latest 7-day rules report's stats, for the repos that have one."""
+    latest = (select(func.max(Report.id).label("id"))
+              .where(Report.mode == "rules", Report.days == DAYS, current_engine(),
+                     Report.repo_key.in_(keys))
+              .group_by(Report.repo_key).subquery())
+    rows = (await s.execute(
+        select(Report.repo_key, Report.report["stats"])
+        .join(latest, Report.id == latest.c.id))).all()
+    return {key: st for key, st in rows
+            if isinstance(st, dict) and all(isinstance(st.get(k), int) for k in BREAKDOWN)}
+
+
+def _same_sample(stats: Any, report_stats: dict[str, Any]) -> bool:
+    """The screen counted the same pull requests as the report, so the report's
+    breakdown describes it (a find of another window has other counts)."""
+    return (isinstance(stats, dict)
+            and stats.get("outsider_attempts") == report_stats.get("outsider_attempts")
+            and stats.get("outsider_merged") == report_stats.get("outsider_merged"))
 
 
 def _parse_ts(value: Any) -> datetime | None:
