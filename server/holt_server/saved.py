@@ -81,12 +81,7 @@ async def list_body(svc: Services, user_id: str) -> SavedList:
         rows = (await s.execute(
             select(SavedRepo).where(SavedRepo.user_id == user_id)
             .order_by(SavedRepo.saved_at.desc(), SavedRepo.repo_key))).scalars().all()
-    keys = [r.repo_key for r in rows]
-    cards = {}
-    if keys:
-        for row in await discover._latest(svc, keys):
-            if (c := discover._card(row, {})) is not None:
-                cards[row[1]] = c
+    cards = await discover.cards(svc, [r.repo_key for r in rows])
     return SavedList(saved=[
         SavedItem(repo=cards[r.repo_key].repo if r.repo_key in cards else r.repo,
                   saved_at=iso(r.saved_at), card=cards.get(r.repo_key))

@@ -45,6 +45,7 @@ from holt_server.db import (
 )
 from holt_server.credits import get_user
 from holt_server.deps import Caller, caller, internal, services, signed_in
+from holt_server.discover import DiscoverRepo
 from holt_server.errors import ApiError
 from holt_server.jobs import done_payload
 from holt_server.services import Services
@@ -654,9 +655,17 @@ async def me_entitlements(request: Request, who: Caller = Depends(caller)) -> sc
                                features=[schema.Access(**a.__dict__) for a in access])
 
 
+class History(schema.Model):
+    items: list[schema.HistoryItem]
+    cards: list[DiscoverRepo] = Field(
+        default_factory=list,
+        description="Holt's current card for each repo in `items` that has one "
+                    "(the latest 7-day rules report, as on saved repos).")
+
+
 @router.get("/me/history")
 async def history(request: Request, who: Caller = Depends(caller),
-                  limit: int = Query(50, ge=1, le=200)) -> schema.History:
+                  limit: int = Query(50, ge=1, le=200)) -> History:
     svc = services(request)
     user_id = signed_in(who)
     async with svc.db.session() as s:
@@ -664,7 +673,8 @@ async def history(request: Request, who: Caller = Depends(caller),
             select(Job).where(Job.user_id == user_id, Job.kind == "analysis")
             .order_by(Job.created_at.desc()).limit(limit)
         )).scalars().all()
-    return schema.History.model_validate({"items": [
+    cards = await discover.cards(svc, list({repos.key(j.repo) for j in jobs}))
+    return History.model_validate({"cards": list(cards.values()), "items": [
         {
             "job_id": j.id,
             "repo": j.repo,

@@ -218,6 +218,13 @@ def _card(row: tuple, views: dict[str, int]) -> DiscoverRepo | None:
         checked_this_week=views.get(key), generated_at=generated or iso(created))
 
 
+async def cards(svc: Services, keys: list[str]) -> dict[str, DiscoverRepo]:
+    """repo_key -> the card for each of `keys` that has a current report."""
+    if not keys:
+        return {}
+    return {row[1]: c for row in await _latest(svc, keys) if (c := _card(row, {})) is not None}
+
+
 def is_hacktoberfest(meta: RepoMeta | None) -> bool:
     """Tagged for Hacktoberfest and not archived (archived repos can't take
     pull requests). Repos whose details haven't been read yet aren't."""

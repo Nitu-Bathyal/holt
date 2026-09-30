@@ -2,7 +2,7 @@
 // reports return at once, anything else becomes a job with stages over SSE.
 import "server-only";
 import type {
-  AnalysisStart, ApiError, Credits, DiscoverOut, DiscoverRepo, DiscoverSort, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, HistoryItem,
+  AnalysisStart, ApiError, Credits, DiscoverOut, DiscoverRepo, DiscoverSort, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, History, HistoryItem,
   ContributionType, JobStatus, Me, Mode, Passes, ProfileOut, ProfilePrefs, Recommendation, Recommendations, Report, Result, SavedList, SavedState, Stats, StarterIssue,
 } from "../types";
 import type { FeedbackInput } from "../feedback";
@@ -369,8 +369,11 @@ export async function createOrder(): Promise<Result<never>> {
   return err(403, "payments_off", "Passes aren't on sale yet. Everything free in Holt keeps working.");
 }
 
-export async function history(userId: string): Promise<Result<{ items: HistoryItem[] }>> {
-  return { ok: true, data: { items: user(userId).history } };
+export async function history(userId: string): Promise<Result<History>> {
+  const items = user(userId).history;
+  const cards = await cachedCards();
+  const checked = new Set(items.map((i) => i.repo.toLowerCase()));
+  return { ok: true, data: { items, cards: [...cards.values()].filter((c) => checked.has(c.repo.toLowerCase())) } };
 }
 
 // Mirrors server/holt_server/badge.py: a positive, factual line for a passing
@@ -627,8 +630,11 @@ const savedOf = (userId: string) => {
   return all.get(userId)!;
 };
 
+const cachedCards = async () =>
+  new Map(((await discover("stars", null, null, 1000)) as { ok: true; data: DiscoverOut }).data.repos.map((c) => [c.repo.toLowerCase(), c]));
+
 export async function savedRepos(userId: string): Promise<Result<SavedList>> {
-  const cards = new Map(((await discover("stars", null, null, 1000)) as { ok: true; data: DiscoverOut }).data.repos.map((c) => [c.repo.toLowerCase(), c]));
+  const cards = await cachedCards();
   const rows = [...savedOf(userId).values()].sort((a, b) => b.saved_at.localeCompare(a.saved_at));
   return { ok: true, data: { saved: rows.map((r) => ({ ...r, card: cards.get(r.repo.toLowerCase()) ?? null })), max_saved: 500 } };
 }

@@ -72,7 +72,7 @@ const pr = (repo: string, state: ContributionPR["state"], openedHoursAgo: number
 } as ContributionPR);
 const repo = (name: string, tone: YourRepo["tone"], saved: boolean): YourRepo => ({
   repo: name, savedAt: saved ? hoursAgo(10) : null, checkedAt: saved ? null : hoursAgo(10), ai: false, checking: false,
-  headline: tone === "good" ? "Worth your time" : "Not worth your time", tone, stats: null, at: hoursAgo(10),
+  headline: tone === "good" ? "Worth your time" : "Not worth your time", tone, stats: null, stars: null, at: hoursAgo(10),
 });
 
 test("the next move: a fresh merge, then an open PR, then a repo worth your time, then finding one", () => {

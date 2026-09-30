@@ -1408,10 +1408,6 @@ class HistoryItem(Model):
         return TONES[self.verdict] if self.verdict else None
 
 
-class History(Model):
-    items: list[HistoryItem]
-
-
 class Health(Model):
     ok: bool
     version: str

@@ -340,10 +340,15 @@ def test_bring_your_own_key_routes_are_gone(h):
 def test_history(h):
     job = h.post("/v1/analyses", {"repo": "pallets/flask"}, user="u3").json()["job_id"]
     h.wait(job)
-    items = h.get("/v1/me/history", user="u3").json()["items"]
+    body = h.get("/v1/me/history", user="u3").json()
+    items = body["items"]
     assert [i["job_id"] for i in items] == [job]
     assert items[0]["headline"] == "Worth your time"
-    assert h.get("/v1/me/history", user="someone-else").json()["items"] == []
+    # Each checked repo's current card, for the numbers on Your repos.
+    [card] = body["cards"]
+    assert (card["repo"], card["headline"]) == ("pallets/flask", "Worth your time")
+    assert "outsider_attempts" in card["stats"]
+    assert h.get("/v1/me/history", user="someone-else").json() == {"items": [], "cards": []}
 
 
 def test_secrets_never_stored_on_jobs(make_harness):
