@@ -75,7 +75,7 @@ function FocusList(props: ListProps) {
       <SaveButton repo={repo} saved={saved === null ? null : isSaved(repo)} onChange={(v) => {
         changed.set(repo.toLowerCase(), v);
         setSet((s) => withSaved(s, repo, v));
-      }} compact={compact} />
+      }} compact={compact} small={compact} />
     );
   const actionsFor = (repo: string, compact: boolean) => {
     const extra = actions?.[repo];

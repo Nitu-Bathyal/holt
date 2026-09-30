@@ -8,18 +8,20 @@ export function RepoCardSkeleton() {
         <span className="size-8 shrink-0 rounded-md border border-line-strong bg-panel-2" />
         <div className="min-w-0 flex-1">
           <span className="flex h-5 items-center"><Skeleton className="h-3.5 w-40" /></span>
-          <span className="mt-0.5 flex h-5 items-center"><Skeleton className="h-2.5 w-4/5" /></span>
+          <span className="mt-0.5 flex h-5 items-center"><Skeleton className="h-2.5 w-full" /></span>
+          <span className="flex h-5 items-center"><Skeleton className="h-2.5 w-3/5" /></span>
         </div>
       </div>
       <div className="mt-3 flex items-center justify-between">
         <Skeleton className="h-6 w-32" />
         <Skeleton className="h-2.5 w-20" />
       </div>
-      <Skeleton className="mt-3 h-1.5 w-full" />
-      <div className="mt-2.5 flex gap-1.5">
-        <Skeleton className="h-5 w-28" />
-        <Skeleton className="h-5 w-24" />
+      <div className="mt-3.5 flex h-4 items-center justify-between">
+        <Skeleton className="h-2.5 w-36" />
+        <Skeleton className="h-2.5 w-20" />
       </div>
+      <Skeleton className="mt-1.5 h-1.5 w-full" />
+      <span className="mt-2 flex h-4 items-center"><Skeleton className="h-2.5 w-44" /></span>
       <div className="mt-3 border-t border-dashed border-line pt-2.5">
         <Skeleton className="h-2.5 w-16" />
         <Skeleton className="mt-2 h-3 w-11/12" />
