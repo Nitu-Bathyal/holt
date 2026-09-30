@@ -1,6 +1,6 @@
 // The merge plan: the AI report (paid, written by holt-pro's POST
 // /v1/merge-plan). This file is the one source of the MergePlan shape;
-// docs/design/MERGE-PLAN.md describes it for holt-pro. Until the endpoint
+// the merge plan design notes describe it for holt-pro. Until the endpoint
 // lands, only /example-ai-report renders one, from the example below.
 import data from "./example-merge-plan.json" with { type: "json" };
 import type { PlaybookSource, Tone, Verdict } from "./types.ts";

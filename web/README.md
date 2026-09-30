@@ -42,7 +42,7 @@ npm run dev -- -p $PORT
 | `/{owner}/{repo}/opengraph-image` | Per-repo share image |
 | `/find` | Beginner flow: languages, time, Hacktoberfest → welcoming repos + starter issues |
 | `/compare?repos=a/b,c/d` | Up to 4 repos side by side |
-| `/example-ai-report` | A recorded merge plan (the AI report) for processing/p5.js, readable without signing in; `?view=locked` shows it before unlocking. Static: `src/lib/example-merge-plan.json` (see `docs/design/MERGE-PLAN.md`) |
+| `/example-ai-report` | A recorded merge plan (the AI report) for processing/p5.js, readable without signing in; `?view=locked` shows it before unlocking. Static: `src/lib/example-merge-plan.json` |
 | `/signin`, `/settings`, `/pricing`, `/me/repos`, `/how-it-works` | Account and free AI reports, plans, history, methodology |
 | `/for-you` | Picked for you: repos Holt rates Worth your time that match the profile and merged pull requests, with reasons and starter issues (`GET /v1/me/recommendations`). Two picks free; the rest with a plan. `MOCK_PLAN=pro` shows every pick in the mock |
 | `/me/contributions` | My Contributions: a connected user's public pull requests with Holt's verdict per repo, "found via Holt", refresh with a 15-minute cooldown |
