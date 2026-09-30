@@ -238,7 +238,7 @@ function FullPlaybook({ p }: { p: Playbook }) {
         ))}
       </div>
       <p className="mt-8 border-t border-dashed border-line pt-4 text-[0.8rem] text-faint">
-        Written by {p.model ?? "an AI model"} from counts of {p.window_days ? `the last ${p.window_days === 365 ? "12 months" : `${p.window_days} days`}` : "recent"} of
+        Written by AI from counts of {p.window_days ? `the last ${p.window_days === 365 ? "12 months" : `${p.window_days} days`}` : "recent"} of
         PRs. Every item was checked against those counts and quotes, and anything that didn&apos;t match was cut. It
         doesn&apos;t change the verdict. Updated <time dateTime={p.generated_at} suppressHydrationWarning>{timeAgo(p.generated_at)}</time>.
       </p>

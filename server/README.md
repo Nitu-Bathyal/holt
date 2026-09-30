@@ -94,6 +94,9 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `HOLT_WARM_MAX_AGE_HOURS` | `20` | A warm pass skips repos whose report is younger than this. |
 | `HOLT_WARM_MIN_POINTS` | `1500` | A warm pass stops when any GitHub token has fewer GraphQL points left. |
 | `HOLT_MAX_PAGES` | `8` | Pull-request pages crawled per analysis (25 PRs a page). |
+| `HOLT_EVIDENCE_DIR` | empty (off) | Keep every report's evidence here, one gzipped file per report (`<owner>__<name>/<UTC time>.json.gz`, the shape of a golden recording). See [Evidence snapshots](#evidence-snapshots). |
+| `HOLT_EVIDENCE_KEEP_DAYS` | `0` (keep all) | Delete a repo's snapshots older than N days when it gets a new one; its newest always stays. |
+| `HOLT_EVIDENCE_REUSE_HOURS` | `168` | `warm --stale-only` makes an outdated report again from a snapshot younger than this, without GitHub. `0` = always read GitHub. |
 | `HOST`, `PORT` | `127.0.0.1`, `8000` | Where `holt-server` listens. |
 | `LOG_LEVEL` | `INFO` | |
 
@@ -306,7 +309,7 @@ Rules:
 `holt_server/warm.py` fills the caches before people arrive, so launch-day
 traffic mostly costs no GitHub quota at request time:
 
-1. **Reports** (7-day rules) for the ~300 repositories in `server/holt_server/seeds/repos.txt`,
+1. **Reports** (7-day rules) for the ~1,550 repositories in `server/holt_server/seeds/repos.txt`,
    skipping any under 20 hours old.
 2. **Starter issues** for the same repositories.
 3. **`/v1/find`** for the searches the web app's own pages make: the nine
@@ -326,6 +329,41 @@ uv run python -m holt_server.warm --limit 50 --no-find
 
 Or set `HOLT_WARM_INTERVAL_HOURS` to run it inside the API on a schedule.
 
+**Refresh tiers** (`--tier`): reports only, oldest first, skipping any younger
+than `HOLT_WARM_MAX_AGE_HOURS`. `weekly` is every repo someone saved
+(`saved_repos`) or viewed in the last 30 days (`repo_views`), seed or not;
+`monthly` is the rest of the seed list. Production's refresh timer
+(`deploy/prod/warm-refresh.sh`, off until the owner switches it on) runs both
+daily with a week's and a month's age.
+
+```sh
+HOLT_WARM_MAX_AGE_HOURS=168 uv run python -m holt_server.warm --tier weekly --dry-run
+HOLT_WARM_MAX_AGE_HOURS=720 uv run python -m holt_server.warm --tier monthly
+```
+
+## Evidence snapshots
+
+With `HOLT_EVIDENCE_DIR` set, every finished report also writes the evidence
+it read (`holt_server/evidence_store.py`): the pull requests with their
+comments, reviews, merges and closes, the repository facts, README and
+CONTRIBUTING, as `golden record` saves them, run through the same credential
+redaction (`holt/evidence/redact.py`). Public GitHub data only; Holt's tokens
+are never part of it. The file is written after the report is stored, and a
+failed write is logged (`saving the evidence of … failed`) and never fails the
+report. Not in Postgres: production keeps them in
+`~/.local/share/holt-prod/evidence` on `/home` (`deploy/prod/README.md`).
+
+Size, measured on the 73 golden recordings: 123 KB a snapshot on average
+(median 70 KB, largest 821 KB), so **about 126 MB per 1,000 repos** each time
+they are all read.
+
+`python -m holt_server.warm --stale-only` (after an `ENGINE_VERSION` bump)
+uses them: a repo whose newest snapshot is younger than
+`HOLT_EVIDENCE_REUSE_HOURS`, and not older than the report it replaces, gets
+its report made again from the snapshot in the warm process, with no GitHub
+call. The new report is dated like the evidence behind it, so the refresh
+tiers still see its real age. Otherwise the repo is read from GitHub as before.
+
 **GitHub cost, measured** (GraphQL points; a token has 5,000 an hour): a rules
 report ~10 (up to ~20 for very busy repositories), starter issues ~5, a find
 search ~60 when its repositories are not cached yet and much less when they
@@ -342,6 +380,21 @@ languages; ~30 points). Re-run it to refresh the list and commit the result:
 ```sh
 GITHUB_TOKEN=... uv run python server/scripts/build_seeds.py --total 300
 ```
+
+Below its marker line, the list continues with blocks built by
+`scripts/build_seed_list.py` from free public lists, no GitHub search: GSoC
+2026 organisations (CNCF through its landscape), goodfirstissue.dev,
+awesome-for-beginners and up-for-grabs. It drops catalogues and farms by
+name, and `--check` drops repos that are gone, archived, forks, under 20 stars
+or not pushed since 2025 (one batched GraphQL pass, ~16 points). Each script
+keeps the other's part:
+
+```sh
+GITHUB_TOKEN=$(gh auth token) uv run python scripts/build_seed_list.py --check
+```
+
+With ~1,550 seeds a cold pass is about 1,550 × ~15 ≈ 23,000 points, so warm a
+new list in `--limit` steps over several days rather than in one pass.
 
 ## Tests
 

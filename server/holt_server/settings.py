@@ -124,6 +124,15 @@ class Settings(BaseSettings):
     find_cache_hours: float = Field(6, alias="HOLT_FIND_CACHE_HOURS")
     # Pull-request pages crawled per analysis (25 PRs a page).
     max_pages: int = Field(8, alias="HOLT_MAX_PAGES")
+    # Evidence snapshots (evidence_store.py): the evidence each report read,
+    # one gzipped file per report under this directory. Empty = none kept.
+    evidence_dir: str = Field("", alias="HOLT_EVIDENCE_DIR")
+    # Delete a repo's snapshots older than this many days (its newest always
+    # stays). 0 = keep every one.
+    evidence_keep_days: float = Field(0, ge=0, alias="HOLT_EVIDENCE_KEEP_DAYS")
+    # `warm --stale-only` makes a report again from a snapshot younger than
+    # this instead of reading GitHub. 0 = always read GitHub.
+    evidence_reuse_hours: float = Field(168, ge=0, alias="HOLT_EVIDENCE_REUSE_HOURS")
 
     @property
     def token_list(self) -> list[str]:

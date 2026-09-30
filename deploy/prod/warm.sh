@@ -7,6 +7,8 @@
 #   deploy/prod/warm.sh --limit 50 --no-find
 #   deploy/prod/warm.sh --stale-only    after a deploy that bumps ENGINE_VERSION:
 #                                       re-run only reports an older engine made
+#                                       (from kept evidence where it is fresh)
+#   deploy/prod/warm.sh --tier weekly   one refresh tier (warm-refresh.sh runs both)
 #   deploy/prod/warm.sh --logs          follow the running pass
 #   deploy/prod/warm.sh --status        is it running? last lines
 #

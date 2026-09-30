@@ -348,7 +348,7 @@ export function ResultView({ p, example = false }: { p: Preflight; example?: boo
               <Text text={x.text} />
             </p>
           ))}
-          <p className="mt-2 text-[0.8rem] text-faint">Written by {p.summary.model ?? "an AI model"} from the checks below, and checked against them. It doesn&apos;t predict whether this will be merged.</p>
+          <p className="mt-2 text-[0.8rem] text-faint">Written by AI from the checks below, and checked against them. It doesn&apos;t predict whether this will be merged.</p>
         </div>
       )}
 

@@ -435,7 +435,7 @@ function fromSeed(seed: Seed, mode: "rules" | "ai", days: number): Report {
     evidence: toEvidence(seed.repo, seed.evidence, mode),
     evidence_until: new Date(Date.now() - 86_400_000).toISOString().slice(0, 10) + "T00:00:00Z",
     generated_at: hoursAgo(2),
-    cost: mode === "ai" ? { model: "openai/gpt-5-mini", input_tokens: 9120, output_tokens: 1480, usd: 0.00524, seconds: 41.3 } : null,
+    cost: mode === "ai" ? { model: "ai", input_tokens: 9120, output_tokens: 1480, usd: 0.00524, seconds: 41.3 } : null,
     holt_users: HOLT_USERS[seed.repo] ?? null,
     outdated: false,
     about: mockAbout(seed.repo),
