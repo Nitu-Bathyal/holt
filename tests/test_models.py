@@ -128,6 +128,44 @@ def test_local_server_needs_no_api_key(tmp_path, monkeypatch):
     assert client._client.base_url.host == "localhost"
 
 
+AZURE_V1 = "https://holt-test.openai.azure.com/openai/v1/"
+
+
+def test_azure_calls_its_v1_endpoint_with_the_key_and_openai_parameters(tmp_path, monkeypatch):
+    monkeypatch.setenv("AZURE_OPENAI_API_KEY", "azure-test-key")
+    model_mod.enable_user_models_config(
+        ModelsConfig(provider="azure", model="gpt-5-mini", base_url=AZURE_V1))
+    client = model_mod.OpenAIModel(tmp_path / "t.jsonl")
+    assert str(client._client.base_url) == AZURE_V1
+    assert client._client.api_key == "azure-test-key"
+    sent = {}
+
+    def create(**kwargs):
+        sent.update(kwargs)
+        return SimpleNamespace(
+            choices=[SimpleNamespace(finish_reason="stop",
+                                     message=SimpleNamespace(content='{"ok": true}'))],
+            usage=SimpleNamespace(prompt_tokens=10, completion_tokens=5))
+
+    client._client = SimpleNamespace(chat=SimpleNamespace(completions=SimpleNamespace(
+        create=create)))
+    assert client.complete(label="narrate", system="s", prompt="p", schema={}) == {"ok": True}
+    # The deployment name, OpenAI's own cap parameter, and a strict JSON schema.
+    assert sent["model"] == "gpt-5-mini"
+    assert sent["max_completion_tokens"] == model_mod.max_output_tokens("narrate")
+    assert "max_tokens" not in sent
+    assert sent["response_format"]["json_schema"]["strict"] is True
+    # Priced like OpenAI's own gpt-5-mini: the deployment is named after the model.
+    assert client.usage.cost_usd > 0
+
+
+def test_azure_without_an_endpoint_says_how_to_set_one(tmp_path, monkeypatch):
+    monkeypatch.setenv("AZURE_OPENAI_API_KEY", "azure-test-key")
+    model_mod.enable_user_models_config(ModelsConfig(provider="azure", model="gpt-5-mini"))
+    with pytest.raises(RuntimeError, match="--base-url https://<resource>.openai.azure.com"):
+        model_mod.OpenAIModel(tmp_path / "t.jsonl")
+
+
 def test_patch_model_replays_hits_and_records_only_misses(tmp_path):
     path = tmp_path / "t.jsonl"
     path.write_text(json.dumps({

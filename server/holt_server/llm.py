@@ -44,7 +44,11 @@ def provider_for(base_url: str | None) -> str:
     OPENROUTER_BASE_URL pointed at.
     """
     host = (base_url or "").lower()
-    if "api.openai.com" in host:
+    # Azure OpenAI's v1 endpoint takes OpenAI's own parameters, and the model
+    # is the deployment's name.
+    if "api.openai.com" in host or any(
+            h in host for h in (".openai.azure.com", ".services.ai.azure.com",
+                                ".cognitiveservices.azure.com")):
         return "openai"
     if "generativelanguage.googleapis.com" in host:
         return "gemini"
