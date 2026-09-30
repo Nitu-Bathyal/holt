@@ -498,3 +498,18 @@ def test_waiting_jobs_show_in_the_state(hp, fake):
     fake.gate.set()
     wait(hp, job_id)
     assert state(hp)["job"] is None
+
+
+def test_an_allowance_is_monthly_in_all_or_unlimited_never_two():
+    from holt_server import pricing
+    from pydantic import ValidationError
+
+    assert pricing.PlanFeature(total=3).limit == 3
+    assert pricing.PlanFeature(per_month=30).limit == 30
+    assert pricing.PlanFeature(unlimited=True).limit is None
+    for bad in ({"total": 3, "per_month": 3}, {"total": 3, "unlimited": True}, {}):
+        with pytest.raises(ValidationError):
+            pricing.PlanFeature(**bad)
+    shipped = pricing.load()
+    assert shipped.plans["free"].features["merge_plan"].total == 3
+    assert shipped.plans["pro"].features["merge_plan"].per_month == 30
