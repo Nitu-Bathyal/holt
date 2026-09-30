@@ -641,7 +641,8 @@ def _original_source(stored: Any) -> ReopenedEvidence | None:
         [primary, FixtureProvider(Window.PRE_T, root=Path(ISSUE_ROOT))],
     )
     source.provenance = (
-        f"read back from {primary.path_for(repo)}, the fixture this assessment "
+        # Forward slashes on every platform, so the path reads the same on Windows.
+        f"read back from {Path(primary.path_for(repo)).as_posix()}, the fixture this assessment "
         "was built from"
     )
     return source
