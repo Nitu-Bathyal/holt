@@ -78,7 +78,10 @@ class Settings(BaseSettings):
     cache_hours: float = Field(24, alias="HOLT_CACHE_HOURS")
     # Free AI credits: given once to every signed-in user, then one more can
     # be claimed each time this many days have passed since the last claim.
-    signup_ai_credits: int = Field(3, alias="HOLT_SIGNUP_AI_CREDITS")
+    # 0 (the default since the merge plan's free taste replaced them): a new
+    # account gets none and nothing to claim; users who already had the
+    # welcome grant keep their credits and their weekly claim.
+    signup_ai_credits: int = Field(0, ge=0, alias="HOLT_SIGNUP_AI_CREDITS")
     claim_every_days: float = Field(7, alias="HOLT_CLAIM_EVERY_DAYS")
     # Features, plans and passes (pricing.py). Empty: the packaged
     # holt_server/pricing.json, where no pass is on sale.

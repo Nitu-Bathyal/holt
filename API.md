@@ -494,10 +494,12 @@ one at a time, and wait behind every user request.
   the server has no model key.
 - `GET /v1/me/entitlements` → `{"plan": "free", "plan_expires_at": null, "features": [Access]}`,
   one `Access` per paid feature in the pricing catalogue:
-  `{"feature": "playbook", "name": "Contribution playbook", "allowed": false, "via": null, "cost": 1, "left_this_month": null, "code": "quota_exceeded", "message": "…"}`.
+  `{"feature": "playbook", "name": "Contribution playbook", "allowed": false, "via": null, "cost": 1, "left_this_month": null, "code": "quota_exceeded", "message": "…", "left": null}`.
   `via` is how a use would be paid for now (`plan` or `credits`), `cost` the
   credits one use takes (0 when the plan covers it), `left_this_month` the
-  plan's monthly allowance left (null when unlimited or none). When
+  plan's monthly allowance left (null when unlimited or none), `left` the
+  plan's allowance left whether monthly or in all (the free merge plans; null
+  when unlimited or none). When
   `allowed` is false, `code`/`message` are the error the paid request would get
   (`quota_exceeded` or `needs_plan`). Informational: the paid route decides
   again, atomically, when it charges.
@@ -508,11 +510,14 @@ one at a time, and wait behind every user request.
   (`verdict`/`headline`/`tone` are null until the job is done).
 
 `/v1/me*` without `X-Holt-User` → 401 `unauthorized`. Free AI credits: every
-signed-in user gets `HOLT_SIGNUP_AI_CREDITS` (3) once, the first time the server
+signed-in user gets `HOLT_SIGNUP_AI_CREDITS` once, the first time the server
 sees them (users from before credits get them on their next request), then can
 claim one more whenever `HOLT_CLAIM_EVERY_DAYS` (7) have passed since the last
 claim; the welcome grant starts that clock. Claims don't accumulate: at most one
 is ever due. Spending, claiming and refunds are atomic on the server.
+`HOLT_SIGNUP_AI_CREDITS` is 0 now that the free merge plans replace them: a new
+account gets no AI credits and nothing to claim (`next_claim_at` null), and
+accounts welcomed before keep their credits and their weekly claim.
 
 #### Credits, plans and passes
 
@@ -523,9 +528,12 @@ passes that stays switched off (below):
 - **Features** (`ai_report`, `playbook`, `preflight`, `guidance`,
   `recommendations`, `merge_plan`, `pr_watch`, `repo_watch`, `issue_watch`)
   and what one use costs in credits, **plans** (`free`, `pro`: what each
-  covers, unlimited or N uses per UTC month) and **passes** (days of Pro for
+  covers, unlimited, N uses per UTC month, or N uses in all) and **passes** (days of Pro for
   one payment, with INR and USD prices) are defined in a JSON catalogue
   (`server/holt_server/pricing.json`, or `HOLT_PRICING_FILE`).
+- The free plan covers 3 merge plans in all (every account, new or old);
+  Pro covers 30 a month while a pass is active. Pro's uses don't touch the
+  free three.
 - A use is paid for by the plan when it covers the feature (free), else with
   the feature's credits: free credits first when the feature accepts them,
   then purchased credits, soonest-expiring first. A feature with no credit
@@ -838,6 +846,99 @@ one:
   most common first: `seen` of the `of` closed outside pull requests read
   showed it, each example a closed pull request with the exact words `who`
   (someone in the project) wrote on it.
+
+### Merge plan (paid)
+
+The paid AI report for one repository: the call (one sentence on what to do
+here, next to the report's verdict and its numbers), your first pull request
+as numbered steps, what gets merged, why outside pull requests get closed (in
+the maintainers' words) and who reviews, plus what the AI found reading the
+pull request threads when the repository has an AI report. It is written from
+this server's latest report for the repository and its starter issues: rules
+build it, a model words the call and the steps, and every claim is checked
+against its sources before it is kept. The verdict is the report's, computed
+by rules; the model never picks it, and no field names the model.
+
+Merge plans can be made only when the server runs with its paid features
+(`HOLT_PRO_URL`) **and** AI is on (an AI budget, `HOLT_AI_BUDGET_USD`);
+otherwise the GET says `available: false`, and the POST is 501
+`not_implemented` (no paid features) or 503 `ai_unavailable` (AI off), with
+nothing charged.
+
+- `GET /v1/merge-plan/{owner}/{repo}` (anonymous or signed in; reads only the
+  database) → `MergePlanState`:
+  `{"repo", "available": true, "access": Access|null, "plan": MergePlan|null, "job": MergePlanJob|null}`.
+  - `access` (signed in, when `available`) is the `merge_plan` feature's
+    `Access` (see Account): whether one can be made now; `left` is how many
+    are left (the free three, or this month's thirty on Pro).
+  - `plan` (signed in) is this user's latest plan for this repository. It is
+    theirs and kept, so it is returned even while `available` is false.
+  - `job` (signed in) is the job making one for this user while it runs
+    (`{"job_id", "status", "stage", "progress"}`), so a reloaded page can
+    follow it again.
+- `POST /v1/me/merge-plan/{owner}/{repo}` (signed in; no body) →
+  `202 {"status": "queued", "job_id"}`: a job makes a new plan (usually under
+  a minute, up to a few; stopped after `HOLT_JOB_TIMEOUT_AI`). Asking again
+  while one is being made returns that job, charged once.
+  - One use of `merge_plan` is taken before anything runs (402
+    `quota_exceeded` otherwise, and nothing is queued). An unknown or private
+    repository is 404 `not_found`, and one with no report yet 404 `not_found`
+    ("Check the repository first"), both before any charge.
+  - A job that fails gives the use back; its error message says so.
+  - Asking again when nothing has changed returns the same plan (same
+    `generated_at`) and gives the use back. A plan that changed, or that was
+    made earlier for someone else, costs a use.
+- `GET /v1/merge-plan-jobs/{job_id}` → `{"status", "stage", "progress", "plan": MergePlan|null, "error": Error|null}`,
+  and `GET /v1/merge-plan-jobs/{job_id}/events` (SSE, as for analyses; `done`
+  carries `{"plan": MergePlan}`).
+
+`MergePlan`:
+
+```json
+{"repo": "pallets/click",
+ "recorded_on": "2026-09-27T20:04:55+00:00", "generated_at": "2026-09-30T12:00:00+00:00",
+ "window": {"days": 365, "since": "2025-09-27"},
+ "sample": {"merged": 50, "closed": 25, "merged_outside": 5, "closed_outside": 25},
+ "note": "Only 5 merged pull requests from people outside the project turned up …",
+ "verdict": {"verdict": "viable", "headline": "Worth your time", "tone": "good", "line": "…",
+             "numbers": [{"value": "5 of 8", "label": "outside PRs merged"}]},
+ "call": {"text": "Pick a small change in `tests/` …", "sources": [Source]},
+ "steps": [{"title": "Pick #3696, or a small fix in `tests/`", "detail": "…"|null,
+            "link": {"label": "#3696 on GitHub", "url": "https://github.com/…"}|null,
+            "copy": {"label": "Comment to post", "text": "Hi! …"}|null,
+            "sources": [Source]}],
+ "merged": [{"value": "72", "unit": "lines", "label": "typical merged pull request, in about 3 files",
+             "seen": 38, "of": 50, "sources": [Source]}],
+ "closed": [{"reason": "Written with AI tools", "seen": 8, "of": 25,
+             "quote": {"text": "…", "who": "davidism", "url": "https://github.com/…", "number": 3874}|null,
+             "examples": [{"number": 3874, "url": "https://github.com/…"}]}],
+ "reviewers": {"people": [{"login": "Rowlando13", "reviewed": 27, "of": 50, "areas": ["tests/", "src/"]}],
+               "sources": [Source]},
+ "ai": {"read_on": "…", "threads": 12,
+        "signals": [{"kind": "outsider_posture", "value": "welcoming", "headline": "Welcoming",
+                     "text": "…", "tone": "good", "url": "https://github.com/…"|null}],
+        "outcomes": [{"value": "merged_after_review", "count": 9}],
+        "quotes": [{"text": "…", "url": "https://github.com/…", "number": 3701,
+                    "outcome": "closed_with_guidance"}]}|null}
+```
+
+- A `Source` is the playbook's: `{"statement", "seen", "of", "links"}`.
+- `verdict` is the report's (`line` is its `verdict_line`), with up to three
+  numbers from its stats; a number with nothing to count is left out.
+- `steps`: at most 6, in order. `detail`, `link` and `copy` may each be null;
+  `copy` is a comment the person may post themselves (Holt never posts).
+- `merged`: at most 6 figures (`value` and `unit` read together: "72 lines",
+  "50 of 50"). `closed`: at most 5 reasons, most `seen` first, each with its
+  first quote (`who` is the project member who wrote it) and up to 5
+  examples. `reviewers.people`: the 3 most active reviewers and the folders
+  each reviews most.
+- `ai` is null unless the plan was written from an AI report. `signals` (`kind`
+  one of `outsider_posture`, `onboarding`, `repo_kind`; `tone` one of `good`,
+  `warn`, `bad`, `neutral`), `outcomes` (the engine's values, most common
+  first, for the web to word) and up to 3 `quotes` from the threads.
+- `call.text`, step titles and details, `merged[].label` and `closed[].reason`
+  are plain English and may contain Markdown code spans, never HTML.
+  `recorded_on` is when the pull requests were read from GitHub.
 
 ### Recommendations for you
 

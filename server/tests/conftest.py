@@ -138,6 +138,9 @@ def make_settings(tmp_path: Path, **overrides: Any) -> Settings:
         "HOLT_AI_BUDGET_OWNER_OK": True,
         "HOLT_ANON_RATE_PER_HOUR": 100,
         "HOLT_USER_RATE_PER_HOUR": 100,
+        # The welcome AI credits from before the merge plan's free taste
+        # (default 0 now); the AI report tests are written around them.
+        "HOLT_SIGNUP_AI_CREDITS": 3,
     }
     values.update(overrides)
     return Settings(_env_file=None, **values)

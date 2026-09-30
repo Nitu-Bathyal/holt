@@ -1,10 +1,10 @@
 """A hard cap on what this environment spends on AI models.
 
 `HOLT_AI_BUDGET_USD` is the most this server may ever spend on models: AI
-reports on its own key, and the playbooks and pre-flight summaries the
-paid-features service writes for it (that service is only reached through
-this server's jobs, so its spend is counted here too). 0, the default, turns
-AI off.
+reports on its own key, and the merge plans, playbooks and pre-flight
+summaries the paid-features service writes for it (that service is only
+reached through this server's jobs, so its spend is counted here too). 0, the
+default, turns AI off.
 
 How it holds:
 
@@ -54,7 +54,7 @@ if TYPE_CHECKING:
 log = logging.getLogger("holt_server.budget")
 
 MICROS = 1_000_000
-ANALYSIS, PLAYBOOK, PREFLIGHT = "analysis", "playbook", "preflight"
+ANALYSIS, PLAYBOOK, PREFLIGHT, MERGE_PLAN = "analysis", "playbook", "preflight", "merge_plan"
 
 
 def to_micros(usd: float) -> int:
@@ -86,6 +86,8 @@ def kind_of(job: Job) -> str | None:
         return ANALYSIS if job.mode == "ai" else None
     if job.kind == "playbook":
         return PLAYBOOK
+    if job.kind == "merge_plan":
+        return MERGE_PLAN
     if job.kind == "preflight":
         return PREFLIGHT if (job.params or {}).get("summary") else None
     return None
