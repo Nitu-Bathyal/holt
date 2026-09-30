@@ -1431,6 +1431,7 @@ class LiveGitHubProvider(EvidenceProvider):
         head = opening.search if opening and home == request else None
         nodes: list[dict[str, Any]] = []
         early: tuple[str, Future] | None = None
+        cohort_early: Future | None = None
         # The keywords only when used, so a transport written before them
         # (the tests have several) still serves full fetches.
         if head is not None:
@@ -1443,7 +1444,8 @@ class LiveGitHubProvider(EvidenceProvider):
             nodes.append(node)
             if len(nodes) == PAGE_SIZE:
                 early = self._settled_early(home, nodes)
-        cohort = self._timing(request, home, nodes)
+                cohort_early = self._timing_early(request, home, nodes)
+        cohort = self._timing(request, home, nodes, cohort_early)
         if self.window is Window.PRE_T:
             nodes += self._settled(home, nodes, early)
         if docs is not None:
@@ -1460,19 +1462,40 @@ class LiveGitHubProvider(EvidenceProvider):
         self._seen.update({r.evidence_id: r for r in kept})
         return kept
 
-    def _timing(self, request: str, home: str,
-                nodes: list[dict[str, Any]]) -> Future | list[EvidenceRecord] | None:
+    def _timing(self, request: str, home: str, nodes: list[dict[str, Any]],
+                early: Future | None = None) -> Future | list[EvidenceRecord] | None:
         """The timing cohort (agent/timing.py): the newest pages themselves when
         they reach back past its window or hold the whole history, else one
-        light search, read while the older pages are."""
+        light search, read while the older pages are (or already started by
+        `_timing_early`)."""
         if self.window is not Window.PRE_T or not self.timing_pages:
             return None
         created = [t for n in nodes if (t := _ts(n.get("createdAt")))]
         if timing_source(created, len(nodes) >= self.max_pages * PAGE_SIZE,
                          self.cutoff) == "sample":
             return [timing_window(request, self.cutoff, "sample")]
+        if early is not None:
+            return early
         if getattr(self.transport, "search_timing", None) is None:
             return None  # a test's transport from before the cohort
+        return in_background(read_timing, self.transport, request, home, self.cutoff,
+                             self.timing_pages)
+
+    def _timing_early(self, request: str, home: str,
+                      page: list[dict[str, Any]]) -> Future | None:
+        """Start the cohort's search while the newest pages load, when the first
+        of them shows the pages won't reach back to the cohort's window (at
+        this page's pace, with room for it to slow). A wrong guess costs the
+        search's points, up to three."""
+        if (self.window is not Window.PRE_T or not self.timing_pages
+                or not isinstance(self.transport, GitHubGraphQL)):
+            return None
+        created = [t for n in page if (t := _ts(n.get("createdAt")))]
+        if len(created) < PAGE_SIZE:
+            return None
+        reach = (max(created) - min(created)) * self.max_pages * EARLY_MARGIN
+        if max(created) - reach <= self.cutoff - timedelta(days=TIMING_DAYS[1]):
+            return None
         return in_background(read_timing, self.transport, request, home, self.cutoff,
                              self.timing_pages)
 

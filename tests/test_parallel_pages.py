@@ -485,3 +485,26 @@ def test_pages_of_28_and_29_read_what_pages_of_25_read(monkeypatch, sample):
     before, pages_before = read()
     assert reshaped == before
     assert pages <= pages_before
+
+
+def test_a_busy_repository_starts_the_timing_search_with_the_first_page():
+    """The first page shows the newest 200 won't reach back 240 days, so the
+    cohort's search starts before the rest of them are read, once."""
+    newest = [_pr(10_000 - i, NOW - timedelta(hours=1 + i)) for i in range(200)]
+    gh = GitHub(newest, [])
+    started_before_last_page = []
+
+    handler = gh.handler
+
+    def watching(request):
+        q = json.loads(request.content)["variables"].get("q", "")
+        if ".." in q:
+            started_before_last_page.append(
+                sum(1 for kind, _ in gh.pages if kind == "newest"))
+        return handler(request)
+
+    gh.handler = watching
+    gh.provider().fetch("a/b")
+    timing_queries = [q for q, _ in gh.queries if ".." in q]
+    assert len(timing_queries) == 1
+    assert started_before_last_page and started_before_last_page[0] < 7
