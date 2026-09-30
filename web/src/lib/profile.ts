@@ -8,6 +8,26 @@ export const SKIP_COOKIE = "holt_profile_skip";
 
 export const LANGS = ["Python", "JavaScript", "TypeScript", "Go", "Rust", "Java", "C++", "Ruby", "PHP", "Nix"];
 
+/** Suggested while typing a language in on /find (GitHub's spelling), past the ones with chips. */
+export const MORE_LANGS = [
+  "Assembly", "C", "C#", "Clojure", "Crystal", "CSS", "Dart", "Dockerfile", "Elixir", "Elm", "Erlang", "F#", "Fortran",
+  "Gleam", "Groovy", "Haskell", "HTML", "Julia", "Jupyter Notebook", "Kotlin", "Lua", "MATLAB", "Nim", "Objective-C",
+  "OCaml", "Perl", "PowerShell", "R", "Scala", "Shell", "Solidity", "Svelte", "Swift", "Vue", "Zig",
+];
+
+/** Suggested while typing a topic on /find: common GitHub topics. */
+export const POPULAR_TOPICS = [
+  "accessibility", "ai", "android", "api", "cli", "compiler", "data-science", "database", "deep-learning", "devops",
+  "django", "docker", "documentation", "education", "fastapi", "flask", "flutter", "game", "hacktoberfest", "ios",
+  "kubernetes", "linux", "llm", "machine-learning", "nextjs", "nodejs", "rails", "react", "security", "self-hosted",
+  "svelte", "terminal", "testing", "visualization", "vue", "web",
+];
+
+/** A language id (lowercase) as a name: GitHub's spelling when we know it, else a leading capital. */
+export function langName(id: string): string {
+  return [...LANGS, ...MORE_LANGS].find((l) => l.toLowerCase() === id) ?? id.charAt(0).toUpperCase() + id.slice(1);
+}
+
 export const TIME = [
   { days: 1, label: "an evening" },
   { days: 3, label: "a weekend" },

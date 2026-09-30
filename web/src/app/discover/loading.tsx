@@ -8,11 +8,11 @@ export default function Loading() {
     <LoadingTransition>
       <SkeletonRegion>
         <FindFrameSkeleton>
-          <div aria-hidden="true" className="border border-line-strong bg-panel shadow-soft">
-            <div className="p-3 sm:p-4 sm:pb-3"><Skeleton className="h-10 w-full sm:w-[27rem]" /></div>
-            <div className="flex gap-2 overflow-hidden border-t border-line p-3 sm:p-4">
+          <div aria-hidden="true" className="find-tray">
+            <div className="py-3 sm:pb-3 sm:pt-4"><Skeleton className="h-9 w-full sm:w-[27rem]" /></div>
+            <div className="flex gap-2 overflow-hidden border-t border-line py-3 sm:py-4">
               {[12, 8, 10, 10, 4, 6, 6].map((w, i) => (
-                <Skeleton key={i} className="h-10 shrink-0" style={{ width: `calc(${w}ch + 28px)` }} />
+                <Skeleton key={i} className="h-9 shrink-0" style={{ width: `calc(${w}ch + 28px)` }} />
               ))}
             </div>
           </div>

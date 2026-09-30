@@ -128,6 +128,26 @@ export function statPills(s: CardStats): string[] {
   return out;
 }
 
+const AREAS: StarterIssue["areas"][number][] = ["code", "docs", "tests", "design", "translations"];
+
+/**
+ * What a card says about its starter issues: how many, how many nobody is on
+ * yet (no one assigned or asking, no open pull request), and the kinds of work
+ * among them. Null when there are none.
+ */
+export function issueSummary(issues: StarterIssue[]): { count: string; free: string; allTaken: boolean; areas: string[] } | null {
+  if (!issues.length) return null;
+  const free = issues.filter((i) => !i.people && !i.open_prs).length;
+  const one = issues.length === 1;
+  const kinds = new Set(issues.flatMap((i) => i.areas ?? []));
+  return {
+    count: `${issues.length} starter issue${one ? "" : "s"}`,
+    free: free === 0 ? (one ? "taken" : "all taken") : free === issues.length ? (one ? "unclaimed" : "all unclaimed") : `${free} unclaimed`,
+    allTaken: free === 0,
+    areas: AREAS.filter((a) => kinds.has(a)),
+  };
+}
+
 // GitHub's own language colours for the ones Holt sees most; the rest get a neutral dot.
 const LANG_COLOR: Record<string, string> = {
   python: "#3572A5", javascript: "#f1e05a", typescript: "#3178c6", go: "#00ADD8", rust: "#dea584", java: "#b07219",

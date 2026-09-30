@@ -88,7 +88,6 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
       <FindFrame
         tab="hacktoberfest"
         title={<>This October, make contributions <span className="text-hf">that actually land.</span></>}
-        mood={ended ? "thinking" : "determined"}
         signedIn={Boolean(user)}
       >
         <p className="mb-5 flex flex-wrap items-center gap-2 text-[0.8rem] uppercase tracking-[0.08em]">
