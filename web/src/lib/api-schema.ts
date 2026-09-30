@@ -1504,6 +1504,11 @@ export interface components {
         };
         /** FindDone */
         FindDone: {
+            /**
+             * Complete
+             * @default true
+             */
+            complete: boolean;
             /** Results */
             results: components["schemas"]["FindResult"][];
             /**
@@ -1549,6 +1554,22 @@ export interface components {
              * @enum {string}
              */
             status: "queued" | "running" | "done" | "error";
+        };
+        /**
+         * FindQueued
+         * @description A search under way: `results` is what Holt's index has meanwhile.
+         */
+        FindQueued: {
+            /** Job Id */
+            job_id: string;
+            /** Results */
+            results: components["schemas"]["FindResult"][];
+            /**
+             * Status
+             * @default queued
+             * @constant
+             */
+            status: "queued";
         };
         /** FindResult */
         FindResult: {
@@ -3096,6 +3117,7 @@ export type FeedbackOut = components['schemas']['FeedbackOut'];
 export type FindDone = components['schemas']['FindDone'];
 export type FindIn = components['schemas']['FindIn'];
 export type FindJobStatus = components['schemas']['FindJobStatus'];
+export type FindQueued = components['schemas']['FindQueued'];
 export type FindResult = components['schemas']['FindResult'];
 export type GitHubAccount = components['schemas']['GitHubAccount'];
 export type GitHubConnection = components['schemas']['GitHubConnection'];
@@ -3612,7 +3634,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["Queued"];
+                    "application/json": components["schemas"]["FindQueued"];
                 };
             };
             /** @description Default Response */

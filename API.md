@@ -437,26 +437,49 @@ a cache hit costs no GitHub call and no rate limit. A miss counts against the
 ### `POST /v1/find`
 Body: `{"languages": ["python"], "topics": [], "days": 7, "hacktoberfest": true, "limit": 20}`
 Returns `{"results": [ { "repo": "owner/repo", "headline": "…", "tone": "good", "verdict": "…",
-"description": "string | null", "language": "string | null", "stars": 123 | null,
-"stats": {…subset}, "issues": [StarterIssue] } ]}` (`description`, `language`
-and `stars` come from `repo_meta`, the same details Discover shows, read when
-the search finishes and again each time a cached search is served; no GitHub
-call. They are null for a repo the warm pass hasn't read yet, and the warm
-pass reads every repo in a search from the last day. `stats` leaves out
-counts it doesn't have rather than sending null), only repos whose rules
-verdict is `viable`, ordered by starter-issue quality.
+"description": "string | null", "language": "string | null", "languages": ["…"],
+"stars": 123 | null, "stats": {…subset}, "issues": [StarterIssue] } ]}`, only repos
+whose rules verdict is `viable`. `stats` leaves out counts it doesn't have rather
+than sending null.
 
-- **Cached** (same search, finished within 6 hours): `200
-  {"status": "done", "results": [...]}` at once, with no rate limit. "Same
-  search" means the same languages and topics (order, case and duplicates
-  ignored), `hacktoberfest` and `days`; `limit` is a slice of one cached
-  answer (searches are computed for at least 20).
-- **Already running** for someone else: `202` with that search's `job_id`, also
-  free.
-- Otherwise `202 {"status": "queued", "job_id": "…"}`, which costs one unit of
-  the work bucket; poll or stream under `/v1/find/{job_id}` like analyses.
-  Polling a find job returns `results` instead of `report`; the SSE `done`
-  event carries `{"results": [...]}`.
+Results come from two places, in this order, with no repo twice:
+
+1. **Holt's index**: every repo whose latest 7-day rules report (current
+   engine) says "Worth your time", as Discover's welcoming board ranks them
+   (best odds, merged share, reply time, sample). Matched through `repo_meta`:
+   any picked language as the main language or a real second share
+   (`languages`), any picked topic, the `hacktoberfest` topic when
+   `hacktoberfest` is true; archived repos and forks left out (a repo closed
+   to outside pull requests is left out by its verdict). The typical first
+   reply must fit in `days`. Only repos with starter issues Holt already knows
+   (read within the last 72 hours; up to 3, best first) are listed. Read from
+   the database: no GitHub call, no rate limit.
+2. **The GitHub search**: repos found by searching GitHub for these filters and
+   screened with the rules, ordered by starter-issue quality. Their
+   `description`, `language` and `stars` come from `repo_meta` (null for a
+   repo whose details haven't been read yet; the warm pass reads every repo in
+   a search from the last day).
+
+- **Search cached** (same search, finished within 6 hours): `200
+  {"status": "done", "results": [...], "complete": true}` at once, with no rate
+  limit: the index as it is now, then the cached search. "Same search" means
+  the same languages and topics (order, case and duplicates ignored),
+  `hacktoberfest` and `days`; `limit` is a slice of one answer (searches are
+  computed for at least 20).
+- **Already running** for someone else: `202 {"status": "queued", "job_id":
+  "…", "results": [...]}` with that search's `job_id`, also free. `results` is
+  the index part, to show while the search runs.
+- Otherwise the same `202` for a new search, which costs one unit of the work
+  bucket; poll or stream under `/v1/find/{job_id}` like analyses. Polling a
+  find job returns `results` instead of `report`; the SSE `done` event carries
+  `{"results": [...]}`, the index then the search. While it runs, the search
+  also reads the starter issues of the first few index matches that have none
+  known, so they can join the answer. If the search fails (an `error` event),
+  the index part from the `202` is still the answer to show.
+- **Over the work limit** with index results: `200 {"status": "done",
+  "results": [...], "complete": false}`, the index part only (no search ran
+  for this caller). Don't keep it for other callers. With no index results the
+  usual `429`.
 
 StarterIssue:
 ```jsonc

@@ -966,6 +966,15 @@ class AnalysisDone(Model):
 class FindDone(Model):
     status: Literal["done"] = "done"
     results: list[FindResult]
+    # False when only Holt's index answered: the caller is over their work
+    # limit, so no GitHub search ran for them.
+    complete: bool = True
+
+
+class FindQueued(Queued):
+    """A search under way: `results` is what Holt's index has meanwhile."""
+
+    results: list[FindResult] = Field(default_factory=list)
 
 
 class JobStatus(Model):

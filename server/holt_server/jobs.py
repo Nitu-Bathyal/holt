@@ -423,7 +423,8 @@ class JobRunner:
                                 getattr(provider, "judges_recency", True))
 
     def _find_sync(self, job: Job, emit, loop) -> dict[str, Any]:
-        p = job.params
+        from holt_server import find
+
         svc = self.services
 
         def cached(repo: str) -> dict[str, Any] | None:
@@ -431,12 +432,7 @@ class JobRunner:
             return asyncio.run_coroutine_threadsafe(
                 fresh_rules_report(svc, repo, job.days), loop).result(timeout=30)
 
-        return starter.run_find(
-            languages=p.get("languages") or [], topics=p.get("topics") or [],
-            hacktoberfest=bool(p.get("hacktoberfest")), days=job.days,
-            limit=int(p.get("limit") or 20), token=svc.pool.next(), emit=emit,
-            cached=cached, http=getattr(svc, "http", None),
-        )
+        return find.run(svc, job.params or {}, job.days, emit, loop, cached)
 
     # --- state changes ------------------------------------------------------
 
@@ -465,16 +461,24 @@ class JobRunner:
     async def _finish(self, job: Job, result: dict[str, Any],
                       evidence: Evidence | None = None) -> None:
         # Here, not at the top: these import the API module, which imports this one.
-        from holt_server import discover, merge_plan, playbook, preflight
+        from holt_server import discover, find, merge_plan, playbook, preflight
 
         model_id = self._ai_model(job)
         cost = self._ai_cost(job, result)
-        async with self.services.db.session() as s:
-            if job.kind == "find":
+        shown = result
+        if job.kind == "find":
+            # The search is cached on its own; the job answers with the index
+            # first (find.py), as a cached search is served.
+            async with self.services.db.session() as s:
                 result = {**result, "results": await discover.with_meta(
                     s, list(result.get("results") or []))}
+            index = await find.index_results(self.services, {**(job.params or {}),
+                                                             "days": job.days})
+            limit = int((job.params or {}).get("limit") or 20)
+            shown = {**result, "results": find.merge(index, result["results"])[:limit]}
+        async with self.services.db.session() as s:
             done = await s.execute(self._mine(job.id).values(
-                status="done", stage="Done", progress=1.0, result=result,
+                status="done", stage="Done", progress=1.0, result=shown,
                 finished_at=now()))
             if done.rowcount != 1:
                 await s.rollback()
@@ -493,7 +497,7 @@ class JobRunner:
             if budget.kind_of(job):
                 await budget.settle(s, job.id, cost, model_id)
             await s.commit()
-        self.hub.publish(job.id, "done", done_payload(job.kind, result))
+        self.hub.publish(job.id, "done", done_payload(job.kind, shown))
         if job.kind == "analysis" and job.repo:
             self.meta.note(job.repo)
             if evidence is not None and evidence.records:
