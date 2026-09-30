@@ -10,7 +10,7 @@ test("find a project has a tab per page, Hacktoberfest only in season or on its 
   assert.deepEqual(findTabs({ signedIn: true, season: true, current: "find" }).map((t) => t.href), ["/find", "/discover", "/hacktoberfest"]);
 });
 
-test("signed out, the search tab isn't 'for you'", () => {
-  assert.equal(findTabs({ signedIn: true, season: false, current: "find" })[0].label, "for you");
-  assert.notEqual(findTabs({ signedIn: false, season: false, current: "find" })[0].label, "for you");
+test("signed out, the search tab isn't 'For you'", () => {
+  assert.equal(findTabs({ signedIn: true, season: false, current: "find" })[0].label, "For you");
+  assert.notEqual(findTabs({ signedIn: false, season: false, current: "find" })[0].label, "For you");
 });
