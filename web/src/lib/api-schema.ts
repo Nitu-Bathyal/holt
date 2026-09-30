@@ -1120,7 +1120,9 @@ export interface components {
              * Code
              * @enum {string}
              */
-            code: "ticket_first" | "no_ai_prs" | "ok_to_test" | "sig_team" | "cla" | "dco" | "issue_first" | "ai_disclosure" | "duplicates";
+            code: "ticket_first" | "no_ai_prs" | "ok_to_test" | "sig_team" | "cla" | "dco" | "issue_first" | "ai_disclosure" | "duplicates" | "stale_bot";
+            /** Days */
+            days: number | null;
             /** Link */
             link: string | null;
             /** Url */
@@ -2571,6 +2573,8 @@ export interface components {
             /** Headline */
             readonly headline: string;
             holt_users: components["schemas"]["HoltUsers"] | null;
+            /** How Long */
+            readonly how_long: components["schemas"]["Counted"][];
             /** Landing */
             landing: components["schemas"]["LandingPath"][];
             /**
@@ -2751,6 +2755,7 @@ export interface components {
              * @default 0
              */
             still_open: number;
+            timing: components["schemas"]["Timing"] | null;
             /**
              * Too Old
              * @default 0
@@ -2852,6 +2857,45 @@ export interface components {
              * @enum {string}
              */
             status: "created" | "authenticated" | "active" | "pending" | "halted" | "paused" | "cancelled" | "completed" | "expired";
+        };
+        /**
+         * Timing
+         * @description How long it takes here (engine 7, agent/timing.py). Facts, never read
+         *     by the verdict. Each is null under its minimum.
+         */
+        Timing: {
+            /** First Reply Slow Hours */
+            first_reply_slow_hours: number | null;
+            /** Last Outside Merge */
+            last_outside_merge: string | null;
+            /** Merge Cohort From */
+            merge_cohort_from: string | null;
+            /** Merge Cohort Merged */
+            merge_cohort_merged: number | null;
+            /** Merge Cohort Prs */
+            merge_cohort_prs: number | null;
+            /** Merge Cohort To */
+            merge_cohort_to: string | null;
+            /** Merge Slow Days */
+            merge_slow_days: number | null;
+            /** Merge Typical Days */
+            merge_typical_days: number | null;
+            /** Merged Within 14 Days */
+            merged_within_14_days: number | null;
+            /** Merged Within 30 Days */
+            merged_within_30_days: number | null;
+            /** Merged Within 3 Days */
+            merged_within_3_days: number | null;
+            /** Merged Within 60 Days */
+            merged_within_60_days: number | null;
+            /** Merged Within 7 Days */
+            merged_within_7_days: number | null;
+            /** Merges In Bursts */
+            merges_in_bursts: boolean | null;
+            /** Stale Bot */
+            stale_bot: boolean | null;
+            /** Stale Close Days */
+            stale_close_days: number | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -3013,6 +3057,7 @@ export type SubscriptionChargeInfo = components['schemas']['SubscriptionChargeIn
 export type SubscriptionCheckout = components['schemas']['SubscriptionCheckout'];
 export type SubscriptionConfirmed = components['schemas']['SubscriptionConfirmed'];
 export type SubscriptionInfo = components['schemas']['SubscriptionInfo'];
+export type Timing = components['schemas']['Timing'];
 export type ValidationError = components['schemas']['ValidationError'];
 export type HoltServerPaymentsConfirmIn = components['schemas']['holt_server__payments__ConfirmIn'];
 export type HoltServerSubscriptionsConfirmIn = components['schemas']['holt_server__subscriptions__ConfirmIn'];

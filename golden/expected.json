@@ -40,7 +40,20 @@
    "outsider_reviewed_share": 0.667,
    "merged_threads": 50,
    "first_pr_people": 16,
-   "first_pr_merged": 6
+   "first_pr_merged": 6,
+   "first_reply_half_hours": 723.2,
+   "merged_within_3_days": 0.067,
+   "merged_within_7_days": 0.093,
+   "merged_within_14_days": 0.12,
+   "merged_within_30_days": 0.133,
+   "merged_within_60_days": 0.147,
+   "merge_typical_days": 4.7,
+   "merge_slow_days": 63.1,
+   "merge_cohort_prs": 150,
+   "merge_cohort_merged": 25,
+   "merge_cohort_from": "2026-02-27",
+   "merge_cohort_to": "2026-07-28",
+   "last_outside_merge": "2026-09-27"
   },
   "history": [
    {
@@ -97,7 +110,22 @@
    "outsider_reviewed_share": 0.594,
    "merged_threads": 130,
    "first_pr_people": 56,
-   "first_pr_merged": 49
+   "first_pr_merged": 49,
+   "first_reply_half_hours": 68.6,
+   "first_reply_slow_hours": 271.2,
+   "merged_within_3_days": 0.262,
+   "merged_within_7_days": 0.347,
+   "merged_within_14_days": 0.468,
+   "merged_within_30_days": 0.637,
+   "merged_within_60_days": 0.669,
+   "merge_typical_days": 6.5,
+   "merge_slow_days": 24.7,
+   "merge_half_days": 16.5,
+   "merge_cohort_prs": 248,
+   "merge_cohort_merged": 168,
+   "merge_cohort_from": "2026-03-15",
+   "merge_cohort_to": "2026-07-28",
+   "last_outside_merge": "2026-09-27"
   },
   "history": [
    {
@@ -144,7 +172,23 @@
    "outsider_reviewed_share": 0.843,
    "merged_threads": 99,
    "first_pr_people": 122,
-   "first_pr_merged": 68
+   "first_pr_merged": 68,
+   "first_reply_half_hours": 23.8,
+   "first_reply_slow_hours": 84.4,
+   "merged_within_3_days": 0.335,
+   "merged_within_7_days": 0.407,
+   "merged_within_14_days": 0.428,
+   "merged_within_30_days": 0.428,
+   "merged_within_60_days": 0.428,
+   "merge_typical_days": 1.6,
+   "merge_slow_days": 4.5,
+   "merge_cohort_prs": 194,
+   "merge_cohort_merged": 83,
+   "merge_cohort_from": "2026-01-31",
+   "merge_cohort_to": "2026-07-28",
+   "last_outside_merge": "2026-09-24",
+   "stale_bot": true,
+   "stale_close_days": 90
   },
   "history": [
    {
@@ -203,7 +247,24 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 384,
    "first_pr_people": 22,
-   "first_pr_merged": 15
+   "first_pr_merged": 15,
+   "first_reply_half_hours": 4.0,
+   "first_reply_slow_hours": 7.7,
+   "merged_within_3_days": 0.542,
+   "merged_within_7_days": 0.583,
+   "merged_within_14_days": 0.583,
+   "merged_within_30_days": 0.583,
+   "merged_within_60_days": 0.583,
+   "merge_typical_days": 0.7,
+   "merge_slow_days": 2.0,
+   "merge_half_days": 1.0,
+   "merge_cohort_prs": 24,
+   "merge_cohort_merged": 14,
+   "merge_cohort_from": "2026-04-01",
+   "merge_cohort_to": "2026-05-31",
+   "last_outside_merge": "2026-09-27",
+   "stale_bot": true,
+   "stale_close_days": 28
   },
   "history": [
    {
@@ -262,7 +323,9 @@
    "outsider_reviewed_share": null,
    "merged_threads": 12,
    "first_pr_people": 0,
-   "first_pr_merged": 0
+   "first_pr_merged": 0,
+   "merge_cohort_prs": 0,
+   "merge_cohort_merged": 0
   },
   "history": [
    {
@@ -308,7 +371,9 @@
    "outsider_reviewed_share": null,
    "merged_threads": 0,
    "first_pr_people": 0,
-   "first_pr_merged": 0
+   "first_pr_merged": 0,
+   "merge_cohort_prs": 0,
+   "merge_cohort_merged": 0
   },
   "history": [
    {
@@ -359,7 +424,22 @@
    "outsider_reviewed_share": 0.543,
    "merged_threads": 138,
    "first_pr_people": 16,
-   "first_pr_merged": 11
+   "first_pr_merged": 11,
+   "first_reply_half_hours": 28.2,
+   "first_reply_slow_hours": 161.2,
+   "merged_within_3_days": 0.693,
+   "merged_within_7_days": 0.781,
+   "merged_within_14_days": 0.816,
+   "merged_within_30_days": 0.842,
+   "merged_within_60_days": 0.868,
+   "merge_typical_days": 0.9,
+   "merge_slow_days": 9.2,
+   "merge_half_days": 0.9,
+   "merge_cohort_prs": 114,
+   "merge_cohort_merged": 102,
+   "merge_cohort_from": "2026-04-01",
+   "merge_cohort_to": "2026-05-31",
+   "last_outside_merge": "2026-09-28"
   },
   "history": [
    {
@@ -410,7 +490,21 @@
    "outsider_reviewed_share": 0.154,
    "merged_threads": 113,
    "first_pr_people": 9,
-   "first_pr_merged": 9
+   "first_pr_merged": 9,
+   "first_reply_half_hours": 24.0,
+   "merged_within_3_days": 0.333,
+   "merged_within_7_days": 0.333,
+   "merged_within_14_days": 0.333,
+   "merged_within_30_days": 0.333,
+   "merged_within_60_days": 0.333,
+   "merge_typical_days": 0.0,
+   "merge_cohort_prs": 12,
+   "merge_cohort_merged": 4,
+   "merge_cohort_from": "2026-04-01",
+   "merge_cohort_to": "2026-05-31",
+   "last_outside_merge": "2026-09-28",
+   "stale_bot": true,
+   "stale_close_days": 14
   },
   "history": [
    {
@@ -468,7 +562,23 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 124,
    "first_pr_people": 19,
-   "first_pr_merged": 16
+   "first_pr_merged": 16,
+   "first_reply_half_hours": 2.9,
+   "first_reply_slow_hours": 11.7,
+   "merged_within_3_days": 0.0,
+   "merged_within_7_days": 0.0,
+   "merged_within_14_days": 0.004,
+   "merged_within_30_days": 0.014,
+   "merged_within_60_days": 0.025,
+   "merge_typical_days": 92.4,
+   "merge_slow_days": 166.4,
+   "merge_cohort_prs": 282,
+   "merge_cohort_merged": 38,
+   "merge_cohort_from": "2026-03-14",
+   "merge_cohort_to": "2026-07-29",
+   "last_outside_merge": "2026-09-27",
+   "stale_bot": true,
+   "stale_close_days": 37
   },
   "history": [
    {
@@ -515,7 +625,9 @@
    "outsider_reviewed_share": null,
    "merged_threads": 23,
    "first_pr_people": 0,
-   "first_pr_merged": 0
+   "first_pr_merged": 0,
+   "merge_cohort_prs": 0,
+   "merge_cohort_merged": 0
   },
   "history": [
    {
@@ -561,7 +673,9 @@
    "outsider_reviewed_share": null,
    "merged_threads": 0,
    "first_pr_people": 0,
-   "first_pr_merged": 0
+   "first_pr_merged": 0,
+   "merge_cohort_prs": 0,
+   "merge_cohort_merged": 0
   },
   "history": [
    {
@@ -612,7 +726,19 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 282,
    "first_pr_people": 2,
-   "first_pr_merged": 1
+   "first_pr_merged": 1,
+   "merged_within_3_days": 0.049,
+   "merged_within_7_days": 0.084,
+   "merged_within_14_days": 0.105,
+   "merged_within_30_days": 0.105,
+   "merged_within_60_days": 0.112,
+   "merge_typical_days": 6.1,
+   "merge_slow_days": 60.1,
+   "merge_cohort_prs": 143,
+   "merge_cohort_merged": 18,
+   "merge_cohort_from": "2026-03-25",
+   "merge_cohort_to": "2026-07-29",
+   "last_outside_merge": "2026-09-26"
   },
   "history": [
    {
@@ -662,7 +788,20 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 217,
    "first_pr_people": 16,
-   "first_pr_merged": 5
+   "first_pr_merged": 5,
+   "first_reply_half_hours": 42.3,
+   "merged_within_3_days": 0.295,
+   "merged_within_7_days": 0.393,
+   "merged_within_14_days": 0.41,
+   "merged_within_30_days": 0.426,
+   "merged_within_60_days": 0.443,
+   "merge_typical_days": 2.3,
+   "merge_slow_days": 34.9,
+   "merge_cohort_prs": 61,
+   "merge_cohort_merged": 29,
+   "merge_cohort_from": "2026-03-27",
+   "merge_cohort_to": "2026-07-30",
+   "last_outside_merge": "2026-09-25"
   },
   "history": [
    {
@@ -714,7 +853,20 @@
    "outsider_reviewed_share": 0.913,
    "merged_threads": 72,
    "first_pr_people": 65,
-   "first_pr_merged": 18
+   "first_pr_merged": 18,
+   "first_reply_half_hours": 3176.5,
+   "merged_within_3_days": 0.111,
+   "merged_within_7_days": 0.111,
+   "merged_within_14_days": 0.143,
+   "merged_within_30_days": 0.159,
+   "merged_within_60_days": 0.175,
+   "merge_typical_days": 2.8,
+   "merge_slow_days": 87.7,
+   "merge_cohort_prs": 63,
+   "merge_cohort_merged": 13,
+   "merge_cohort_from": "2026-02-07",
+   "merge_cohort_to": "2026-07-26",
+   "last_outside_merge": "2026-09-24"
   },
   "history": [
    {
@@ -773,7 +925,20 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 30,
    "first_pr_people": 31,
-   "first_pr_merged": 2
+   "first_pr_merged": 2,
+   "first_reply_half_hours": 93.7,
+   "merged_within_3_days": 0.043,
+   "merged_within_7_days": 0.052,
+   "merged_within_14_days": 0.09,
+   "merged_within_30_days": 0.124,
+   "merged_within_60_days": 0.152,
+   "merge_typical_days": 10.0,
+   "merge_slow_days": 50.1,
+   "merge_cohort_prs": 210,
+   "merge_cohort_merged": 34,
+   "merge_cohort_from": "2026-03-19",
+   "merge_cohort_to": "2026-07-30",
+   "last_outside_merge": "2026-09-20"
   },
   "history": [
    {
@@ -831,7 +996,22 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 332,
    "first_pr_people": 21,
-   "first_pr_merged": 19
+   "first_pr_merged": 19,
+   "first_reply_half_hours": 277.5,
+   "first_reply_slow_hours": 1008.6,
+   "merged_within_3_days": 0.293,
+   "merged_within_7_days": 0.439,
+   "merged_within_14_days": 0.512,
+   "merged_within_30_days": 0.61,
+   "merged_within_60_days": 0.878,
+   "merge_typical_days": 7.1,
+   "merge_slow_days": 45.9,
+   "merge_half_days": 9.2,
+   "merge_cohort_prs": 41,
+   "merge_cohort_merged": 36,
+   "merge_cohort_from": "2026-03-13",
+   "merge_cohort_to": "2026-07-29",
+   "last_outside_merge": "2026-09-26"
   },
   "history": [
    {
@@ -890,7 +1070,18 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 60,
    "first_pr_people": 42,
-   "first_pr_merged": 4
+   "first_pr_merged": 4,
+   "merged_within_3_days": 0.048,
+   "merged_within_7_days": 0.048,
+   "merged_within_14_days": 0.048,
+   "merged_within_30_days": 0.048,
+   "merged_within_60_days": 0.048,
+   "merge_typical_days": 1.0,
+   "merge_cohort_prs": 21,
+   "merge_cohort_merged": 1,
+   "merge_cohort_from": "2026-01-31",
+   "merge_cohort_to": "2026-02-26",
+   "last_outside_merge": "2026-02-23"
   },
   "history": [
    {
@@ -946,7 +1137,19 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 25,
    "first_pr_people": 11,
-   "first_pr_merged": 0
+   "first_pr_merged": 0,
+   "merged_within_3_days": 0.028,
+   "merged_within_7_days": 0.032,
+   "merged_within_14_days": 0.036,
+   "merged_within_30_days": 0.036,
+   "merged_within_60_days": 0.036,
+   "merge_typical_days": 2.3,
+   "merge_slow_days": 12.2,
+   "merge_cohort_prs": 251,
+   "merge_cohort_merged": 10,
+   "merge_cohort_from": "2026-03-12",
+   "merge_cohort_to": "2026-07-29",
+   "last_outside_merge": "2026-09-26"
   },
   "history": [
    {
@@ -1011,7 +1214,10 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 100,
    "first_pr_people": 8,
-   "first_pr_merged": 4
+   "first_pr_merged": 4,
+   "merge_cohort_prs": 0,
+   "merge_cohort_merged": 0,
+   "last_outside_merge": "2026-09-25"
   },
   "history": [
    {
@@ -1069,7 +1275,19 @@
    "outsider_reviewed_share": null,
    "merged_threads": 68,
    "first_pr_people": 56,
-   "first_pr_merged": 0
+   "first_pr_merged": 0,
+   "first_reply_half_hours": 16.6,
+   "first_reply_slow_hours": 57.5,
+   "merged_within_3_days": 0.007,
+   "merged_within_7_days": 0.013,
+   "merged_within_14_days": 0.013,
+   "merged_within_30_days": 0.013,
+   "merged_within_60_days": 0.013,
+   "merge_typical_days": 4.5,
+   "merge_cohort_prs": 152,
+   "merge_cohort_merged": 3,
+   "merge_cohort_from": "2026-03-17",
+   "merge_cohort_to": "2026-07-29"
   },
   "history": [
    {
@@ -1128,7 +1346,22 @@
    "outsider_reviewed_share": 0.0,
    "merged_threads": 233,
    "first_pr_people": 60,
-   "first_pr_merged": 58
+   "first_pr_merged": 58,
+   "first_reply_half_hours": 0.0,
+   "first_reply_slow_hours": 0.0,
+   "merged_within_3_days": 0.79,
+   "merged_within_7_days": 0.79,
+   "merged_within_14_days": 0.839,
+   "merged_within_30_days": 0.839,
+   "merged_within_60_days": 0.839,
+   "merge_typical_days": 0.0,
+   "merge_slow_days": 0.3,
+   "merge_half_days": 0.0,
+   "merge_cohort_prs": 248,
+   "merge_cohort_merged": 208,
+   "merge_cohort_from": "2026-03-31",
+   "merge_cohort_to": "2026-07-30",
+   "last_outside_merge": "2026-09-27"
   },
   "history": [
    {
@@ -1186,7 +1419,21 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 150,
    "first_pr_people": 40,
-   "first_pr_merged": 22
+   "first_pr_merged": 22,
+   "first_reply_half_hours": 5.0,
+   "first_reply_slow_hours": 22.1,
+   "merged_within_3_days": 0.365,
+   "merged_within_7_days": 0.387,
+   "merged_within_14_days": 0.396,
+   "merged_within_30_days": 0.41,
+   "merged_within_60_days": 0.41,
+   "merge_typical_days": 0.5,
+   "merge_slow_days": 3.1,
+   "merge_cohort_prs": 222,
+   "merge_cohort_merged": 91,
+   "merge_cohort_from": "2026-03-23",
+   "merge_cohort_to": "2026-07-30",
+   "last_outside_merge": "2026-09-27"
   },
   "history": [
    {
@@ -1241,7 +1488,12 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 16,
    "first_pr_people": 81,
-   "first_pr_merged": 5
+   "first_pr_merged": 5,
+   "first_reply_half_hours": 610.7,
+   "merge_cohort_prs": 0,
+   "merge_cohort_merged": 0,
+   "last_outside_merge": "2026-08-24",
+   "stale_bot": true
   },
   "history": [
    {
@@ -1306,7 +1558,11 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 52,
    "first_pr_people": 57,
-   "first_pr_merged": 23
+   "first_pr_merged": 23,
+   "merge_cohort_prs": 0,
+   "merge_cohort_merged": 0,
+   "last_outside_merge": "2026-09-25",
+   "stale_bot": true
   },
   "history": [
    {
@@ -1359,7 +1615,20 @@
    "outsider_reviewed_share": null,
    "merged_threads": 0,
    "first_pr_people": 12,
-   "first_pr_merged": 0
+   "first_pr_merged": 0,
+   "merged_within_3_days": 0.029,
+   "merged_within_7_days": 0.179,
+   "merged_within_14_days": 0.179,
+   "merged_within_30_days": 0.179,
+   "merged_within_60_days": 0.267,
+   "merge_typical_days": 52.8,
+   "merge_slow_days": 81.0,
+   "merge_cohort_prs": 240,
+   "merge_cohort_merged": 115,
+   "merge_cohort_from": "2026-03-28",
+   "merge_cohort_to": "2026-07-30",
+   "stale_bot": true,
+   "stale_close_days": 28
   },
   "history": [
    {
@@ -1415,7 +1684,24 @@
    "outsider_reviewed_share": 0.977,
    "merged_threads": 183,
    "first_pr_people": 31,
-   "first_pr_merged": 29
+   "first_pr_merged": 29,
+   "first_reply_half_hours": 17.3,
+   "first_reply_slow_hours": 183.9,
+   "merged_within_3_days": 0.512,
+   "merged_within_7_days": 0.664,
+   "merged_within_14_days": 0.712,
+   "merged_within_30_days": 0.808,
+   "merged_within_60_days": 0.864,
+   "merge_typical_days": 0.9,
+   "merge_slow_days": 27.0,
+   "merge_half_days": 2.3,
+   "merge_cohort_prs": 125,
+   "merge_cohort_merged": 111,
+   "merge_cohort_from": "2026-03-31",
+   "merge_cohort_to": "2026-07-30",
+   "last_outside_merge": "2026-09-27",
+   "stale_bot": true,
+   "stale_close_days": 67
   },
   "history": [
    {
@@ -1462,7 +1748,18 @@
    "outsider_reviewed_share": null,
    "merged_threads": 0,
    "first_pr_people": 102,
-   "first_pr_merged": 0
+   "first_pr_merged": 0,
+   "merged_within_3_days": 0.0,
+   "merged_within_7_days": 0.0,
+   "merged_within_14_days": 0.0,
+   "merged_within_30_days": 0.0,
+   "merged_within_60_days": 0.0,
+   "merge_cohort_prs": 109,
+   "merge_cohort_merged": 0,
+   "merge_cohort_from": "2026-02-05",
+   "merge_cohort_to": "2026-07-29",
+   "stale_bot": true,
+   "stale_close_days": 30
   },
   "history": [
    {
@@ -1521,7 +1818,23 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 19,
    "first_pr_people": 50,
-   "first_pr_merged": 14
+   "first_pr_merged": 14,
+   "first_reply_half_hours": 0.3,
+   "first_reply_slow_hours": 10.4,
+   "merged_within_3_days": 0.282,
+   "merged_within_7_days": 0.282,
+   "merged_within_14_days": 0.282,
+   "merged_within_30_days": 0.282,
+   "merged_within_60_days": 0.282,
+   "merge_typical_days": 0.8,
+   "merge_slow_days": 2.2,
+   "merge_cohort_prs": 213,
+   "merge_cohort_merged": 60,
+   "merge_cohort_from": "2026-03-31",
+   "merge_cohort_to": "2026-07-30",
+   "last_outside_merge": "2026-09-15",
+   "stale_bot": true,
+   "stale_close_days": 5
   },
   "history": [
    {
@@ -1584,7 +1897,12 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 107,
    "first_pr_people": 2,
-   "first_pr_merged": 1
+   "first_pr_merged": 1,
+   "merge_cohort_prs": 6,
+   "merge_cohort_merged": 2,
+   "merge_cohort_from": "2026-04-06",
+   "merge_cohort_to": "2026-07-22",
+   "last_outside_merge": "2026-07-29"
   },
   "history": [
    {
@@ -1635,7 +1953,19 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 148,
    "first_pr_people": 36,
-   "first_pr_merged": 1
+   "first_pr_merged": 1,
+   "merged_within_3_days": 0.043,
+   "merged_within_7_days": 0.085,
+   "merged_within_14_days": 0.128,
+   "merged_within_30_days": 0.137,
+   "merged_within_60_days": 0.137,
+   "merge_typical_days": 5.0,
+   "merge_slow_days": 12.9,
+   "merge_cohort_prs": 117,
+   "merge_cohort_merged": 16,
+   "merge_cohort_from": "2026-02-26",
+   "merge_cohort_to": "2026-07-28",
+   "last_outside_merge": "2026-08-06"
   },
   "history": [
    {
@@ -1698,7 +2028,20 @@
    "outsider_reviewed_share": 0.941,
    "merged_threads": 222,
    "first_pr_people": 23,
-   "first_pr_merged": 13
+   "first_pr_merged": 13,
+   "first_reply_half_hours": 537.3,
+   "merged_within_3_days": 0.036,
+   "merged_within_7_days": 0.073,
+   "merged_within_14_days": 0.091,
+   "merged_within_30_days": 0.164,
+   "merged_within_60_days": 0.2,
+   "merge_typical_days": 18.6,
+   "merge_slow_days": 33.9,
+   "merge_cohort_prs": 55,
+   "merge_cohort_merged": 11,
+   "merge_cohort_from": "2026-02-27",
+   "merge_cohort_to": "2026-07-30",
+   "last_outside_merge": "2026-09-21"
   },
   "history": [
    {
@@ -1754,7 +2097,20 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 70,
    "first_pr_people": 13,
-   "first_pr_merged": 11
+   "first_pr_merged": 11,
+   "first_reply_half_hours": 356.3,
+   "merged_within_3_days": 0.044,
+   "merged_within_7_days": 0.093,
+   "merged_within_14_days": 0.137,
+   "merged_within_30_days": 0.265,
+   "merged_within_60_days": 0.348,
+   "merge_typical_days": 23.3,
+   "merge_slow_days": 61.9,
+   "merge_cohort_prs": 204,
+   "merge_cohort_merged": 79,
+   "merge_cohort_from": "2026-03-25",
+   "merge_cohort_to": "2026-07-30",
+   "last_outside_merge": "2026-09-25"
   },
   "history": [
    {
@@ -1803,7 +2159,24 @@
    "outsider_reviewed_share": 0.952,
    "merged_threads": 113,
    "first_pr_people": 35,
-   "first_pr_merged": 19
+   "first_pr_merged": 19,
+   "first_reply_half_hours": 14.2,
+   "first_reply_slow_hours": 88.8,
+   "merged_within_3_days": 0.361,
+   "merged_within_7_days": 0.413,
+   "merged_within_14_days": 0.484,
+   "merged_within_30_days": 0.523,
+   "merged_within_60_days": 0.548,
+   "merge_typical_days": 1.5,
+   "merge_slow_days": 20.5,
+   "merge_half_days": 20.3,
+   "merge_cohort_prs": 155,
+   "merge_cohort_merged": 87,
+   "merge_cohort_from": "2026-02-28",
+   "merge_cohort_to": "2026-07-30",
+   "last_outside_merge": "2026-09-27",
+   "stale_bot": true,
+   "stale_close_days": 8
   },
   "history": [
    {
@@ -1852,7 +2225,12 @@
    "outsider_reviewed_share": 0.636,
    "merged_threads": 40,
    "first_pr_people": 5,
-   "first_pr_merged": 3
+   "first_pr_merged": 3,
+   "first_reply_half_hours": 4.8,
+   "first_reply_slow_hours": 20.4,
+   "merge_cohort_prs": 0,
+   "merge_cohort_merged": 0,
+   "last_outside_merge": "2026-09-29"
   },
   "history": [
    {
@@ -1902,7 +2280,21 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 120,
    "first_pr_people": 9,
-   "first_pr_merged": 5
+   "first_pr_merged": 5,
+   "first_reply_half_hours": 283.7,
+   "merged_within_3_days": 0.225,
+   "merged_within_7_days": 0.325,
+   "merged_within_14_days": 0.4,
+   "merged_within_30_days": 0.45,
+   "merged_within_60_days": 0.475,
+   "merge_typical_days": 3.9,
+   "merge_slow_days": 30.5,
+   "merge_half_days": 96.5,
+   "merge_cohort_prs": 40,
+   "merge_cohort_merged": 21,
+   "merge_cohort_from": "2026-04-01",
+   "merge_cohort_to": "2026-05-31",
+   "last_outside_merge": "2026-09-28"
   },
   "history": [
    {
@@ -1950,7 +2342,10 @@
    "outsider_reviewed_share": null,
    "merged_threads": 7,
    "first_pr_people": 0,
-   "first_pr_merged": 0
+   "first_pr_merged": 0,
+   "merge_cohort_prs": 0,
+   "merge_cohort_merged": 0,
+   "last_outside_merge": "2026-09-24"
   },
   "history": [
    {
@@ -2004,7 +2399,11 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 86,
    "first_pr_people": 12,
-   "first_pr_merged": 3
+   "first_pr_merged": 3,
+   "first_reply_half_hours": 177.0,
+   "merge_cohort_prs": 0,
+   "merge_cohort_merged": 0,
+   "last_outside_merge": "2026-04-29"
   },
   "history": [
    {
@@ -2062,7 +2461,18 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 223,
    "first_pr_people": 9,
-   "first_pr_merged": 3
+   "first_pr_merged": 3,
+   "merged_within_3_days": 0.075,
+   "merged_within_7_days": 0.075,
+   "merged_within_14_days": 0.075,
+   "merged_within_30_days": 0.125,
+   "merged_within_60_days": 0.125,
+   "merge_typical_days": 8.3,
+   "merge_cohort_prs": 40,
+   "merge_cohort_merged": 6,
+   "merge_cohort_from": "2026-04-01",
+   "merge_cohort_to": "2026-07-30",
+   "last_outside_merge": "2026-09-28"
   },
   "history": [
    {
@@ -2115,7 +2525,21 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 175,
    "first_pr_people": 25,
-   "first_pr_merged": 20
+   "first_pr_merged": 20,
+   "first_reply_half_hours": 1.3,
+   "merged_within_3_days": 0.749,
+   "merged_within_7_days": 0.808,
+   "merged_within_14_days": 0.844,
+   "merged_within_30_days": 0.85,
+   "merged_within_60_days": 0.85,
+   "merge_typical_days": 0.7,
+   "merge_slow_days": 3.2,
+   "merge_half_days": 1.3,
+   "merge_cohort_prs": 167,
+   "merge_cohort_merged": 142,
+   "merge_cohort_from": "2026-04-01",
+   "merge_cohort_to": "2026-05-31",
+   "last_outside_merge": "2026-09-28"
   },
   "history": [
    {
@@ -2174,7 +2598,11 @@
    "outsider_reviewed_share": null,
    "merged_threads": 0,
    "first_pr_people": 7,
-   "first_pr_merged": 0
+   "first_pr_merged": 0,
+   "merge_cohort_prs": 4,
+   "merge_cohort_merged": 0,
+   "merge_cohort_from": "2026-03-20",
+   "merge_cohort_to": "2026-07-21"
   },
   "history": [
    {
@@ -2233,7 +2661,23 @@
    "outsider_reviewed_share": 0.846,
    "merged_threads": 70,
    "first_pr_people": 23,
-   "first_pr_merged": 10
+   "first_pr_merged": 10,
+   "first_reply_half_hours": 2127.7,
+   "first_reply_slow_hours": 3292.8,
+   "merged_within_3_days": 0.043,
+   "merged_within_7_days": 0.043,
+   "merged_within_14_days": 0.043,
+   "merged_within_30_days": 0.13,
+   "merged_within_60_days": 0.13,
+   "merge_typical_days": 100.4,
+   "merge_slow_days": 155.5,
+   "merge_half_days": 155.5,
+   "merge_cohort_prs": 23,
+   "merge_cohort_merged": 8,
+   "merge_cohort_from": "2026-03-10",
+   "merge_cohort_to": "2026-07-26",
+   "merges_in_bursts": true,
+   "last_outside_merge": "2026-09-14"
   },
   "history": [
    {
@@ -2282,7 +2726,17 @@
    "outsider_reviewed_share": null,
    "merged_threads": 114,
    "first_pr_people": 28,
-   "first_pr_merged": 0
+   "first_pr_merged": 0,
+   "merged_within_3_days": 0.0,
+   "merged_within_7_days": 0.0,
+   "merged_within_14_days": 0.0,
+   "merged_within_30_days": 0.0,
+   "merged_within_60_days": 0.0,
+   "merge_cohort_prs": 21,
+   "merge_cohort_merged": 0,
+   "merge_cohort_from": "2026-02-01",
+   "merge_cohort_to": "2026-07-13",
+   "last_outside_merge": "2025-08-30"
   },
   "history": [
    {
@@ -2351,7 +2805,20 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 182,
    "first_pr_people": 18,
-   "first_pr_merged": 4
+   "first_pr_merged": 4,
+   "first_reply_half_hours": 3.4,
+   "first_reply_slow_hours": 16.4,
+   "merged_within_3_days": 0.125,
+   "merged_within_7_days": 0.167,
+   "merged_within_14_days": 0.167,
+   "merged_within_30_days": 0.167,
+   "merged_within_60_days": 0.167,
+   "merge_typical_days": 1.2,
+   "merge_cohort_prs": 24,
+   "merge_cohort_merged": 4,
+   "merge_cohort_from": "2026-03-22",
+   "merge_cohort_to": "2026-07-29",
+   "last_outside_merge": "2026-09-24"
   },
   "history": [
    {
@@ -2406,7 +2873,17 @@
    "outsider_reviewed_share": null,
    "merged_threads": 52,
    "first_pr_people": 4,
-   "first_pr_merged": 0
+   "first_pr_merged": 0,
+   "merged_within_3_days": 0.01,
+   "merged_within_7_days": 0.015,
+   "merged_within_14_days": 0.015,
+   "merged_within_30_days": 0.015,
+   "merged_within_60_days": 0.015,
+   "merge_typical_days": 1.7,
+   "merge_cohort_prs": 195,
+   "merge_cohort_merged": 3,
+   "merge_cohort_from": "2026-03-23",
+   "merge_cohort_to": "2026-07-30"
   },
   "history": [
    {
@@ -2463,7 +2940,12 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 96,
    "first_pr_people": 5,
-   "first_pr_merged": 4
+   "first_pr_merged": 4,
+   "first_reply_half_hours": 35.1,
+   "first_reply_slow_hours": 255.7,
+   "merge_cohort_prs": 0,
+   "merge_cohort_merged": 0,
+   "last_outside_merge": "2026-09-25"
   },
   "history": [
    {
@@ -2521,7 +3003,23 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 57,
    "first_pr_people": 28,
-   "first_pr_merged": 2
+   "first_pr_merged": 2,
+   "first_reply_half_hours": 107.2,
+   "first_reply_slow_hours": 545.3,
+   "merged_within_3_days": 0.022,
+   "merged_within_7_days": 0.029,
+   "merged_within_14_days": 0.072,
+   "merged_within_30_days": 0.108,
+   "merged_within_60_days": 0.122,
+   "merge_typical_days": 21.9,
+   "merge_slow_days": 62.8,
+   "merge_cohort_prs": 139,
+   "merge_cohort_merged": 21,
+   "merge_cohort_from": "2026-03-23",
+   "merge_cohort_to": "2026-07-29",
+   "last_outside_merge": "2026-09-15",
+   "stale_bot": true,
+   "stale_close_days": 11
   },
   "history": [
    {
@@ -2570,7 +3068,19 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 49,
    "first_pr_people": 7,
-   "first_pr_merged": 5
+   "first_pr_merged": 5,
+   "merged_within_3_days": 0.073,
+   "merged_within_7_days": 0.087,
+   "merged_within_14_days": 0.131,
+   "merged_within_30_days": 0.15,
+   "merged_within_60_days": 0.165,
+   "merge_typical_days": 8.6,
+   "merge_slow_days": 64.5,
+   "merge_cohort_prs": 206,
+   "merge_cohort_merged": 38,
+   "merge_cohort_from": "2026-01-31",
+   "merge_cohort_to": "2026-07-29",
+   "last_outside_merge": "2026-08-30"
   },
   "history": [
    {
@@ -2620,7 +3130,20 @@
    "outsider_reviewed_share": 0.4,
    "merged_threads": 15,
    "first_pr_people": 97,
-   "first_pr_merged": 3
+   "first_pr_merged": 3,
+   "first_reply_half_hours": 1.7,
+   "first_reply_slow_hours": 21.4,
+   "merged_within_3_days": 0.0,
+   "merged_within_7_days": 0.0,
+   "merged_within_14_days": 0.0,
+   "merged_within_30_days": 0.03,
+   "merged_within_60_days": 0.03,
+   "merge_typical_days": 22.2,
+   "merge_cohort_prs": 66,
+   "merge_cohort_merged": 2,
+   "merge_cohort_from": "2026-01-31",
+   "merge_cohort_to": "2026-07-25",
+   "last_outside_merge": "2026-08-11"
   },
   "history": [
    {
@@ -2673,7 +3196,12 @@
    "outsider_reviewed_share": null,
    "merged_threads": 226,
    "first_pr_people": 8,
-   "first_pr_merged": 0
+   "first_pr_merged": 0,
+   "merge_cohort_prs": 6,
+   "merge_cohort_merged": 0,
+   "merge_cohort_from": "2026-02-09",
+   "merge_cohort_to": "2026-07-03",
+   "last_outside_merge": "2025-05-28"
   },
   "history": [
    {
@@ -2730,7 +3258,22 @@
    "outsider_reviewed_share": 0.458,
    "merged_threads": 207,
    "first_pr_people": 38,
-   "first_pr_merged": 32
+   "first_pr_merged": 32,
+   "first_reply_half_hours": 14.0,
+   "first_reply_slow_hours": 44.2,
+   "merged_within_3_days": 0.714,
+   "merged_within_7_days": 0.762,
+   "merged_within_14_days": 0.762,
+   "merged_within_30_days": 0.762,
+   "merged_within_60_days": 0.762,
+   "merge_typical_days": 0.6,
+   "merge_slow_days": 2.2,
+   "merge_half_days": 0.7,
+   "merge_cohort_prs": 42,
+   "merge_cohort_merged": 32,
+   "merge_cohort_from": "2026-02-02",
+   "merge_cohort_to": "2026-07-26",
+   "last_outside_merge": "2026-09-27"
   },
   "history": [
    {
@@ -2786,7 +3329,21 @@
    "outsider_reviewed_share": 0.912,
    "merged_threads": 115,
    "first_pr_people": 39,
-   "first_pr_merged": 25
+   "first_pr_merged": 25,
+   "first_reply_half_hours": 47.5,
+   "first_reply_slow_hours": 596.2,
+   "merged_within_3_days": 0.136,
+   "merged_within_7_days": 0.236,
+   "merged_within_14_days": 0.279,
+   "merged_within_30_days": 0.343,
+   "merged_within_60_days": 0.386,
+   "merge_typical_days": 5.9,
+   "merge_slow_days": 54.1,
+   "merge_cohort_prs": 140,
+   "merge_cohort_merged": 57,
+   "merge_cohort_from": "2026-02-16",
+   "merge_cohort_to": "2026-07-29",
+   "last_outside_merge": "2026-09-26"
   },
   "history": [
    {
@@ -2833,7 +3390,20 @@
    "outsider_reviewed_share": 0.02,
    "merged_threads": 149,
    "first_pr_people": 43,
-   "first_pr_merged": 40
+   "first_pr_merged": 40,
+   "first_reply_half_hours": 29.4,
+   "merged_within_3_days": 0.106,
+   "merged_within_7_days": 0.175,
+   "merged_within_14_days": 0.182,
+   "merged_within_30_days": 0.243,
+   "merged_within_60_days": 0.253,
+   "merge_typical_days": 3.9,
+   "merge_slow_days": 21.6,
+   "merge_cohort_prs": 292,
+   "merge_cohort_merged": 74,
+   "merge_cohort_from": "2026-03-27",
+   "merge_cohort_to": "2026-07-30",
+   "last_outside_merge": "2026-09-27"
   },
   "history": [
    {
@@ -2890,7 +3460,22 @@
    "outsider_reviewed_share": 0.444,
    "merged_threads": 183,
    "first_pr_people": 5,
-   "first_pr_merged": 4
+   "first_pr_merged": 4,
+   "first_reply_half_hours": 2.0,
+   "first_reply_slow_hours": 53.1,
+   "merged_within_3_days": 0.613,
+   "merged_within_7_days": 0.647,
+   "merged_within_14_days": 0.699,
+   "merged_within_30_days": 0.717,
+   "merged_within_60_days": 0.757,
+   "merge_typical_days": 0.3,
+   "merge_slow_days": 13.9,
+   "merge_half_days": 1.2,
+   "merge_cohort_prs": 173,
+   "merge_cohort_merged": 134,
+   "merge_cohort_from": "2026-03-29",
+   "merge_cohort_to": "2026-07-30",
+   "last_outside_merge": "2026-09-28"
   },
   "history": [
    {
@@ -2941,7 +3526,11 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 74,
    "first_pr_people": 9,
-   "first_pr_merged": 3
+   "first_pr_merged": 3,
+   "first_reply_half_hours": 224.5,
+   "merge_cohort_prs": 0,
+   "merge_cohort_merged": 0,
+   "last_outside_merge": "2026-09-28"
   },
   "history": [
    {
@@ -2999,7 +3588,21 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 38,
    "first_pr_people": 17,
-   "first_pr_merged": 13
+   "first_pr_merged": 13,
+   "merged_within_3_days": 0.03,
+   "merged_within_7_days": 0.038,
+   "merged_within_14_days": 0.038,
+   "merged_within_30_days": 0.061,
+   "merged_within_60_days": 0.076,
+   "merge_typical_days": 20.0,
+   "merge_slow_days": 38.0,
+   "merge_cohort_prs": 132,
+   "merge_cohort_merged": 11,
+   "merge_cohort_from": "2026-03-12",
+   "merge_cohort_to": "2026-07-30",
+   "last_outside_merge": "2026-09-22",
+   "stale_bot": true,
+   "stale_close_days": 97
   },
   "history": [
    {
@@ -3050,7 +3653,13 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 142,
    "first_pr_people": 7,
-   "first_pr_merged": 4
+   "first_pr_merged": 4,
+   "first_reply_half_hours": 161.1,
+   "merge_cohort_prs": 0,
+   "merge_cohort_merged": 0,
+   "last_outside_merge": "2026-09-25",
+   "stale_bot": true,
+   "stale_close_days": 187
   },
   "history": [
    {
@@ -3104,7 +3713,10 @@
    "outsider_reviewed_share": null,
    "merged_threads": 198,
    "first_pr_people": 0,
-   "first_pr_merged": 0
+   "first_pr_merged": 0,
+   "merge_cohort_prs": 0,
+   "merge_cohort_merged": 0,
+   "last_outside_merge": "2026-09-29"
   },
   "history": [
    {
@@ -3151,7 +3763,14 @@
    "outsider_reviewed_share": null,
    "merged_threads": 38,
    "first_pr_people": 1,
-   "first_pr_merged": 0
+   "first_pr_merged": 0,
+   "merge_cohort_prs": 1,
+   "merge_cohort_merged": 0,
+   "merge_cohort_from": "2026-03-06",
+   "merge_cohort_to": "2026-03-06",
+   "last_outside_merge": "2020-02-11",
+   "stale_bot": true,
+   "stale_close_days": 372
   },
   "history": [
    {
@@ -3207,7 +3826,22 @@
    "outsider_reviewed_share": 0.78,
    "merged_threads": 177,
    "first_pr_people": 34,
-   "first_pr_merged": 27
+   "first_pr_merged": 27,
+   "first_reply_half_hours": 11.9,
+   "first_reply_slow_hours": 87.3,
+   "merged_within_3_days": 0.392,
+   "merged_within_7_days": 0.52,
+   "merged_within_14_days": 0.624,
+   "merged_within_30_days": 0.712,
+   "merged_within_60_days": 0.736,
+   "merge_typical_days": 3.0,
+   "merge_slow_days": 24.2,
+   "merge_half_days": 6.5,
+   "merge_cohort_prs": 125,
+   "merge_cohort_merged": 97,
+   "merge_cohort_from": "2026-03-29",
+   "merge_cohort_to": "2026-07-30",
+   "last_outside_merge": "2026-09-28"
   },
   "history": [
    {
@@ -3260,7 +3894,21 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 71,
    "first_pr_people": 63,
-   "first_pr_merged": 17
+   "first_pr_merged": 17,
+   "first_reply_half_hours": 59.9,
+   "first_reply_slow_hours": 1141.7,
+   "merged_within_3_days": 0.083,
+   "merged_within_7_days": 0.104,
+   "merged_within_14_days": 0.125,
+   "merged_within_30_days": 0.146,
+   "merged_within_60_days": 0.146,
+   "merge_typical_days": 5.6,
+   "merge_slow_days": 86.1,
+   "merge_cohort_prs": 48,
+   "merge_cohort_merged": 10,
+   "merge_cohort_from": "2026-02-04",
+   "merge_cohort_to": "2026-07-18",
+   "last_outside_merge": "2026-08-24"
   },
   "history": [
    {
@@ -3313,7 +3961,9 @@
    "outsider_reviewed_share": null,
    "merged_threads": 60,
    "first_pr_people": 0,
-   "first_pr_merged": 0
+   "first_pr_merged": 0,
+   "merge_cohort_prs": 0,
+   "merge_cohort_merged": 0
   },
   "history": [
    {
@@ -3364,7 +4014,12 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 82,
    "first_pr_people": 31,
-   "first_pr_merged": 1
+   "first_pr_merged": 1,
+   "merge_cohort_prs": 0,
+   "merge_cohort_merged": 0,
+   "last_outside_merge": "2026-05-15",
+   "stale_bot": true,
+   "stale_close_days": 21
   },
   "history": [
    {
@@ -3421,7 +4076,19 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 38,
    "first_pr_people": 44,
-   "first_pr_merged": 14
+   "first_pr_merged": 14,
+   "merged_within_3_days": 0.274,
+   "merged_within_7_days": 0.299,
+   "merged_within_14_days": 0.312,
+   "merged_within_30_days": 0.35,
+   "merged_within_60_days": 0.376,
+   "merge_typical_days": 0.9,
+   "merge_slow_days": 28.9,
+   "merge_cohort_prs": 157,
+   "merge_cohort_merged": 61,
+   "merge_cohort_from": "2026-01-31",
+   "merge_cohort_to": "2026-07-29",
+   "last_outside_merge": "2026-09-22"
   },
   "history": [
    {
@@ -3480,7 +4147,18 @@
    "outsider_reviewed_share": 0.619,
    "merged_threads": 42,
    "first_pr_people": 76,
-   "first_pr_merged": 13
+   "first_pr_merged": 13,
+   "merged_within_3_days": 0.023,
+   "merged_within_7_days": 0.03,
+   "merged_within_14_days": 0.03,
+   "merged_within_30_days": 0.03,
+   "merged_within_60_days": 0.03,
+   "merge_typical_days": 1.7,
+   "merge_cohort_prs": 132,
+   "merge_cohort_merged": 4,
+   "merge_cohort_from": "2026-02-07",
+   "merge_cohort_to": "2026-07-30",
+   "last_outside_merge": "2026-09-19"
   },
   "history": [
    {
@@ -3527,7 +4205,19 @@
    "outsider_reviewed_share": 0.125,
    "merged_threads": 8,
    "first_pr_people": 160,
-   "first_pr_merged": 7
+   "first_pr_merged": 7,
+   "first_reply_half_hours": 25.8,
+   "merged_within_3_days": 0.03,
+   "merged_within_7_days": 0.03,
+   "merged_within_14_days": 0.03,
+   "merged_within_30_days": 0.03,
+   "merged_within_60_days": 0.03,
+   "merge_typical_days": 0.3,
+   "merge_cohort_prs": 200,
+   "merge_cohort_merged": 6,
+   "merge_cohort_from": "2026-01-31",
+   "merge_cohort_to": "2026-07-29",
+   "last_outside_merge": "2026-08-21"
   },
   "history": [
    {
@@ -3589,7 +4279,14 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 119,
    "first_pr_people": 6,
-   "first_pr_merged": 4
+   "first_pr_merged": 4,
+   "first_reply_half_hours": 27.1,
+   "first_reply_slow_hours": 39.4,
+   "merge_cohort_prs": 7,
+   "merge_cohort_merged": 3,
+   "merge_cohort_from": "2026-05-29",
+   "merge_cohort_to": "2026-07-30",
+   "last_outside_merge": "2026-09-18"
   },
   "history": [
    {
@@ -3646,7 +4343,22 @@
    "outsider_reviewed_share": 0.984,
    "merged_threads": 287,
    "first_pr_people": 21,
-   "first_pr_merged": 15
+   "first_pr_merged": 15,
+   "first_reply_half_hours": 7.0,
+   "first_reply_slow_hours": 15.3,
+   "merged_within_3_days": 0.481,
+   "merged_within_7_days": 0.506,
+   "merged_within_14_days": 0.506,
+   "merged_within_30_days": 0.519,
+   "merged_within_60_days": 0.543,
+   "merge_typical_days": 0.4,
+   "merge_slow_days": 6.4,
+   "merge_half_days": 6.5,
+   "merge_cohort_prs": 81,
+   "merge_cohort_merged": 44,
+   "merge_cohort_from": "2026-03-19",
+   "merge_cohort_to": "2026-07-29",
+   "last_outside_merge": "2026-09-27"
   },
   "history": [
    {
@@ -3698,7 +4410,22 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 306,
    "first_pr_people": 17,
-   "first_pr_merged": 5
+   "first_pr_merged": 5,
+   "first_reply_half_hours": 1.1,
+   "first_reply_slow_hours": 5.7,
+   "merged_within_3_days": 0.115,
+   "merged_within_7_days": 0.215,
+   "merged_within_14_days": 0.238,
+   "merged_within_30_days": 0.262,
+   "merged_within_60_days": 0.277,
+   "merge_typical_days": 3.6,
+   "merge_slow_days": 30.7,
+   "merge_half_days": 120.6,
+   "merge_cohort_prs": 130,
+   "merge_cohort_merged": 38,
+   "merge_cohort_from": "2026-03-27",
+   "merge_cohort_to": "2026-07-29",
+   "last_outside_merge": "2026-09-27"
   },
   "history": [
    {
@@ -3750,7 +4477,9 @@
    "outsider_reviewed_share": null,
    "merged_threads": 0,
    "first_pr_people": 0,
-   "first_pr_merged": 0
+   "first_pr_merged": 0,
+   "merge_cohort_prs": 0,
+   "merge_cohort_merged": 0
   },
   "history": [
    {
@@ -3797,7 +4526,11 @@
    "outsider_reviewed_share": null,
    "merged_threads": 0,
    "first_pr_people": 8,
-   "first_pr_merged": 0
+   "first_pr_merged": 0,
+   "merge_cohort_prs": 5,
+   "merge_cohort_merged": 0,
+   "merge_cohort_from": "2026-03-09",
+   "merge_cohort_to": "2026-07-06"
   },
   "history": [
    {
@@ -3853,7 +4586,19 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 124,
    "first_pr_people": 3,
-   "first_pr_merged": 0
+   "first_pr_merged": 0,
+   "merged_within_3_days": 0.065,
+   "merged_within_7_days": 0.078,
+   "merged_within_14_days": 0.091,
+   "merged_within_30_days": 0.13,
+   "merged_within_60_days": 0.13,
+   "merge_typical_days": 6.0,
+   "merge_slow_days": 21.5,
+   "merge_cohort_prs": 77,
+   "merge_cohort_merged": 11,
+   "merge_cohort_from": "2026-03-28",
+   "merge_cohort_to": "2026-07-30",
+   "last_outside_merge": "2026-09-14"
   },
   "history": [
    {
@@ -3914,7 +4659,24 @@
    "outsider_reviewed_share": 0.968,
    "merged_threads": 71,
    "first_pr_people": 20,
-   "first_pr_merged": 20
+   "first_pr_merged": 20,
+   "first_reply_half_hours": 34.7,
+   "first_reply_slow_hours": 307.9,
+   "merged_within_3_days": 0.197,
+   "merged_within_7_days": 0.382,
+   "merged_within_14_days": 0.474,
+   "merged_within_30_days": 0.618,
+   "merged_within_60_days": 0.684,
+   "merge_typical_days": 8.0,
+   "merge_slow_days": 63.3,
+   "merge_half_days": 14.9,
+   "merge_cohort_prs": 152,
+   "merge_cohort_merged": 120,
+   "merge_cohort_from": "2026-03-31",
+   "merge_cohort_to": "2026-07-30",
+   "last_outside_merge": "2026-09-27",
+   "stale_bot": true,
+   "stale_close_days": 37
   },
   "history": [
    {
@@ -3978,7 +4740,21 @@
    "outsider_reviewed_share": 1.0,
    "merged_threads": 113,
    "first_pr_people": 18,
-   "first_pr_merged": 4
+   "first_pr_merged": 4,
+   "first_reply_half_hours": 37.8,
+   "first_reply_slow_hours": 69.9,
+   "merged_within_3_days": 0.029,
+   "merged_within_7_days": 0.072,
+   "merged_within_14_days": 0.13,
+   "merged_within_30_days": 0.159,
+   "merged_within_60_days": 0.174,
+   "merge_typical_days": 8.1,
+   "merge_slow_days": 30.9,
+   "merge_cohort_prs": 69,
+   "merge_cohort_merged": 13,
+   "merge_cohort_from": "2026-03-27",
+   "merge_cohort_to": "2026-07-29",
+   "last_outside_merge": "2026-09-28"
   },
   "history": [
    {

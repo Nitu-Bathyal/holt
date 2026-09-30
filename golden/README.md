@@ -9,7 +9,7 @@ fails if a verdict or a count changes without being approved.
 |---|---|---|
 | `repos.json` | Which repositories, the shape each covers, and for 10 of them the verdict a person checked by hand and why | hand |
 | `expected.json` | The engine's current verdict, deciding rules and counts per repository, plus every approved verdict change and its reason | `approve` |
-| `recordings/*.json.gz` | The evidence a live report read: the newest 200 pull requests (plus, for a busy repository, older ones reaching past the 14-day settle window) with their comments, reviews, merges and closes (v2 evidence), repository facts, releases, README and CONTRIBUTING | `record` |
+| `recordings/*.json.gz` | The evidence a live report read: the newest 200 pull requests (plus, for a busy repository, older ones reaching past the 14-day settle window) with their comments, reviews, merges and closes (v2 evidence), repository facts, releases, README and CONTRIBUTING, the stale bot's config, and the timing cohort (`timing:` records) | `record` |
 
 The replay is the free report as githolt.com computes it: no model, a 7-day
 contributor, read at the moment the recording was made (so a PR opened an hour
@@ -25,7 +25,15 @@ uv run python -m golden diff --base origin/main   # vs what main approved
 uv run python -m golden check                 # exit 1 on any unapproved change (CI runs this as a test)
 uv run python -m golden approve --reason "..."    # accept the current output
 GITHUB_TOKEN=$(gh auth token) uv run python -m golden record owner/name   # add or re-record one
+GITHUB_TOKEN=$(gh auth token) uv run python -m golden record-timing       # redo only the timing evidence
 ```
+
+`record-timing` re-reads what engine 7's "how long it takes here" block adds
+(agent/timing.py) as of each recording's own cutoff: the stale bot's config at
+that commit and the timing cohort (0-3 points a repository), leaving the rest
+of the recording as it was. `python -m golden.backtest record-timing` does the
+same for the backtest's before parts, and `python -m golden.backtest calibrate`
+checks whether the block's lines held for the pull requests opened next.
 
 `diff` prints a Markdown table, one row per repository whose verdict, rules or
 counts moved. Verdict changes come first. The "hand check" column shows whether

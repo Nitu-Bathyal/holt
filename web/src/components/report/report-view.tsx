@@ -48,7 +48,8 @@ export function Section({ n, title, id, children, note, reveal }: { n: string; t
 export function VerdictHero({ report, reveal, land }: { report: Report; reveal?: boolean; land?: boolean }) {
   // Every sentence here comes from the server, derived there from the verdict,
   // the counts and the rules, so the top of the page can't disagree with them
-  // or with itself. Three lines: the reason, the numbers, what to do next.
+  // or with itself. The reason, the numbers, how long it takes (when known),
+  // and what to do next.
   const t = TONE[report.tone];
   return (
     <div className="relative overflow-hidden border border-line-strong bg-panel shadow-card" data-verdict-hero>
@@ -82,6 +83,17 @@ export function VerdictHero({ report, reveal, land }: { report: Report; reveal?:
               </p>
             )}
           </TopLine>
+          {report.how_long.length > 0 && (
+            <TopLine label="how long" name="how-long">
+              <ul className="space-y-1">
+                {report.how_long.map((l) => (
+                  <li key={l.topic}>
+                    <span className="text-faint">{l.topic}:</span> {l.text}
+                  </li>
+                ))}
+              </ul>
+            </TopLine>
+          )}
           <TopLine label="what to do" name="next">
             <p>{report.next_step}</p>
           </TopLine>
@@ -160,6 +172,7 @@ const ASK_SOURCE: Record<Report["asks"][number]["code"], string> = {
   issue_first: "CONTRIBUTING, on opening an issue first",
   ai_disclosure: "Where the project asks you to say whether you used AI",
   duplicates: "A pull request closed as a duplicate",
+  stale_bot: "Where a bot closes quiet pull requests",
 };
 
 export function ReportView({

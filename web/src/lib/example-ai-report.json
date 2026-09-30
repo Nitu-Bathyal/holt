@@ -17,7 +17,8 @@
     "closed_silently": 0,
     "closed_by_bot": 0,
     "withdrawn": 0,
-    "too_old": 0
+    "too_old": 0,
+    "timing": null
   },
   "decided_by": [
     "28 pull requests from outside contributors were merged, by 28 different people, out of 119 attempts by 81 people. Of those who got a reply, half heard back within 2.3 hours. 55 attempts got no reply at all and weren't merged."
@@ -206,6 +207,7 @@
   "first_timer_line": "28 people got their first pull request merged here.",
   "next_step": "Best bet: a small change in homeassistant/components, where 26 of 104 outside pull requests were merged.",
   "stat_line": "28 of 119 outside PRs merged",
+  "how_long": [],
   "counted": [
     {
       "topic": "What we read",

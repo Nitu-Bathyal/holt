@@ -121,28 +121,60 @@ AI_POLICY_CANDIDATES = (
 DOC_CANDIDATES = {"readme": README_CANDIDATES, "contributing": CONTRIBUTING_CANDIDATES,
                   "ai_policy": AI_POLICY_CANDIDATES}
 
+# The stale bot's config (agent/stale.py), read in the same query: probot's
+# file, and the workflow names actions/stale is kept under on the golden set.
+# Every workflow's text would be too much (pytorch's 156 come to 1.1 MB), so
+# the query lists the folder's names too, and a workflow with "stale" in its
+# name that isn't a candidate is read with a second, small query.
+STALE_PROBOT = (".github/stale.yml", ".github/stale.yaml")
+WORKFLOWS = ".github/workflows"
+STALE_WORKFLOWS = (
+    "stale.yml", "stale.yaml", "stale-bot.yml", "stale-issues.yml", "stale-prs.yml",
+    "stale-pr.yml", "stale_issue.yml", "stale-issues-and-prs.yml", "close-stale.yml",
+    "close-stale-issues.yml", "close-stale-prs.yml", "shared_stale.yml", "mark-stale.yml",
+)
+STALE_CANDIDATES = {"probot": STALE_PROBOT,
+                    "actions": tuple(f"{WORKFLOWS}/{n}" for n in STALE_WORKFLOWS)}
+MAX_STALE_FILES = 3
 
-def docs_query(oid: str) -> tuple[str, dict[str, tuple[str, str]]]:
-    """A query asking for every candidate path, and alias -> (kind, path)."""
-    aliases: dict[str, tuple[str, str]] = {}
+
+def _blob_fields(oid: str, candidates: dict[str, tuple[str, ...]],
+                 aliases: dict[str, tuple[str, str]], prefix: str = "") -> list[str]:
     fields = []
-    for kind, paths in DOC_CANDIDATES.items():
+    for kind, paths in candidates.items():
         for i, path in enumerate(paths):
-            alias = f"{kind}{i}"
+            alias = f"{prefix}{kind}{i}"
             aliases[alias] = (kind, path)
-            # oid is a hex sha and paths are our own constants: nothing here
-            # comes from the user, so interpolating is safe.
+            # oid is a hex sha and paths are our own constants or names GitHub
+            # listed (checked by `_safe_path`), so interpolating is safe.
             fields.append(
                 f'{alias}: object(expression:"{oid}:{path}") {{ ... on Blob {{ text }} }}'
             )
-    document = (
+    return fields
+
+
+def _repo_query(fields: list[str]) -> str:
+    return (
         "query($owner:String!, $name:String!) {\n"
         "  rateLimit { cost remaining resetAt }\n"
         "  repository(owner:$owner, name:$name) {\n    "
         + "\n    ".join(fields)
         + "\n  }\n}\n"
     )
-    return document, aliases
+
+
+def docs_query(oid: str) -> tuple[str, dict[str, tuple[str, str]]]:
+    """A query asking for every candidate path, and alias -> (kind, path)."""
+    aliases: dict[str, tuple[str, str]] = {}
+    fields = _blob_fields(oid, DOC_CANDIDATES, aliases)
+    fields += _blob_fields(oid, STALE_CANDIDATES, aliases, prefix="stale_")
+    fields.append(f'workflows: object(expression:"{oid}:{WORKFLOWS}") '
+                  "{ ... on Tree { entries { name } } }")
+    return _repo_query(fields), aliases
+
+
+def _safe_path(name: str) -> bool:
+    return bool(name) and all(c.isalnum() or c in "._-" for c in name)
 
 
 # Date filtering happens server-side. Ordering by newest and paging until the
@@ -214,6 +246,109 @@ PAGE_SIZE = 25  # PR_SEARCH's `first:25`
 # confirms that, the rest are asked for this many at a time. Bounded, because
 # GitHub asks clients not to hammer it with concurrent requests on one token.
 PAGE_CONCURRENCY = 4
+
+
+# The timing cohort (agent/timing.py): outside pull requests opened 60 to 240
+# days before the reading, for how long merges take. Only the dates and who
+# opened each, a hundred a page with no connections inside, so a page costs
+# one point. Read only when the report's own pages don't reach back that far.
+# One page of the whole window, newest first, is all of it on most
+# repositories. On a busy one it covers a week or two (kubernetes: 17-30
+# July), and one fortnight can be a release freeze or a holiday, so the other
+# pages are the newest of each older part of the window instead: three pages
+# read three stretches months apart.
+TIMING_SEARCH = """
+query($q:String!, $cursor:String) {
+  rateLimit { cost remaining resetAt }
+  search(query:$q, type:ISSUE, first:100, after:$cursor) {
+    issueCount
+    pageInfo { hasNextPage endCursor }
+    nodes {
+      ... on PullRequest {
+        number createdAt mergedAt isDraft authorAssociation
+        author { login __typename }
+        mergedBy { login __typename }
+      }
+    }
+  }
+}
+"""
+TIMING_PAGES = 3
+TIMING_DAYS = (60, 240)  # agent/timing.COHORT_DAYS
+
+
+def timing_query(repo_slug: str, cutoff: datetime,
+                 days: tuple[float, float] = TIMING_DAYS) -> str:
+    """Pull requests opened `days[0]` to `days[1]` days before the cutoff."""
+    start = (cutoff - timedelta(days=days[1])).date().isoformat()
+    end = (cutoff - timedelta(days=days[0])).date().isoformat()
+    return f"repo:{repo_slug} is:pr created:{start}..{end} sort:created-desc"
+
+
+def timing_parts(pages: int) -> list[tuple[float, float]]:
+    """The older parts of the window the pages after the first read, in days."""
+    lo, hi = TIMING_DAYS
+    step = (hi - lo) / max(1, pages)
+    return [(lo + k * step, lo + (k + 1) * step) for k in range(1, pages)]
+
+
+def project_timing(repo_slug: str, nodes: Iterable[dict[str, Any]],
+                   home: str | None = None) -> Iterator[EvidenceRecord]:
+    """The cohort's pull requests: one record when each was opened, and one
+    when it was merged. Their own id prefix and payload keys, so nothing that
+    reads the main sample (threads, the team, landings) ever counts them."""
+    home = home or repo_slug
+    for pr in nodes:
+        created = _ts(pr.get("createdAt"))
+        if created is None or pr.get("number") is None:
+            continue
+        base = f"timing:{repo_slug}#{pr['number']}"
+        url = f"https://github.com/{home}/pull/{pr['number']}"
+        yield EvidenceRecord(base, "github", url, created, {
+            "login": _login(pr.get("author")), "bot": _is_bot(pr.get("author")),
+            "association": pr.get("authorAssociation"), "draft": bool(pr.get("isDraft")),
+        })
+        if merged := _ts(pr.get("mergedAt")):
+            # Who merged it: merging takes write access, so they're on the team
+            # (agent/timing.py), whatever GitHub's association says.
+            by = pr.get("mergedBy")
+            yield EvidenceRecord(f"{base}:landed", "github", url, merged,
+                                 {"by": _login(by) if by else None, "by_bot": _is_bot(by)})
+
+
+def timing_window(repo_slug: str, cutoff: datetime, source: str, **facts: Any) -> EvidenceRecord:
+    """Where the cohort came from: "sample" (the report's own pages reach back
+    that far) or "search", with how many pages and whether the search ran out."""
+    return EvidenceRecord(
+        f"timing:{repo_slug}:window", "github", f"https://github.com/{repo_slug}",
+        cutoff - timedelta(days=TIMING_DAYS[0]), {"source": source, **facts})
+
+
+def timing_source(created: list[datetime], full: bool, cutoff: datetime) -> str:
+    """"sample" when the newest pages hold the whole history (they weren't
+    full) or reach back past the cohort's window, else "search"."""
+    start = cutoff - timedelta(days=TIMING_DAYS[1])
+    if not full or (created and min(created) <= start):
+        return "sample"
+    return "search"
+
+
+def read_timing(transport: Any, request: str, home: str, cutoff: datetime,
+                pages: int = TIMING_PAGES) -> list[EvidenceRecord]:
+    """The timing search's records, window record first: the newest page of
+    the whole window, then (if it didn't hold it all) the newest page of each
+    older part (`timing_parts`)."""
+    found, complete = transport.search_timing(timing_query(home, cutoff), 1)
+    read = 1
+    if not complete:
+        for part in timing_parts(pages):
+            more, _ = transport.search_timing(timing_query(home, cutoff, part), 1)
+            found += more
+            read += 1
+    unique = list({n.get("number"): n for n in found}.values())
+    return [timing_window(request, cutoff, "search", pages=read, complete=complete,
+                          read=len(unique)),
+            *project_timing(request, unique, home=home)]
 
 
 # Issues, for Path Finder. Decomposed the same way pull requests are: an issue
@@ -451,10 +586,29 @@ class GitHubGraphQL:
         document, aliases = docs_query(oid)
         repo = self.query(document, owner=owner, name=name).get("repository") or {}
         found: dict[str, Any] = {kind: None for kind in DOC_CANDIDATES}
+        stale: list[dict[str, str]] = []
         for alias, (kind, path) in aliases.items():  # dicts keep candidate order
             blob = repo.get(alias)
-            if found[kind] is None and blob and blob.get("text"):
+            if not blob or not blob.get("text"):
+                continue
+            if alias.startswith("stale_"):
+                stale.append({"kind": kind, "path": path, "text": blob["text"]})
+            elif found[kind] is None:
                 found[kind] = {"text": blob["text"], "path": path}
+        # A workflow named for staleness that no candidate covered: one more
+        # small query, only then.
+        names = [e.get("name") or "" for e in ((repo.get("workflows") or {}).get("entries") or [])]
+        extra = [f"{WORKFLOWS}/{n}" for n in names
+                 if "stale" in n.lower() and n.endswith((".yml", ".yaml")) and _safe_path(n)
+                 and f"{WORKFLOWS}/{n}" not in STALE_CANDIDATES["actions"]]
+        if extra:
+            more: dict[str, tuple[str, str]] = {}
+            fields = _blob_fields(oid, {"actions": tuple(extra[:MAX_STALE_FILES])}, more)
+            got = self.query(_repo_query(fields), owner=owner, name=name).get("repository") or {}
+            stale += [{"kind": kind, "path": path, "text": got[a]["text"]}
+                      for a, (kind, path) in more.items() if (got.get(a) or {}).get("text")]
+        found["stale"] = [f for f in stale
+                          if f["kind"] == "probot" or "actions/stale@" in f["text"]][:MAX_STALE_FILES]
         return found
 
     def search_issues(self, q: str, max_pages: int = 6) -> Iterator[dict[str, Any]]:
@@ -493,6 +647,19 @@ class GitHubGraphQL:
         document = PR_SEARCH if timeline else PR_SEARCH_SCREEN
         for search in self._pages(document, q, max_pages, wanted, first):
             yield from (n for n in search["nodes"] if n)
+
+    def search_timing(self, q: str, max_pages: int = TIMING_PAGES) -> tuple[list[dict[str, Any]], bool]:
+        """The timing cohort's pages: (nodes, whether the search ran out)."""
+        nodes: list[dict[str, Any]] = []
+        cursor: str | None = None
+        for _ in range(max_pages):
+            search = self.query(TIMING_SEARCH, q=q, cursor=cursor)["search"]
+            nodes += [n for n in search["nodes"] if n]
+            page = search["pageInfo"]
+            if not page["hasNextPage"]:
+                return nodes, True
+            cursor = page["endCursor"]
+        return nodes, False
 
     def first_page(self, q: str) -> Future:
         """Start reading a search's first page now, for `search_pull_requests(first=)`."""
@@ -971,6 +1138,21 @@ def project_docs(repo_slug: str, docs: dict[str, Any], commit: dict[str, Any]) -
         )
 
 
+def project_stale(repo_slug: str, docs: dict[str, Any],
+                  commit: dict[str, Any]) -> Iterator[EvidenceRecord]:
+    """The stale bot's config files as they stood at the cutoff commit."""
+    when = _ts(commit["committedDate"])
+    for i, found in enumerate(docs.get("stale") or []):
+        yield EvidenceRecord(
+            evidence_id=f"repo:{repo_slug}:stale:{i}",
+            source="github",
+            url=f"https://github.com/{repo_slug}/blob/{commit['oid']}/{found['path']}",
+            timestamp=when,
+            payload={"kind": found["kind"], "path": found["path"],
+                     "text": found["text"][:MAX_DOC_CHARS], "commit_oid": commit["oid"]},
+        )
+
+
 def project_issues(repo_slug: str, nodes: Iterable[dict[str, Any]]) -> Iterator[EvidenceRecord]:
     """Issue events. Opening is pre-cutoff evidence; being resolved is the label."""
     for issue in nodes:
@@ -1042,6 +1224,7 @@ class LiveGitHubProvider(EvidenceProvider):
         max_pages: int = 8,
         timeline: bool = True,
         settled_pages: int | None = None,
+        timing_pages: int | None = None,
     ) -> None:
         super().__init__(window, cutoff or datetime.now(UTC))
         self.transport = transport or GitHubGraphQL()
@@ -1054,6 +1237,10 @@ class LiveGitHubProvider(EvidenceProvider):
         # False for a quick screen: no close events or commit references (see
         # PR_SEARCH_SCREEN). A full report always reads them.
         self.timeline = timeline
+        # Pages of the timing cohort a full report may read (TIMING_SEARCH).
+        self.timing_pages = (
+            (TIMING_PAGES if timeline else 0) if timing_pages is None else timing_pages
+        )
         self._seen: dict[str, EvidenceRecord] = {}
 
     def _fetch_raw(self, request: str, /, **params: object) -> Iterable[EvidenceRecord]:
@@ -1087,17 +1274,38 @@ class LiveGitHubProvider(EvidenceProvider):
             nodes.append(node)
             if len(nodes) == PAGE_SIZE:
                 early = self._settled_early(home, nodes)
+        cohort = self._timing(request, home, nodes)
         if self.window is Window.PRE_T:
             nodes += self._settled(home, nodes, early)
         if docs is not None:
-            records.extend(project_docs(request, docs.result(), history[0]))
+            found = docs.result()
+            records.extend(project_docs(request, found, history[0]))
+            records.extend(project_stale(request, found, history[0]))
         records.extend(project(request, nodes, home=home))
+        if cohort is not None:
+            records.extend(cohort.result() if isinstance(cohort, Future) else cohort)
 
         # Slice at the source; the base-class assertion is the safety net, not
         # the filter. A PR created before T can still carry a merge after it.
         kept = [r for r in records if self._in_window(r)]
         self._seen.update({r.evidence_id: r for r in kept})
         return kept
+
+    def _timing(self, request: str, home: str,
+                nodes: list[dict[str, Any]]) -> Future | list[EvidenceRecord] | None:
+        """The timing cohort (agent/timing.py): the newest pages themselves when
+        they reach back past its window or hold the whole history, else one
+        light search, read while the older pages are."""
+        if self.window is not Window.PRE_T or not self.timing_pages:
+            return None
+        created = [t for n in nodes if (t := _ts(n.get("createdAt")))]
+        if timing_source(created, len(nodes) >= self.max_pages * PAGE_SIZE,
+                         self.cutoff) == "sample":
+            return [timing_window(request, self.cutoff, "sample")]
+        if getattr(self.transport, "search_timing", None) is None:
+            return None  # a test's transport from before the cohort
+        return in_background(read_timing, self.transport, request, home, self.cutoff,
+                             self.timing_pages)
 
     def _settled_early(
         self, home: str, page: list[dict[str, Any]]

@@ -214,6 +214,12 @@ class GitHub:
         if "cursor" not in variables:
             return httpx.Response(200, json={"data": {"repository": {
                 "readme0": {"text": "# b"}}}})
+        if ".." in variables["q"]:  # the timing cohort's search: none here
+            with self.lock:
+                self.queries.append((variables["q"], 0))
+            return httpx.Response(200, json={"data": {"search": {
+                "issueCount": 0, "pageInfo": {"hasNextPage": False, "endCursor": None},
+                "nodes": []}}})
         pool = self.older if self._is_settled(variables["q"]) else self.newest
         offset = 0 if variables["cursor"] is None else int(
             base64.b64decode(variables["cursor"]).decode().split(":")[1])
