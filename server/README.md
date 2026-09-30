@@ -380,11 +380,12 @@ they are all read.
 
 `python -m holt_server.warm --stale-only` (after an `ENGINE_VERSION` bump)
 uses them: a repo whose newest snapshot is younger than its refresh tier (a
-week for repos someone saved or viewed lately, a month for the other seeds;
-at least `HOLT_EVIDENCE_REUSE_HOURS`), and not older than the report it
-replaces, gets its report made again from the snapshot in the warm process,
-with no GitHub call. The tier's age is how stale its report may get anyway. The new report is dated like the evidence behind it, so the refresh
-tiers still see its real age. Otherwise the repo is read from GitHub as before.
+week for repos someone saved or viewed lately, a month for the other seeds; at
+least `HOLT_EVIDENCE_REUSE_HOURS`), and not older than the report it replaces,
+gets its report made again from the snapshot in the warm process, with no
+GitHub call. The tier's age is how stale its report may get anyway. The new
+report is dated like the evidence behind it, so the refresh tiers still see
+its real age. Otherwise the repo is read from GitHub as before.
 
 **GitHub cost, measured** (GraphQL points; a token has 5,000 an hour): a rules
 report ~10 (up to ~20 for very busy repositories), starter issues ~5, a find
