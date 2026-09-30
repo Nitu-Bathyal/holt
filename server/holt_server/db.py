@@ -586,6 +586,17 @@ class Contribution(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     closed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     merged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    # Where an open one stands (pr_state.py), read right after the search.
+    # Empty ("unknown") for merged and closed ones, and when that read failed.
+    node_id: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    turn: Mapped[str] = mapped_column(String(10), default="unknown",
+                                      server_default=text("'unknown'"))
+    turn_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    first_reply_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                            nullable=True)
+    last_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                              nullable=True)
+    review_decision: Mapped[str | None] = mapped_column(String(20), nullable=True)
 
 
 class RepoMeta(Base):

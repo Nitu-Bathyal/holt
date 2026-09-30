@@ -286,9 +286,9 @@ within 2 days."), `merged` ("About half within a week, most within a month."),
 `rhythm` (only when `merges_in_bursts`), and `closed if quiet` (the stale
 bot). Empty when nothing cleared its minimum. Render the lines as given.
 
-My PRs (PR 2 of engine 6b) reads `stats.timing` through the report join, so it
-can say "Day 9, no reply yet. Most get one within 3 days here." without
-another GitHub read.
+My PRs reads `stats.timing` through the report join (`verdict.timing` in My
+Contributions), so it can say "Day 9, no reply yet. Most get one within 3 days
+here." without another GitHub read.
 
 `headline`, `tone`, `verdict_line`, `numbers_line`, `first_timer_line`,
 `next_step`, `stat_line`, `counted`, `how_long` and `odds` are derived by the server from
@@ -752,14 +752,45 @@ repository's statistics.
       "created_at": "…", "closed_at": "…" | null, "merged_at": "…" | null,
       "verdict": { "verdict": "viable", "headline": "Worth your time", "tone": "good",
                    "checked_at": "…",
-                   "first_reply_hours": 15.0 | null  // typical wait for an outside PR's first reply
+                   "first_reply_hours": 15.0 | null, // typical wait for an outside PR's first reply
+                   "timing": { … } | null  // the report's `stats.timing` (engine 7), as is
                  } | null,   // latest cached 7-day rules report
       "found_via_holt": true,
       "counted": true,                  // in `summary`; all of a repo's PRs, or none
-      "not_counted_because": null | "you" | "own_project" }
+      "not_counted_because": null | "you" | "own_project",
+      // Where an open one stands (below). "unknown" and nulls on merged and closed ones.
+      "turn": "yours" | "theirs" | "unknown",
+      "turn_at": "…" | null,           // when the turn last changed hands
+      "first_reply_at": "…" | null,    // the project's first comment or review
+      "last_activity_at": "…" | null,  // the newest push, comment or review by a person
+      "review_decision": "approved" | "changes_requested" | "review_required" | null }
   ]
 }
 ```
+
+**Where an open pull request stands.** Right after the search, the open ones
+are read again by node ID, 100 per query (`nodes(ids:)`): the review decision,
+the first and last 5 comments and reviews, and the last commit. GitHub charges
+1 point for up to 20 open pull requests (about 5 per 100), so a refresh costs
+the search's 1–2 points plus 1. If that read fails, the list still refreshes
+and each open pull request keeps its last known state (`unknown` the first
+time).
+
+- The **project's team** here: not the author, not automation (the engine's
+  bot test), and someone GitHub calls an owner, member or collaborator, or who
+  approved or asked for changes on this pull request. Another user's "+1" is
+  activity, not a reply.
+- `turn` is `yours` when someone on the team commented or reviewed after your
+  last push or comment (asking for changes included); `theirs` when you acted
+  last (opening it counts), or the team's last word was an approval; `unknown`
+  when it couldn't be read. `turn_at` is the team's last word when it's
+  yours, your last push or comment when it's theirs.
+- `first_reply_at` is the team's first comment or review. `last_activity_at`
+  is the newest push, comment or review by anyone but a bot.
+
+PR watch alerts reuse these fields. My PRs words each open row from them and
+`verdict.timing` (the web's `web/src/lib/home.ts`): "Day 9, no reply yet. Most
+get one within 3 days here."
 
 - `GET /v1/me/contributions` → `Contributions`. Reads GitHub only when the
   user has never been fetched (or their login changed); otherwise the stored

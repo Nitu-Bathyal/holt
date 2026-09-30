@@ -20,8 +20,8 @@ import { QuickCheck } from "@/components/shell/quick-check";
 import { RepoRows } from "@/components/your-repos/repo-rows";
 import { contributions, getProfile, history, preflightState, recommendations, savedRepos, starterIssues } from "@/lib/api";
 import type { CatMood } from "@/lib/cat";
-import { humanHours, timeAgo } from "@/lib/format";
-import { alsoForYou, clock, dismissedNudges, homeNudge, moveLead, moveTitle, nextMove, NUDGE_COOKIE, othersInFlight, outsidePulls, type NextMove, type Nudge } from "@/lib/home";
+import { timeAgo } from "@/lib/format";
+import { alsoForYou, clock, dismissedNudges, homeNudge, moveLead, moveTitle, needsYou, nextMove, NUDGE_COOKIE, othersInFlight, outsidePulls, type NextMove, type Nudge } from "@/lib/home";
 import { showPreflight } from "@/lib/preflight";
 import { SKIP_COOKIE } from "@/lib/profile";
 import { basisLine, lockedLine } from "@/lib/recommendations";
@@ -46,7 +46,7 @@ const NUDGES: Record<Nudge, { text: string; href: string; cta: string }> = {
 
 function mood(m: NextMove): CatMood {
   if (m.kind === "merged") return "celebrating";
-  if (m.kind === "waiting") return m.wait.late ? "thinking" : "ready";
+  if (m.kind === "waiting") return needsYou(m.wait) ? "thinking" : "ready";
   if (m.kind === "issue") return "determined";
   return "ready";
 }
@@ -181,10 +181,11 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
                       </p>
                       <Link href={`/${a.repo.repo}${a.repo.ai ? "?mode=ai" : ""}`} className="text-link text-[0.84rem]">{a.kind === "checking" ? "watch it →" : "open it →"}</Link>
                     </li>
-                  ) : a.kind === "late" ? (
+                  ) : a.kind === "pr" ? (
                     <li key={a.wait.pr.url} data-rule className="app-row grid-cols-[minmax(0,1fr)_auto]" style={{ "--rule": "var(--orange)" } as React.CSSProperties}>
                       <p className="pl-2 font-sans text-[0.95rem]">
-                        Your PR to <span className="font-mono font-semibold">{a.wait.pr.repo}</span> has waited {humanHours(a.wait.hours)}. Replies there usually take {humanHours(a.wait.typical)}.
+                        <span className="font-mono font-semibold">{a.wait.pr.repo}</span> <span className="font-mono text-[0.84rem] text-faint">#{a.wait.pr.number}</span>
+                        <span className="block">{a.wait.line}</span>
                       </p>
                       <a href={a.wait.pr.url} className="text-link text-[0.84rem]">open it ↗</a>
                     </li>

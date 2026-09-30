@@ -19,7 +19,7 @@ from conftest import canned_report
 def pr(repo, number, state="OPEN", created=None, merged=None, closed=None, private=False,
        title=None, association="CONTRIBUTOR", merged_by=None):
     created = created or now() - timedelta(days=3)
-    return {"number": number, "title": title or f"Fix {number}",
+    return {"id": f"PR_{repo}#{number}", "number": number, "title": title or f"Fix {number}",
             "authorAssociation": association,
             "mergedBy": {"login": merged_by} if merged_by else None,
             "url": f"https://github.com/{repo}/pull/{number}", "state": state,
@@ -36,6 +36,10 @@ class FakeGitHub:
         self.prs: dict[str, list[dict]] = {"octocat": [], "someone": []}
         self.searches: list[dict] = []
         self.fail: httpx.Response | None = None
+        # Node ID -> its pr_state.STATE node; the batches of IDs asked for.
+        self.states: dict[str, dict] = {}
+        self.state_reads: list[list[str]] = []
+        self.fail_state: httpx.Response | None = None
 
     def __call__(self, req: httpx.Request) -> httpx.Response:
         if req.url.path.startswith("/user/"):
@@ -48,6 +52,13 @@ class FakeGitHub:
             return self.fail
         body = json.loads(req.content)
         v = body["variables"]
+        if "ids" in v:
+            self.state_reads.append(v["ids"])
+            if self.fail_state is not None:
+                return self.fail_state
+            return httpx.Response(200, json={"data": {
+                "rateLimit": {"remaining": 4000, "resetAt": "2026-09-27T12:00:00Z"},
+                "nodes": [self.states.get(i) for i in v["ids"]]}})
         self.searches.append(v)
         login = v["q"].split("author:", 1)[1].split()[0]
         nodes = self.prs.get(login, [])
@@ -470,3 +481,84 @@ def test_metric_counts_without_people(gh):
 
 def test_metric_needs_the_internal_key(gh):
     assert gh.client.get("/v1/metrics/contributions").status_code == 401
+
+
+def state(repo, number, *, replied=None, decision=None, pushed=None):
+    """A pr_state.STATE node: a maintainer comment at `replied`, the last commit at `pushed`."""
+    comments = ([{"author": {"__typename": "User", "login": "lead"},
+                  "authorAssociation": "MEMBER", "createdAt": replied.isoformat()}]
+                if replied else [])
+    return {"id": f"PR_{repo}#{number}", "reviewDecision": decision,
+            "author": {"login": "octocat"},
+            "firstComments": {"nodes": comments}, "comments": {"nodes": comments},
+            "firstReviews": {"nodes": []}, "reviews": {"nodes": []},
+            "commits": {"nodes": [{"commit": {"committedDate": pushed.isoformat()}}]
+                        if pushed else []}}
+
+
+def test_open_prs_carry_whose_turn_it_is(gh):
+    opened = now() - timedelta(days=5)
+    gh.fake.prs["octocat"] = [
+        pr("octo/one", 1, created=opened), pr("octo/two", 2, created=opened),
+        pr("octo/three", 3, "MERGED", created=opened, merged=now(), closed=now())]
+    gh.fake.states = {
+        "PR_octo/one#1": state("octo/one", 1, replied=opened + timedelta(days=1),
+                               pushed=opened, decision="CHANGES_REQUESTED"),
+        "PR_octo/two#2": state("octo/two", 2, pushed=opened)}
+    connect(gh)
+    assert gh.fake.state_reads == [["PR_octo/one#1", "PR_octo/two#2"]]  # open ones, one query
+    got = {p["number"]: p for p in mine(gh).json()["pull_requests"]}
+    assert got[1]["turn"] == "yours"
+    assert got[1]["first_reply_at"] == got[1]["turn_at"] == got[1]["last_activity_at"]
+    assert got[1]["first_reply_at"].startswith((opened + timedelta(days=1)).date().isoformat())
+    assert got[1]["review_decision"] == "changes_requested"
+    assert got[2]["turn"] == "theirs" and got[2]["first_reply_at"] is None
+    assert got[3]["turn"] == "unknown" and got[3]["last_activity_at"] is None
+
+
+def test_no_state_read_without_open_prs(gh):
+    gh.fake.prs["octocat"] = [pr("octo/one", 1, "CLOSED", closed=now())]
+    connect(gh)
+    assert gh.fake.state_reads == []
+
+
+def test_a_failed_state_read_keeps_the_last_known_state(gh):
+    opened = now() - timedelta(days=5)
+    gh.fake.prs["octocat"] = [pr("octo/one", 1, created=opened)]
+    gh.fake.states = {"PR_octo/one#1": state("octo/one", 1, replied=opened + timedelta(days=1))}
+    connect(gh)
+    assert mine(gh).json()["pull_requests"][0]["turn"] == "yours"
+    age_sync(gh, 20)
+    gh.fake.fail_state = httpx.Response(502)
+    assert refresh(gh).status_code == 200  # the list still refreshes
+    [p] = mine(gh).json()["pull_requests"]
+    assert p["turn"] == "yours" and p["first_reply_at"] is not None
+
+
+def test_a_state_read_failure_on_the_first_fetch_is_unknown(gh):
+    gh.fake.prs["octocat"] = [pr("octo/one", 1)]
+    gh.fake.fail_state = httpx.Response(502)
+    connect(gh)
+    [p] = mine(gh).json()["pull_requests"]
+    assert p["turn"] == "unknown" and p["first_reply_at"] is None
+
+
+def test_each_verdict_carries_the_repos_timing(gh):
+    gh.fake.prs["octocat"] = [pr("pallets/flask", 1), pr("octo/one", 2)]
+    report = canned_report("pallets/flask")
+    report["stats"] = {**report["stats"], "timing": {
+        "first_reply_half_hours": 5.0, "first_reply_slow_hours": 70.0,
+        "merge_half_days": 6.0, "merge_slow_days": 30.0, "stale_bot": True,
+        "stale_close_days": 37}}
+
+    async def go(s):
+        s.add(Report(repo="pallets/flask", repo_key="pallets/flask", mode="rules", days=7,
+                     report=report, created_at=now()))
+    call(gh, go)
+    add_report(gh, "octo/one", "viable")  # from before engine 7: no timing
+    connect(gh)
+    got = {p["repo"]: p["verdict"] for p in mine(gh).json()["pull_requests"]}
+    t = got["pallets/flask"]["timing"]
+    assert t["first_reply_slow_hours"] == 70.0 and t["merge_half_days"] == 6.0
+    assert t["stale_close_days"] == 37 and t["merged_within_7_days"] is None
+    assert got["octo/one"]["timing"] is None
