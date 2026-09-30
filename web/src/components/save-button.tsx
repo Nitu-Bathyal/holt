@@ -23,9 +23,10 @@ function Bookmark({ filled, drop }: { filled: boolean; drop: boolean }) {
  *
  * In a list, the list owns which repos are saved: it passes `saved` and hears
  * every change through `onChange`, so the card and its focus view agree.
- * `compact` leaves out the "see your saved repos" link, for a card's footer.
+ * `compact` leaves out the "see your saved repos" link, for a card; `small`
+ * is a shorter button, for a card's top corner.
  */
-export function SaveButton({ repo, saved: initial, onChange, compact = false, className = "" }: { repo: string; saved: boolean | null; onChange?: (saved: boolean) => void; compact?: boolean; className?: string }) {
+export function SaveButton({ repo, saved: initial, onChange, compact = false, small = false, className = "" }: { repo: string; saved: boolean | null; onChange?: (saved: boolean) => void; compact?: boolean; small?: boolean; className?: string }) {
   const [saved, setSaved] = useState(Boolean(initial));
   // Another button for the same repo (the card vs. its focus view) changed it.
   const [shown, setShown] = useState(initial);
@@ -87,7 +88,7 @@ export function SaveButton({ repo, saved: initial, onChange, compact = false, cl
       aria-label={`${saved ? "Saved" : "Save"} ${repo} for later`}
       onClick={() => (signedIn ? send(!saved) : setAsking((a) => !a))}
       data-umami-event={signedIn ? (saved ? "unsave-repo" : "save-repo") : "save-repo-signed-out"}
-      className={`inline-flex min-h-11 items-center gap-2 border px-3 text-[0.87rem] transition-colors ${
+      className={`inline-flex items-center border transition-colors ${small ? "min-h-8 gap-1.5 px-2 text-[0.8rem]" : "min-h-11 gap-2 px-3 text-[0.87rem]"} ${
         saved ? "border-blue bg-blue/10 text-blue" : "border-line-strong bg-panel text-muted hover:border-ink hover:text-ink"
       }`}
     >
@@ -106,14 +107,14 @@ export function SaveButton({ repo, saved: initial, onChange, compact = false, cl
   }
 
   return (
-    <span className={`inline-flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 ${className}`}>
+    <span className={`inline-flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 ${small ? "justify-end" : ""} ${className}`}>
       {button}
       {fresh && !error && !compact && (
         <Link href="/me/repos?show=saved" className="hidden text-[0.82rem] text-faint hover:text-blue sm:inline">
           see your saved repos
         </Link>
       )}
-      <span role="status" className={error ? "basis-full text-[0.82rem] text-orange" : "sr-only"}>
+      <span role="status" className={error ? `basis-full text-[0.82rem] text-orange ${small ? "max-w-44 text-right" : ""}` : "sr-only"}>
         {error || (fresh ? `${repo} saved` : "")}
       </span>
     </span>
