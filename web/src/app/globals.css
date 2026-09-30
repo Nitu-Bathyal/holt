@@ -1545,28 +1545,70 @@
 }
 .hero-sub {
   max-width: 36ch;
-  font-size: clamp(1rem, min(1.35vw, 2.5svh), 1.45rem);
+}
+/* [data-hero] outranks `.landing-wide .prose-sans`, which would set the size. */
+[data-hero] .hero-sub {
+  font-family: var(--font-archivo), var(--font-sans);
+  font-size: clamp(0.9rem, min(1.07vw, 1.95svh), 1.15rem);
   line-height: 1.55;
+  text-wrap: pretty;
 }
 /* The sub-line moves beside the headline only where both fit on one row;
    the headline's vw cap then leaves "actually merge" room in ~70%. */
 @media (min-width: 1280px) {
+  /* One grid: headline | gap | the bar's button | the rest of the sub-line.
+     The bar ends at the button's right edge, and the sub-line starts right
+     above the button's left edge (7px = the bar's 1px border + 6px margin). */
+  .hero-stack {
+    --sub-w: clamp(16rem, 24vw, 24rem);
+    --sub-gap: clamp(2rem, 3vw, 3.5rem);
+    --btn-w: 12.5rem;
+    --btn-box: calc(var(--btn-w) + 7px);
+    --sub-shift: clamp(1rem, 1.6vw, 2rem);
+    display: grid;
+    grid-template-columns: max-content var(--sub-gap) var(--btn-box) calc(var(--sub-w) - var(--btn-box) + var(--sub-shift));
+    width: fit-content;
+    max-width: 100%;
+    margin-top: clamp(0.6rem, 2.6svh, 2.4rem);
+  }
   .hero-lede {
-    grid-template-columns: minmax(0, 1fr) minmax(260px, 28%);
-    align-items: end;
+    display: contents;
   }
   .hero-h1 {
+    grid-area: 1 / 1;
     font-size: clamp(2.3rem, min(8.4vw, 11svh), 9.5rem);
+  }
+  .hero-sub {
+    grid-area: 1 / 3 / 2 / 5;
+    align-self: end;
+    max-width: none;
+    margin-left: var(--sub-shift);
+  }
+  .hero-stack > .hero-act,
+  .hero-stack > .hero-foot {
+    grid-column: 1 / 4;
+    max-width: none;
+  }
+  [data-hero] .hero-act .btn-primary {
+    width: var(--btn-w);
   }
 }
 .hero-act {
-  max-width: 1080px;
-  margin-top: clamp(1.1rem, 3.4svh, 3rem);
+  max-width: 880px;
+  margin-top: clamp(1rem, 3svh, 2.4rem);
+}
+[data-hero] #repo-input {
+  height: 3.5rem;
+  font-size: 1rem;
+}
+[data-hero] .hero-act .btn-primary {
+  min-height: 44px;
+  margin: 6px;
 }
 @media (min-width: 1024px) {
   [data-hero] #repo-input {
-    height: clamp(3.5rem, 7.5svh, 5.25rem);
-    font-size: clamp(1rem, min(1.3vw, 2.4svh), 1.35rem);
+    height: clamp(3.25rem, 6svh, 4.25rem);
+    font-size: clamp(0.95rem, min(1.05vw, 2svh), 1.15rem);
   }
 }
 .hero-foot {
@@ -1575,9 +1617,9 @@
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem 2rem;
-  max-width: 1080px;
-  margin-top: clamp(0.9rem, 2.4svh, 2.2rem);
-  font-size: clamp(0.9rem, min(1.05vw, 2svh), 1.1rem);
+  max-width: 880px;
+  margin-top: clamp(0.8rem, 2svh, 1.8rem);
+  font-size: clamp(0.85rem, min(0.95vw, 1.8svh), 1rem);
 }
 /* Phones held sideways: compact, as before. */
 @media (orientation: landscape) and (max-height: 500px) {

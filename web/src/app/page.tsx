@@ -111,31 +111,34 @@ export default async function Home() {
                 </p>
                 {hf && <HacktoberfestPill year={hf.year} short={hf.short} />}
               </div>
-              {/* Sized by the screen; the sub-line moves beside the headline where both fit. */}
-              <div className="hero-lede">
-                <h1 className="display hero-h1">
-                  <span className="headline-line"><span>Will this repo</span></span>
-                  <span className="headline-line"><span className="text-orange"><span className="marker">actually merge</span></span></span>
-                  <span className="headline-line"><span className="text-orange">your PR?</span></span>
-                </h1>
-                <p className="prose-sans fade-up hero-sub" style={{ ["--d" as string]: ".3s" }}>
-                  Holt checks what happened to the outsiders who tried before you: did anyone reply, and
-                  did anything get merged?
-                </p>
-              </div>
-              <div className="fade-up hero-act" style={{ ["--d" as string]: ".38s" }}>
-                <PasteBox signedIn={signedIn} />
-              </div>
-              <div className="fade-up hero-foot" style={{ ["--d" as string]: ".42s" }}>
-                <p className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                  <Link href="/find" className="bracket-link bracket-link--orange min-h-11 px-3 text-center sm:min-h-12 sm:px-5">
-                    [ find a project&nbsp;→&nbsp;]
-                  </Link>
-                </p>
-                <p className="font-sans text-faint">
-                  swap <strong className="text-muted">hub</strong> for <strong className="text-muted">holt</strong>:{" "}
-                  <SwapHost />
-                </p>
+              {/* One block: from 1280px the bar and its foot line span the headline plus the sub-line. */}
+              <div className="hero-stack">
+                {/* Sized by the screen; the sub-line moves beside the headline where both fit. */}
+                <div className="hero-lede">
+                  <h1 className="display hero-h1">
+                    <span className="headline-line"><span>Will this repo</span></span>
+                    <span className="headline-line"><span className="text-orange"><span className="marker">actually merge</span></span></span>
+                    <span className="headline-line"><span className="text-orange">your PR?</span></span>
+                  </h1>
+                  <p className="prose-sans fade-up hero-sub" style={{ ["--d" as string]: ".3s" }}>
+                    Holt checks what happened to the outsiders who tried before you: did anyone reply, and
+                    did anything get merged?
+                  </p>
+                </div>
+                <div className="fade-up hero-act" style={{ ["--d" as string]: ".38s" }}>
+                  <PasteBox signedIn={signedIn} />
+                </div>
+                <div className="fade-up hero-foot" style={{ ["--d" as string]: ".42s" }}>
+                  <p className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                    <Link href="/find" className="bracket-link bracket-link--orange min-h-11 px-3 text-center sm:min-h-12 sm:px-5">
+                      [ find a project&nbsp;→&nbsp;]
+                    </Link>
+                  </p>
+                  <p className="font-sans text-faint">
+                    swap <strong className="text-muted">hub</strong> for <strong className="text-muted">holt</strong>:{" "}
+                    <SwapHost />
+                  </p>
+                </div>
               </div>
               <div className="fade-up mt-6 flex flex-wrap items-center gap-x-3 gap-y-2 low:mt-4" style={{ ["--d" as string]: ".5s" }}>
                 <span className="award-badge">
