@@ -185,7 +185,7 @@ function sample(repo: string): Playbook {
   return {
     repo,
     generated_at: "2026-09-27T10:00:00Z",
-    model: "openai/gpt-5-mini",
+    model: "ai",
     note: null,
     window_days: 365,
     archived: false,
