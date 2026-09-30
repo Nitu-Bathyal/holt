@@ -1297,16 +1297,26 @@ export interface components {
         DiscoverRepo: {
             /** Checked This Week */
             checked_this_week: number | null;
+            /** Contributors */
+            contributors: number | null;
             /** Description */
             description: string | null;
             /** Generated At */
             generated_at: string | null;
             /** Headline */
             readonly headline: string;
+            /** Issues */
+            issues: components["schemas"]["StarterIssue"][];
             /** Language */
             language: string | null;
             /** Languages */
             languages: string[];
+            /** Open Issues */
+            open_issues: number | null;
+            /** Open Pull Requests */
+            open_pull_requests: number | null;
+            /** Pull Requests */
+            pull_requests: number | null;
             /** Pushed At */
             pushed_at: string | null;
             /** Reason */
@@ -1480,6 +1490,8 @@ export interface components {
         };
         /** FindResult */
         FindResult: {
+            /** Contributors */
+            contributors: number | null;
             /** Description */
             description: string | null;
             /** Headline */
@@ -1490,6 +1502,12 @@ export interface components {
             language: string | null;
             /** Languages */
             languages: string[];
+            /** Open Issues */
+            open_issues: number | null;
+            /** Open Pull Requests */
+            open_pull_requests: number | null;
+            /** Pull Requests */
+            pull_requests: number | null;
             /** Repo */
             repo: string;
             /** Stars */
@@ -1735,6 +1753,10 @@ export interface components {
         PartialStats: {
             /** Bot Share */
             bot_share?: number | null;
+            /** Closed By Bot */
+            closed_by_bot?: number | null;
+            /** Closed Silently */
+            closed_silently?: number | null;
             /** Distinct Outsiders */
             distinct_outsiders?: number | null;
             /** First Time Merged Authors */
@@ -1747,6 +1769,10 @@ export interface components {
             outsider_attempts?: number | null;
             /** Outsider Merged */
             outsider_merged?: number | null;
+            /** Still Open */
+            still_open?: number | null;
+            /** Withdrawn */
+            withdrawn?: number | null;
         };
         /** Pass */
         Pass: {
@@ -2281,6 +2307,8 @@ export interface components {
         Recommendation: {
             /** Checked At */
             checked_at: string | null;
+            /** Contributors */
+            contributors: number | null;
             /** Description */
             description: string | null;
             /** Headline */
@@ -2297,6 +2325,12 @@ export interface components {
              */
             readonly numbers_line: string;
             readonly odds: components["schemas"]["Odds"] | null;
+            /** Open Issues */
+            open_issues: number | null;
+            /** Open Pull Requests */
+            open_pull_requests: number | null;
+            /** Pull Requests */
+            pull_requests: number | null;
             /** Reason */
             reason: string;
             /** Repo */
@@ -2372,6 +2406,8 @@ export interface components {
              * @default false
              */
             archived: boolean;
+            /** Contributors */
+            contributors: number | null;
             /** Created At */
             created_at: string | null;
             /** Default Branch */
