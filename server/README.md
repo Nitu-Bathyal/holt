@@ -339,7 +339,7 @@ Rules:
 `holt_server/warm.py` fills the caches before people arrive, so launch-day
 traffic mostly costs no GitHub quota at request time:
 
-1. **Reports** (7-day rules) for the ~300 repositories in `server/holt_server/seeds/repos.txt`,
+1. **Reports** (7-day rules) for the ~1,550 repositories in `server/holt_server/seeds/repos.txt`,
    skipping any under 20 hours old.
 2. **Starter issues** for the same repositories.
 3. **`/v1/find`** for the searches the web app's own pages make: the nine
@@ -375,6 +375,21 @@ languages; ~30 points). Re-run it to refresh the list and commit the result:
 ```sh
 GITHUB_TOKEN=... uv run python server/scripts/build_seeds.py --total 300
 ```
+
+Below its marker line, the list continues with blocks built by
+`scripts/build_seed_list.py` from free public lists, no GitHub search: GSoC
+2026 organisations (CNCF through its landscape), goodfirstissue.dev,
+awesome-for-beginners and up-for-grabs. It drops catalogues and farms by
+name, and `--check` drops repos that are gone, archived, forks, under 20 stars
+or not pushed since 2025 (one batched GraphQL pass, ~16 points). Each script
+keeps the other's part:
+
+```sh
+GITHUB_TOKEN=$(gh auth token) uv run python scripts/build_seed_list.py --check
+```
+
+With ~1,550 seeds a cold pass is about 1,550 × ~15 ≈ 23,000 points, so warm a
+new list in `--limit` steps over several days rather than in one pass.
 
 ## Tests
 
