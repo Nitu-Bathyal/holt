@@ -4,17 +4,17 @@ import { currentUser } from "@/lib/session";
 
 const SIGN_IN = { error: { code: "unauthorized", message: "Please sign in first." } };
 
-// Start a credit-pack checkout. Only the pack's id goes to the server: the
-// price and the credits come from its catalogue.
+// Start a pass checkout. Only the pass's id goes to the server: the price and
+// the days come from its catalogue.
 export async function POST(req: NextRequest) {
   const user = await currentUser();
   if (!user) return NextResponse.json(SIGN_IN, { status: 401 });
-  const body = (await req.json().catch(() => null)) as { pack?: unknown } | null;
-  const pack = typeof body?.pack === "string" && /^[a-z0-9_]{1,40}$/.test(body.pack) ? body.pack : null;
-  if (!pack) {
-    return NextResponse.json({ error: { code: "invalid_request", message: "That credit pack isn't on sale." } }, { status: 400 });
+  const body = (await req.json().catch(() => null)) as { pass?: unknown } | null;
+  const pass = typeof body?.pass === "string" && /^[a-z0-9_]{1,40}$/.test(body.pass) ? body.pass : null;
+  if (!pass) {
+    return NextResponse.json({ error: { code: "invalid_request", message: "That pass isn't on sale." } }, { status: 400 });
   }
-  const r = await createOrder(user.id, pack);
+  const r = await createOrder(user.id, pass);
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
   return NextResponse.json(r.data);
 }

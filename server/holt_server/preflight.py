@@ -312,11 +312,7 @@ async def active(svc: Services, key: str) -> Job | None:
 
 
 def on_sale(svc: Services) -> bool:
-    cat = entitlements.catalogue(svc)
-    spec = cat.features[FEATURE]
-    plan = any(p.on_sale and FEATURE in p.features for p in cat.plans.values())
-    pack = spec.credits is not None and any(p.on_sale for p in cat.packs.values())
-    return plan or pack
+    return entitlements.catalogue(svc).sold(FEATURE)
 
 
 async def job_state(svc: Services, job: Job) -> schema.PreflightJob:

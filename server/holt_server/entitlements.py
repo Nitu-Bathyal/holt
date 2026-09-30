@@ -201,8 +201,7 @@ async def refund_job(s: AsyncSession, job: Job) -> None:
 async def set_plan(svc: Services, user_id: str, plan: str, *, expires_at: datetime | None,
                    reason: str, actor: str, reference: str | None = None) -> None:
     """Put a user on `plan` until `expires_at` (None: until changed). For the
-    admin CLI; the subscription code uses `write_plan` inside its own
-    transaction."""
+    admin CLI; a paid pass uses `write_plan` inside its own transaction."""
     _check_plan(svc, plan, reason)
     await credits.ensure_user(svc, user_id)
     async with svc.db.session() as s:

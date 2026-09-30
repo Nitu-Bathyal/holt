@@ -1,7 +1,6 @@
-// Credit packs: what the pricing page, the checkout and the thank-you page
-// show. No prices live here; they come from the server (API.md, "Credit packs").
-import { shortDate } from "./format.ts";
-import type { Order, Pack, PlanOffer, Subscription } from "./types";
+// Pro passes: what the pricing page, the checkout and the thank-you page
+// show. No prices live here; they come from the server (API.md, "Passes").
+import type { Order, PassFeature } from "./types";
 
 /** 49900 INR (paise) -> "₹499"; 49950 -> "₹499.50". */
 export function formatPrice(amount: number, currency: string): string {
@@ -12,19 +11,6 @@ export function formatPrice(amount: number, currency: string): string {
     minimumFractionDigits: Number.isInteger(major) ? 0 : 2,
     maximumFractionDigits: 2,
   }).format(major);
-}
-
-export function creditsLabel(n: number): string {
-  return `${n} credit${n === 1 ? "" : "s"}`;
-}
-
-/** How long a pack's credits last, in words. */
-export function expiryLine(pack: Pick<Pack, "expires_days">): string {
-  const d = pack.expires_days;
-  if (!d) return "Credits never expire";
-  if (d % 365 === 0) return `Credits last ${d / 365} year${d === 365 ? "" : "s"}`;
-  if (d % 30 === 0) return `Credits last ${d / 30} month${d === 30 ? "" : "s"}`;
-  return `Credits last ${d} days`;
 }
 
 /** Our order ids: 32 hex characters. */
@@ -39,66 +25,20 @@ export const STATUS_LABEL: Record<Order["status"], string> = {
   held: "Being checked",
 };
 
-/** A pack or plan to buy straight after signing in (`/pricing?buy=credits_10`), if it's on sale. */
-export function packToBuy(buy: unknown, packs: { id: string }[]): string | null {
-  return typeof buy === "string" && packs.some((p) => p.id === buy) ? buy : null;
+/** A pass to buy straight after signing in (`/pricing?buy=pro_3m`), if it's on sale. */
+export function passToBuy(buy: unknown, passes: { id: string }[]): string | null {
+  return typeof buy === "string" && passes.some((p) => p.id === buy) ? buy : null;
 }
 
-/** What one feature of a monthly plan gives, in words. */
-export function planFeatureLine(f: PlanOffer["features"][number]): string {
-  if (f.unlimited) return `${f.name}, unlimited`;
-  return `${f.name}, ${f.per_month} a month`;
+/** What one Pro feature gives, in words. */
+export function passFeatureLine(f: PassFeature): string {
+  if (f.unlimited) return f.name;
+  return `${f.name}: ${f.per_month} a month`;
 }
 
-/** Short label for a subscription's state, for the settings page. */
-export function subscriptionLabel(sub: Subscription): string {
-  if (sub.status === "active" && sub.cancel_at_period_end) return "Cancelled";
-  return SUBSCRIPTION_LABEL[sub.status];
-}
-
-const SUBSCRIPTION_LABEL: Record<Subscription["status"], string> = {
-  created: "Waiting for payment",
-  authenticated: "Starting",
-  active: "Active",
-  pending: "Payment failed",
-  halted: "Stopped",
-  paused: "Paused",
-  cancelled: "Cancelled",
-  completed: "Ended",
-  expired: "Never started",
-};
-
-/**
- * One sentence on where a subscription stands: when it charges next, or
- * until when the plan lasts. `planUntil` is when the plan in force lapses.
- */
-export function subscriptionLine(sub: Subscription, planUntil: string | null): string {
-  const price = formatPrice(sub.amount, sub.currency);
-  const paid = sub.paid_until ? shortDate(sub.paid_until) : "";
-  const until = planUntil ? shortDate(planUntil) : paid;
-  const lasts = planUntil && new Date(planUntil).getTime() > Date.now();
-  switch (sub.status) {
-    case "active":
-      if (sub.cancel_at_period_end) return `You won't be charged again. Your plan stays until ${paid}.`;
-      return sub.next_charge_at ? `Next charge: ${price} on ${shortDate(sub.next_charge_at)}.` : `Paid until ${paid}.`;
-    case "created":
-    case "authenticated":
-      return "We're confirming your first payment with Razorpay. This takes a minute or two.";
-    case "pending":
-      return `Your last payment didn't go through. Razorpay will try again, and your plan keeps working until ${until}.`;
-    case "halted":
-      return "The payments didn't go through, so the plan stopped. Nothing more will be charged.";
-    case "paused":
-      return "Paused. Nothing is charged while it's paused.";
-    case "cancelled":
-    case "completed":
-      return lasts ? `No more charges. Your plan stays until ${until}.` : "No more charges. You're on the free plan.";
-    case "expired":
-      return "The first payment didn't go through, so the plan never started. You haven't been charged.";
-  }
-}
-
-/** Whether settings should offer "cancel" for this subscription. */
-export function canCancel(sub: Subscription): boolean {
-  return (sub.status === "active" && !sub.cancel_at_period_end) || sub.status === "authenticated" || sub.status === "pending";
+/** A pass's price per month, when it's worth saying ("₹83 a month"). */
+export function perMonth(amount: number, days: number, currency: string): string | null {
+  const months = Math.round(days / 30);
+  if (months <= 1) return null;
+  return `${formatPrice(Math.round(amount / months / 100) * 100, currency)} a month`;
 }

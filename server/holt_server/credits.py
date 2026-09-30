@@ -7,8 +7,8 @@ passed since the last claim; the welcome grant starts that clock. Claims do
 not pile up while someone is away: there is only ever one to claim.
 
 Two pools. Free credits are `users.ai_credits`. Purchased credits are
-`credit_lots`, one per pack bought (or admin grant), which never expire or
-expire when the pack says (pricing.json). A spend takes free credits first
+`credit_lots`, one per admin grant (or credit pack bought before passes
+replaced packs), which never expire or expire when the grant says. A spend takes free credits first
 (when the feature accepts them), then the soonest-expiring lot.
 
 Balances change only through guarded `UPDATE`s, so two requests racing each
@@ -278,40 +278,10 @@ async def add_lot(s: AsyncSession, user_id: str, amount: int, *, origin: str, ki
     return lot
 
 
-async def purchase_pack(svc: Services, user_id: str, pack_id: str,
-                        reference: str) -> tuple[CreditLot, bool]:
-    """Add a bought pack's credits. For the payment code, once a payment is
-    confirmed; `reference` is the payment's id, so a repeated confirmation
-    adds nothing. Returns (lot, added)."""
-    from holt_server.entitlements import catalogue
-
-    pack = catalogue(svc).packs.get(pack_id)
-    if pack is None:
-        raise ValueError(f"no pack {pack_id!r} in the pricing file")
-    if not reference:
-        raise ValueError("a purchase needs the payment's reference")
-    await ensure_user(svc, user_id)
-    expires = now() + timedelta(days=pack.expires_days) if pack.expires_days else None
-    async with svc.db.session() as s:
-        try:
-            lot = await add_lot(s, user_id, pack.credits, origin="pack", kind="purchase",
-                                pack_id=pack_id, reference=reference, expires_at=expires)
-            await s.commit()
-            return lot, True
-        except IntegrityError:  # this payment was already added
-            await s.rollback()
-    async with svc.db.session() as s:
-        lot = (await s.execute(
-            select(CreditLot).where(CreditLot.reference == reference))).scalar_one()
-    if lot.user_id != user_id or lot.pack_id != pack_id:
-        raise ValueError(f"payment {reference!r} was already used for another purchase")
-    return lot, False
-
-
 async def grant(svc: Services, user_id: str, amount: int, *, pool: Pool, reason: str,
                 actor: str, expires_days: int | None = None) -> None:
     """An admin gift. `free` adds to the free balance (any feature that takes
-    free credits); `purchased` adds a lot, spendable like a bought pack."""
+    free credits); `purchased` adds a lot of purchased credits."""
     if amount <= 0:
         raise ValueError("the number of credits must be positive")
     if not reason.strip():
