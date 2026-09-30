@@ -45,7 +45,7 @@ def provider_for(base_url: str | None) -> str:
     """
     host = (base_url or "").lower()
     # Azure OpenAI's v1 endpoint takes OpenAI's own parameters, and the model
-    # is the deployment's name (docs/ops/azure-openai.md).
+    # is the deployment's name.
     if "api.openai.com" in host or any(
             h in host for h in (".openai.azure.com", ".services.ai.azure.com",
                                 ".cognitiveservices.azure.com")):

@@ -97,8 +97,8 @@ services:
       GITHUB_APP_INSTALLATION_ID: ${GITHUB_APP_INSTALLATION_ID:-}
       GITHUB_APP_PRIVATE_KEY_FILE: ${GITHUB_APP_PRIVATE_KEY_FILE:+/run/secrets/github_app_key}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
-      # Where AI reports' model runs, from secrets.env; unset keeps OpenRouter's
-      # gpt-5-mini. Azure OpenAI: docs/ops/azure-openai.md.
+      # The model provider, base URL and model, from secrets.env; unset keeps
+      # the server's defaults.
       OPENROUTER_BASE_URL: ${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-5-mini}
       HOLT_MODEL_PROVIDER: ${HOLT_MODEL_PROVIDER:-}

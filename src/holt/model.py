@@ -224,7 +224,7 @@ PROVIDER_PRESETS: dict[str, dict[str, str]] = {
     },
     # Azure OpenAI's v1 endpoint. No default base URL: it names your resource,
     # https://<resource>.openai.azure.com/openai/v1/, and the model is your
-    # deployment's name. See docs/ops/azure-openai.md.
+    # deployment's name.
     "azure": {"api_key_env": "AZURE_OPENAI_API_KEY"},
     "openai-compatible": {"api_key_env": "OPENAI_API_KEY"},
 }
