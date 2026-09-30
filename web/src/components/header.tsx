@@ -1,5 +1,5 @@
 // The two top bars (the signed-in home plan). The marketing header
-// jumps between the landing page's sections; the app top bar is the logo, a
+// exposes the main product tasks; the app top bar is the logo, a
 // repo box, the theme and your account, with the sidebar doing the rest.
 import Link from "next/link";
 import { signOut } from "@/auth";
@@ -7,7 +7,7 @@ import { HOME } from "@/lib/home";
 import { EXAMPLES_PATH } from "@/lib/examples";
 import type { SessionUser } from "@/lib/session";
 import { CatFace } from "./cat-face";
-import { JumpNav } from "./shell/jump-nav";
+import { PublicNav } from "./shell/public-nav";
 import { LogoLink } from "./shell/logo-link";
 import { Icon } from "./shell/icons";
 import { QuickCheck } from "./shell/quick-check";
@@ -81,36 +81,36 @@ function MenuButton({ target, label }: { target: string; label: string }) {
 
 /**
  * Pages that explain or sell Holt, and every page while signed out: the
- * landing page's sections to jump to, an example to try, and sign in (or,
+ * core product tasks, an example to try, and sign in (or,
  * signed in, your account menu and a button into the app).
  */
 export function MarketingHeader({ user, credits }: { user: SessionUser | null; credits: string | null }) {
   return (
     <header className="site-header sticky top-0 z-40 border-b border-line bg-header" style={{ viewTransitionName: "site-header" }}>
-      <div className="wrap flex min-h-[60px] items-center gap-4">
+      <div className="wrap flex min-h-[60px] items-center gap-2 sm:gap-4">
         <span className="mr-auto">
           {/* Signed out, on the landing page it glides back to the hero (lib/shell.ts, logoAction). */}
           <LogoLink signedIn={!!user} className={LOGO}>
             <LogoBody />
           </LogoLink>
         </span>
-        <JumpNav className="hidden items-center gap-6 text-[0.84rem] text-muted lg:flex" />
+        <PublicNav signedIn={!!user} className="hidden items-center gap-5 text-[0.84rem] text-muted lg:flex" />
         <div className="flex items-center gap-1">
           <ThemeToggle />
           {user ? (
             <>
-              <Link href={HOME} className="btn-primary ml-1 min-h-11 px-4 text-[0.84rem] sm:min-h-10">open Holt →</Link>
+              <Link href={HOME} className="btn-primary ml-1 min-h-11 whitespace-nowrap px-4 text-[0.84rem] sm:min-h-10">open Holt →</Link>
               <AccountMenu user={user} credits={credits} />
             </>
           ) : (
             <>
               <Link href={EXAMPLES_PATH} className="hidden min-h-11 items-center px-3 text-[0.86rem] text-ink transition-colors hover:text-blue sm:inline-flex">try an example</Link>
-              <Link href="/signin" className="btn-primary ml-1 min-h-11 px-4 text-[0.84rem] sm:min-h-10">sign in</Link>
+              <Link href="/signin" className="btn-primary ml-1 min-h-11 whitespace-nowrap px-4 text-[0.84rem] sm:min-h-10">sign in</Link>
             </>
           )}
           <MenuButton target="mobile-nav" label="Menu" />
           <nav id="mobile-nav" popover="auto" data-lenis-prevent aria-label="Mobile" className="sheet text-[0.95rem] lg:hidden">
-            <JumpNav item="block px-4 py-3 transition-colors hover:bg-panel-2" />
+            <PublicNav signedIn={!!user} item="block min-h-11 px-4 py-3 transition-colors hover:bg-panel-2 aria-[current]:font-semibold aria-[current]:text-blue" />
             {user ? (
               <Link href={HOME} className="block px-4 py-3 text-blue transition-colors hover:bg-panel-2">open Holt →</Link>
             ) : (

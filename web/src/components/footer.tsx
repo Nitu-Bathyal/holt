@@ -226,9 +226,9 @@ export function Footer({ signedIn = false }: { signedIn?: boolean }) {
 
         <nav aria-label="Footer" className="mt-14 grid grid-cols-2 gap-8 text-[0.88rem] sm:grid-cols-3">
           <Group title="product">
-            <FLink href="/find">find a project</FLink>
-            <FLink href="/discover">discover repos</FLink>
-            <FLink href="/how-it-works">how it works</FLink>
+            <FLink href="/find">Find a project</FLink>
+            <FLink href="/discover">Browse projects</FLink>
+            <FLink href="/how-it-works">How it works</FLink>
             <FLink href="/badge">badge for maintainers</FLink>
             <FLink href="/pricing">pricing</FLink>
           </Group>
