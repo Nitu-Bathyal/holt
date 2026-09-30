@@ -44,3 +44,46 @@ export function OddsLegend({ stats }: { stats: CardStats }) {
     </ul>
   );
 }
+
+/**
+ * The odds bar for a card, marked instead of labelled: a flag over the end of
+ * the green part says how many were merged, and the full sentence is on hover
+ * (and for screen readers). It fills from the left as the card appears.
+ */
+export function OddsMeter({ stats }: { stats: CardStats }) {
+  const segs = oddsSegments(stats);
+  const words = oddsText(stats);
+  if (!segs || !stats.attempts) {
+    return (
+      <div role="img" aria-label={words} title={words} className="odds-meter">
+        <p className="text-[0.76rem] text-faint">No outside pull requests yet</p>
+        <div className="mt-1.5 h-2 bg-panel-2" />
+      </div>
+    );
+  }
+  // As OddsBar: "too recent" is context, never more than a third of the bar.
+  const decided = segs.reduce((a, s) => a + (s.key === "recent" ? 0 : s.n), 0);
+  const width = (s: { key: string; n: number }) => (s.key === "recent" ? Math.min(s.n, decided / 2) : s.n);
+  const total = segs.reduce((a, s) => a + width(s), 0);
+  const merged = segs.find((s) => s.key === "merged")?.n ?? 0;
+  const at = (merged / total) * 100;
+  const pct = Math.round((merged / stats.attempts) * 100);
+  return (
+    <div role="img" aria-label={words} title={words} className="odds-meter" style={{ ["--at" as string]: `${at}%` }}>
+      {/* The flag slides with its tick but stays inside the card: at 0% its left edge is on the tick, at 100% its right edge. */}
+      <div className="relative h-5">
+        <span className="odds-flag absolute bottom-1 left-(--at) -translate-x-(--at) whitespace-nowrap text-[0.76rem] font-semibold text-green tabular-nums">
+          {pct}% merged
+        </span>
+      </div>
+      <div className="relative">
+        <div className="odds-fill flex h-2 gap-px overflow-hidden bg-panel-2">
+          {segs.map((s) => (
+            <span key={s.key} className={SEGMENT_CLASS[s.key]} style={{ flexGrow: width(s), flexBasis: 0, minWidth: width(s) / total < 0.02 ? 3 : 0 }} />
+          ))}
+        </div>
+        <span aria-hidden="true" className="odds-flag absolute -top-1 bottom-0 left-(--at) w-px -translate-x-1/2 bg-green" />
+      </div>
+    </div>
+  );
+}
