@@ -1703,9 +1703,11 @@
   grid-area: 1 / 1;
   text-align: center;
 }
+/* 110%, not 100%: at a fractional line height the hidden tile's edge showed
+   as a 1px line under the other word. */
 .swap-from {
   color: var(--orange);
-  transform: translateY(-100%);
+  transform: translateY(-110%);
 }
 .swap-to,
 .swap-on {
@@ -1723,7 +1725,7 @@
   transform: none;
 }
 .swap[data-swapped="false"] .swap-to {
-  transform: translateY(100%);
+  transform: translateY(110%);
 }
 /* "hub" is a letter shorter than "holt": the tail closes the gap. */
 .swap[data-swapped="false"] .swap-tail {
