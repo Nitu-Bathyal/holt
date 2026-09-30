@@ -182,12 +182,16 @@ export default async function RepoPage({ params, searchParams }: Props) {
             </Link>
           </nav>
         </div>
+        {/* Free report only: on the AI tab another budget would be another paid run.
+            Signed in only: another budget is another check. Its own line, so the
+            header above is the same on both tabs and the switch never moves. */}
+        {mode === "rules" && signedIn && (
+          <div className="-mt-3 mb-6 flex justify-end">
+            <BudgetPicker repo={display} days={days} />
+          </div>
+        )}
 
         {!signedIn && access === "full" && report.ok && <ExampleNote />}
-
-        {/* Free report only: on the AI tab another budget would be another paid run.
-            Signed in only: another budget is another check. */}
-        {mode === "rules" && signedIn && <BudgetPicker repo={display} days={days} />}
 
         {/* Switching between the free and AI tabs crossfades the report, not the page. */}
         <ViewTransition key={mode} name="report-body" share="swap" enter="swap" exit="swap" default="none">
