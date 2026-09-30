@@ -180,7 +180,6 @@
   "evidence_until": "2026-06-01T00:00:00Z",
   "generated_at": "2026-06-01T00:00:00Z",
   "cost": {
-    "model": "ai",
     "input_tokens": 5945,
     "output_tokens": 5400,
     "usd": 0.01229,
