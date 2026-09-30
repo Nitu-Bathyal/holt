@@ -117,11 +117,17 @@ responses. The server also accepts and normalises full URLs
   "about": {                          // what the repo is; null until its details are read
     "description": "string | null", "readme_line": "string | null",
     "homepage": "https://… | null", "stars": 91234, "forks": 1200 | null,
-    "open_issues": 57 | null, "license": "MIT | null", "topics": ["cli"],
+    "open_issues": 57 | null, "pull_requests": 4100 | null,
+    "open_pull_requests": 12 | null, "contributors": 812 | null,
+    "license": "MIT | null", "topics": ["cli"],
     "languages": [ { "name": "Python", "share": 0.92 } ],
     "created_at": "…Z | null", "pushed_at": "…Z | null",
     "default_branch": "main | null", "archived": false, "fork": false,
-    "fork_of": "owner/repo | null", "fetched_at": "…Z"
+    "fork_of": "owner/repo | null",
+    "links": [ { "kind": "contributing" | "discussions" | "docs" | "discord" | "slack"
+                 | "gitter" | "matrix" | "zulip", "url": "https://…" } ],
+    "latest_release": { "tag": "v3.1.0", "published_at": "…Z | null", "url": "https://…" } | null,
+    "fetched_at": "…Z"
   } | null
 }
 ```
@@ -156,8 +162,18 @@ many repositories per GraphQL query, never on the request path. Like
 `holt_users` it is filled only by `GET /v1/reports/{owner}/{repo}` and never
 stored with the report; it is null until the details have been read, and the
 fields added with it (`forks` onwards, `readme_line`) are null on rows read
-before they existed. `languages` holds up to three, biggest first, `share` in
-0..1. `homepage` is always an `http(s)` URL. Nothing in it feeds the verdict.
+before they existed. `pull_requests` counts every pull request ever opened
+(`open_pull_requests` those open now) and `contributors` the people who
+committed, anonymous committers included, as GitHub's contributors list
+counts them; all three are the whole repository, not Holt's sample.
+`contributors` comes from one REST request per repository after the details
+query and stays at its last value when that request fails. `languages` holds up to three, biggest first, `share` in
+0..1. `homepage` is always an `http(s)` URL. `links` is where a newcomer
+finds the rules and help, one per kind, in the order listed above: GitHub's
+contributing guide, Discussions when the repository has them, then the docs and
+chat rooms the README links to (never a badge's image); it is empty until the
+details are read again, and every URL is `http(s)`. `latest_release` is GitHub's
+latest release, null when there is none. Nothing in it feeds the verdict.
 The public extension proxy passes it on.
 
 ### Engine version and `outdated`
