@@ -19,6 +19,7 @@ NODE = {
     "homepageUrl": "flask.palletsprojects.com", "parent": {"nameWithOwner": "orig/flask"},
     "licenseInfo": {"spdxId": "BSD-3-Clause", "name": "BSD 3-Clause"},
     "issues": {"totalCount": 5}, "defaultBranchRef": {"name": "main"},
+    "pullRequests": {"totalCount": 4_100}, "openPrs": {"totalCount": 12},
     "languages": {"totalSize": 1000, "edges": [
         {"size": 50, "node": {"name": "HTML"}}, {"size": 950, "node": {"name": "Python"}}]},
     "readme0": None,
@@ -36,6 +37,7 @@ def test_details_query_reads_the_about_fields_in_the_same_request():
                   "homepageUrl", "languages(first: 3", 'object(expression: "HEAD:README.md")'):
         assert field in document
     assert out["forks"] == 16_300 and out["open_issues"] == 5
+    assert out["pull_requests"] == 4_100 and out["open_pull_requests"] == 12
     assert out["license"] == "BSD-3-Clause" and out["default_branch"] == "main"
     assert out["language_shares"] == [{"name": "Python", "share": 0.95}, {"name": "HTML", "share": 0.05}]
     assert out["fork_of"] == "orig/flask" and out["homepage"] == "flask.palletsprojects.com"

@@ -64,6 +64,9 @@ DETAILS_FIELDS = """
   forkCount createdAt homepageUrl parent { nameWithOwner }
   licenseInfo { spdxId name } issues(states: OPEN) { totalCount }
   defaultBranchRef { name }
+  pullRequests { totalCount } openPrs: pullRequests(states: OPEN) { totalCount }
+  hasDiscussionsEnabled contributingGuidelines { url }
+  latestRelease { tagName publishedAt url }
 """
 
 # A second language is named beside the primary one when it is at least this
@@ -362,6 +365,10 @@ def _details(node: dict[str, Any]) -> dict[str, Any]:
         "fork": bool(node.get("isFork")),
         "forks": node.get("forkCount"),
         "open_issues": (node.get("issues") or {}).get("totalCount"),
+        "pull_requests": (node.get("pullRequests") or {}).get("totalCount"),
+        "open_pull_requests": (node.get("openPrs") or {}).get("totalCount"),
+        # GraphQL has no contributor count; `details` fills it from REST.
+        "contributors": None,
         "license": license_name(node.get("licenseInfo")),
         "homepage": (node.get("homepageUrl") or "").strip() or None,
         "language_shares": language_shares(node.get("languages")),
