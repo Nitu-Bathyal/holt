@@ -309,6 +309,29 @@ def _homepage(value: Any) -> str | None:
     return url if scheme in ("http", "https") and "://" in url else None
 
 
+def _web_url(value: Any) -> str | None:
+    """An absolute http(s) address, else None: the page links to it."""
+    url = str(value or "").strip()
+    parts = urlsplit(url)
+    return url if len(url) <= 500 and parts.scheme.lower() in ("http", "https") and parts.netloc else None
+
+
+def _links(value: Any) -> list[dict[str, str]]:
+    out = []
+    for link in value or []:
+        kind = (link or {}).get("kind") if isinstance(link, dict) else None
+        url = _web_url((link or {}).get("url")) if isinstance(link, dict) else None
+        if kind in schema.LINK_KINDS and url and all(o["kind"] != kind for o in out):
+            out.append({"kind": kind, "url": url})
+    return out
+
+
+def _release(value: Any) -> dict[str, Any] | None:
+    if not isinstance(value, dict) or not value.get("tag") or not _web_url(value.get("url")):
+        return None
+    return {"tag": str(value["tag"])[:100], "published_at": value.get("published_at"), "url": value["url"]}
+
+
 async def store_meta(svc: Services, details: dict[str, dict[str, Any] | None]) -> int:
     """Save what `GitHubLookup.details` returned; missing repos are left alone.
     Returns how many rows were written."""
@@ -337,6 +360,8 @@ async def store_meta(svc: Services, details: dict[str, dict[str, Any] | None]) -
             row.default_branch = (d.get("default_branch") or "")[:200] or None
             row.fork_of = (d.get("fork_of") or "")[:200] or None
             row.readme_line = (d.get("readme_line") or "")[:500] or None
+            row.links = _links(d.get("links"))
+            row.latest_release = _release(d.get("latest_release"))
             row.fetched_at = now()
             s.add(row)
             written += 1
