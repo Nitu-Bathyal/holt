@@ -108,7 +108,7 @@ export function ReportHeaderSkeleton() {
           <Skeleton className="h-2.5 w-52" />
         </span>
       </div>
-      {/* Where the AI report button and Save sit. */}
+      {/* Where the Merge plan button and Save sit. */}
       <Skeleton className="h-11 w-36 shrink-0 self-start sm:h-9" />
     </div>
     </>
