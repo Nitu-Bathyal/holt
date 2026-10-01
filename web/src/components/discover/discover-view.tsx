@@ -25,6 +25,7 @@ export async function DiscoverView({ sort, language, topic }: { sort: DiscoverSo
           {SORTS.map((s, i) => (
             <li key={s.id} className={i ? "-ml-px" : ""}>
               <Link
+                rel="nofollow"
                 href={boardHref({ sort: s.id, language, topic })}
                 scroll={false}
                 aria-current={s.id === sort ? "page" : undefined}
@@ -40,7 +41,7 @@ export async function DiscoverView({ sort, language, topic }: { sort: DiscoverSo
         <nav aria-label="Language" className="border-t border-line">
           <ul className="flex gap-2 overflow-x-auto py-3 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:py-4">
             <li className="shrink-0">
-              <Link href={boardHref({ sort, topic })} scroll={false} aria-current={!language ? "page" : undefined}
+              <Link rel="nofollow" href={boardHref({ sort, topic })} scroll={false} aria-current={!language ? "page" : undefined}
                 className={`inline-flex min-h-11 items-center sm:min-h-9 whitespace-nowrap border px-3.5 text-[0.82rem] transition-colors ${!language ? "border-blue bg-blue text-on-accent" : "border-line-strong text-muted hover:border-blue hover:text-ink"}`}>
                 Any language
               </Link>
@@ -49,7 +50,7 @@ export async function DiscoverView({ sort, language, topic }: { sort: DiscoverSo
               const on = l.name.toLowerCase() === language?.toLowerCase();
               return (
                 <li key={l.name} className="shrink-0">
-                  <Link href={boardHref({ sort, language: l.name, topic })} scroll={false} aria-current={on ? "page" : undefined}
+                  <Link rel="nofollow" href={boardHref({ sort, language: l.name, topic })} scroll={false} aria-current={on ? "page" : undefined}
                     className={`inline-flex min-h-11 items-center sm:min-h-9 gap-2 whitespace-nowrap border px-3.5 text-[0.82rem] transition-colors ${on ? "border-blue bg-blue text-on-accent" : "border-line-strong text-muted hover:border-blue hover:text-ink"}`}>
                     <LangDot color={langColor(l.name)} />
                     {l.name}
@@ -72,7 +73,7 @@ export async function DiscoverView({ sort, language, topic }: { sort: DiscoverSo
           {topic && (
             <p>
               Only repos tagged <strong className="font-semibold text-ink">{topic}</strong>.{" "}
-              <Link href={boardHref({ sort, language })} className="text-link">Show all topics</Link>
+              <Link rel="nofollow" href={boardHref({ sort, language })} className="text-link">Show all topics</Link>
             </p>
           )}
         </div>

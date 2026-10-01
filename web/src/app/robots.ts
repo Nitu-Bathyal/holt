@@ -9,7 +9,12 @@ export default function robots(): MetadataRoute.Robots {
     return { rules: { userAgent: "*", disallow: "/" } };
   }
   return {
-    rules: { userAgent: "*", allow: "/", disallow: ["/api/", "/me/", "/settings", "/signin"] },
+    rules: { userAgent: "*", allow: "/", disallow: [
+        "/api/", "/me/", "/settings", "/signin",
+        // Board facets run a heavy query per hit; the bare /discover stays crawlable.
+        "/discover/", "/discover?", "/find?", "/hacktoberfest?",
+      ],
+    },
     sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }
