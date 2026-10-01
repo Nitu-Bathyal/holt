@@ -1,10 +1,10 @@
-// /compare: reading the list from the URL, and which column leads on each
-// number. Only the numbers the reports already show; no verdict changes.
-// No imports beyond repo parsing and types, so it runs under `node --test`.
+// /compare: reading the list from the URL, the page's one sentence, and which
+// column leads on each number. Only what the reports already say; no verdict
+// changes. No imports beyond repo parsing and types, so it runs under `node --test`.
 import { parseRepoInput } from "./repo.ts";
 import { humanHours, pct, timeAgo } from "./format.ts";
 import { compactCount, share } from "./repo-about.ts";
-import type { Report, Stats } from "./types.ts";
+import type { Report, Stats, Verdict } from "./types.ts";
 
 export const MAX = 4;
 
@@ -46,6 +46,13 @@ export function compareHref(list: string[]): string {
   return list.length ? `/compare?repos=${list.join(",")}` : "/compare";
 }
 
+/** Your saved repos not already in the list, newest saved first: one tap adds each. None once the list is full. */
+export function savedToAdd(saved: string[], list: string[], limit = 6): string[] {
+  if (list.length >= MAX) return [];
+  const inList = new Set(list.map((r) => r.toLowerCase()));
+  return saved.filter((s) => !inList.has(s.toLowerCase())).slice(0, limit);
+}
+
 /** Well-known repos for the example on an empty page; only ones with a report already cached are shown. */
 export const EXAMPLE_POOL = ["pallets/flask", "psf/requests", "pytorch/pytorch", "home-assistant/core", "NixOS/nixpkgs", "django/django", "facebook/react", "microsoft/vscode"];
 
@@ -57,6 +64,21 @@ export const SUGGESTIONS: { label: string; repos: string[] }[] = [
 ];
 
 export type Lead = "merged" | "reply" | "firstTimers" | "silent" | "closed";
+
+/** A column as the page reads it: what its report says, or null while it has none. */
+export type Checked = Pick<Report, "repo" | "verdict" | "stats"> | null;
+
+/**
+ * Only these verdicts' numbers can be marked best. A fast reply on a repo
+ * rated "Not worth your time" (or one with too little to go on, or not code)
+ * mustn't read as a reason to pick it over one that is worth trying.
+ */
+const CAN_LEAD = new Set<Verdict>(["viable", "long_shot"]);
+
+/** The stats `leaders` should weigh: null for a column with no report or a verdict that can't lead. */
+export function contenders(cols: Checked[]): (Stats | null)[] {
+  return cols.map((c) => (c && CAN_LEAD.has(c.verdict) ? c.stats : null));
+}
 
 /**
  * For each number, the columns (by index) that do best on it: highest share
@@ -82,14 +104,33 @@ export function leaders(stats: (Stats | null)[]): Record<Lead, number[]> {
 }
 
 /**
- * The page's one sentence: the repo that merges outsiders most often, once
- * you've picked two or more and one of them clearly leads; otherwise the
- * question the page answers.
+ * The page's one sentence, verdicts first: which repo is worth your time, or
+ * the best of the long shots, or that none is. The merge rate only breaks a
+ * tie between repos with the same verdict, so a better number never outranks
+ * a better verdict. Once you've picked two or more and every one has a
+ * report; otherwise the question the page answers.
  */
-export function compareTitle(picked: boolean, repos: string[], lead: Record<Lead, number[]>): string {
-  const top = lead.merged;
-  if (picked && repos.length >= 2 && top.length === 1) return `${repos[top[0]]} merges outsiders most often.`;
-  return "Which one will review your pull request?";
+export function compareTitle(picked: boolean, cols: Checked[]): string {
+  const checked = cols.filter((c) => c != null);
+  if (!picked || cols.length < 2 || checked.length < cols.length) return "Which one will review your pull request?";
+  const top = (group: NonNullable<Checked>[]) => {
+    const m = leaders(group.map((c) => c.stats)).merged;
+    return m.length === 1 ? group[m[0]].repo : null;
+  };
+  const worth = checked.filter((c) => c.verdict === "viable");
+  const long = checked.filter((c) => c.verdict === "long_shot");
+  if (worth.length === 1) return `${worth[0].repo} is the one worth your time.`;
+  if (worth.length > 1) {
+    const which = worth.length < checked.length ? `${worth.length} of these are` : checked.length === 2 ? "Both are" : `All ${checked.length} are`;
+    const t = top(worth);
+    return t ? `${which} worth your time; ${t} merges outsiders most often.` : `${which} worth your time.`;
+  }
+  if (long.length === 1) return `${long[0].repo} is your best shot here, but still a long shot.`;
+  if (long.length > 1) {
+    const t = top(long);
+    return t ? `No sure bets here; ${t} is the best of the long shots.` : "No sure bets here, only long shots.";
+  }
+  return "None of these looks like a good bet right now.";
 }
 
 /** The numbers compared, one row each, in the order they're read. */

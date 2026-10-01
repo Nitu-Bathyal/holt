@@ -1,12 +1,13 @@
 "use client";
-// /compare's one table: a column per repo, every number on its own row so the
-// eye runs straight across, the best of these marked on each. Columns whose
-// check is still running fill in when it lands (and the marks move with them).
-// Phones: each row's label sits above its numbers, and three or four columns
-// swipe sideways, a column at a time.
+// /compare's one table: a column per repo, the verdict and its reason first,
+// then every number on its own row so the eye runs straight across, the best
+// marked on each (among repos worth trying: lib/compare.ts, `contenders`).
+// Columns whose check is still running fill in when it lands (and the marks
+// move with them). Phones: each row's label sits above its numbers, and three
+// or four columns swipe sideways, a column at a time (the page says so above).
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
-import { ABOUT_ROWS, aboutCells, cells, leaders, ROWS, type Cell, type Lead } from "@/lib/compare";
+import { ABOUT_ROWS, aboutCells, cells, contenders, leaders, ROWS, type Cell, type Lead } from "@/lib/compare";
 import { fullStats, langColor } from "@/lib/repo-card";
 import { friendlyStage } from "@/lib/stages";
 import type { Report, StarterIssue } from "@/lib/types";
@@ -28,7 +29,7 @@ export function CompareTable({ columns, issues, label, now }: { columns: Column[
   const [landed, setLanded] = useState<Record<string, Report>>({});
   const onLanded = useCallback((repo: string, r: Report) => setLanded((m) => ({ ...m, [repo]: r })), []);
   const reports = columns.map((c) => (c.kind === "report" ? c.report : landed[c.repo] ?? null));
-  const lead = leaders(reports.map((r) => r?.stats ?? null));
+  const lead = leaders(contenders(reports));
   const all = reports.map((r) => r && cells(r));
   const about = reports.map((r) => r && aboutCells(r.about, now));
 
@@ -54,6 +55,7 @@ export function CompareTable({ columns, issues, label, now }: { columns: Column[
                   <>
                     <VerdictPill headline={r.headline} tone={r.tone} className="px-1.5 py-0.5 text-[0.76rem]" />
                     <OddsBar stats={fullStats(r.stats)} className="mt-3 h-1.5" />
+                    <p className="mt-3 font-sans text-[0.84rem] leading-snug text-muted">{r.verdict_line}</p>
                   </>
                 ) : c.kind === "live" ? (
                   <LiveCheck repo={c.repo} onLanded={onLanded} />
@@ -65,7 +67,7 @@ export function CompareTable({ columns, issues, label, now }: { columns: Column[
           })}
         </div>
 
-        {ROWS.map((row) => (
+        {ROWS.map((row, n) => (
           <div role="row" key={row.id} className="cmp-row">
             <div role="rowheader" className="cmp-label"><span>{row.label}</span></div>
             {columns.map((c, i) => {
@@ -73,7 +75,15 @@ export function CompareTable({ columns, issues, label, now }: { columns: Column[
               const best = row.id !== "way" && lead[row.id as Lead].includes(i);
               return (
                 <div role="cell" key={c.repo} className="cmp-cell">
-                  {cell ? <Value cell={cell} best={best} code={row.id === "way"} /> : <span className="text-faint">–</span>}
+                  {cell ? (
+                    <Value cell={cell} best={best} code={row.id === "way"} />
+                  ) : (
+                    <>
+                      <span className="text-faint">–</span>
+                      {/* Say once, at the top of an empty column, why it's empty. */}
+                      {n === 0 && <span className="cmp-sub">{c.kind === "live" ? "after the check" : "not checked yet"}</span>}
+                    </>
+                  )}
                 </div>
               );
             })}

@@ -1,8 +1,8 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ABOUT_ROWS, aboutCells, bareNames, cells, compareHref, compareTitle, leaders, parseList, pickRepo, ROWS } from "./compare.ts";
+import { ABOUT_ROWS, aboutCells, bareNames, cells, compareHref, compareTitle, contenders, leaders, parseList, pickRepo, ROWS, savedToAdd } from "./compare.ts";
 import { humanHours } from "./format.ts";
-import type { Stats } from "./types.ts";
+import type { Stats, Verdict } from "./types.ts";
 
 const st = (over: Partial<Stats> = {}): Stats => ({ outsider_attempts: 10, outsider_merged: 5, distinct_outsiders: 8, first_time_merged_authors: 2, no_reply: 1, median_first_response_hours: 10, bot_share: 0, still_open: 0, closed_silently: 0, closed_by_bot: 0, withdrawn: 0, too_old: 0, timing: null, ...over });
 
@@ -30,14 +30,43 @@ test("no leader with one column, equal numbers or missing ones", () => {
   assert.deepEqual(leaders([st({ outsider_attempts: 0 }), st()]).merged, []);
 });
 
-test("compareTitle names the one repo that merges outsiders most often, once you picked", () => {
-  const repos = ["a/b", "c/d"];
-  const lead = leaders([st({ outsider_merged: 8 }), st()]);
-  assert.equal(compareTitle(true, repos, lead), "a/b merges outsiders most often.");
-  // The example on an empty page, a tie, or a single repo keep the question.
-  assert.equal(compareTitle(false, repos, lead), "Which one will review your pull request?");
-  assert.equal(compareTitle(true, repos, leaders([st(), st()])), "Which one will review your pull request?");
-  assert.equal(compareTitle(true, ["a/b"], leaders([st()])), "Which one will review your pull request?");
+const col = (repo: string, verdict: Verdict, over: Partial<Stats> = {}) => ({ repo, verdict, stats: st(over) });
+const ASK = "Which one will review your pull request?";
+
+test("compareTitle goes by verdict first; the merge rate only breaks a tie", () => {
+  // A higher merge rate doesn't beat a better verdict.
+  assert.equal(compareTitle(true, [col("a/b", "long_shot", { outsider_merged: 9 }), col("c/d", "viable", { outsider_merged: 3 })]), "c/d is the one worth your time.");
+  assert.equal(compareTitle(true, [col("a/b", "viable", { outsider_merged: 8 }), col("c/d", "viable")]), "Both are worth your time; a/b merges outsiders most often.");
+  assert.equal(compareTitle(true, [col("a/b", "viable"), col("c/d", "viable"), col("e/f", "viable")]), "All 3 are worth your time.");
+  assert.equal(compareTitle(true, [col("a/b", "viable"), col("c/d", "viable", { outsider_merged: 7 }), col("e/f", "not_viable", { outsider_merged: 9 })]), "2 of these are worth your time; c/d merges outsiders most often.");
+  // django vs flask: the long shot is the best of them, and the title says it's still a long shot.
+  assert.equal(compareTitle(true, [col("pallets/flask", "not_viable", { outsider_merged: 1 }), col("django/django", "long_shot")]), "django/django is your best shot here, but still a long shot.");
+  assert.equal(compareTitle(true, [col("a/b", "long_shot", { outsider_merged: 1 }), col("c/d", "long_shot")]), "No sure bets here; c/d is the best of the long shots.");
+  assert.equal(compareTitle(true, [col("a/b", "long_shot"), col("c/d", "long_shot")]), "No sure bets here, only long shots.");
+  assert.equal(compareTitle(true, [col("a/b", "not_viable"), col("c/d", "insufficient_evidence")]), "None of these looks like a good bet right now.");
+});
+
+test("compareTitle keeps the question for the example, a single repo, or one not checked yet", () => {
+  const two = [col("a/b", "viable"), col("c/d", "long_shot")];
+  assert.equal(compareTitle(false, two), ASK);
+  assert.equal(compareTitle(true, [col("a/b", "viable")]), ASK);
+  assert.equal(compareTitle(true, [...two, null]), ASK);
+});
+
+test("only repos worth trying or long shots can lead a row", () => {
+  const cols = [col("a/b", "not_viable", { median_first_response_hours: 1 }), col("c/d", "long_shot", { median_first_response_hours: 48 }), col("e/f", "viable", { median_first_response_hours: 20 }), null];
+  const s = contenders(cols);
+  assert.deepEqual(s.map((x) => x != null), [false, true, true, false]);
+  // The not-worth repo's one-hour reply gets no mark; the viable repo's 20 hours does.
+  assert.deepEqual(leaders(s).reply, [2]);
+  // A lone contender has nobody to beat, so nothing is marked.
+  assert.deepEqual(leaders(contenders([col("a/b", "personal", { outsider_merged: 9 }), col("c/d", "viable")])).merged, []);
+});
+
+test("savedToAdd offers saved repos not in the list, and none once it's full", () => {
+  assert.deepEqual(savedToAdd(["a/b", "C/D", "e/f"], ["c/d"]), ["a/b", "e/f"]);
+  assert.deepEqual(savedToAdd(["a/1", "a/2", "a/3"], [], 2), ["a/1", "a/2"]);
+  assert.deepEqual(savedToAdd(["z/z"], ["a/1", "a/2", "a/3", "a/4"]), []);
 });
 
 test("fewest closed without a word leads", () => {
