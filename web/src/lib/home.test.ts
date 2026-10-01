@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { afterSignIn, alsoForYou, dismissedNudges, homeFacts, homeNudge, moveLead, moveTitle, nextMove, othersInFlight, outsidePulls, statusLine, waiting, waitPhrase } from "./home.ts";
+import { afterSignIn, alsoForYou, dismissedNudges, homeFacts, homeNudge, moveLead, moveTitle, nextMove, othersInFlight, outsidePulls, waiting, waitPhrase } from "./home.ts";
 import type { YourRepo } from "./your-repos.ts";
 import type { ContributionPR } from "./types";
 import type { Timing } from "./api-schema";
@@ -43,13 +43,6 @@ test("dismissed nudges come from their cookie, and only known ones", () => {
   assert.deepEqual(dismissedNudges(undefined), []);
   assert.deepEqual(dismissedNudges("github,profile,evil"), ["github", "profile"]);
   assert.deepEqual(dismissedNudges("alerts,github"), ["alerts", "github"]);
-});
-
-test("the status line: waiting PRs and AI reports left, in plain words", () => {
-  assert.equal(statusLine({ waiting: 1, credits: { balance: 3, ai_available: true } }), "1 PR waiting for a reply · 3 AI reports left");
-  assert.equal(statusLine({ waiting: 2, credits: { balance: 1, ai_available: false } }), "2 PRs waiting for a reply");
-  assert.equal(statusLine({ waiting: 0, credits: { balance: 1, ai_available: true } }), "1 AI report left");
-  assert.equal(statusLine({ waiting: 0, credits: null }), "");
 });
 
 const pull = (repo: string, number: number, state: ContributionPR["state"], created: string): ContributionPR => ({

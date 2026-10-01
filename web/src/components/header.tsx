@@ -38,8 +38,8 @@ function Logo({ href }: { href: string }) {
   );
 }
 
-/** Your account: who you're signed in as, AI reports left, settings, sign out. */
-export function AccountMenu({ user, credits }: { user: SessionUser; credits: string | null }) {
+/** Your account: who you're signed in as, settings, sign out. */
+export function AccountMenu({ user }: { user: SessionUser }) {
   const initial = (user.name || user.email || "?").trim().charAt(0).toUpperCase();
   return (
     <>
@@ -57,7 +57,6 @@ export function AccountMenu({ user, credits }: { user: SessionUser; credits: str
       <div id="account-menu" popover="auto" data-lenis-prevent className="menu w-60 text-[0.88rem]">
         <div className="px-3 py-2">
           <p className="truncate text-ink">{user.name || user.email}</p>
-          {credits && <p className="mt-0.5 text-[0.82rem] text-faint">{credits}</p>}
         </div>
         <Link href="/settings/profile" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">Settings</Link>
         <Link href="/settings/ai-reports" className="block px-3 py-2.5 transition-colors hover:bg-panel-2">AI reports</Link>
@@ -84,7 +83,7 @@ function MenuButton({ target, label }: { target: string; label: string }) {
  * core product tasks, an example to try, and sign in (or,
  * signed in, your account menu and a button into the app).
  */
-export function MarketingHeader({ user, credits }: { user: SessionUser | null; credits: string | null }) {
+export function MarketingHeader({ user }: { user: SessionUser | null }) {
   return (
     <header className="site-header sticky top-0 z-40 border-b border-line bg-header" style={{ viewTransitionName: "site-header" }}>
       <div className="wrap flex min-h-[60px] items-center gap-2 sm:gap-4">
@@ -100,7 +99,7 @@ export function MarketingHeader({ user, credits }: { user: SessionUser | null; c
           {user ? (
             <>
               <Link href={HOME} className="btn-primary ml-1 min-h-11 whitespace-nowrap px-4 text-[0.84rem] sm:min-h-10">open Holt →</Link>
-              <AccountMenu user={user} credits={credits} />
+              <AccountMenu user={user} />
             </>
           ) : (
             <>
@@ -124,7 +123,7 @@ export function MarketingHeader({ user, credits }: { user: SessionUser | null; c
 }
 
 /** App pages, signed in: the sidebar holds the places and, on desktop, the logo, so this bar stays small. */
-export function AppTopBar({ user, credits, railCollapsed, drawer, bell }: { user: SessionUser; credits: string | null; railCollapsed: boolean; drawer: React.ReactNode; /** PR watch's bell (components/alerts). */ bell?: React.ReactNode }) {
+export function AppTopBar({ user, railCollapsed, drawer, bell }: { user: SessionUser; railCollapsed: boolean; drawer: React.ReactNode; /** PR watch's bell (components/alerts). */ bell?: React.ReactNode }) {
   return (
     <header className="site-header sticky top-0 z-40 border-b border-line bg-header" style={{ viewTransitionName: "site-header" }}>
       {/* On desktop the rail carries the logo, the bar starts with the rail's toggle, and the check box lines up with the page (.app-bar). */}
@@ -140,7 +139,7 @@ export function AppTopBar({ user, credits, railCollapsed, drawer, bell }: { user
         <div className="app-bar-end flex items-center gap-1">
           {bell}
           <ThemeToggle />
-          <AccountMenu user={user} credits={credits} />
+          <AccountMenu user={user} />
         </div>
       </div>
       {drawer}

@@ -19,8 +19,6 @@ export interface SidebarProps {
   badges?: Record<string, React.ReactNode>;
   /** Who's signed in, for the foot. */
   user: { name: string; image: string | null };
-  /** "3 AI reports left", or null. */
-  credits: string | null;
 }
 
 function Item({ item, on, path, badge }: { item: NavItem; on: boolean; path: string; badge?: React.ReactNode }) {
@@ -66,7 +64,7 @@ function Nav({ groups, badges = {} }: Pick<SidebarProps, "groups" | "badges">) {
   );
 }
 
-function Foot({ user, credits }: Pick<SidebarProps, "user" | "credits">) {
+function Foot({ user }: Pick<SidebarProps, "user">) {
   const initial = user.name.trim().charAt(0).toUpperCase() || "?";
   return (
     <div className="side-foot">
@@ -81,11 +79,6 @@ function Foot({ user, credits }: Pick<SidebarProps, "user" | "credits">) {
         </span>
         <span className="side-label">{user.name}</span>
       </Link>
-      {credits && (
-        <Link href="/settings/ai-reports" className="side-credits">
-          {credits}
-        </Link>
-      )}
       <p className="side-legal">
         <Link href="/privacy">Privacy</Link>
         <Link href="/terms">Terms</Link>
@@ -122,7 +115,7 @@ export function Sidebar(props: SidebarProps) {
         <Brand />
         <div className="rail-body">
           <Nav groups={props.groups} badges={props.badges} />
-          <Foot user={props.user} credits={props.credits} />
+          <Foot user={props.user} />
         </div>
       </div>
     </aside>
@@ -134,7 +127,7 @@ export function Drawer(props: SidebarProps) {
   return (
     <div id="app-drawer" popover="auto" data-lenis-prevent className="drawer">
       <Nav groups={props.groups} badges={props.badges} />
-      <Foot user={props.user} credits={props.credits} />
+      <Foot user={props.user} />
     </div>
   );
 }
