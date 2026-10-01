@@ -127,7 +127,7 @@ function Feedback({ storageKey: key, report }: { storageKey: string; report: Pic
   };
 
   return (
-    <section aria-labelledby={`${reasonId}-q`} className="border border-dashed border-line-strong p-4 sm:p-5">
+    <section aria-labelledby={`${reasonId}-q`} className="border border-line-strong p-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
           <h2 id={`${reasonId}-q`} className="text-[0.98rem] font-semibold tracking-tight">

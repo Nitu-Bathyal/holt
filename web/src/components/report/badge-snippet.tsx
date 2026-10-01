@@ -8,7 +8,7 @@ export function BadgeSnippet({ repo, offered }: { repo: string; offered: boolean
   const more = `/badge?repo=${repo}`;
   if (!offered) {
     return (
-      <div className="panel p-4 sm:p-5">
+      <div className="border-t border-line pt-5">
         <p className="text-[0.89rem] text-ink">Maintainer of this repo?</p>
         <p className="mt-1 font-sans text-[0.88rem] text-muted">
           See what would earn it a Holt badge. <Link href={more} className="text-link">Get a badge →</Link>
@@ -18,7 +18,7 @@ export function BadgeSnippet({ repo, offered }: { repo: string; offered: boolean
   }
   const { markdown } = badgeSnippets(SITE_URL, repo);
   return (
-    <div className="panel p-4 sm:p-5">
+    <div className="border-t border-line pt-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <p className="text-[0.89rem] text-ink">Maintainer? Show newcomers they&apos;re welcome.</p>
         {/* eslint-disable-next-line @next/next/no-img-element */}
