@@ -124,9 +124,9 @@ find "$STATE" -maxdepth 1 -type d -name 'run.*' -mmin +1440 -exec rm -rf {} + 2>
 main_sha="" preview_sha="" fingerprint=""
 
 # The policy pages' contact details, the staging sign-in keys, the paid
-# features key and the smoke run's Cloudflare Access token come from
-# ~/.config/holt/secrets.env, the file production reads; only the keys named
-# in this script are taken from it.
+# features key, the Razorpay test keys, Resend's key and the smoke run's
+# Cloudflare Access token come from ~/.config/holt/secrets.env, the file
+# production reads; only the keys named in this script are taken from it.
 SECRETS="${HOLT_SECRETS_FILE:-$HOME/.config/holt/secrets.env}"
 secret() {   # secret KEY: the value of KEY=value in $SECRETS, else empty
     [[ -f "$SECRETS" ]] || return 0
@@ -569,6 +569,46 @@ ai_settings() {
         HOLT_PRO_MODEL_KEY HOLT_PRO_MODEL_PROVIDER HOLT_PRO_PLAYBOOK_MODEL
 }
 ai_settings
+
+# Pass checkout on staging: Razorpay TEST mode, every pass on sale
+# (HOLT_PASSES_ON_SALE; production ignores that switch and its compose never
+# sets it). On only when RAZORPAY_KEY_ID in $SECRETS is a test key
+# (rzp_test_...) and RAZORPAY_KEY_SECRET is set: a live key is refused, so
+# staging can never take real money. STAGING_RAZORPAY_WEBHOOK_SECRET is
+# optional (the Checkout callback gives the pass without a webhook). Always
+# exported, empty when off, so nothing in .env can turn checkout on instead.
+payment_settings() {
+    RAZORPAY_KEY_ID="$(secret RAZORPAY_KEY_ID)"
+    RAZORPAY_KEY_SECRET="$(secret RAZORPAY_KEY_SECRET)"
+    RAZORPAY_WEBHOOK_SECRET="$(secret STAGING_RAZORPAY_WEBHOOK_SECRET)"
+    HOLT_PAYMENTS_ENABLED=0 HOLT_PASSES_ON_SALE=0
+    if [[ -z "$RAZORPAY_KEY_ID" || -z "$RAZORPAY_KEY_SECRET" ]]; then
+        log "passes: off (no RAZORPAY_KEY_ID/SECRET in $SECRETS)"
+    elif [[ "$RAZORPAY_KEY_ID" != rzp_test_* ]]; then
+        log "passes: off (RAZORPAY_KEY_ID is not a test key; staging only takes rzp_test_ keys)"
+    else
+        HOLT_PAYMENTS_ENABLED=1 HOLT_PASSES_ON_SALE=1
+        log "passes: on sale (Razorpay test mode)"
+    fi
+    if (( ! HOLT_PAYMENTS_ENABLED )); then
+        RAZORPAY_KEY_ID="" RAZORPAY_KEY_SECRET="" RAZORPAY_WEBHOOK_SECRET=""
+    fi
+    export HOLT_PAYMENTS_ENABLED HOLT_PASSES_ON_SALE \
+        RAZORPAY_KEY_ID RAZORPAY_KEY_SECRET RAZORPAY_WEBHOOK_SECRET
+}
+payment_settings
+
+# PR watch's alert emails (server/README.md, "PR watch"): Resend's key from
+# $SECRETS, the one production reads (one verified sending domain, one key).
+# It only matters while staging's .env says HOLT_PR_WATCH=1. Always exported,
+# empty when unset, so nothing in .env can turn email on instead. Never logged.
+RESEND_API_KEY="$(secret RESEND_API_KEY)"
+if [[ -n "$RESEND_API_KEY" ]]; then
+    log "alert emails: on (Resend)"
+else
+    log "alert emails: off (no RESEND_API_KEY in $SECRETS)"
+fi
+export RESEND_API_KEY
 
 export BUILDX_BUILDER="$BUILDER" COMPOSE_PROJECT_NAME="$PROJECT"
 compose() { docker compose -p "$PROJECT" -f "$DEPLOY/compose.yml" --env-file "$DEPLOY/.env" "$@"; }

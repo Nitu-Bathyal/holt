@@ -700,7 +700,9 @@ passes that stays switched off (below):
 A pass is one payment for a fixed number of days of Pro (`pro_1m` 30 days,
 `pro_3m` 90, `pro_12m` 365). It never renews. Razorpay, INR. **Switched
 off** unless the server has `HOLT_PAYMENTS_ENABLED=1` and its Razorpay keys,
-and a pass in the catalogue has `on_sale: true` and an INR price. While off,
+and a pass in the catalogue has `on_sale: true` and an INR price (outside
+production, `HOLT_PASSES_ON_SALE=1` puts every pass on sale: staging, in
+Razorpay test mode). While off,
 `GET /v1/passes` offers nothing and `POST /v1/me/orders` answers 403
 `payments_off`. The price and the days always come from the server's
 catalogue.

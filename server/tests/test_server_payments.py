@@ -11,13 +11,15 @@ from __future__ import annotations
 import asyncio
 import itertools
 import json
+import logging
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timedelta
+from pathlib import Path
 from typing import Any
 
 import pytest
-from holt_server import entitlements, payments
+from holt_server import entitlements, payments, pricing
 from holt_server.db import CreditLot, Order, PlanEvent, now
 from sqlalchemy import select
 
@@ -206,6 +208,126 @@ def test_payments_are_off_by_default(tmp_path):
     s = make_settings(tmp_path)
     assert s.payments_enabled is False
     assert payments.build(s) is None
+
+
+# --- HOLT_PASSES_ON_SALE: every pass on sale, outside production -----------------------
+
+
+PACKAGED = [
+    {"id": "pro_1m", "name": "1 month", "days": 30, "amount": 9900, "currency": "INR"},
+    {"id": "pro_3m", "name": "3 months", "days": 90, "amount": 24900, "currency": "INR"},
+    {"id": "pro_12m", "name": "12 months", "days": 365, "amount": 79900, "currency": "INR"},
+]
+
+
+@pytest.fixture
+def make_staging(make_harness):
+    """The packaged pricing file (no pass on sale in it) on staging's settings."""
+    def build(env: str = "staging", **overrides):
+        values = {"HOLT_ENV": env, "HOLT_PAYMENTS_ENABLED": True, "HOLT_PASSES_ON_SALE": True,
+                  "HOLT_PR_WATCH": True, **overrides}
+        h = make_harness(**values)
+        h.rz = h.svc.razorpay = FakeRazorpay()
+        return h
+    return build
+
+
+def test_the_switch_puts_every_packaged_pass_on_sale(make_staging):
+    h = make_staging()
+    body = h.get("/v1/passes").json()
+    assert body["on_sale"] is True and body["passes"] == PACKAGED
+    assert {f["id"]: (f["per_month"], f["unlimited"]) for f in body["features"]} == {
+        "merge_plan": (30, False), "pr_watch": (None, True),
+        "repo_watch": (None, True), "issue_watch": (None, True)}
+    level, line = payments.startup_line(h.svc)
+    assert level == logging.INFO and "pro_1m, pro_3m, pro_12m" in line and "test keys" in line
+
+
+@pytest.mark.parametrize("how", ["callback", "webhook"])
+def test_a_pass_bought_on_the_switch_gives_pro(make_staging, how):
+    h = make_staging()
+    before = h.get("/v1/me/entitlements", user="buyer").json()
+    assert before["plan"] == "free"
+    assert h.get("/v1/me/alerts/settings", user="buyer").json()["access"]["state"] == "off"
+
+    out = checkout(h, pass_="pro_3m")
+    assert (out["amount"], out["currency"], out["days"]) == (24900, "INR", 90)
+    assert out["key_id"] == KEY_ID
+    cb = h.rz.pay(out["provider_order_id"])
+    if how == "callback":
+        r = confirm(h, cb)
+        assert r.status_code == 200 and r.json()["plan"] == "pro", r.text
+    else:
+        payment = h.rz.payments[cb["razorpay_payment_id"]]
+        assert webhook(h, hook_body("payment.captured", payment)).json()["result"] == "paid"
+
+    assert pro_days(h, "buyer") == 90
+    after = h.get("/v1/me/entitlements", user="buyer").json()
+    access = {a["feature"]: a for a in after["features"]}
+    assert after["plan"] == "pro"
+    assert access["merge_plan"]["via"] == "plan" and access["merge_plan"]["left_this_month"] == 30
+    assert access["pr_watch"]["allowed"] is True and access["pr_watch"]["via"] == "plan"
+    assert h.get("/v1/me/alerts/settings", user="buyer").json()["access"]["state"] == "pro"
+    assert_one_grant_per_payment(h, "buyer")
+
+
+@pytest.mark.parametrize("overrides", [
+    {"HOLT_PAYMENTS_ENABLED": False},
+    {"HOLT_PASSES_ON_SALE": False},
+])
+def test_the_switch_needs_payments_on_too_and_payments_need_the_switch(make_staging, overrides):
+    h = make_staging(**overrides)
+    assert h.get("/v1/passes").json() == OFF
+    assert h.post("/v1/me/orders", {"pass": "pro_1m"}, user="buyer").status_code in (400, 403)
+    assert rows(h, Order) == [] and h.rz.calls == []
+
+
+def test_the_switch_without_razorpay_keys_sells_nothing(make_staging):
+    h = make_staging()
+    h.svc.razorpay = None
+    assert h.get("/v1/passes").json() == OFF
+    r = h.post("/v1/me/orders", {"pass": "pro_1m"}, user="buyer")
+    assert r.status_code == 403 and r.json()["error"]["code"] == "payments_off"
+
+
+def test_production_ignores_the_switch(make_staging):
+    """Everything staging sets, on production: still nothing on sale."""
+    h = make_staging(env="production")
+    assert h.svc.settings.sell_every_pass is False
+    assert h.get("/v1/passes").json() == OFF
+    for pid in ("pro_1m", "pro_3m", "pro_12m"):
+        r = h.post("/v1/me/orders", {"pass": pid}, user="buyer")
+        assert r.status_code == 400 and r.json()["error"]["code"] == "invalid_request"
+    assert rows(h, Order) == [] and h.rz.calls == []
+    assert not any(p.on_sale for p in entitlements.catalogue(h.svc).passes.values())
+    level, line = payments.startup_line(h.svc)
+    assert level == logging.ERROR and "ignored" in line
+
+
+def test_the_switch_is_off_and_the_environment_is_production_by_default(monkeypatch):
+    from holt_server.settings import Settings
+
+    for name in ("HOLT_ENV", "HOLT_PASSES_ON_SALE", "HOLT_PAYMENTS_ENABLED"):
+        monkeypatch.delenv(name, raising=False)
+    s = Settings(_env_file=None)
+    assert (s.env, s.passes_on_sale, s.payments_enabled, s.sell_every_pass) == (
+        "production", False, False, False)
+    # Production's own settings (deploy/prod/compose.yml sets HOLT_ENV and none
+    # of the payment switches): a pass is on sale only if the pricing file says so.
+    prod = Settings(_env_file=None, HOLT_ENV="production")
+    cat = pricing.cached(prod.pricing_file, prod.sell_every_pass)
+    assert [pid for pid, p in cat.passes.items() if p.on_sale] == []
+
+
+def test_productions_compose_never_sets_the_payment_switches():
+    prod = Path(__file__).resolve().parents[2] / "deploy" / "prod"
+    if not prod.is_dir():
+        pytest.skip("no deploy/ next to the server (an installed package)")
+    for path in sorted(prod.iterdir()):
+        if path.is_file():
+            text = path.read_text(encoding="utf-8")
+            for name in ("HOLT_PASSES_ON_SALE", "HOLT_PAYMENTS_ENABLED", "RAZORPAY"):
+                assert name not in text, f"{path.name} mentions {name}"
 
 
 def test_passes_need_the_internal_key(hp):
