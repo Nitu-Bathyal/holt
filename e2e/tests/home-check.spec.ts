@@ -34,10 +34,13 @@ for (const reducedMotion of ["no-preference", "reduce"] as const) {
     await page.keyboard.type("flask");
     await expect(input).toHaveValue("pallets/flask");
 
-    // Only the homepage hides the discovery link.
-    await page.goto("/pricing");
-    if (phone) await page.getByRole("button", { name: "Menu", exact: true }).click();
-    await expect(page.getByRole("navigation", { name: phone ? "Mobile" : "Main", exact: true })
-      .getByRole("link", { name: "Find a project", exact: true })).toBeVisible();
+    // Every public page uses the same header navigation.
+    for (const path of ["/pricing", "/how-it-works", "/badge", "/contact"]) {
+      await page.goto(path);
+      if (phone) await page.getByRole("button", { name: "Menu", exact: true }).click();
+      const publicNav = page.getByRole("navigation", { name: phone ? "Mobile" : "Main", exact: true });
+      await expect(publicNav.getByRole("link", { name: "Find a project", exact: true })).toHaveCount(0);
+      await expect(publicNav.getByRole("link", { name: "Check a repo", exact: true })).toBeVisible();
+    }
   });
 }
