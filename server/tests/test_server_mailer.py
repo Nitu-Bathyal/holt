@@ -11,7 +11,7 @@ from pathlib import Path
 
 import httpx
 import pytest
-from holt_server import alert_email, alerts, mailer
+from holt_server import alert_email, alerts, alerts_api, mailer
 from holt_server.db import Alert, AlertEmail, AlertSettings, User
 from holt_server.mailer import Pending, Prefs, Queue
 from sqlalchemy import select
@@ -304,10 +304,11 @@ def test_resend_gets_the_message_and_the_key():
 
 
 def test_resend_trouble_is_retried_and_a_refusal_is_not():
-    with pytest.raises(mailer.MailLater):
-        resend(lambda req: httpx.Response(503)).send(MESSAGE)
-    with pytest.raises(mailer.MailLater):
-        resend(lambda req: httpx.Response(429)).send(MESSAGE)
+    # Busy, down, or the key or sending domain refused: the setup's problem,
+    # not this message's, so it is tried again once that is fixed.
+    for status in (503, 429, 401, 403, 409):
+        with pytest.raises(mailer.MailLater):
+            resend(lambda req, status=status: httpx.Response(status)).send(MESSAGE)
 
     def down(req):
         raise httpx.ConnectError("no route")
@@ -492,6 +493,72 @@ def test_a_busy_provider_is_tried_again_next_run(hm):
     assert stored(hm, AlertEmail) == [] and stored(hm, Alert)[0].emailed_at is None
     hm.outbox.error = None
     assert run(hm, at + timedelta(minutes=5)).sent == 1
+
+
+def test_one_failing_email_doesnt_block_the_others(hm):
+    at = ist(14)
+    seed(hm, at, ("changes", "pallets/click", 2811, timedelta(minutes=10)))
+    seed(hm, at, ("reply", "moment/moment", 6120, timedelta(minutes=10)), user="u2",
+         email="two@example.com")
+    real = hm.outbox.send
+
+    def send(message):
+        if message.to == "you@example.com":
+            raise RuntimeError("boom")
+        return real(message)
+    hm.outbox.send = send
+    got = run(hm, at)
+    assert (got.sent, got.failed) == (1, 1)
+    assert [m.to for m in hm.outbox.sent] == ["two@example.com"]
+
+
+def test_a_rotated_secret_still_gives_a_working_unsubscribe_link(hm):
+    at = ist(14)
+    seed(hm, at, ("changes", "pallets/click", 2811, timedelta(minutes=10)))
+    hm.svc.settings.secret_key = "a new passphrase"
+    assert run(hm, at).sent == 1
+    token = hm.outbox.sent[0].headers["List-Unsubscribe"].split("?t=")[1].rstrip(">")
+    r = hm.post("/v1/alerts/unsubscribe", {"token": token})
+    assert r.status_code == 200 and r.json() == {"email_on": False}
+
+
+def test_turning_email_back_on_waits_for_the_next_8_oclock(hm, monkeypatch):
+    at = ist(15, day=3)
+    monkeypatch.setattr(alerts_api, "now", lambda: at)
+    seed(hm, at, ("merged", "moment/moment", 6120, timedelta(hours=4)),
+         last_daily=date(2026, 10, 1))  # unsubscribed two days ago
+
+    async def off(s):
+        [row] = await _settings(s)
+        row.email_on = False
+        return alerts.unsubscribe_token(hm.svc.settings.secret_key, "u1",
+                                        row.unsubscribe_nonce)
+    token = call(hm, off)
+    assert hm.post("/v1/alerts/resubscribe", {"token": token}).json() == {"email_on": True}
+    [settings] = call(hm, _settings)
+    assert settings.last_daily_on == date(2026, 10, 3)
+    assert run(hm, at).sent == 0  # not a "daily" email in the middle of the afternoon
+    assert run(hm, ist(8, 5, day=4)).sent == 1  # tomorrow's 8:00 brings it
+
+
+def test_a_move_west_doesnt_skip_a_day():
+    from holt_server.db import AlertSettings as Row
+    row = Row(user_id="u1", tz="America/Los_Angeles", last_daily_on=date(2026, 10, 2))
+    at = datetime(2026, 10, 2, 4, tzinfo=UTC)  # still 1 October in Los Angeles
+    mailer.skip_today(row, at, starting=False)
+    assert row.last_daily_on == date(2026, 10, 1)
+    # Nothing changes for someone who stayed put.
+    row = Row(user_id="u1", tz="Asia/Kolkata", last_daily_on=date(2026, 10, 1))
+    mailer.skip_today(row, at, starting=False)
+    assert row.last_daily_on == date(2026, 10, 1)
+    # Turned on after 8:00: the first daily email is tomorrow's.
+    row = Row(user_id="u1", tz="Asia/Kolkata", last_daily_on=None)
+    mailer.skip_today(row, at, starting=True)
+    assert row.last_daily_on == date(2026, 10, 2)
+    # Turned on before 8:00: today's 8:00 is the first.
+    row = Row(user_id="u1", tz="Asia/Kolkata", last_daily_on=None)
+    mailer.skip_today(row, datetime(2026, 10, 2, 1, tzinfo=UTC), starting=True)
+    assert row.last_daily_on is None
 
 
 def test_a_refused_email_is_not_sent_again(hm):

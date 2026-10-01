@@ -100,7 +100,12 @@ async def watched(s, user_ids: list[str]) -> list[Contribution]:
 
 
 async def _points_low(svc: Services, out: Pass) -> bool:
-    left = await svc.lookup.remaining()
+    try:
+        left = await svc.lookup.remaining()
+    except Exception as exc:  # noqa: BLE001 -- GitHub is down: no reads this pass
+        log.warning("pr watch: couldn't read GitHub points (%s)", type(exc).__name__)
+        out.stopped = "github"
+        return True
     if left < svc.settings.warm_min_points:
         log.info("pr watch: stopping GitHub reads, points left %d", left)
         out.stopped = "low_points"
@@ -193,6 +198,8 @@ async def check(svc: Services, at: datetime | None = None) -> Pass:
             if err.code == "rate_limited":
                 out.stopped = "rate_limited"
                 break
+        except Exception:  # noqa: BLE001 -- one user's trouble never stops the pass
+            log.exception("pr watch: searching a user's pull requests failed")
     out.searched = len(searched)
 
     if out.stopped is None:
@@ -215,7 +222,10 @@ async def check(svc: Services, at: datetime | None = None) -> Pass:
             for r in batch:
                 by_user.setdefault(r.user_id, []).append(r)
             for user_id, mine in by_user.items():
-                await _store(svc, user_id, mine, nodes, at)
+                try:
+                    await _store(svc, user_id, mine, nodes, at)
+                except Exception:  # noqa: BLE001 -- the others still get theirs
+                    log.exception("pr watch: storing a user's pull requests failed")
 
     await _waits(svc, [u for u, _, _ in users], at)
     async with svc.db.session() as s:

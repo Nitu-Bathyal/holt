@@ -63,6 +63,22 @@ def test_your_turn_fires_again_only_when_the_team_speaks_again():
     assert kinds(alerts.events(old, again)) == ["reply"]
 
 
+def test_a_comment_after_a_standing_request_for_changes_is_a_reply():
+    asked = pr(turn="yours", turn_at=NOW - timedelta(hours=3), reply_by="mkoval",
+               reply_kind="changes")
+    # Someone else comments; the request still stands, and it was already told.
+    later = pr(turn="yours", turn_at=NOW - timedelta(hours=1), reply_by="mkoval",
+               reply_kind="changes")
+    [found] = alerts.events(asked, later)
+    assert (found.kind, found.facts) == ("reply", {})
+    assert alerts.line(found.kind, later.repo, later.number, found.facts) == (
+        "Your turn: a reviewer replied on click #2811.")
+    # A plain reply turning into a request for changes is news.
+    replied = pr(turn="yours", turn_at=NOW - timedelta(hours=3), reply_by="lead",
+                 reply_kind="reply")
+    assert kinds(alerts.events(replied, later)) == ["changes"]
+
+
 def test_your_own_move_is_no_alert():
     old = pr(turn="yours", turn_at=NOW - timedelta(hours=3), reply_by="lead",
              reply_kind="reply")
@@ -78,6 +94,10 @@ def test_an_approval_alerts_once():
     assert alerts.line("approved", "dotnet/efcore", 3310, found.facts) == (
         "Approved: @jrios approved efcore #3310.")
     assert alerts.events(new, new) == []
+    # A row stored before Holt kept who spoke last: an approval from weeks
+    # ago is not news the first time it is read again.
+    before = pr(turn="theirs", turn_at=at, review_decision="approved")
+    assert alerts.events(before, new) == []
     # The decision turning to approved with nobody's word since your last move.
     [bare] = alerts.events(pr(), pr(review_decision="approved"))
     assert alerts.line("approved", "dotnet/efcore", 3310, bare.facts) == "Approved: efcore #3310."

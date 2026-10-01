@@ -935,9 +935,12 @@ get replies, merges and closes, but no "past normal" or stale-bot alert.
 | `closed` | It was closed without merging. | Closed without merging: moment #6120. |
 
 `text` is rendered by the server, so the bell, the email and the extension say
-the same thing. The three waits need the repository's current rules report;
-with no report, or numbers under the engine's minimums, they don't fire. Each
-event alerts once. A "your turn" fires again only when the team speaks again.
+the same thing. Without a name to give, it says "a reviewer". The three waits
+need the repository's current rules report; with no report, or numbers under
+the engine's minimums, they don't fire. Each event alerts once. A "your turn"
+fires again only when the team speaks again (a comment after a request for
+changes that still stands reads as `reply`). `late_reply` and `late_merge` fire
+once per pull request, and again only after the old alert is deleted at 90 days.
 
 **How they're made.** A checker runs every 30 minutes (`HOLT_PR_WATCH_MINUTES`)
 for users with alerts on and access: it re-reads their open pull requests by
@@ -990,25 +993,32 @@ still reach the bell.
   - `email` is the signed-in account's verified address: `web/` sends the one
     from the sign-in provider, never free text from the user (there is no
     confirm-link flow yet). `null` clears it. Not an address → 400.
-  - `tz` is an IANA name from the browser; unknown → 400 `invalid_request`.
+  - `tz` is an IANA name from the browser (older names like `Asia/Calcutta`
+    are fine); unknown → 400 `invalid_request`.
 - `PUT /v1/me/contributions/{owner}/{name}/{number}/mute` → 204: no alerts for
   that pull request (its row on My PRs is unchanged, `watch: "muted"`).
   `DELETE` on the same path → 204, watched again. Not one of the caller's pull
   requests → 404 `not_found`.
-- `POST /v1/alerts/unsubscribe?t=<token>` (internal key, no user) →
+- `POST /v1/alerts/unsubscribe` body `{"token": "…"}` (internal key, no user) →
   `{"email_on": false}`. The email's "Stop these emails" link and its one-click
   header: turns email off for the token's owner with no sign-in; the bell and
-  `enabled` stay. `DELETE` on the same path → `{"email_on": true}` (the page's
-  "undo"). A token that isn't current → 404 `not_found`. The token is derived
-  from the server's secret and a per-user value, never stored, and changes when
-  the address changes.
+  `enabled` stay. `POST /v1/alerts/resubscribe` with the same body →
+  `{"email_on": true}` (the page's "undo"). A token that isn't current → 404
+  `not_found`. The token is derived from the server's secret and a per-user
+  value, never stored, and changes when the address changes. It travels in the
+  body so it stays out of the server's access log.
 
 The emails link to the web app, so `web/` serves:
-`{HOLT_WEB_URL}/alerts/unsubscribe?t=<token>` (a page that has already called
-`POST /v1/alerts/unsubscribe`, with an undo button),
-`{HOLT_WEB_URL}/api/alerts/unsubscribe?t=<token>` (a `POST` route for mail
-clients' one-click unsubscribe, which passes the token on the same way and
-answers 200), and `{HOLT_WEB_URL}/settings/alerts`.
+
+- `{HOLT_WEB_URL}/alerts/unsubscribe?t=<token>`: the footer link's page. It
+  sends the token to `POST /v1/alerts/unsubscribe` and offers an undo. Do that
+  from the browser (a button, or on load), not while rendering on the server:
+  mail scanners and link previews fetch the links in an email, and a fetch
+  alone must not unsubscribe anyone.
+- `{HOLT_WEB_URL}/api/alerts/unsubscribe?t=<token>`: a `POST` route for mail
+  clients' one-click unsubscribe (RFC 8058). It passes the token on the same
+  way and answers 200.
+- `{HOLT_WEB_URL}/settings/alerts` and `{HOLT_WEB_URL}/me/contributions`.
 
 ### Profile
 

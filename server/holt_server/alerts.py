@@ -134,9 +134,18 @@ def events(old: Pr | None, new: Pr) -> list[Found]:
     spoke_again = (new.turn_at is not None
                    and (old.turn_at is None or new.turn_at > old.turn_at))
     if new.turn == "yours" and (old.turn != "yours" or spoke_again):
-        out.append(Found("changes" if new.reply_kind == "changes" else "reply", who,
-                         new.turn_at))
-    approved = new.reply_kind == "approved" and old.reply_kind != "approved"
+        if new.reply_kind != "changes":
+            out.append(Found("reply", who, new.turn_at))
+        elif old.turn == "yours" and old.reply_kind == "changes":
+            # The request for changes was already standing and already told:
+            # this is someone's comment after it, and Holt doesn't keep whose.
+            out.append(Found("reply", at=new.turn_at))
+        else:
+            out.append(Found("changes", who, new.turn_at))
+    # `spoke_again`: rows stored before `reply_kind` existed have none, and an
+    # approval from weeks ago must not read as new.
+    approved = (new.reply_kind == "approved" and old.reply_kind != "approved"
+                and spoke_again)
     decided = new.review_decision == "approved" and old.review_decision != "approved"
     if approved or decided:
         out.append(Found("approved", who if new.reply_kind == "approved" else {}, new.turn_at))

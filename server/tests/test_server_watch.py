@@ -180,6 +180,8 @@ def test_settings_are_checked(w):
     connect(w)
     bad = lambda body: w.put("/v1/me/alerts/settings", body, user="u1")  # noqa: E731
     assert bad({"tz": "Mars/Olympus"}).status_code == 400
+    # The old name browsers still report for India.
+    assert bad({"tz": "Asia/Calcutta"}).json()["tz"] == "Asia/Calcutta"
     assert bad({"email": "not an address"}).status_code == 400
     assert bad({"email_mode": "hourly"}).status_code == 400
     got = bad({"email_mode": "daily", "email": "a@b.co", "email_on": False}).json()
@@ -221,6 +223,8 @@ def test_marking_alerts_read(w):
     check(w)
     [item] = bell(w)["items"]
     assert w.post("/v1/me/alerts/read", {}, user="u1").status_code == 400
+    assert w.post("/v1/me/alerts/read", {"ids": [2**40]}, user="u1").status_code == 400
+    assert w.get("/v1/me/alerts", user="u1", params={"before": 2**40}).status_code == 400
     assert w.post("/v1/me/alerts/read", {"ids": [item["id"]]}, user="u2").status_code == 204
     assert bell(w)["unread"] == 1  # someone else's ids change nothing
     assert w.post("/v1/me/alerts/read", {"ids": [item["id"]]}, user="u1").status_code == 204
@@ -323,6 +327,7 @@ def test_a_muted_pull_request_gets_no_alerts(w):
     assert w.put("/v1/me/contributions/octo/one/1/mute", user="u1").status_code == 204
     assert w.put("/v1/me/contributions/octo/one/1/mute", user="u1").status_code == 204
     assert w.put("/v1/me/contributions/octo/one/99/mute", user="u1").status_code == 404
+    assert w.put(f"/v1/me/contributions/octo/one/{2**40}/mute", user="u1").status_code == 400
     assert mine(w).json()["pull_requests"][0]["watch"] == "muted"
     assert bell(w)["watching"] == 0
     w.fake.states[ONE] = state("octo/one", 1, pushed=opened, replied=now())
@@ -444,15 +449,16 @@ def test_one_click_unsubscribe_turns_email_off_and_keeps_the_bell(w):
     watching_one(w)
     turn_on(w, email="you@example.com")
     token = token_of(w)
-    r = w.post(f"/v1/alerts/unsubscribe?t={token}")  # no user: whoever holds the link
+    body = {"token": token}
+    r = w.post("/v1/alerts/unsubscribe", body)  # no user: whoever holds the link
     assert r.status_code == 200 and r.json() == {"email_on": False}
     got = w.get("/v1/me/alerts/settings", user="u1").json()
     assert got["email_on"] is False and got["enabled"] is True
-    assert w.post(f"/v1/alerts/unsubscribe?t={token}").status_code == 200  # twice is fine
-    assert w.delete(f"/v1/alerts/unsubscribe?t={token}").json() == {"email_on": True}  # undo
-    assert w.post(f"/v1/alerts/unsubscribe?t={'0' * 64}").status_code == 404
-    assert w.post("/v1/alerts/unsubscribe").status_code == 400
-    assert w.client.post(f"/v1/alerts/unsubscribe?t={token}").status_code == 401  # no key
+    assert w.post("/v1/alerts/unsubscribe", body).status_code == 200  # twice is fine
+    assert w.post("/v1/alerts/resubscribe", body).json() == {"email_on": True}  # undo
+    assert w.post("/v1/alerts/unsubscribe", {"token": "0" * 64}).status_code == 404
+    assert w.post("/v1/alerts/unsubscribe", {}).status_code == 400
+    assert w.client.post("/v1/alerts/unsubscribe", json=body).status_code == 401  # no key
 
 
 def test_a_new_address_gets_a_new_unsubscribe_link(w):
@@ -463,7 +469,7 @@ def test_a_new_address_gets_a_new_unsubscribe_link(w):
     assert token_of(w) == old  # the same address: links in sent emails keep working
     turn_on(w, email="new@example.com")
     assert token_of(w) != old
-    assert w.post(f"/v1/alerts/unsubscribe?t={old}").status_code == 404
+    assert w.post("/v1/alerts/unsubscribe", {"token": old}).status_code == 404
     assert w.get("/v1/me/alerts/settings", user="u1").json()["email_on"] is True
 
 

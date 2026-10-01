@@ -117,6 +117,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/alerts/resubscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resubscribe
+         * @description The unsubscribe page's "undo": email back on, with the same token.
+         */
+        post: operations["resubscribe_v1_alerts_resubscribe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/alerts/unsubscribe": {
         parameters: {
             query?: never;
@@ -133,11 +153,7 @@ export interface paths {
          *     stays. `web/` calls it for whoever holds the link.
          */
         post: operations["unsubscribe_v1_alerts_unsubscribe_post"];
-        /**
-         * Resubscribe
-         * @description The unsubscribe page's "undo": email back on, with the same link.
-         */
-        delete: operations["resubscribe_v1_alerts_unsubscribe_delete"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -3428,6 +3444,15 @@ export interface components {
             /** Stale Close Days */
             stale_close_days: number | null;
         };
+        /**
+         * UnsubscribeBody
+         * @description The token from an email's unsubscribe link. In the body, not the
+         *     address, so it stays out of this server's access log.
+         */
+        UnsubscribeBody: {
+            /** Token */
+            token: string;
+        };
         /** Unsubscribed */
         Unsubscribed: {
             /** Email On */
@@ -3597,6 +3622,7 @@ export type StarterIssue = components['schemas']['StarterIssue'];
 export type StarterIssues = components['schemas']['StarterIssues'];
 export type Stats = components['schemas']['Stats'];
 export type Timing = components['schemas']['Timing'];
+export type UnsubscribeBody = components['schemas']['UnsubscribeBody'];
 export type Unsubscribed = components['schemas']['Unsubscribed'];
 export type ValidationError = components['schemas']['ValidationError'];
 export type $defs = Record<string, never>;
@@ -3801,11 +3827,9 @@ export interface operations {
             };
         };
     };
-    unsubscribe_v1_alerts_unsubscribe_post: {
+    resubscribe_v1_alerts_resubscribe_post: {
         parameters: {
-            query: {
-                t: string;
-            };
+            query?: never;
             header?: {
                 "x-holt-user"?: string | null;
                 "x-holt-client-ip"?: string | null;
@@ -3814,7 +3838,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnsubscribeBody"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -3836,11 +3864,9 @@ export interface operations {
             };
         };
     };
-    resubscribe_v1_alerts_unsubscribe_delete: {
+    unsubscribe_v1_alerts_unsubscribe_post: {
         parameters: {
-            query: {
-                t: string;
-            };
+            query?: never;
             header?: {
                 "x-holt-user"?: string | null;
                 "x-holt-client-ip"?: string | null;
@@ -3849,7 +3875,11 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnsubscribeBody"];
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {

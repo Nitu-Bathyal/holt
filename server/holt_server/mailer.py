@@ -62,6 +62,8 @@ DAILY_AT = time(8, 0)
 QUIET_FROM = time(22, 0)
 # Sends kept in hand under the provider's daily limit.
 LIMIT_MARGIN = 5
+# A run ends after this many emails the provider wouldn't take.
+MAX_TROUBLE = 3
 SEND_TIMEOUT_S = 20.0
 RESEND_URL = "https://api.resend.com/emails"
 
@@ -120,6 +122,20 @@ class Plan:
     daily_empty: tuple[tuple[str, date], ...] = ()
     # Emails left out because the provider's daily limit is near.
     held: int = 0
+
+
+def skip_today(row: AlertSettings, at: datetime, starting: bool) -> None:
+    """Keep a user's daily email at 8:00 when their settings change. Someone
+    who just turned alerts or email on after 8:00 gets their first daily
+    email tomorrow, not at once; someone who moved to a time zone where the
+    last one is dated tomorrow doesn't lose a day."""
+    local = at.astimezone(zone(row.tz))
+    today = local.date()
+    if row.last_daily_on is not None and row.last_daily_on > today:
+        row.last_daily_on = today
+    elif (starting and local.time() >= DAILY_AT
+          and (row.last_daily_on is None or row.last_daily_on < today)):
+        row.last_daily_on = today
 
 
 def zone(name: str) -> ZoneInfo:
@@ -193,7 +209,8 @@ class Message:
 
 
 class MailRefused(Exception):
-    """The provider won't take this message, and asking again won't help."""
+    """The provider says this one message is wrong (a bad address, say):
+    asking again won't help."""
 
     def __init__(self, status: int) -> None:
         super().__init__(f"refused ({status})")
@@ -201,7 +218,9 @@ class MailRefused(Exception):
 
 
 class MailLater(Exception):
-    """The provider is busy or unreachable: try again on a later run."""
+    """Anything else: the provider is busy or unreachable, or it refuses the
+    key or the sending domain. The alerts stay unsent and a later run tries
+    again, so fixing the setup loses nothing."""
 
 
 class Mailer(Protocol):
@@ -228,10 +247,10 @@ class Resend:
                 "Idempotency-Key": message.idempotency_key})
         except httpx.HTTPError as exc:
             raise MailLater(type(exc).__name__) from exc
-        if res.status_code in (408, 409, 429) or res.status_code >= 500:
-            raise MailLater(str(res.status_code))
-        if res.status_code >= 400:
+        if res.status_code in (400, 422):
             raise MailRefused(res.status_code)
+        if res.status_code >= 300:
+            raise MailLater(str(res.status_code))
         try:
             return str(res.json().get("id") or "")
         except ValueError:
@@ -290,8 +309,8 @@ def render(svc: Services, row: AlertSettings, access: alerts.Access, email: Emai
     return Message(
         to=row.email or "", subject=out.subject, html=out.html, text=out.text,
         headers={
-            # One click, no sign-in (RFC 8058): the web app's route posts it
-            # on to POST /v1/alerts/unsubscribe.
+            # One click, no sign-in (RFC 8058): the web app's route passes
+            # the token on to POST /v1/alerts/unsubscribe.
             "List-Unsubscribe": f"<{web}/api/alerts/unsubscribe?t={token}>",
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click"},
         idempotency_key="holt-alerts-" + hashlib.sha256(
@@ -379,16 +398,23 @@ async def run(svc: Services, at: datetime | None = None) -> Run:
     if todo.held:
         log.warning("alert emails: %d held back, the provider's daily limit (%d) is near",
                     todo.held, svc.settings.alert_email_daily_limit)
+    trouble = 0
     for email in todo.emails:
         row, access = who[email.user_id]
         try:
             ok = await _send(svc, row, access, email, at)
         except MailLater as exc:
-            # The provider is busy or down: the rest would fail the same way.
-            log.warning("alert emails: the provider isn't answering (%s); trying again "
-                        "next run", exc)
+            log.warning("alert emails: the provider didn't take one (%s); it is tried "
+                        "again next run", exc)
             out.failed += 1
-            break
+            trouble += 1
+            if trouble >= MAX_TROUBLE:  # busy or down: the rest would go the same way
+                break
+            continue
+        except Exception:  # noqa: BLE001 -- one person's email never blocks the others
+            log.exception("alert emails: sending one failed")
+            out.failed += 1
+            continue
         out.sent += ok is True
         out.failed += ok is False
     return out
@@ -403,8 +429,17 @@ async def _send(svc: Services, row: AlertSettings, access: alerts.Access, email:
         found = list((await s.execute(
             select(Alert).where(Alert.id.in_(email.alert_ids), Alert.emailed_at.is_(None))
             .order_by(Alert.id))).scalars())
-    if not found:
-        return None
+        if not found:
+            return None
+        # The token comes from HOLT_SECRET_KEY: if that was rotated, the
+        # stored hash is brought in step so this email's link works.
+        current = alerts.token_hash(alerts.unsubscribe_token(
+            svc.settings.secret_key, row.user_id, row.unsubscribe_nonce))
+        if current != row.unsubscribe_hash:
+            await s.execute(update(AlertSettings).where(AlertSettings.user_id == row.user_id)
+                            .values(unsubscribe_hash=current))
+            await s.commit()
+            row.unsubscribe_hash = current
     message = render(svc, row, access, email, found, at)
     provider_id, status = None, "sent"
     try:
