@@ -110,8 +110,9 @@ def test_details_fields_are_one_query_per_hundred(h):
 
 
 class _Response:
-    def __init__(self, status, links=None, body=None):
+    def __init__(self, status, links=None, body=None, headers=None, text=""):
         self.status_code, self.links, self._body = status, links or {}, body
+        self.headers, self.text = headers or {}, text
 
     def json(self):
         return self._body
@@ -148,7 +149,7 @@ def test_contributors_without_a_next_page_are_counted():
 
 
 def test_rate_limited_contributors_leave_the_rest_of_the_details():
-    out = _counting(_Response(403))._details_with_people([REPO])[REPO]
+    out = _counting(_Response(403, headers={"x-ratelimit-remaining": "0"}))._details_with_people([REPO])[REPO]
     assert out["contributors"] is None and out["open_issues"] == 5
 
 
@@ -197,3 +198,81 @@ def test_a_repo_without_links_or_releases_serves_empty(h):
     h.client.portal.call(lambda: discover.store_meta(h.svc, lookup._details([REPO])))
     about = _served(h)
     assert about["links"] == [] and about["latest_release"] is None
+
+
+def _person(login, n, kind="User"):
+    return {"login": login, "type": kind, "contributions": n, "html_url": f"https://github.com/{login}",
+            "avatar_url": f"https://avatars.githubusercontent.com/u/{n}?v=4"}
+
+
+PEOPLE = [_person("davidism", 2500), _person("dependabot[bot]", 900, "Bot"),
+          _person("pre-commit-ci[bot]", 300), _person("mitsuhiko", 2000), _person("ghost-user", 5)]
+
+
+def _people_lookup(body=PEOPLE, names=None, status=200):
+    names = names if names is not None else {"u0": {"name": "David Lord"}, "u1": None, "u2": {"name": " Armin Ronacher "}}
+    lookup, transport = lookup_with(lambda v: names if "l0" in v else {"r0": NODE})
+    lookup.http = _Http(_Response(status, body=body))
+    return lookup, transport
+
+
+def test_top_contributors_are_githubs_order_without_bots_and_with_real_names():
+    lookup, transport = _people_lookup()
+    out = lookup._details_with_people([REPO])[REPO]
+    assert [p["login"] for p in out["top_contributors"]] == ["davidism", "mitsuhiko", "ghost-user"]
+    named = {p["login"]: p["name"] for p in out["top_contributors"]}
+    # Logins are asked for in sorted order: davidism, ghost-user, mitsuhiko.
+    assert named == {"davidism": "David Lord", "ghost-user": None, "mitsuhiko": "Armin Ronacher"}
+    assert out["top_contributors"][0]["contributions"] == 2500
+    url, params = lookup.http.asked[1]
+    assert url.endswith("/repos/pallets/flask/contributors") and params == {"per_page": github.TOP_CONTRIBUTORS_ASKED}
+    # One names query for the whole batch, after the details query.
+    document, variables = transport.sent[-1]
+    assert "u2: user(login:$l2) { name }" in document and variables == {"l0": "davidism", "l1": "ghost-user", "l2": "mitsuhiko"}
+
+
+def test_at_most_ten_contributors_are_kept():
+    body = [_person(f"p{i}", 100 - i) for i in range(15)]
+    out = _people_lookup(body, names={})[0]._details_with_people([REPO])[REPO]
+    assert len(out["top_contributors"]) == github.TOP_CONTRIBUTORS == 10
+
+
+def test_a_failed_names_query_leaves_logins_only():
+    lookup, _ = lookup_with(lambda v: (_ for _ in ()).throw(RuntimeError("down")) if "l0" in v else {"r0": NODE})
+    lookup.http = _Http(_Response(200, body=PEOPLE))
+    out = lookup._details_with_people([REPO])[REPO]
+    assert [p["name"] for p in out["top_contributors"]] == [None, None, None]
+
+
+def test_contributors_are_stored_served_and_kept_when_github_wont_say(h):
+    details = _people_lookup()[0]._details_with_people([REPO])
+    h.client.portal.call(lambda: discover.store_meta(h.svc, details))
+    add(h, Report(repo=REPO, repo_key=REPO, mode="rules", days=7,
+                  report=canned_report(REPO), created_at=now()))
+    served = _served(h)["top_contributors"]
+    assert served[0] == {"login": "davidism", "name": "David Lord", "url": "https://github.com/davidism",
+                         "avatar_url": "https://avatars.githubusercontent.com/u/2500?v=4", "contributions": 2500}
+    # GitHub didn't answer this time: yesterday's list stays.
+    again = _people_lookup(status=500)[0]._details_with_people([REPO])
+    assert again[REPO]["top_contributors"] is None
+    h.client.portal.call(lambda: discover.store_meta(h.svc, again))
+    assert len(_served(h)["top_contributors"]) == 3
+
+
+def test_only_github_profiles_are_served_as_contributors():
+    people = discover._people([
+        {"login": "ok", "url": "https://github.com/ok", "avatar_url": "javascript:x", "contributions": "7"},
+        {"login": "evil", "url": "https://evil.example/ok"},
+        {"login": "", "url": "https://github.com/x"}, "nonsense"])
+    assert people == [{"login": "ok", "name": None, "url": "https://github.com/ok", "avatar_url": None, "contributions": 7}]
+
+
+def test_a_repository_too_large_to_list_is_not_a_rate_limit():
+    # GitHub's answer for NixOS/nixpkgs, with quota to spare: that repository
+    # gets no count or list, and the rest of the batch carries on.
+    too_large = _Response(403, headers={"x-ratelimit-remaining": "4970"},
+                          text='{"message":"The history or contributor list is too large to list contributors for this repository via the API."}')
+    lookup = _counting(too_large)
+    assert lookup._contributors(REPO) is None and lookup._top_contributors(REPO) is None
+    assert github._rate_limited(_Response(403, text='{"message":"You have exceeded a secondary rate limit."}'))
+    assert github._rate_limited(_Response(429))

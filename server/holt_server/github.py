@@ -26,7 +26,7 @@ from urllib.parse import quote
 
 import httpx
 
-from holt.about import help_links, language_shares, license_name, readme_line
+from holt.about import help_links, language_shares, license_name, readme_excerpt, readme_line
 from holt.evidence.errors import AuthError, GitHubError, RateLimited
 from holt.evidence.github_graphql import GitHubGraphQL
 from holt_server import github_app
@@ -44,6 +44,9 @@ query($owner:String!, $name:String!) {
 # uncached report. GitHub redirects a renamed repository's old name here.
 REPO_URL = "https://api.github.com/repos/{owner}/{name}"
 REST_HEADERS = {"Accept": "application/vnd.github+json", "X-GitHub-Api-Version": "2022-11-28"}
+# Search by name (GitHub's REST search), and how many matches are kept.
+SEARCH_URL = "https://api.github.com/search/repositories"
+SEARCH_RESULTS = 5
 
 RATE_LIMIT = "query { rateLimit { remaining resetAt } }"
 
@@ -76,6 +79,13 @@ DETAILS_FIELDS = """
 SECOND_LANGUAGE_SHARE = 0.10
 
 LOOKUP_TIMEOUT_S = 15.0
+# The people a report's About lists: GitHub's own contributors list (most
+# commits first), bots left out. A few more are asked for than shown, so a bot
+# or two near the top still leaves a full list.
+TOP_CONTRIBUTORS = 10
+TOP_CONTRIBUTORS_ASKED = 15
+# Profile names looked up per GraphQL query (one `user` alias each).
+NAMES_PER_QUERY = 100
 
 # A token with fewer GraphQL points left than this is skipped until its reset:
 # one analysis costs a couple of hundred.
@@ -361,7 +371,17 @@ def _links(node: dict[str, Any]) -> list[dict[str, str]]:
         out.append({"kind": "discussions", "url": f"https://github.com/{node['nameWithOwner']}/discussions"})
     readme = next((text for i in range(len(README_PATHS))
                    if (text := (node.get(f"readme{i}") or {}).get("text"))), None)
-    return out + help_links(readme)
+    return out + help_links(readme, node.get("nameWithOwner"))
+
+
+def _readme(node: dict[str, Any]) -> str | None:
+    """The top of the repository's Markdown README (a .rst one is left out:
+    the page renders Markdown only)."""
+    for i, path in enumerate(README_PATHS):
+        text = (node.get(f"readme{i}") or {}).get("text")
+        if text and path.lower().endswith(".md"):
+            return readme_excerpt(text)
+    return None
 
 
 def _release(node: dict[str, Any]) -> dict[str, Any] | None:
@@ -399,9 +419,24 @@ def _details(node: dict[str, Any]) -> dict[str, Any]:
         "readme_line": next((line for i in range(len(README_PATHS))
                              if (line := readme_line((node.get(f"readme{i}") or {}).get("text")))),
                             None),
+        "readme": _readme(node),
         "links": _links(node),
         "latest_release": _release(node),
     }
+
+
+def _rate_limited(response: Any) -> bool:
+    """A REST answer that means "slow down". GitHub also answers 403 when a
+    repository's history is too large to list its contributors (NixOS/nixpkgs)
+    with quota to spare: that is about the one repository, and must not stop
+    the rest of a batch."""
+    if response.status_code == 429:
+        return True
+    if response.status_code != 403:
+        return False
+    headers = getattr(response, "headers", None) or {}
+    text = str(getattr(response, "text", "") or "").lower()
+    return headers.get("x-ratelimit-remaining") == "0" or "rate limit" in text
 
 
 @dataclass
@@ -491,8 +526,10 @@ class GitHubLookup:
                 continue
             try:
                 d["contributors"] = self._contributors(repo)
+                d["top_contributors"] = self._top_contributors(repo)
             except RateLimited:
                 break  # the rest are read tomorrow; counts are a nicety
+        self._name_people(out)
         return out
 
     def _contributors(self, repo: str) -> int | None:
@@ -514,7 +551,7 @@ class GitHubLookup:
             self.pool.note_refused(index, "401 Unauthorized", token)
         if response.status_code == 204:
             return 0  # an empty repository
-        if response.status_code in (403, 429):
+        if _rate_limited(response):
             raise RateLimited(retry_after=None)
         if response.status_code != 200:
             return None
@@ -526,6 +563,108 @@ class GitHubLookup:
             return len(response.json())
         except (ValueError, TypeError):
             return None
+
+    def _top_contributors(self, repo: str) -> list[dict[str, Any]] | None:
+        """The repository's most active committers, in GitHub's order (most
+        commits first), bots left out: `{"login", "url", "avatar_url",
+        "contributions"}` each, the name added by `_name_people`. None when
+        GitHub wouldn't say, so the stored list is kept."""
+        owner, _, name = repo.partition("/")
+        index, token = self.pool.lease()
+        try:
+            response = self.http.get(
+                REPO_URL.format(owner=quote(owner, safe=""), name=quote(name, safe="")) + "/contributors",
+                params={"per_page": TOP_CONTRIBUTORS_ASKED},
+                headers={**REST_HEADERS, "Authorization": f"Bearer {token}"},
+                timeout=LOOKUP_TIMEOUT_S, follow_redirects=True)
+        except httpx.HTTPError as exc:
+            log.warning("REST top contributors failed (%s)", type(exc).__name__)
+            return None
+        if response.status_code == 401:
+            self.pool.note_refused(index, "401 Unauthorized", token)
+        if response.status_code == 204:
+            return []  # an empty repository
+        if _rate_limited(response):
+            raise RateLimited(retry_after=None)
+        if response.status_code != 200:
+            return None
+        try:
+            body = response.json()
+        except (ValueError, TypeError):
+            return None
+        people = []
+        for p in body if isinstance(body, list) else []:
+            login = (p or {}).get("login") if isinstance(p, dict) else None
+            if not login or p.get("type") != "User" or login.lower().endswith("[bot]"):
+                continue
+            people.append({"login": login, "url": p.get("html_url"), "avatar_url": p.get("avatar_url"),
+                           "contributions": p.get("contributions")})
+        return people[:TOP_CONTRIBUTORS]
+
+    def _name_people(self, out: dict[str, dict[str, Any] | None]) -> None:
+        """Each listed contributor's GitHub profile name, `NAMES_PER_QUERY`
+        people per GraphQL query for the whole batch. A name GitHub doesn't
+        have, or a query that fails, leaves it None (the page shows the
+        login): names are a nicety and never hold up the details."""
+        people = [p for d in out.values() if d for p in d.get("top_contributors") or []]
+        logins = sorted({p["login"] for p in people})
+        names: dict[str, str | None] = {}
+        for start in range(0, len(logins), NAMES_PER_QUERY):
+            chunk = logins[start:start + NAMES_PER_QUERY]
+            params = ", ".join(f"$l{i}:String!" for i in range(len(chunk)))
+            parts = "\n  ".join(f"u{i}: user(login:$l{i}) {{ name }}" for i in range(len(chunk)))
+            document = f"query({params}) {{\n  {parts}\n  rateLimit {{ cost remaining resetAt }}\n}}\n"
+            transport = self.pool.transport(self.http)
+            try:
+                data = transport.query(document, timeout=LOOKUP_TIMEOUT_S,
+                                       **{f"l{i}": login for i, login in enumerate(chunk)})
+            except Exception as exc:  # noqa: BLE001 - names are a nicety
+                log.warning("contributor names query failed (%s)", type(exc).__name__)
+                continue
+            finally:
+                self.points_used += getattr(transport, "points_used", 0) or 0
+            for i, login in enumerate(chunk):
+                node = data.get(f"u{i}")
+                names[login] = node.get("name") if isinstance(node, dict) else None
+        for p in people:
+            p["name"] = (str(names.get(p["login"]) or "").strip()[:100]) or None
+
+    async def search(self, name: str) -> list[dict[str, Any]]:
+        """Public repositories whose name matches `name`, most starred first, as
+        [{"repo", "description", "stars"}]: how a bare "excalidraw" becomes
+        excalidraw/excalidraw. Forks are left out, so a famous project isn't
+        buried under copies of itself. One REST search request (a budget of its
+        own, apart from the GraphQL points reports use)."""
+        return await asyncio.to_thread(self._search, name)
+
+    def _search(self, name: str) -> list[dict[str, Any]]:
+        index, token = self.pool.lease()
+        try:
+            response = self.http.get(
+                SEARCH_URL,
+                params={"q": f"{name} in:name fork:false", "sort": "stars", "order": "desc",
+                        "per_page": SEARCH_RESULTS},
+                headers={**REST_HEADERS, "Authorization": f"Bearer {token}"},
+                timeout=LOOKUP_TIMEOUT_S)
+        except httpx.HTTPError as exc:
+            log.warning("REST repository search failed (%s)", type(exc).__name__)
+            raise upstream() from exc
+        if response.status_code == 401:
+            self.pool.note_refused(index, "401 Unauthorized", token)
+            raise upstream()
+        if response.status_code in (403, 429):
+            raise RateLimited(retry_after=None)
+        if response.status_code == 422:
+            return []  # GitHub won't search for that text
+        if response.status_code != 200:
+            raise upstream()
+        try:
+            items = response.json().get("items") or []
+        except (ValueError, AttributeError):
+            raise upstream() from None
+        return [{"repo": it["full_name"], "description": (it.get("description") or "").strip() or None,
+                 "stars": int(it.get("stargazers_count") or 0)}
+                for it in items if isinstance(it, dict) and it.get("full_name") and not it.get("private")]
 
     def _details(self, repos: list[str]) -> dict[str, dict[str, Any] | None]:
         from holt.evidence.errors import RepoNotFound
