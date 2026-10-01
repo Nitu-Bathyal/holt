@@ -168,7 +168,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
 
         <div className="mt-14 grid grid-cols-1 gap-12 border-t border-line pt-10 lg:grid-cols-2">
           <section aria-labelledby="counts">
-            <h2 id="counts" className="h2 hf-h2">What counts in {YEAR}</h2>
+            <h2 id="counts" className="h2 h2-sm">What counts in {YEAR}</h2>
             <ul className="mt-6 space-y-3 font-sans text-muted">
               {COUNTS.map((line) => (
                 <li key={line} className="flex gap-2">
@@ -181,7 +181,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
               From the{" "}
               <a className="text-link" href={RULES_URL} target="_blank" rel="noopener noreferrer">hacktoberfest.com FAQ ↗</a>
             </p>
-            <h2 id="how" className="h2 hf-h2 mt-12">How to make October count</h2>
+            <h2 id="how" className="h2 h2-sm mt-12">How to make October count</h2>
             <ol className="mt-6 space-y-6">
               {STEPS.map(([title, body], i) => (
                 <li key={title} className="grid grid-cols-[2.5rem_1fr] gap-3">
@@ -195,7 +195,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
             </ol>
           </section>
           <section id="tips" aria-labelledby="tips-h" className="scroll-mt-24">
-            <h2 id="tips-h" className="h2 hf-h2">How not to get your PR ignored</h2>
+            <h2 id="tips-h" className="h2 h2-sm">How not to get your PR ignored</h2>
             <ol className="mt-6 space-y-5">
               {TIPS.map(([title, body]) => (
                 <li key={title} className="flex gap-3">
