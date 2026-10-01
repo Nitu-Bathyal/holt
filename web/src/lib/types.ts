@@ -10,6 +10,8 @@ export type EvidenceItem = S.EvidenceItem;
 export type Odds = S.Odds;
 export type Counted = S.Counted;
 export type StarterIssue = S.StarterIssue;
+export type RepoSearch = S.RepoSearch;
+export type RepoHit = S.RepoHit;
 export type FindResult = S.FindResult;
 // The web always sends every field; the server has defaults for them.
 export type FindQuery = Required<S.FindIn>;

@@ -864,6 +864,29 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/repos/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Search Repos
+         * @description Which repository does a bare name mean? ("excalidraw" is
+         *     excalidraw/excalidraw.) Public repositories whose name matches, most
+         *     starred first, at most five. It only reads GitHub's search; nothing is
+         *     stored.
+         */
+        get: operations["search_repos_v1_repos_search_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/repos/{owner}/{repo}/starter-issues": {
         parameters: {
             query?: never;
@@ -1300,6 +1323,22 @@ export interface components {
             truncated: boolean;
             /** Window Days */
             window_days: number;
+        };
+        /**
+         * Contributor
+         * @description One of the repository's most active committers, as GitHub lists them.
+         */
+        Contributor: {
+            /** Avatar Url */
+            avatar_url: string | null;
+            /** Contributions */
+            contributions: number | null;
+            /** Login */
+            login: string;
+            /** Name */
+            name: string | null;
+            /** Url */
+            url: string;
         };
         /** Cost */
         Cost: {
@@ -2795,12 +2834,28 @@ export interface components {
             pull_requests: number | null;
             /** Pushed At */
             pushed_at: string | null;
+            /** Readme */
+            readme: string | null;
             /** Readme Line */
             readme_line: string | null;
             /** Stars */
             stars: number;
+            /** Top Contributors */
+            top_contributors: components["schemas"]["Contributor"][];
             /** Topics */
             topics: string[];
+        };
+        /** RepoHit */
+        RepoHit: {
+            /** Description */
+            description: string | null;
+            /** Repo */
+            repo: string;
+            /**
+             * Stars
+             * @default 0
+             */
+            stars: number;
         };
         /**
          * RepoLink
@@ -2814,6 +2869,16 @@ export interface components {
             kind: "contributing" | "discussions" | "docs" | "discord" | "slack" | "gitter" | "matrix" | "zulip";
             /** Url */
             url: string;
+        };
+        /**
+         * RepoSearch
+         * @description Public repositories whose name matches `query`, most starred first.
+         */
+        RepoSearch: {
+            /** Query */
+            query: string;
+            /** Results */
+            results: components["schemas"]["RepoHit"][];
         };
         /**
          * RepoVerdict
@@ -3146,6 +3211,7 @@ export type ContributionMetric = components['schemas']['ContributionMetric'];
 export type ContributionPullRequest = components['schemas']['ContributionPullRequest'];
 export type ContributionSummary = components['schemas']['ContributionSummary'];
 export type Contributions = components['schemas']['Contributions'];
+export type Contributor = components['schemas']['Contributor'];
 export type Cost = components['schemas']['Cost'];
 export type Counted = components['schemas']['Counted'];
 export type Credits = components['schemas']['Credits'];
@@ -3245,7 +3311,9 @@ export type RecommendationBasis = components['schemas']['RecommendationBasis'];
 export type Recommendations = components['schemas']['Recommendations'];
 export type Release = components['schemas']['Release'];
 export type RepoAbout = components['schemas']['RepoAbout'];
+export type RepoHit = components['schemas']['RepoHit'];
 export type RepoLink = components['schemas']['RepoLink'];
+export type RepoSearch = components['schemas']['RepoSearch'];
 export type RepoVerdict = components['schemas']['RepoVerdict'];
 export type Report = components['schemas']['Report'];
 export type ReportList = components['schemas']['ReportList'];
@@ -5247,6 +5315,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Report"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    search_repos_v1_repos_search_get: {
+        parameters: {
+            query: {
+                q: string;
+            };
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RepoSearch"];
                 };
             };
             /** @description Default Response */
