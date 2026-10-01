@@ -24,9 +24,11 @@ function Bookmark({ filled, drop }: { filled: boolean; drop: boolean }) {
  * In a list, the list owns which repos are saved: it passes `saved` and hears
  * every change through `onChange`, so the card and its focus view agree.
  * `compact` leaves out the "see your saved repos" link, for a card; `small`
- * is the bookmark alone, with no box, turning violet once saved.
+ * is the bookmark alone, with no box, turning violet once saved, its right
+ * edge lined up with what's under it; `icon` is the same bookmark a little
+ * larger and centred, for a list of rows (the home page's Your repos).
  */
-export function SaveButton({ repo, saved: initial, onChange, compact = false, small = false, className = "" }: { repo: string; saved: boolean | null; onChange?: (saved: boolean) => void; compact?: boolean; small?: boolean; className?: string }) {
+export function SaveButton({ repo, saved: initial, onChange, compact = false, small = false, icon = false, className = "" }: { repo: string; saved: boolean | null; onChange?: (saved: boolean) => void; compact?: boolean; small?: boolean; icon?: boolean; className?: string }) {
   const [saved, setSaved] = useState(Boolean(initial));
   // Another button for the same repo (the card vs. its focus view) changed it.
   const [shown, setShown] = useState(initial);
@@ -88,17 +90,17 @@ export function SaveButton({ repo, saved: initial, onChange, compact = false, sm
       aria-label={`${saved ? "Saved" : "Save"} ${repo} for later`}
       onClick={() => (signedIn ? send(!saved) : setAsking((a) => !a))}
       data-umami-event={signedIn ? (saved ? "unsave-repo" : "save-repo") : "save-repo-signed-out"}
-      title={small ? (saved ? "Saved" : "Save for later") : undefined}
+      title={small || icon ? (saved ? "Saved" : "Save for later") : undefined}
       className={
-        small
-          ? `grid size-11 items-center justify-items-end transition-colors [&>svg]:size-6 ${saved ? "text-hf" : "text-faint hover:text-ink"}`
+        small || icon
+          ? `grid size-11 items-center transition-colors ${icon ? "justify-items-center [&>svg]:size-[1.625rem]" : "justify-items-end [&>svg]:size-6"} ${saved ? "text-hf" : "text-faint hover:text-ink"}`
           : `inline-flex min-h-11 items-center gap-2 border px-4 font-sans text-[0.92rem] font-medium transition-colors ${
               saved ? "border-blue bg-blue/10 text-blue" : "border-line-strong bg-panel text-muted hover:border-ink hover:text-ink"
             }`
       }
     >
       <Bookmark filled={saved} drop={saved && fresh} />
-      {!small && label}
+      {!small && !icon && label}
     </button>
   );
 
@@ -112,14 +114,14 @@ export function SaveButton({ repo, saved: initial, onChange, compact = false, sm
   }
 
   return (
-    <span className={`inline-flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 ${small ? "justify-end" : ""} ${className}`}>
+    <span className={`inline-flex shrink-0 flex-wrap items-center gap-x-3 gap-y-1 ${small || icon ? "justify-end" : ""} ${className}`}>
       {button}
       {fresh && !error && !compact && (
         <Link href="/me/repos?show=saved" className="hidden text-[0.82rem] text-faint hover:text-blue sm:inline">
           see your saved repos
         </Link>
       )}
-      <span role="status" className={error ? `basis-full text-[0.82rem] text-orange ${small ? "max-w-44 text-right" : ""}` : "sr-only"}>
+      <span role="status" className={error ? `basis-full text-[0.82rem] text-orange ${small || icon ? "max-w-44 text-right" : ""}` : "sr-only"}>
         {error || (fresh ? `${repo} saved` : "")}
       </span>
     </span>
