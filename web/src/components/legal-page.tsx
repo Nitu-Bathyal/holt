@@ -1,11 +1,13 @@
 import Link from "next/link";
 import { CONTACT_EMAIL, LEGAL_PAGES, LEGAL_UPDATED } from "@/lib/site";
+import { LegalToc } from "./legal-toc";
 import { PageHead } from "./page-head";
 import { PageTransition } from "./motion/page-transition";
 
 // The frame every policy page shares: the PageHead band with a rail, the
-// "Last updated" line, a narrow prose column (styles: .legal in globals.css),
-// and links to the other policies. Static: no loading.tsx, no skeleton.
+// "Last updated" line, a prose column (styles: .legal in globals.css) with
+// "On this page" beside it on wide screens, and links to the other policies.
+// Static: no loading.tsx, no skeleton.
 export function LegalPage({
   rail,
   title,
@@ -21,16 +23,21 @@ export function LegalPage({
   return (
     <PageTransition>
       <>
-        <PageHead narrow>
+        <PageHead>
           <p className="rail mb-4 flex gap-2"><strong className="m-0">{rail}</strong><span>Holt · githolt.com</span></p>
-          <h1 className="display max-w-3xl text-[clamp(1.9rem,6vw,3.2rem)]">{title}</h1>
-          <p className="prose-sans mt-5 max-w-2xl text-[1.05rem]">{lede}</p>
-          <p className="mt-6 text-[0.85rem] text-faint">Last updated: <time>{LEGAL_UPDATED}</time></p>
+          <h1 className="display max-w-3xl text-[clamp(1.8rem,4.2vw,2.6rem)]">{title}</h1>
+          <p className="prose-sans mt-4 max-w-2xl text-[0.98rem]">{lede}</p>
+          <p className="mt-5 text-[0.8rem] text-faint">Last updated: <time>{LEGAL_UPDATED}</time></p>
         </PageHead>
 
-        <article className="wrap legal max-w-3xl py-10 sm:py-14">{children}</article>
+        <div className="wrap grid gap-12 py-8 sm:py-10 lg:grid-cols-[minmax(0,46rem)_13rem] lg:justify-between">
+          <article className="legal min-w-0">{children}</article>
+          <aside className="hidden lg:block">
+            <LegalToc />
+          </aside>
+        </div>
 
-        <nav aria-label="Policies" className="wrap max-w-3xl border-t border-line py-8 text-[0.87rem] text-faint">
+        <nav aria-label="Policies" className="wrap border-t border-line py-6 text-[0.84rem] text-faint">
           <p className="flex flex-wrap items-center gap-x-5">
             <span>See also:</span>
             {others.map((p) => (
