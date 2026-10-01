@@ -490,6 +490,9 @@ function mockContributions(userId: string, login: string): Contributions {
     turn: (state === "open" ? "theirs" : "unknown") as "yours" | "theirs" | "unknown", turn_at: null as string | null,
     first_reply_at: null as string | null, last_activity_at: state === "open" ? at(daysAgo) : null,
     review_decision: null as "approved" | "changes_requested" | "review_required" | null,
+    reply_by: null as string | null, reply_kind: null as "changes" | "approved" | "reply" | null,
+    // PR watch isn't mocked: nobody has alerts here.
+    watch: null as "on" | "muted" | null, unread_alert: false,
   });
   const prs = [
     pr("home-assistant/core", 153340, "Add a battery sensor to the Roborock integration", "open", 2, verdict("viable"), true),

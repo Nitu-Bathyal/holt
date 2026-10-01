@@ -12,6 +12,7 @@ from fastapi import FastAPI
 from holt_server import (
     __version__,
     admin,
+    alerts_api,
     budget,
     connections,
     contributions,
@@ -20,6 +21,7 @@ from holt_server import (
     entitlements,
     errors,
     feedback,
+    mailer,
     merge_plan,
     payments,
     playbook,
@@ -28,6 +30,7 @@ from holt_server import (
     profiles,
     recommendations,
     saved,
+    watch,
 )
 from holt_server.api import public, router
 from holt_server.services import Services
@@ -57,12 +60,17 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         if run_jobs and svc.settings.contributions_refresh_hours > 0:
             refreshing = asyncio.create_task(contributions.schedule(svc),
                                              name="holt-contributions")
+        # PR watch: the checker and the mailer, only when switched on.
+        watching = mailing = None
+        if run_jobs and svc.settings.pr_watch:
+            watching = asyncio.create_task(watch.schedule(svc), name="holt-pr-watch")
+            mailing = asyncio.create_task(mailer.schedule(svc), name="holt-alert-mail")
         try:
             yield
         finally:
             pro_check.cancel()
             await asyncio.gather(pro_check, return_exceptions=True)
-            for task in (warming, refreshing):
+            for task in (warming, refreshing, watching, mailing):
                 if task is not None:
                     task.cancel()
                     await asyncio.gather(task, return_exceptions=True)
@@ -88,6 +96,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(feedback.router)
     app.include_router(connections.router)
     app.include_router(contributions.router)
+    app.include_router(alerts_api.router)
     app.include_router(discover.router)
     app.include_router(profiles.router)
     app.include_router(payments.router)

@@ -117,6 +117,48 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/alerts/resubscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Resubscribe
+         * @description The unsubscribe page's "undo": email back on, with the same token.
+         */
+        post: operations["resubscribe_v1_alerts_resubscribe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/alerts/unsubscribe": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Unsubscribe
+         * @description The email's "Stop these emails" link and its one-click
+         *     `List-Unsubscribe` header: turns email off, with no sign-in. The bell
+         *     stays. `web/` calls it for whoever holds the link.
+         */
+        post: operations["unsubscribe_v1_alerts_unsubscribe_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/analyses": {
         parameters: {
             query?: never;
@@ -294,6 +336,87 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/alerts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Alerts
+         * @description The latest alerts. They stay listed after access ends; none are made
+         *     then, and the unread count goes to 0.
+         */
+        get: operations["get_alerts_v1_me_alerts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/alerts/count": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Alert Count
+         * @description Cheap: the top bar asks on every page.
+         */
+        get: operations["get_alert_count_v1_me_alerts_count_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/alerts/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Read Alerts */
+        post: operations["read_alerts_v1_me_alerts_read_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/alerts/settings": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Alert Settings */
+        get: operations["get_alert_settings_v1_me_alerts_settings_get"];
+        /**
+         * Put Alert Settings
+         * @description Change the fields sent. The first `enabled: true` starts the free
+         *     taste (`alerts.TRIAL_DAYS` days, once per account) for someone without a
+         *     pass that covers alerts.
+         */
+        put: operations["put_alert_settings_v1_me_alerts_settings_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/contributions": {
         parameters: {
             query?: never;
@@ -354,6 +477,27 @@ export interface paths {
          * @description Forget the choice: the repository goes back to Holt's default.
          */
         delete: operations["delete_contribution_choice_v1_me_contributions_repos__owner___name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/contributions/{owner}/{name}/{number}/mute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Mute
+         * @description No alerts for this pull request. Its row on My PRs stays as it is.
+         */
+        put: operations["mute_v1_me_contributions__owner___name___number__mute_put"];
+        post?: never;
+        /** Unmute */
+        delete: operations["unmute_v1_me_contributions__owner___name___number__mute_delete"];
         options?: never;
         head?: never;
         patch?: never;
@@ -1093,6 +1237,111 @@ export interface components {
             /** Users */
             users: components["schemas"]["AdminUserSummary"][];
         };
+        /** AlertAccess */
+        AlertAccess: {
+            /**
+             * State
+             * @enum {string}
+             */
+            state: "unavailable" | "off" | "trial" | "pro" | "ended";
+            /** Until */
+            until: string | null;
+        };
+        /** AlertCount */
+        AlertCount: {
+            /** Unread */
+            unread: number;
+        };
+        /** AlertItem */
+        AlertItem: {
+            /** Created At */
+            created_at: string;
+            /** Id */
+            id: number;
+            /**
+             * Kind
+             * @enum {string}
+             */
+            kind: "changes" | "reply" | "approved" | "late_reply" | "late_merge" | "stale_soon" | "merged" | "closed";
+            /** Number */
+            number: number;
+            /** Pr Url */
+            pr_url: string;
+            /** Read At */
+            read_at: string | null;
+            /** Repo */
+            repo: string;
+            /** Report Path */
+            report_path: string;
+            /** Text */
+            text: string;
+            /** Title */
+            title: string;
+        };
+        /** AlertList */
+        AlertList: {
+            access: components["schemas"]["AlertAccess"];
+            /** Enabled */
+            enabled: boolean;
+            /** Items */
+            items: components["schemas"]["AlertItem"][];
+            /** Next Before */
+            next_before: number | null;
+            /** Unread */
+            unread: number;
+            /** Watching */
+            watching: number;
+        };
+        /**
+         * AlertReadBody
+         * @description POST /v1/me/alerts/read: some alerts, or all of them.
+         */
+        AlertReadBody: {
+            /**
+             * All
+             * @default false
+             */
+            all: boolean;
+            /** Ids */
+            ids?: number[];
+        };
+        /** AlertSettings */
+        AlertSettings: {
+            access: components["schemas"]["AlertAccess"];
+            /** Email */
+            email: string | null;
+            /** Email Available */
+            email_available: boolean;
+            /**
+             * Email Mode
+             * @enum {string}
+             */
+            email_mode: "turn" | "daily" | "all";
+            /** Email On */
+            email_on: boolean;
+            /** Enabled */
+            enabled: boolean;
+            /** Tz */
+            tz: string;
+            /** Watching */
+            watching: number;
+        };
+        /**
+         * AlertSettingsBody
+         * @description PUT /v1/me/alerts/settings: only the fields sent are changed.
+         */
+        AlertSettingsBody: {
+            /** Email */
+            email?: string | null;
+            /** Email Mode */
+            email_mode?: ("turn" | "daily" | "all") | null;
+            /** Email On */
+            email_on?: boolean | null;
+            /** Enabled */
+            enabled?: boolean | null;
+            /** Tz */
+            tz?: string | null;
+        };
         /** AnalysisDone */
         AnalysisDone: {
             report: components["schemas"]["Report"];
@@ -1279,6 +1528,10 @@ export interface components {
             not_counted_because: ("you" | "own_project") | null;
             /** Number */
             number: number;
+            /** Reply By */
+            reply_by: string | null;
+            /** Reply Kind */
+            reply_kind: ("changes" | "approved" | "reply") | null;
             /** Repo */
             repo: string;
             /** Review Decision */
@@ -1298,9 +1551,16 @@ export interface components {
             turn: "yours" | "theirs" | "unknown";
             /** Turn At */
             turn_at: string | null;
+            /**
+             * Unread Alert
+             * @default false
+             */
+            unread_alert: boolean;
             /** Url */
             url: string;
             verdict: components["schemas"]["RepoVerdict"] | null;
+            /** Watch */
+            watch: ("on" | "muted") | null;
         };
         /** ContributionSummary */
         ContributionSummary: {
@@ -3210,6 +3470,20 @@ export interface components {
             /** Stale Close Days */
             stale_close_days: number | null;
         };
+        /**
+         * UnsubscribeBody
+         * @description The token from an email's unsubscribe link. In the body, not the
+         *     address, so it stays out of this server's access log.
+         */
+        UnsubscribeBody: {
+            /** Token */
+            token: string;
+        };
+        /** Unsubscribed */
+        Unsubscribed: {
+            /** Email On */
+            email_on: boolean;
+        };
         /** ValidationError */
         ValidationError: {
             /** Context */
@@ -3240,6 +3514,13 @@ export type AdminPlanUsage = components['schemas']['AdminPlanUsage'];
 export type AdminUser = components['schemas']['AdminUser'];
 export type AdminUserSummary = components['schemas']['AdminUserSummary'];
 export type AdminUsers = components['schemas']['AdminUsers'];
+export type AlertAccess = components['schemas']['AlertAccess'];
+export type AlertCount = components['schemas']['AlertCount'];
+export type AlertItem = components['schemas']['AlertItem'];
+export type AlertList = components['schemas']['AlertList'];
+export type AlertReadBody = components['schemas']['AlertReadBody'];
+export type AlertSettings = components['schemas']['AlertSettings'];
+export type AlertSettingsBody = components['schemas']['AlertSettingsBody'];
 export type AnalysisDone = components['schemas']['AnalysisDone'];
 export type AnalysisIn = components['schemas']['AnalysisIn'];
 export type Ask = components['schemas']['Ask'];
@@ -3368,6 +3649,8 @@ export type StarterIssue = components['schemas']['StarterIssue'];
 export type StarterIssues = components['schemas']['StarterIssues'];
 export type Stats = components['schemas']['Stats'];
 export type Timing = components['schemas']['Timing'];
+export type UnsubscribeBody = components['schemas']['UnsubscribeBody'];
+export type Unsubscribed = components['schemas']['Unsubscribed'];
 export type ValidationError = components['schemas']['ValidationError'];
 export type $defs = Record<string, never>;
 export interface operations {
@@ -3558,6 +3841,80 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["AdminUser"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    resubscribe_v1_alerts_resubscribe_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnsubscribeBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Unsubscribed"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    unsubscribe_v1_alerts_unsubscribe_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UnsubscribeBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Unsubscribed"];
                 };
             };
             /** @description Default Response */
@@ -3937,6 +4294,180 @@ export interface operations {
             };
         };
     };
+    get_alerts_v1_me_alerts_get: {
+        parameters: {
+            query?: {
+                limit?: number;
+                before?: number | null;
+            };
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertList"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_alert_count_v1_me_alerts_count_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertCount"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    read_alerts_v1_me_alerts_read_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AlertReadBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_alert_settings_v1_me_alerts_settings_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertSettings"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    put_alert_settings_v1_me_alerts_settings_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AlertSettingsBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AlertSettings"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     get_contributions_v1_me_contributions_get: {
         parameters: {
             query?: never;
@@ -4067,6 +4598,76 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["Contributions"];
                 };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    mute_v1_me_contributions__owner___name___number__mute_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path: {
+                owner: string;
+                name: string;
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    unmute_v1_me_contributions__owner___name___number__mute_delete: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path: {
+                owner: string;
+                name: string;
+                number: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Default Response */
             default: {

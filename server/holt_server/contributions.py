@@ -22,6 +22,9 @@ of opening that repository's report page on Holt. `repo_views` keeps the first
 and the last view of each repository, so only a pull request within 30 days
 after one of those two counts: it can miss one after a view in between, but it
 never counts one it can't show.
+
+PR watch (alerts.py): every fetch compares each pull request with the row it
+replaces and, for someone with alerts on, stores an alert for what changed.
 """
 
 from __future__ import annotations
@@ -39,7 +42,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import and_, delete, func, select, text
 
-from holt_server import pr_state, repo_stats, repos, schema
+from holt_server import alerts, pr_state, repo_stats, repos, schema
 from holt_server.db import (
     Contribution,
     ContributionChoice,
@@ -171,7 +174,8 @@ def parse(nodes: Iterable[dict[str, Any] | None], login: str) -> list[dict[str, 
 
 
 # The per-pull-request state columns (pr_state.py).
-STATE_FIELDS = ("turn", "turn_at", "first_reply_at", "last_activity_at", "review_decision")
+STATE_FIELDS = ("turn", "turn_at", "first_reply_at", "last_activity_at", "review_decision",
+                "reply_by", "reply_kind")
 
 
 def add_state(gql, rows: list[dict[str, Any]]) -> None:
@@ -255,6 +259,7 @@ async def _fetch_and_store(svc: Services, user_id: str, login: str) -> bool:
             old = before.get((r["repo_key"], r["number"]))
             if "turn" not in r and r["state"] == "open" and old is not None:
                 r.update({f: getattr(old, f) for f in STATE_FIELDS})
+        await _alert(s, svc, user_id, before, rows)
         await s.execute(delete(Contribution).where(Contribution.user_id == user_id))
         s.add_all(Contribution(user_id=user_id, **r) for r in rows)
         sync = await s.get(ContributionSync, user_id)
@@ -266,12 +271,35 @@ async def _fetch_and_store(svc: Services, user_id: str, login: str) -> bool:
     return True
 
 
+async def _alert(s, svc: Services, user_id: str, before: dict[tuple[str, int], Contribution],
+                 rows: list[dict[str, Any]]) -> None:
+    """Alerts for what this fetch saw change on the pull requests PR watch
+    covers (alerts.py): your turn, approved, merged, closed. Waits are the
+    checker's (watch.py). A failure is only logged: the list still refreshes."""
+    try:
+        async with s.begin_nested():
+            if not before or not await alerts.watching(s, svc, user_id):
+                return
+            skip = await alerts.muted(s, user_id)
+            out = await left_out(s, user_id, {r["repo_key"] for r in rows})
+            for r in rows:
+                key = (r["repo_key"], r["number"])
+                old = before.get(key)
+                if old is None or key in skip or r["repo_key"] in out:
+                    continue
+                new = alerts.Pr.of(r)
+                await alerts.record(s, user_id, new, alerts.events(alerts.Pr.of(old), new))
+    except Exception:  # noqa: BLE001
+        log.exception("making alerts from a contributions fetch failed")
+
+
 async def forget(s, user_id: str) -> None:
-    """Delete a user's fetched pull requests and their counting choices
-    (disconnect). Caller commits."""
+    """Delete a user's fetched pull requests, their counting choices and
+    everything PR watch kept for them (disconnect). Caller commits."""
     await s.execute(delete(Contribution).where(Contribution.user_id == user_id))
     await s.execute(delete(ContributionSync).where(ContributionSync.user_id == user_id))
     await s.execute(delete(ContributionChoice).where(ContributionChoice.user_id == user_id))
+    await alerts.forget(s, user_id)
 
 
 def fetch_soon(svc: Services, user_id: str, login: str) -> None:
@@ -347,6 +375,15 @@ def not_counted_because(verdict: schema.RepoVerdict | None,
     return None
 
 
+async def left_out(s, user_id: str, keys: set[str]) -> set[str]:
+    """The repositories among `keys` whose pull requests don't count for this
+    user (their choice, or their own project), so PR watch leaves them alone."""
+    known = await verdicts(s, keys)
+    chosen = {c.repo_key: c.counted for c in (await s.execute(
+        select(ContributionChoice).where(ContributionChoice.user_id == user_id))).scalars()}
+    return {k for k in keys if not_counted_because(known.get(k), chosen.get(k)) is not None}
+
+
 async def page(svc: Services, user_id: str, conn: GitHubConnection) -> schema.Contributions:
     async with svc.db.session() as s:
         sync = await s.get(ContributionSync, user_id)
@@ -357,6 +394,10 @@ async def page(svc: Services, user_id: str, conn: GitHubConnection) -> schema.Co
         known = await verdicts(s, {p.repo_key for p in prs})
         chosen = {c.repo_key: c.counted for c in (await s.execute(
             select(ContributionChoice).where(ContributionChoice.user_id == user_id))).scalars()}
+        # PR watch: only for someone who gets alerts now.
+        watching = await alerts.watching(s, svc, user_id)
+        muted = await alerts.muted(s, user_id) if watching else set()
+        unread = await alerts.unread_prs(s, user_id) if watching else set()
     if sync is None:  # disconnected while the first fetch ran
         raise ApiError("not_found", "Connect your GitHub account to see your contributions.")
     items = []
@@ -364,6 +405,10 @@ async def page(svc: Services, user_id: str, conn: GitHubConnection) -> schema.Co
         view = seen.get(p.repo_key)
         verdict = known.get(p.repo_key)
         why = not_counted_because(verdict, chosen.get(p.repo_key))
+        key = (p.repo_key, p.number)
+        watch = None
+        if watching and p.state == "open" and why is None:
+            watch = "muted" if key in muted else "on"
         items.append(schema.ContributionPullRequest(
             repo=p.repo, number=p.number, title=p.title, url=p.url, state=p.state,
             draft=p.draft, created_at=iso(p.created_at), closed_at=iso(p.closed_at),
@@ -371,9 +416,11 @@ async def page(svc: Services, user_id: str, conn: GitHubConnection) -> schema.Co
             found_via_holt=view is not None and after_holt(
                 p.created_at, view.first_viewed_at, view.last_viewed_at),
             counted=why is None, not_counted_because=why,
+            watch=watch, unread_alert=key in unread,
             **(dict(turn=p.turn, turn_at=iso(p.turn_at), first_reply_at=iso(p.first_reply_at),
                     last_activity_at=iso(p.last_activity_at),
-                    review_decision=p.review_decision) if p.state == "open" else {})))
+                    review_decision=p.review_decision, reply_by=p.reply_by,
+                    reply_kind=p.reply_kind) if p.state == "open" else {})))
     counted = [i for i in items if i.counted]
     merged = sum(i.state == "merged" for i in counted)
     closed = sum(i.state == "closed" for i in counted)

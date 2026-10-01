@@ -109,6 +109,12 @@ services:
       # server ignores a budget without the owner's explicit OWNER_OK=1.
       HOLT_AI_BUDGET_USD: ${HOLT_PROD_AI_BUDGET_USD:-0}
       HOLT_AI_BUDGET_OWNER_OK: ${HOLT_PROD_AI_BUDGET_OWNER_OK:-0}
+      # PR watch (server/README.md, "PR watch"): off until the owner sets
+      # HOLT_PROD_PR_WATCH=1 in $HOLT_PROD_HOME/.env or secrets.env (a
+      # HOLT_PR_WATCH meant for staging never reaches here). Alert emails
+      # need RESEND_API_KEY in secrets.env; without it none are sent.
+      HOLT_PR_WATCH: ${HOLT_PROD_PR_WATCH:-0}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
       # Six people's jobs at once, plus three background workers for badges
       # and warm passes (each takes a waiting person's job first); a warm
       # pass keeps HOLT_WARM_PARALLEL reports in flight. Each job is a thread

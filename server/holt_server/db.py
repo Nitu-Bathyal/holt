@@ -11,12 +11,13 @@ that is missing.
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 
 from sqlalchemy import (
     JSON,
     BigInteger,
     Boolean,
+    Date,
     DateTime,
     Float,
     Index,
@@ -87,6 +88,11 @@ class User(Base):
     byok_provider: Mapped[str | None] = mapped_column(String(40), nullable=True)
     byok_model: Mapped[str | None] = mapped_column(String(200), nullable=True)
     byok_cipher: Mapped[str | None] = mapped_column(Text, nullable=True)
+    # PR watch's free taste (alerts.py): alerts work until then without a
+    # pass. Set once, the first time alerts are turned on; never cleared, so
+    # it can't be had twice.
+    alerts_trial_ends_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                                  nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
 
 
@@ -598,6 +604,110 @@ class Contribution(Base):
     last_activity_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
                                                               nullable=True)
     review_decision: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    # The team member who spoke last after the author's last move, and what
+    # they did: `changes` (asked for changes), `approved` or `reply`. Null
+    # when the author acted last.
+    reply_by: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    reply_kind: Mapped[str | None] = mapped_column(String(10), nullable=True)
+
+
+class AlertSettings(Base):
+    """A user's PR watch settings (alerts.py). A row exists once they have
+    turned alerts on or saved a setting; deleted on disconnect."""
+
+    __tablename__ = "alert_settings"
+
+    user_id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    # The top switch: off, Holt stops reading their pull requests for alerts.
+    enabled: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Where alert emails go: the address `web/` vouches for (the verified one
+    # from sign-in). Null: the bell only.
+    email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    # The Email switch; the one-click unsubscribe turns it off.
+    email_on: Mapped[bool] = mapped_column(Boolean, default=True)
+    # turn (your turn right away, the rest daily) | daily | all (everything
+    # as it happens).
+    email_mode: Mapped[str] = mapped_column(String(10), default="turn")
+    # The user's local date of the last daily email run, so it runs once a day.
+    last_daily_on: Mapped[date | None] = mapped_column(Date, nullable=True)
+    # IANA name, from the browser when settings are saved.
+    tz: Mapped[str] = mapped_column(String(64), default="UTC")
+    # The unsubscribe token is HMAC(HOLT_SECRET_KEY, user id + this), never
+    # stored; `unsubscribe_hash` is its SHA-256, to find the user by.
+    unsubscribe_nonce: Mapped[str] = mapped_column(String(32))
+    unsubscribe_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class WatchMute(Base):
+    """A pull request its author muted: no alerts for it. Its own table
+    because `contributions` rows are replaced on every fetch."""
+
+    __tablename__ = "watch_mutes"
+
+    user_id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    repo_key: Mapped[str] = mapped_column(String(200), primary_key=True)
+    number: Mapped[int] = mapped_column(Integer, primary_key=True)
+    muted_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class Alert(Base):
+    """One thing PR watch told a user about one of their pull requests. The
+    line a person reads is built from `kind` and `facts` when it is shown
+    (alerts.line), so a wording fix reaches old alerts too. Deleted after
+    `alerts.KEEP_DAYS`, and on disconnect.
+
+    kind: changes | reply | approved | late_reply | late_merge | stale_soon |
+    merged | closed.
+    email_via: how it was emailed: `now`, `daily`, or `failed` (the provider
+    refused it for good). Null: not yet, or never.
+    """
+
+    __tablename__ = "alerts"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(200))
+    repo: Mapped[str] = mapped_column(String(200))
+    repo_key: Mapped[str] = mapped_column(String(200))
+    number: Mapped[int] = mapped_column(Integer)
+    pr_url: Mapped[str] = mapped_column(String(500))
+    pr_title: Mapped[str] = mapped_column(Text)
+    kind: Mapped[str] = mapped_column(String(20))
+    # The numbers and names the line is built from.
+    facts: Mapped[dict] = mapped_column(JSON, default=dict)
+    # A hash of user + pull request + kind + the event's time: an event
+    # alerts once, whichever read sees it first.
+    dedupe_key: Mapped[str] = mapped_column(String(64), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    read_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    email_via: Mapped[str | None] = mapped_column(String(10), nullable=True)
+    emailed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    __table_args__ = (
+        Index("ix_alerts_user", "user_id", "created_at"),
+        Index("ix_alerts_unsent", "emailed_at", "created_at"),
+    )
+
+
+class AlertEmail(Base):
+    """One alert email handed to the provider (mailer.py): the daily cap
+    counts these, and support can tell what was sent. The address isn't
+    copied here. status: sent | failed."""
+
+    __tablename__ = "alert_emails"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(200))
+    kind: Mapped[str] = mapped_column(String(10))  # now | daily
+    alert_ids: Mapped[list] = mapped_column(JSON, default=list)
+    # The provider's id for the message; its refusal's status when it failed.
+    provider_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    status: Mapped[str] = mapped_column(String(10), default="sent")
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+    __table_args__ = (Index("ix_alert_emails_sent", "sent_at"),
+                      Index("ix_alert_emails_user", "user_id", "sent_at"))
 
 
 class RepoMeta(Base):

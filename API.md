@@ -856,7 +856,13 @@ repository's statistics.
       "turn_at": "…" | null,           // when the turn last changed hands
       "first_reply_at": "…" | null,    // the project's first comment or review
       "last_activity_at": "…" | null,  // the newest push, comment or review by a person
-      "review_decision": "approved" | "changes_requested" | "review_required" | null }
+      "review_decision": "approved" | "changes_requested" | "review_required" | null,
+      "reply_by": "davidism" | null,   // who on the team spoke last after your last move
+      "reply_kind": "changes" | "approved" | "reply" | null, // and what that was
+      // PR watch (below). null when the person gets no alerts now, and on
+      // merged, closed and uncounted ones.
+      "watch": "on" | "muted" | null,
+      "unread_alert": false }          // it has an alert the person hasn't opened
   ]
 }
 ```
@@ -880,6 +886,11 @@ time).
   yours, your last push or comment when it's theirs.
 - `first_reply_at` is the team's first comment or review. `last_activity_at`
   is the newest push, comment or review by anyone but a bot.
+- `reply_by` is the team member who spoke last after your last push or comment,
+  and `reply_kind` what that was: `changes` (a review asking for changes; it
+  stands until an approval, so a comment after it doesn't change it),
+  `approved`, or `reply` (any other comment or review). Both null when you
+  acted last.
 
 PR watch alerts reuse these fields. My PRs words each open row from them and
 `verdict.timing` (the web's `web/src/lib/home.ts`): "Day 9, no reply yet. Most
@@ -910,6 +921,130 @@ get one within 3 days here."
   on `stats_opt_out`, of pull requests opened on or after `since` (default:
   all stored). Also `python -m holt_server.contributions metric [--since DATE]
   [--json]`.
+
+### PR watch (alerts)
+
+Holt watches a connected user's open pull requests and tells them, on the bell
+and by email, when it's their turn, when one has waited longer than most do in
+that repository, before a stale bot closes it, and when it is approved, merged
+or closed. Rules only, no model; everything is read as the Holt GitHub App,
+public data only. Stored in `alert_settings`, `watch_mutes`, `alerts` and
+`alert_emails`; alerts are deleted after 90 days, and all of it when GitHub is
+disconnected.
+
+**Switched off by default.** With `HOLT_PR_WATCH` unset, nothing checks pull
+requests or sends email, `access.state` is `unavailable` for everyone, and
+turning alerts on answers 501 `not_implemented`. The web hides the feature then.
+
+**Access.** `AlertAccess` = `{"state": "unavailable" | "off" | "trial" | "pro" | "ended", "until": "…" | null}`.
+
+- `pro`: the plan in force covers the `pr_watch` feature. `until` is the plan's expiry (null: none).
+- `trial`: the free taste, 14 days from the first time alerts are turned on (not from signup), once per account. `until` is when it ends.
+- `ended`: the taste is over and no pass covers it. `until` is when it ended. Old alerts stay listed; none are made.
+- `off`: never turned on (or a pass lapsed with the taste unused). Turning alerts on starts the taste.
+
+**What's watched.** Every open pull request in My Contributions that counts
+(not a repository left out of the numbers), unless its author muted it. Drafts
+get replies, merges and closes, but no "past normal" or stale-bot alert.
+
+**The alerts.** `kind` is one of:
+
+| `kind` | When | `text` |
+|---|---|---|
+| `changes` | Someone on the team asked for changes after your last move. | Your turn: @reviewer asked for changes on click #2811. |
+| `reply` | Someone on the team commented or reviewed after your last move. | Your turn: @reviewer replied on click #2811. |
+| `approved` | A team member approved, or the review decision became approved. | Approved: @reviewer approved click #2811. |
+| `late_reply` | No team reply yet, and the wait passed the repository's **slow** first reply (`timing.first_reply_slow_hours`, the wait within which 8 in 10 get one). Never the typical one. | Day 6, no reply on p5.js #7120. Most get one within 4 days here. |
+| `late_merge` | There has been a reply, it's their turn, and the wait passed `timing.merge_slow_days`. | Day 20 on efcore #3310. Most merged ones land within 2 weeks here. |
+| `stale_soon` | The repository's stale bot has a known day count (`timing.stale_close_days`) and the pull request has been quiet for all but 5 of those days (and at least half of them). | Quiet for 25 days on free-programming-books #11020. The bot here closes at 30. |
+| `merged` | It was merged. | Merged: kubernetes #128811. |
+| `closed` | It was closed without merging. | Closed without merging: moment #6120. |
+
+`text` is rendered by the server, so the bell, the email and the extension say
+the same thing. Without a name to give, it says "a reviewer". The three waits
+need the repository's current rules report; with no report, or numbers under
+the engine's minimums, they don't fire. Each event alerts once. A "your turn"
+fires again only when the team speaks again (a comment after a request for
+changes that still stands reads as `reply`). `late_reply` and `late_merge` fire
+once per pull request, and again only after the old alert is deleted at 90 days.
+
+**How they're made.** A checker runs every 30 minutes (`HOLT_PR_WATCH_MINUTES`)
+for users with alerts on and access: it re-reads their open pull requests by
+node ID (about 5 GraphQL points per 100), searches a user's list again when it
+is over 6 hours old (which finds new pull requests), and works out the waits
+from stored times. It stops reading GitHub under `HOLT_WARM_MIN_POINTS`. Every
+contributions fetch (the daily one, and the refresh button) makes the same
+alerts for what it sees change, so a refresh never swallows one.
+
+**Email.** Sent to `email` while `email_on`, by `email_mode`:
+
+- `turn` (default): `changes` and `reply` right away, the rest in one daily email.
+- `daily`: only the daily email.
+- `all`: every kind right away.
+
+"Right away" is the next 5-minute mailer run after the alert is 5 minutes old
+(alerts from one check share an email), and at most one such email per pull
+request in 24 hours; a later one waits for the daily email. The daily email
+goes out at 8:00 in the user's `tz` with everything not emailed from the last
+36 hours, and is skipped when empty. No email between 22:00 and 8:00 their
+time. Each email carries `List-Unsubscribe` (one click, RFC 8058). Without
+`RESEND_API_KEY` no email is sent at all (`email_available: false`); alerts
+still reach the bell.
+
+`AlertItem` = `{"id": 41, "kind": "reply", "text": "Your turn: @davidism replied on click #2811.",
+"repo": "pallets/click", "number": 2811, "title": "Fix shell completion",
+"pr_url": "https://github.com/pallets/click/pull/2811", "report_path": "/pallets/click",
+"created_at": "…", "read_at": "…" | null}`.
+
+`AlertSettings` = `{"enabled": true, "email": "you@example.com" | null, "email_on": true,
+"email_mode": "turn" | "daily" | "all", "tz": "Asia/Kolkata", "access": AlertAccess,
+"watching": 3, "email_available": true}`.
+
+- `GET /v1/me/alerts?limit=20&before=<id>` → `{"unread": 2, "access": AlertAccess,
+  "enabled": true, "watching": 3, "items": [AlertItem], "next_before": 17 | null}`.
+  Newest first; `limit` 1–50; `next_before` is the `before` for the next page
+  (null on the last). `unread` counts every unread alert, and is 0 without
+  access. `enabled` is the person's own switch (as in settings). `watching` is
+  how many open pull requests are being watched now.
+- `GET /v1/me/alerts/count` → `{"unread": 2}`. Cheap, for the top bar on every
+  page. 0 without access.
+- `POST /v1/me/alerts/read` body `{"ids": [41, 40]}` or `{"all": true}` → 204.
+  Only the caller's own alerts change. Neither given → 400 `invalid_request`.
+- `GET /v1/me/alerts/settings` → `AlertSettings` (the defaults before anything is saved).
+- `PUT /v1/me/alerts/settings` body `{"enabled"?, "email"?, "email_on"?, "email_mode"?, "tz"?}`
+  → `AlertSettings`. Only the fields sent change.
+  - `enabled: true` needs GitHub connected (404 `not_found` otherwise). In state
+    `off` it starts the 14 days. In `ended` → 402 `needs_plan`. In `unavailable`
+    → 501 `not_implemented`. Turning off and on again never restarts the 14 days.
+  - `email` is the signed-in account's verified address: `web/` sends the one
+    from the sign-in provider, never free text from the user (there is no
+    confirm-link flow yet). `null` clears it. Not an address → 400.
+  - `tz` is an IANA name from the browser (older names like `Asia/Calcutta`
+    are fine); unknown → 400 `invalid_request`.
+- `PUT /v1/me/contributions/{owner}/{name}/{number}/mute` → 204: no alerts for
+  that pull request (its row on My PRs is unchanged, `watch: "muted"`).
+  `DELETE` on the same path → 204, watched again. Not one of the caller's pull
+  requests → 404 `not_found`.
+- `POST /v1/alerts/unsubscribe` body `{"token": "…"}` (internal key, no user) →
+  `{"email_on": false}`. The email's "Stop these emails" link and its one-click
+  header: turns email off for the token's owner with no sign-in; the bell and
+  `enabled` stay. `POST /v1/alerts/resubscribe` with the same body →
+  `{"email_on": true}` (the page's "undo"). A token that isn't current → 404
+  `not_found`. The token is derived from the server's secret and a per-user
+  value, never stored, and changes when the address changes. It travels in the
+  body so it stays out of the server's access log.
+
+The emails link to the web app, so `web/` serves:
+
+- `{HOLT_WEB_URL}/alerts/unsubscribe?t=<token>`: the footer link's page. It
+  sends the token to `POST /v1/alerts/unsubscribe` and offers an undo. Do that
+  from the browser (a button, or on load), not while rendering on the server:
+  mail scanners and link previews fetch the links in an email, and a fetch
+  alone must not unsubscribe anyone.
+- `{HOLT_WEB_URL}/api/alerts/unsubscribe?t=<token>`: a `POST` route for mail
+  clients' one-click unsubscribe (RFC 8058). It passes the token on the same
+  way and answers 200.
+- `{HOLT_WEB_URL}/settings/alerts` and `{HOLT_WEB_URL}/me/contributions`.
 
 ### Profile
 

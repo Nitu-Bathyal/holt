@@ -143,3 +143,25 @@ def test_reads_in_batches_of_100():
     got = pr_state.read(gql, [f"PR_{i}" for i in range(230)], 5.0)
     assert [len(c) for c in gql.calls] == [100, 100, 30]
     assert len(got) == 230
+
+
+def test_who_spoke_last_and_what_they_said():
+    replied = derive(pushed=0, comments=[said("lead", 1, "MEMBER")])
+    assert (replied.reply_by, replied.reply_kind) == ("lead", "reply")
+    # A request for changes stands when someone comments after it.
+    asked = derive(pushed=0, reviews=[review("Lead", 1, "CHANGES_REQUESTED", "MEMBER")],
+                   comments=[said("other", 2, "COLLABORATOR")])
+    assert (asked.turn, asked.reply_by, asked.reply_kind) == ("yours", "Lead", "changes")
+    # Until an approval.
+    approved = derive(pushed=0, reviews=[review("lead", 1, "CHANGES_REQUESTED", "MEMBER"),
+                                         review("lead", 2, "APPROVED", "MEMBER")])
+    assert (approved.turn, approved.reply_by, approved.reply_kind) == (
+        "theirs", "lead", "approved")
+
+
+def test_nobody_spoke_last_when_you_did():
+    s = derive(comments=[said("lead", 1, "OWNER"), said("me", 2, "CONTRIBUTOR")])
+    assert (s.reply_by, s.reply_kind) == (None, None)
+    # An old request for changes doesn't outlive your push.
+    pushed = derive(pushed=3, reviews=[review("lead", 1, "CHANGES_REQUESTED", "MEMBER")])
+    assert (pushed.turn, pushed.reply_by, pushed.reply_kind) == ("theirs", None, None)
