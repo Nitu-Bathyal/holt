@@ -7,7 +7,7 @@
 // the server's answer says which.
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { unsubAfter, unsubHeading, type EmailKind, type UnsubState } from "@/lib/alerts";
+import { unsubAfter, unsubHeading, unsubNote, type EmailKind, type UnsubState } from "@/lib/alerts";
 import { setEmailByToken } from "@/lib/alerts-client";
 import { ALERT_SETTINGS, SETTINGS } from "@/lib/settings";
 
@@ -24,6 +24,8 @@ export function Unsubscribe({ token }: { token: string | null }) {
     setState(unsubAfter(on, r.status));
   }
 
+  const note = unsubNote(state, kind);
+
   // Once, when a browser opens the page.
   useEffect(() => {
     if (sent.current || !token) return;
@@ -36,6 +38,7 @@ export function Unsubscribe({ token }: { token: string | null }) {
     <div className="wrap max-w-2xl py-20">
       <div role="status">
         <h1 className="display text-[clamp(1.8rem,5vw,2.4rem)]">{unsubHeading(state, kind)}</h1>
+        {note && <p className="prose-sans mt-3">{note}</p>}
       </div>
       <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
         {state === "off" && <button type="button" onClick={() => void send(true)} className="btn-ghost">undo</button>}

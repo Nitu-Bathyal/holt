@@ -202,6 +202,12 @@ export function unsubHeading(state: UnsubState, kind: EmailKind | null): string 
   }
 }
 
+/** Under the sentence, once the emails are off: what still reaches the person. */
+export function unsubNote(state: UnsubState, kind: EmailKind | null): string | null {
+  if (state !== "off") return null;
+  return kind === "product" ? "You'll still get a receipt when you buy a pass." : "The bell still has them.";
+}
+
 /** Where the page lands after the server answers: 404 is a link that isn't current any more. */
 export function unsubAfter(on: boolean, status: number): UnsubState {
   if (status >= 200 && status < 300) return on ? "on" : "off";

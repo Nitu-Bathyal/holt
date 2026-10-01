@@ -3,7 +3,7 @@ import { readdirSync, readFileSync, statSync } from "node:fs";
 import { test } from "node:test";
 import {
   accessNote, alertLinks, alertView, badge, browserTz, dayMonth, EMAIL_MODES, emailKind, sampleAlerts, settingsBody, showFirstTime, turnOnDetour, unsubAfter,
-  unsubHeading, unsubscribeStep, unsubscribeToken, watchingLine, withTz,
+  unsubHeading, unsubNote, unsubscribeStep, unsubscribeToken, watchingLine, withTz,
 } from "./alerts.ts";
 import type { Timing } from "./api-schema";
 import type { AlertAccess, ContributionPR } from "./types";
@@ -189,6 +189,10 @@ test("the page says which emails stopped: alerts, or the account's own", () => {
   assert.equal(unsubHeading("on", "alerts"), "Alert emails are back on.");
   assert.equal(unsubHeading("off", "product"), "Account emails are off.");
   assert.equal(unsubHeading("on", "product"), "Account emails are back on.");
+  assert.equal(unsubNote("off", "alerts"), "The bell still has them.");
+  assert.equal(unsubNote("off", null), "The bell still has them."); // a server that doesn't say yet
+  assert.equal(unsubNote("off", "product"), "You'll still get a receipt when you buy a pass.");
+  for (const state of ["idle", "working", "on", "expired", "failed"] as const) assert.equal(unsubNote(state, "alerts"), null, state);
   assert.equal(unsubHeading("idle", null), "Stopping these emails…");
   assert.equal(unsubHeading("working", "product"), "Stopping these emails…");
   assert.equal(unsubHeading("expired", null), "This link doesn't work any more.");
