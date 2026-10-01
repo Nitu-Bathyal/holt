@@ -31,6 +31,9 @@ import { ReactiveCat } from "./reactive-cat";
 
 const SIGN_OFF = "git commit --to-the-right-repo";
 
+/** "terms" → "Terms": the policy labels are lowercase where the policy pages use them as their rail. */
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
 /** First path segments that are the site's own pages, not a repository owner. */
 const SITE_ROUTES = new Set(["api", "badge", "compare", "contact", "discover", "example-ai-report", "examples", "find", "hacktoberfest", "how-it-works", "me", "preflight", "pricing", "privacy", "profile", "refunds", "settings", "signin", "terms"]);
 
@@ -63,7 +66,7 @@ function ReportFooter({ signedIn }: { signedIn: boolean }) {
           </ul>
           <ul>
             {LEGAL_PAGES.map((p) => (
-              <FLink key={p.href} href={p.href}>{p.label}</FLink>
+              <FLink key={p.href} href={p.href}>{cap(p.label)}</FLink>
             ))}
             <FLink href="/contact#team">Team</FLink>
             {!signedIn && <MotionSwitch />}
@@ -272,29 +275,33 @@ export function Footer({ signedIn = false }: { signedIn?: boolean }) {
           </>
         )}
 
-        <nav aria-label="Footer" className="mt-14 grid grid-cols-2 gap-8 text-[0.88rem] sm:grid-cols-3">
-          <Group title="product">
+        {/* Three columns side by side from the sign-off's left edge, each as
+            wide as its words, then one line of fine print under a rule. */}
+        <nav aria-label="Footer" className="mt-14 grid grid-cols-2 gap-x-10 gap-y-8 text-[0.86rem] sm:flex sm:flex-wrap sm:gap-x-20">
+          <Group title="Product">
             <FLink href="/find">Find a project</FLink>
             <FLink href="/discover">Browse projects</FLink>
             <FLink href="/how-it-works">How it works</FLink>
-            <FLink href="/badge">badge for maintainers</FLink>
-            <FLink href="/pricing">pricing</FLink>
+            <FLink href="/badge">Badge for maintainers</FLink>
+            <FLink href="/pricing">Pricing</FLink>
           </Group>
-          <Group title="open source">
+          <Group title="Open source">
             <FLink href={GITHUB_REPO_URL} {...react("adoring")}>holt-oss/holt</FLink>
-            <FLink href={`${GITHUB_REPO_URL}/blob/main/CONTRIBUTING.md`} {...react("adoring")}>contributing</FLink>
-            <FLink href={`${GITHUB_REPO_URL}/blob/main/docs/USAGE.md`} {...react("adoring")}>the CLI</FLink>
-            <li className="py-1 text-faint">Apache-2.0</li>
+            <FLink href={`${GITHUB_REPO_URL}/blob/main/CONTRIBUTING.md`} {...react("adoring")}>Contributing</FLink>
+            <FLink href={`${GITHUB_REPO_URL}/blob/main/docs/USAGE.md`} {...react("adoring")}>The CLI</FLink>
           </Group>
-          <Group title="legal">
+          <Group title="Legal">
             {LEGAL_PAGES.map((p) => (
-              <FLink key={p.href} href={p.href}>{p.label}</FLink>
+              <FLink key={p.href} href={p.href}>{cap(p.label)}</FLink>
             ))}
-            <FLink href="/contact#team">team</FLink>
+            <FLink href="/contact#team">Team</FLink>
             {/* Signed in, it's under Settings → Display. */}
             {!signedIn && <MotionSwitch />}
           </Group>
         </nav>
+        <p className="mt-10 border-t border-line pt-5 text-[0.78rem] text-faint">
+          Holt · open source, Apache-2.0 · read-only toward GitHub: it never posts, comments or contacts anyone.
+        </p>
       </div>
 
       {/* Last, so it can arrive without moving anything. */}
@@ -324,7 +331,7 @@ export function Footer({ signedIn = false }: { signedIn?: boolean }) {
 function Group({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-2 text-faint">{title}</p>
+      <p className="mb-2.5 text-[0.72rem] uppercase tracking-[0.08em] text-faint">{title}</p>
       <ul>{children}</ul>
     </div>
   );
@@ -340,7 +347,7 @@ function MotionSwitch() {
         onClick={() => setMotion(toggledMotion(reduced, deviceReduces()))}
         className="inline-flex min-h-11 items-center text-left text-muted hover:text-ink sm:min-h-0 sm:py-1"
       >
-        reduce motion<span aria-hidden="true" className={reduced ? "ml-1.5 text-blue" : "hidden"}>· on</span>
+        Reduce motion<span aria-hidden="true" className={reduced ? "ml-1.5 text-blue" : "hidden"}>· on</span>
       </button>
     </li>
   );
