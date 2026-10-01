@@ -152,15 +152,15 @@ export async function searchRepos(name: string, caller: Caller): Promise<Result<
 
 export async function find(q: FindQuery, caller: Caller): Promise<Result<FindStart>> {
   if (MOCK) return mock.find(q);
-  const r = await call<{ status?: string; job_id?: string; results?: FindResult[] }>("/v1/find", {
+  const r = await call<{ status?: string; job_id?: string; results?: FindResult[]; complete?: boolean }>("/v1/find", {
     method: "POST",
     body: JSON.stringify(q),
     caller,
   });
   if (!r.ok) return r;
-  // The server answers 202 {status: "queued", job_id}; accept a direct {results} too.
-  if (r.data.job_id) return { ok: true, data: { status: "queued", job_id: r.data.job_id } };
-  return { ok: true, data: { status: "done", results: r.data.results ?? [] } };
+  // 202 {status: "queued", job_id, results}: the search runs, `results` is Holt's index meanwhile.
+  if (r.data.job_id) return { ok: true, data: { status: "queued", job_id: r.data.job_id, results: r.data.results ?? [] } };
+  return { ok: true, data: { status: "done", results: r.data.results ?? [], complete: r.data.complete ?? true } };
 }
 
 /** Checked repos, filtered and ranked from rules verdicts (API.md, GET /v1/discover). Reads only the database. */

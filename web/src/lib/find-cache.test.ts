@@ -4,8 +4,8 @@ import { FindCache, findKey } from "./find-cache.ts";
 import type { FindQuery, FindStart, Result } from "./types.ts";
 
 const q = (over: Partial<FindQuery> = {}): FindQuery => ({ languages: ["python"], topics: [], days: 7, hacktoberfest: true, limit: 12, ...over });
-const done = (repo: string): Result<FindStart> => ({ ok: true, data: { status: "done", results: [{ repo, headline: "Worth your time", tone: "good", verdict: "viable", description: null, language: null, languages: [], stars: null, open_issues: null, pull_requests: null, open_pull_requests: null, contributors: null, stats: {}, issues: [] }] } });
-const queued = (id: string): Result<FindStart> => ({ ok: true, data: { status: "queued", job_id: id } });
+const done = (repo: string, complete = true): Result<FindStart> => ({ ok: true, data: { status: "done", results: [{ repo, headline: "Worth your time", tone: "good", verdict: "viable", description: null, language: null, languages: [], stars: null, open_issues: null, pull_requests: null, open_pull_requests: null, contributors: null, stats: {}, issues: [] }], complete } });
+const queued = (id: string): Result<FindStart> => ({ ok: true, data: { status: "queued", job_id: id, results: [] } });
 
 function counter(make: (n: number) => Result<FindStart>) {
   let calls = 0;
@@ -55,6 +55,15 @@ test("a failed job is forgotten; errors are not cached", async () => {
   assert.equal(r2.ok, false);
   await cache.get(q(), c.fetch);
   assert.equal(c.calls(), 3);
+});
+
+test("an index-only answer (that caller was over their limit) is not kept for the next", async () => {
+  const cache = new FindCache();
+  const c = counter((n) => (n === 1 ? done("a/b", false) : done("a/b")));
+  await cache.get(q(), c.fetch);
+  await cache.get(q(), c.fetch);
+  await cache.get(q(), c.fetch);
+  assert.equal(c.calls(), 2);
 });
 
 test("entries expire after the window", async () => {

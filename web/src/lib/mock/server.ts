@@ -278,11 +278,11 @@ export async function searchRepos(name: string): Promise<Result<RepoSearch>> {
 
 const FIND_MS = Math.round(JOB_MS / 2);
 
-/** API.md: find always answers 202; the job's `done` carries {results}. */
+/** API.md: a new search answers 202 with the index part (here, the first two results); the job's `done` carries them all. */
 export async function find(q: FindQuery): Promise<Result<FindStart>> {
   const id = `find_${crypto.randomUUID().slice(0, 12)}`;
   state().findJobs.set(id, { id, q, started: Date.now() });
-  return { ok: true, data: { status: "queued", job_id: id } };
+  return { ok: true, data: { status: "queued", job_id: id, results: findResults(q).slice(0, 2) } };
 }
 
 export async function findStatus(id: string): Promise<Result<FindJobStatus>> {

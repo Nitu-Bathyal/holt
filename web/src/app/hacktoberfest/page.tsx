@@ -126,7 +126,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
           {!result.ok ? (
             <ErrorPanel error={result.error} retryHref={here} />
           ) : result.data.status === "queued" ? (
-            <FindRunner key={tab.id} jobId={result.data.job_id} days={days} retryHref={here} fit={fit} saved={saved} empty={empty} />
+            <FindRunner key={tab.id} jobId={result.data.job_id} index={result.data.results} days={days} retryHref={here} fit={fit} saved={saved} empty={empty} />
           ) : (
             <FindResults results={personalise(result.data.results, fit)} days={days} saved={saved} empty={empty} />
           )}

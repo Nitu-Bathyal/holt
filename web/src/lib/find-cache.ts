@@ -1,8 +1,9 @@
 // A short-lived cache for /v1/find, keyed by the query. Every page load of
 // /find or /hacktoberfest would otherwise start a find upstream and spend the
 // visitor's rate limit. Per key and window this starts at most one find:
-// concurrent misses share one call, a queued job is shared by everyone who
-// asks, and its results (seen by the SSE proxy) are served from memory.
+// concurrent misses share one call, a queued job (with the index part the
+// server sent) is shared by everyone who asks, and its results (seen by the
+// SSE proxy) are served from memory.
 // No imports, so it runs under `node --test`.
 import type { FindQuery, FindResult, FindStart, Result } from "./types";
 
@@ -40,8 +41,9 @@ export class FindCache {
     if (pending) return pending;
     const p = fetch()
       .then((r) => {
-        // Errors are not cached: the next visitor tries again.
-        if (r.ok) {
+        // Errors are not cached: the next visitor tries again. Nor is an
+        // index-only answer (that caller was over their limit; the next may not be).
+        if (r.ok && !(r.data.status === "done" && r.data.complete === false)) {
           this.set(key, r.data);
           if (r.data.status === "queued") this.jobs.set(r.data.job_id, key);
         }
@@ -57,7 +59,7 @@ export class FindCache {
     const key = this.jobs.get(jobId);
     if (!key) return;
     this.jobs.delete(jobId);
-    this.set(key, { status: "done", results });
+    this.set(key, { status: "done", results, complete: true });
   }
 
   /** A queued find failed or expired: forget it so the next visitor starts afresh. */

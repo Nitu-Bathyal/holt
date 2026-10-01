@@ -25,6 +25,7 @@ from holt_server import (
     credits,
     discover,
     entitlements,
+    find as find_mod,
     repo_stats,
     repos,
     schema,
@@ -606,7 +607,7 @@ def find_params(body: FindIn) -> dict[str, Any]:
 
 
 async def cached_find(svc: Services, key: str, limit: int) -> list[dict] | None:
-    """Fresh cached results that can answer a request for `limit`, or None."""
+    """A fresh cached search that can answer a request for `limit`, or None."""
     cutoff = now() - timedelta(hours=svc.settings.find_cache_hours)
     async with svc.db.session() as s:
         row = await s.get(FindCache, key)
@@ -617,7 +618,7 @@ async def cached_find(svc: Services, key: str, limit: int) -> list[dict] | None:
         # for more would find nothing new).
         if computed_for >= limit or len(row.results) < computed_for:
             # Details the warm pass fetched since the search ran show up too.
-            return await discover.with_meta(s, row.results[:limit])
+            return await discover.with_meta(s, row.results)
     return None
 
 
@@ -628,21 +629,39 @@ async def active_find(svc: Services, key: str) -> Job | None:
         )).scalar_one_or_none()
 
 
+def find_done(results: list[dict], limit: int, complete: bool = True) -> JSONResponse:
+    return JSONResponse(schema.FindDone.model_validate(
+        {"results": results[:limit], "complete": complete}).model_dump(mode="json"))
+
+
+def find_queued(job_id: str, index: list[dict], limit: int) -> JSONResponse:
+    """202 for a search under way, with the index part to show meanwhile."""
+    return JSONResponse(schema.FindQueued.model_validate(
+        {"job_id": job_id, "results": index[:limit]}).model_dump(mode="json"), status_code=202)
+
+
 @router.post("/find", response_model=schema.FindDone,
-             responses={202: {"model": schema.Queued}})
+             responses={202: {"model": schema.FindQueued}})
 async def find(body: FindIn, request: Request, who: Caller = Depends(caller)) -> JSONResponse:
     svc = services(request)
     starter.function("find")
     params = find_params(body)
     key = find_key(params["languages"], params["topics"], params["hacktoberfest"], body.days)
     await usage.record(svc, "find", user_id=who.user_id, ip=who.ip)
+    # Holt's own index answers first, from the database (find.py).
+    index = await find_mod.index_results(svc, params)
     # Cached, or already being searched for someone else: free, no rate limit.
-    if (results := await cached_find(svc, key, body.limit)) is not None:
-        return JSONResponse(schema.FindDone.model_validate(
-            {"results": results}).model_dump(mode="json"))
+    if (search := await cached_find(svc, key, body.limit)) is not None:
+        return find_done(find_mod.merge(index, search), body.limit)
     if (running := await active_find(svc, key)) is not None:
-        return queued(running.id)
-    rate_limit(svc, who)
+        return find_queued(running.id, index, body.limit)
+    try:
+        rate_limit(svc, who)
+    except ApiError as err:
+        # Over the work limit: what the index has is still an answer.
+        if err.code == "rate_limited" and index:
+            return find_done(index, body.limit, complete=False)
+        raise
     async with svc.db.session() as s:
         job = Job(kind="find", mode="rules", days=body.days, params=params,
                   user_id=who.user_id, dedupe_key=f"find:{key}")
@@ -652,10 +671,10 @@ async def find(body: FindIn, request: Request, who: Caller = Depends(caller)) ->
         except IntegrityError:  # an identical search started a moment ago
             await s.rollback()
             if (running := await active_find(svc, key)) is not None:
-                return queued(running.id)
+                return find_queued(running.id, index, body.limit)
             raise
     svc.runner.wake()
-    return queued(job.id)
+    return find_queued(job.id, index, body.limit)
 
 
 @router.get("/find/{job_id}", dependencies=[Depends(internal)])

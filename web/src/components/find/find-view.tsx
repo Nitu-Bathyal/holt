@@ -109,10 +109,16 @@ export function FindView({ initialPicks, searched = initialPicks, initial, sourc
 
   // The search's state, lifted here so its one-line summary sits in the tray.
   const r = shown.result;
+  // A new search comes with what Holt has already checked (`results`), shown
+  // while the search adds to it; if the search fails, that still stands.
+  const index = r.ok && r.data.status === "queued" ? r.data.results : null;
   const job = useFindJob(r.ok && r.data.status === "queued" ? r.data.job_id : null);
-  const raw: FindResult[] | null = !r.ok ? null : r.data.status === "done" ? r.data.results : job.results;
-  const error = !r.ok ? r.error : job.error;
-  const list = raw ? personalise(raw, fit) : null;
+  const searching = index !== null && !job.results && !job.error;
+  const raw: FindResult[] | null = !r.ok ? null : r.data.status === "done" ? r.data.results : job.results ?? (index?.length ? index : null);
+  const error = !r.ok ? r.error : index?.length ? null : job.error;
+  const fitted = raw ? personalise(raw, fit) : null;
+  // Nothing of the index fits yet: wait for the search rather than say "none".
+  const list = searching && !fitted?.length ? null : fitted;
   const status = locked || error ? "" : !list ? "Checking which repos reply to outsiders. A new search takes up to a minute." : list.length ? `${list.length} repo${list.length === 1 ? "" : "s"} that merge outside PRs, best starter issues first` : "";
 
   // "save as my profile": only with a profile to update, and picks that differ from it.
@@ -166,7 +172,7 @@ export function FindView({ initialPicks, searched = initialPicks, initial, sourc
     <>
       <FindFilters picks={picks} onChange={setPicks} hf={hf} footer={footer} />
       {notice}
-      <Results pending={pending} locked={locked} list={list} error={error} progress={job.stage.progress} days={picks.days} saved={saved} picks={picks} setPicks={setPicks} onRetry={retryNow} />
+      <Results pending={pending} locked={locked} list={list} searching={searching} error={error} progress={job.stage.progress} days={picks.days} saved={saved} picks={picks} setPicks={setPicks} onRetry={retryNow} />
     </>
   );
 }
@@ -176,12 +182,14 @@ function sameAsProfile(p: Picks, prof: Pick<Prefs, "languages" | "topics" | "day
   return same(p.langs, prof.languages) && same(p.topics, prof.topics) && same(p.types, prof.contributions) && p.days === prof.days && p.level === prof.level;
 }
 
-function Results({ pending, locked, list, error, progress, days, saved, picks, setPicks, onRetry }: {
+function Results({ pending, locked, list, searching, error, progress, days, saved, picks, setPicks, onRetry }: {
   pending: boolean;
   /** Signed out and the picks changed: where to come back to after signing in. */
   locked: string | null;
-  /** The personalised results, or null while the search runs. */
+  /** The personalised results, or null while the search runs with nothing to show yet. */
   list: FindResult[] | null;
+  /** The search is still adding to `list`. */
+  searching: boolean;
   error: ApiError | null;
   progress: number;
   days: number;
@@ -196,25 +204,36 @@ function Results({ pending, locked, list, error, progress, days, saved, picks, s
   } else if (error) {
     body = <ErrorPanel error={error} onRetry={onRetry} />;
   } else if (!list) {
-    const pct = Math.round(Math.min(1, Math.max(0.05, progress)) * 100);
     body = (
       <>
-        <div className="mb-5 h-1 bg-panel-2" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Search progress">
-          <div className="h-full bg-blue transition-[width] duration-500 ease-out" style={{ width: `${pct}%` }} />
-        </div>
+        <SearchProgress progress={progress} />
         <FindResultsSkeleton count={3} />
       </>
     );
   } else if (!list.length) {
     body = <Empty picks={picks} setPicks={setPicks} />;
   } else {
-    body = <FindResults results={list} days={days} saved={saved} />;
+    body = (
+      <>
+        {searching && <SearchProgress progress={progress} />}
+        <FindResults results={list} days={days} saved={saved} />
+      </>
+    );
   }
 
   return (
     <section aria-label="Results" aria-busy={!locked && (pending || (!list && !error))} className="mt-5">
       <div className={`transition-opacity duration-200 ${pending && !locked ? "pointer-events-none opacity-40" : ""}`}>{body}</div>
     </section>
+  );
+}
+
+function SearchProgress({ progress }: { progress: number }) {
+  const pct = Math.round(Math.min(1, Math.max(0.05, progress)) * 100);
+  return (
+    <div className="mb-5 h-1 bg-panel-2" role="progressbar" aria-valuenow={pct} aria-valuemin={0} aria-valuemax={100} aria-label="Search progress">
+      <div className="h-full bg-blue transition-[width] duration-500 ease-out" style={{ width: `${pct}%` }} />
+    </div>
   );
 }
 
