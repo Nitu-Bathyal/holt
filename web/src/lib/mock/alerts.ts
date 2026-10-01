@@ -129,5 +129,8 @@ export async function setAlertMute(userId: string, repo: string, number: number,
 export async function setAlertEmailByToken(token: string, on: boolean): Promise<Result<Unsubscribed>> {
   if (token !== TOKEN) return err(404, "not_found", "That link doesn't work any more. You can change your alert emails in your settings.");
   for (const r of rows().values()) r.emailOn = on;
-  return { ok: true, data: { email_on: on } };
+  // The answer says which emails the token is for. Not a literal in the return, so it
+  // type-checks whether or not the response type has `emails` yet.
+  const answer = { email_on: on, emails: "alerts" as const };
+  return { ok: true, data: answer };
 }
