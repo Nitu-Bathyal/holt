@@ -11,8 +11,7 @@ import { fullStats } from "@/lib/repo-card";
 import type { Report } from "@/lib/types";
 import { CatFace } from "../cat-face";
 import { OddsBar } from "../repo-card/odds-bar";
-import { Skeleton, SkeletonCard, SkeletonText } from "../skeleton";
-import { StatsGridSkeleton } from "./report-skeleton";
+import { Skeleton, SkeletonText } from "../skeleton";
 import { TONE, TONE_MOOD } from "./tone";
 import { VerdictCat } from "./verdict-cat";
 
@@ -25,35 +24,38 @@ export function PartialReport({ report, back, land }: { report: Report; back: st
   const t = TONE[report.tone];
   const lead = statLines(report.stats)[0];
   return (
-    <div className="max-w-3xl space-y-10" data-teaser>
+    <div className="max-w-4xl space-y-6" data-teaser>
+      {/* The same compact card as the full report's (report-view.tsx, VerdictHero), with the odds and one number. */}
       <div className="relative overflow-hidden border border-line-strong bg-panel shadow-card" data-verdict-hero>
         <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${t.bg} ${land ? "land-bar" : ""}`} />
-        <div className="p-5 pl-6 sm:p-8 sm:pl-10">
-          <div className="flex items-center justify-between gap-4 text-[0.8rem] uppercase tracking-[0.08em] text-faint">
-            <span>verdict · rules report</span>
+        <div className="p-4 pl-5 sm:p-5 sm:pl-7">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+              <h1 className={`inline-flex items-center gap-2 border px-2.5 py-1 text-[0.95rem] font-semibold sm:text-[1rem] ${t.text} ${t.border} ${t.soft}`}>
+                <span aria-hidden="true" className={`size-1.5 rounded-full ${t.bg}`} />
+                {report.headline}
+              </h1>
+              <span className="text-[0.78rem] uppercase tracking-[0.08em] text-faint">rules report</span>
+            </div>
             {land ? (
-              <VerdictCat mood={TONE_MOOD[report.tone]} className="text-[1.1rem] normal-case tracking-normal sm:text-[1.5rem]" />
+              <VerdictCat mood={TONE_MOOD[report.tone]} className="text-[1rem] normal-case tracking-normal sm:text-[1.2rem]" />
             ) : (
-              <CatFace mood={TONE_MOOD[report.tone]} blink className="text-[1.1rem] normal-case tracking-normal sm:text-[1.5rem]" />
+              <CatFace mood={TONE_MOOD[report.tone]} blink className="text-[1rem] normal-case tracking-normal sm:text-[1.2rem]" />
             )}
           </div>
-          <h1 className={`display mt-4 text-[2.6rem] sm:text-[4rem] ${t.text} ${land ? "land-stamp" : ""}`}>
-            {report.headline}
-            <span className="text-ink">.</span>
-          </h1>
-          <p className="mt-4 max-w-2xl font-sans text-[1.05rem] leading-relaxed text-ink sm:text-[1.15rem]" data-line="reason">
+          <p className="mt-3 max-w-3xl font-sans text-[1rem] leading-snug text-ink sm:text-[1.05rem]" data-line="reason">
             {report.verdict_line}
           </p>
-          <div className="mt-6 max-w-2xl" data-odds>
+          <div className="mt-3 max-w-2xl" data-odds>
             <OddsBar stats={fullStats(report.stats)} className="h-2.5" />
             {lead && (
-              <p className="mt-3 font-sans text-[0.98rem] text-muted" data-line="lead-number">
-                <span className={`mr-2 font-mono text-[1.25rem] font-semibold tracking-tight ${lead.tone === "neutral" ? "text-ink" : TONE[lead.tone].text}`}>{lead.big}</span>
+              <p className="mt-2 font-sans text-[0.93rem] text-muted" data-line="lead-number">
+                <span className={`mr-2 font-mono text-[1.15rem] font-semibold tracking-tight ${lead.tone === "neutral" ? "text-ink" : TONE[lead.tone].text}`}>{lead.big}</span>
                 {lead.label}
               </p>
             )}
           </div>
-          <p className="mt-5 text-[0.82rem] text-faint">
+          <p className="mt-3 text-[0.78rem] text-faint">
             checked <time dateTime={report.generated_at} suppressHydrationWarning>{timeAgo(report.generated_at)}</time>
           </p>
         </div>
@@ -61,19 +63,16 @@ export function PartialReport({ report, back, land }: { report: Report; back: st
 
       <section aria-label="The full report" className="relative" data-locked>
         {/* The report's own sections over placeholders: no numbers, real or made up, until sign-in. */}
-        <div aria-hidden="true" inert className="pointer-events-none select-none space-y-10 blur-[3px] sk-still [mask-image:linear-gradient(#000_45%,transparent)]">
+        <div aria-hidden="true" inert className="pointer-events-none select-none space-y-8 blur-[3px] sk-still [mask-image:linear-gradient(#000_40%,transparent)]">
           {LOCKED.map((s) => (
-            <div key={s.n} className="border-t border-line pt-8">
-              <p className="mb-5 flex items-baseline gap-x-4">
-                <span className="text-[0.8rem] text-blue">{s.n}</span>
-                <span className="text-[1.25rem] font-semibold tracking-tight sm:text-[1.4rem]">{s.title}</span>
-              </p>
+            <div key={s.title}>
+              <p className="mb-3 text-[1.05rem] font-semibold tracking-tight sm:text-[1.15rem]">{s.title}</p>
               {s.body}
             </div>
           ))}
         </div>
-        <div className="absolute inset-x-0 top-16 flex justify-center px-4 sm:top-24">
-          <Link href={signInHref(back)} prefetch={false} className="btn-primary shadow-card" data-signin-card>
+        <div className="absolute inset-x-0 top-10 flex justify-center px-4 sm:top-14">
+          <Link href={signInHref(back)} prefetch={false} className="btn-primary" data-signin-card>
             sign in to see the full report <span aria-hidden="true">→</span>
           </Link>
         </div>
@@ -82,20 +81,20 @@ export function PartialReport({ report, back, land }: { report: Report; back: st
   );
 }
 
+/** The full report's sections, as placeholders: starter issues as thin rows, the README, where work lands, the evidence. */
 const LOCKED = [
   {
-    n: "01",
     title: "Starter issues",
     body: (
-      <ul className="grid gap-3 md:grid-cols-2">
-        <SkeletonCard />
-        <SkeletonCard className="hidden md:block" />
-      </ul>
+      <span className="block space-y-2">
+        <Skeleton className="h-5 w-full" />
+        <Skeleton className="h-5 w-full" />
+        <Skeleton className="h-5 w-4/5" />
+      </span>
     ),
   },
-  { n: "02", title: "What happened to outsiders", body: <StatsGridSkeleton /> },
+  { title: "README", body: <SkeletonText lines={4} last="55%" /> },
   {
-    n: "03",
     title: "Where newcomer work lands",
     body: (
       <span className="block space-y-3">
@@ -105,5 +104,5 @@ const LOCKED = [
       </span>
     ),
   },
-  { n: "04", title: "The evidence", body: <SkeletonText lines={4} last="40%" /> },
+  { title: "The evidence", body: <SkeletonText lines={3} last="40%" /> },
 ];

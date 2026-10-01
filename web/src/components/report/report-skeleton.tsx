@@ -6,7 +6,7 @@ import { StarterIssuesSkeleton } from "./starter-issues";
 
 function SectionSkeleton({ children, title = "14rem" }: { children: React.ReactNode; title?: string }) {
   return (
-    <div className="border-t border-line pt-8">
+    <div>
       <div className="mb-5 flex h-[2.0625rem] items-center gap-x-4 sm:h-[2.31rem]">
         <Skeleton className="h-3 w-5" />
         <Skeleton className="h-5 max-w-[70%]" style={{ width: title }} />
@@ -18,7 +18,7 @@ function SectionSkeleton({ children, title = "14rem" }: { children: React.ReactN
 
 export function StatsGridSkeleton({ tiles = 6 }: { tiles?: number }) {
   return (
-    <ul aria-hidden="true" className="grid gap-px overflow-hidden border border-line bg-line shadow-soft sm:grid-cols-2 lg:grid-cols-3">
+    <ul aria-hidden="true" className="grid gap-px overflow-hidden border border-line bg-line sm:grid-cols-2 lg:grid-cols-3">
       {Array.from({ length: tiles }, (_, i) => (
         <li key={i} className="bg-panel p-5">
           <span className="flex h-[2.0rem] items-center">
@@ -35,10 +35,9 @@ export function StatsGridSkeleton({ tiles = 6 }: { tiles?: number }) {
 export function ReportBodySkeleton() {
   return (
     <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-10">
-      <div className="min-w-0 space-y-10">
-        <div className="relative overflow-hidden border border-line-strong bg-panel shadow-card">
-          <span aria-hidden="true" className="absolute inset-y-0 left-0 w-1 bg-line-strong" />
-          <div className="p-5 pl-6 sm:p-8 sm:pl-10">
+      <div className="min-w-0 space-y-8">
+        <div className="relative border-b border-line">
+          <div className="pb-5">
             <div className="flex h-[1.5rem] items-center justify-between gap-4">
               <Skeleton className="h-3 w-64 max-w-[70%]" />
               <Skeleton className="h-4 w-14" />
@@ -98,6 +97,7 @@ export function ReportBodySkeleton() {
 /** The repo line and the free / AI tabs. */
 export function ReportHeaderSkeleton() {
   return (
+    <>
     <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3">
       <span aria-hidden="true" className="size-10 self-start rounded-md border border-line-strong bg-panel-2" />
       <div className="min-w-0 flex-1">
@@ -108,18 +108,17 @@ export function ReportHeaderSkeleton() {
           <Skeleton className="h-2.5 w-52" />
         </span>
       </div>
-      <div aria-hidden="true" className="grid w-full grid-cols-2 border border-line-strong text-center text-[0.85rem] text-faint sm:w-auto">
-        <span className="inline-flex min-h-11 items-center justify-center px-3">free report</span>
-        <span className="inline-flex min-h-11 items-center justify-center px-3">AI report ✦</span>
-      </div>
+      {/* Where the AI report button and Save sit. */}
+      <Skeleton className="h-11 w-36 shrink-0 self-start sm:h-9" />
     </div>
+    </>
   );
 }
 
 export function ReportSkeleton() {
   return (
     <div className="relative">
-      <div aria-hidden="true" className="hero-backdrop bottom-auto h-[560px] [mask-image:linear-gradient(#000_55%,transparent)]" />
+      
       <SkeletonRegion label="Loading the report…" className="report-wide relative py-8 sm:py-12">
         <ReportHeaderSkeleton />
         <ReportBodySkeleton />
