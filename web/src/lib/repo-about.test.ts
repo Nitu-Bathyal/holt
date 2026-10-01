@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { aboutNumbers, compactCount, flags, helpLinks, projectFacts, readmeShown, share, siteLabel } from "./repo-about.ts";
+import { aboutNumbers, compactCount, flags, helpLinks, houseRules, projectFacts, readmeShown, share, siteLabel } from "./repo-about.ts";
 import type { RepoAbout } from "./repo-about.ts";
 
 const base: RepoAbout = {
@@ -24,6 +24,8 @@ const base: RepoAbout = {
   fork_of: null,
   links: [],
   latest_release: null,
+  readme: null,
+  top_contributors: [],
   fetched_at: "2026-09-29T00:00:00Z",
 };
 
@@ -97,4 +99,19 @@ test("archived and fork flags", () => {
     { kind: "fork", text: "Fork of orig/flask", repo: "orig/flask" },
   ]);
   assert.deepEqual(flags({ ...base, fork: true }), [{ kind: "fork", text: "A fork" }]);
+});
+
+test("house rules: one plain instruction per ask, each once, with where it was read", () => {
+  const url = "https://github.com/o/r/blob/main/CONTRIBUTING.md";
+  const rules = houseRules([
+    { code: "ai_disclosure", url, link: null, days: null },
+    { code: "stale_bot", url, link: null, days: 30 },
+    { code: "ai_disclosure", url, link: null, days: null },
+    { code: "stale_bot", url: "https://x", link: null, days: null },
+  ]);
+  assert.deepEqual(rules, [
+    { text: "Say whether you used AI.", url },
+    { text: "A bot closes pull requests that go quiet for 30 days.", url },
+  ]);
+  assert.deepEqual(houseRules([]), []);
 });

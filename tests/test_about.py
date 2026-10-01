@@ -206,3 +206,14 @@ def test_help_links_ignore_badge_images_and_github_docs():
     assert help_links("![x](https://img.shields.io/badge/chat-gitter-green)") == []
     assert help_links("Read https://docs.github.com/en/pull-requests first.") == []
     assert help_links(None) == [] and help_links("") == []
+
+
+def test_a_docs_link_must_name_the_project_when_the_repo_is_known():
+    text = "Built on [WSGI](https://wsgi.readthedocs.io/) and [the docs](https://flask.readthedocs.io/en/latest/)."
+    assert help_links(text, "pallets/flask") == [{"kind": "docs", "url": "https://flask.readthedocs.io/en/latest/"}]
+    # Only a link to someone else's docs: none, rather than a wrong one.
+    assert help_links("Uses [WSGI](https://wsgi.readthedocs.io/).", "pallets/flask") == []
+    # Without a repo, the first one stands (as before).
+    assert help_links("Uses [WSGI](https://wsgi.readthedocs.io/).") == [{"kind": "docs", "url": "https://wsgi.readthedocs.io/"}]
+    # A chat link needs no name.
+    assert help_links("https://discord.gg/pallets", "pallets/flask") == [{"kind": "discord", "url": "https://discord.gg/pallets"}]

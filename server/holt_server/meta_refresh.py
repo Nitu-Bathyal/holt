@@ -87,8 +87,11 @@ class MetaRefresher:
             fetched = dict((await s.execute(
                 select(RepoMeta.repo_key, RepoMeta.fetched_at)
                 .where(RepoMeta.repo_key.in_(list(pending))))).all())
+            # Read before the README, links and release were kept: read again.
+            old_shape = set((await s.execute(
+                select(RepoMeta.repo_key).where(RepoMeta.repo_key.in_(list(pending)), RepoMeta.links.is_(None)))).scalars())
         return [repo for key, repo in pending.items()
-                if key not in fetched or utc(fetched[key]) < cutoff]
+                if key not in fetched or key in old_shape or utc(fetched[key]) < cutoff]
 
     async def drain(self) -> None:
         """Wait for the reads already noted (tests, and a clean shutdown)."""

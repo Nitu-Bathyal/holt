@@ -3,7 +3,7 @@
 import "server-only";
 import type {
   AnalysisStart, ApiError, Credits, DiscoverOut, DiscoverRepo, DiscoverSort, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, HistoryItem,
-  ContributionType, JobStatus, Me, Mode, Passes, ProfileOut, ProfilePrefs, Recommendation, Recommendations, Report, Result, SavedList, SavedState, Stats, StarterIssue,
+  ContributionType, JobStatus, Me, Mode, Passes, ProfileOut, ProfilePrefs, Recommendation, Recommendations, RepoSearch, Report, Result, SavedList, SavedState, Stats, StarterIssue,
 } from "../types";
 import type { FeedbackInput } from "../feedback";
 import type { Timing } from "../api-schema";
@@ -245,7 +245,8 @@ export async function getReport(repoIn: string, mode: Mode, days: number): Promi
   const v = validate(repoIn);
   if (!v.ok) return v;
   const r = state().cache.get(key(v.data, mode, days)) ?? (mode === "rules" ? anotherBudget(v.data, days) : undefined);
-  return r ? { ok: true, data: r } : err(404, "not_found", "No report yet for this repository.");
+  // Like the real server, `about` is read fresh when a report is served, never stored with it: a report cached earlier shows the current fields.
+  return r ? { ok: true, data: { ...r, about: mockAbout(r.repo) } } : err(404, "not_found", "No report yet for this repository.");
 }
 
 /** Like the server: a rules report's verdict is the same for every budget, so
@@ -263,6 +264,16 @@ export async function starterIssues(repoIn: string, limit: number): Promise<Resu
   const v = validate(repoIn);
   if (!v.ok) return v;
   return { ok: true, data: { repo: v.data, issues: mockIssues(v.data).slice(0, limit) } };
+}
+
+/** API.md, "Repo search": the repos the mock knows whose name has `name` in it, exact matches first. */
+export async function searchRepos(name: string): Promise<Result<RepoSearch>> {
+  const q = name.trim().toLowerCase();
+  if (!/^[a-z0-9._-]+(?: [a-z0-9._-]+)*$/.test(q)) return err(400, "invalid_request", "That doesn't look like a repository name.");
+  const known = [...new Set([...PRECACHED, "excalidraw/excalidraw"])];
+  const hits = known.filter((r) => r.split("/")[1].toLowerCase().includes(q));
+  hits.sort((a, b) => Number(b.split("/")[1].toLowerCase() === q) - Number(a.split("/")[1].toLowerCase() === q));
+  return { ok: true, data: { query: q, results: hits.slice(0, 5).map((repo) => ({ repo, description: null, stars: 0 })) } };
 }
 
 const FIND_MS = Math.round(JOB_MS / 2);

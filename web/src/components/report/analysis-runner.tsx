@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState, ViewTransition } from "react";
+import { useRouter } from "next/navigation";
+import { startTransition, useEffect, useState, ViewTransition } from "react";
 import { reportHref } from "@/lib/budget";
 import { checkNeedsSignIn } from "@/lib/gate";
 import type { Mode, Report } from "@/lib/types";
@@ -26,6 +27,14 @@ export function AnalysisRunner({ repo, mode, days, signedIn, fallback, ticket }:
   const { state, retry } = useAnalysis(repo, mode, days, true, ticket, stays);
   const [issues, setIssues] = useState<IssuesState>(null);
   const showFallback = state.phase === "error" && fallback !== undefined;
+  const router = useRouter();
+  const done = state.phase === "done";
+
+  // The page header (repo details) is drawn by the server from the saved report,
+  // which didn't exist when this page loaded. Ask for it again now that it does.
+  useEffect(() => {
+    if (done) startTransition(() => router.refresh());
+  }, [done, router]);
 
   // Read alongside the check, not after it, so the issues are there when the report lands.
   useEffect(() => {

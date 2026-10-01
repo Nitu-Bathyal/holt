@@ -5,7 +5,7 @@ import { cache } from "react";
 import type {
   AnalysisStart, ApiError, Checkout, Contributions, Credits, DiscoverOut, DiscoverSort, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection,
   HistoryItem, JobStatus, Me, MergePlanStart, MergePlanState, Mode, Order, OrderConfirmed, Passes, PlaybookStart, PlaybookState, PreflightStart, PreflightState,
-  ProfileOut, ProfilePrefs, RazorpaySuccess, Recommendations, Report, Result, SavedList, SavedState, StarterIssue,
+  ProfileOut, ProfilePrefs, RazorpaySuccess, Recommendations, RepoSearch, Report, Result, SavedList, SavedState, StarterIssue,
 } from "./types";
 import type { FeedbackInput } from "./feedback";
 import { isJobId } from "./ids";
@@ -142,6 +142,12 @@ export async function starterIssues(repo: string, limit: number, caller: Caller)
   if (!repoOk(repo)) return BAD_REPO;
   if (MOCK) return mock.starterIssues(repo, limit);
   return call(`/v1/repos/${repoPath(repo)}/starter-issues?limit=${limit}`, { caller });
+}
+
+/** Public repositories whose name matches `name`, most starred first (API.md, "Repo search"): which repo a bare "excalidraw" means. */
+export async function searchRepos(name: string, caller: Caller): Promise<Result<RepoSearch>> {
+  if (MOCK) return mock.searchRepos(name);
+  return call(`/v1/repos/search?q=${encodeURIComponent(name)}`, { caller });
 }
 
 export async function find(q: FindQuery, caller: Caller): Promise<Result<FindStart>> {

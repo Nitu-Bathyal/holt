@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ABOUT_ROWS, aboutCells, cells, compareHref, compareTitle, leaders, parseList, ROWS } from "./compare.ts";
+import { ABOUT_ROWS, aboutCells, bareNames, cells, compareHref, compareTitle, leaders, parseList, pickRepo, ROWS } from "./compare.ts";
 import { humanHours } from "./format.ts";
 import type { Stats } from "./types.ts";
 
@@ -82,4 +82,28 @@ test("aboutCells: stars lead, counts are compact, and archived shows where the l
   assert.equal(old.forks.tone, "none");
   assert.equal(old.language.main, "–");
   for (const r of ABOUT_ROWS) assert.equal(aboutCells(null, now)[r.id].main, "–", r.id);
+});
+
+test("bareNames: a word with no owner is a name to look up; repos and links are not", () => {
+  assert.deepEqual(bareNames("excalidraw"), ["excalidraw"]);
+  assert.deepEqual(bareNames("  Excalidraw, vscode  tailwindcss "), ["excalidraw", "vscode", "tailwindcss"]);
+  assert.deepEqual(bareNames("pallets/flask https://github.com/psf/requests"), []);
+  assert.deepEqual(bareNames("psf/requests excalidraw"), ["excalidraw"]);
+  assert.deepEqual(bareNames("excalidraw EXCALIDRAW excalidraw"), ["excalidraw"]);
+  assert.deepEqual(bareNames(["a", "b,c"]), ["a", "b", "c"]);
+  assert.deepEqual(bareNames(undefined), []);
+});
+
+test("bareNames: odd text is not a name", () => {
+  assert.deepEqual(bareNames("!!! ??? <script> a;b x:y"), []);
+  assert.deepEqual(bareNames(".hidden -dash"), []);
+  assert.deepEqual(bareNames("a".repeat(61)), []);
+  assert.deepEqual(bareNames("github.com/psf"), []);
+});
+
+test("pickRepo: the exact name wins over a more starred near match, else the top result", () => {
+  const hits = [{ repo: "someone/excalidraw-tools" }, { repo: "excalidraw/excalidraw" }, { repo: "fork/Excalidraw" }];
+  assert.equal(pickRepo("excalidraw", hits), "excalidraw/excalidraw");
+  assert.equal(pickRepo("excali", hits), "someone/excalidraw-tools");
+  assert.equal(pickRepo("excalidraw", []), null);
 });

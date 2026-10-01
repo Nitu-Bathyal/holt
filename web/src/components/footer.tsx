@@ -31,11 +31,57 @@ import { ReactiveCat } from "./reactive-cat";
 
 const SIGN_OFF = "git commit --to-the-right-repo";
 
+/** First path segments that are the site's own pages, not a repository owner. */
+const SITE_ROUTES = new Set(["api", "badge", "compare", "contact", "discover", "example-ai-report", "examples", "find", "hacktoberfest", "how-it-works", "me", "preflight", "pricing", "privacy", "profile", "refunds", "settings", "signin", "terms"]);
+
+/** /owner/repo, and not one of the site's own two-part pages such as /me/repos. */
+function isReportPath(path: string | null): boolean {
+  const parts = (path ?? "").split("/").filter(Boolean);
+  return parts.length === 2 && !SITE_ROUTES.has(parts[0].toLowerCase());
+}
+
+/** The footer under a report: one line of what Holt does and doesn't do, then the links. */
+function ReportFooter({ signedIn }: { signedIn: boolean }) {
+  return (
+    <footer className="mt-auto border-t border-line bg-panel">
+      <div className="wrap flex flex-col gap-5 py-8 text-[0.85rem] md:flex-row md:items-start md:justify-between">
+        <div className="max-w-sm">
+          <p className="font-semibold text-ink">Holt</p>
+          <p className="mt-1 font-sans leading-snug text-muted">Reads a project&apos;s public pull request history on GitHub. It never posts, comments or contacts anyone.</p>
+          <p className="mt-2 text-faint">Open source, Apache-2.0</p>
+        </div>
+        <nav aria-label="Footer" className="grid grid-cols-2 gap-x-10 gap-y-1 sm:grid-cols-3">
+          <ul>
+            <FLink href="/find">Find a project</FLink>
+            <FLink href="/discover">Browse projects</FLink>
+            <FLink href="/how-it-works">How it works</FLink>
+          </ul>
+          <ul>
+            <FLink href="/badge">Badge for maintainers</FLink>
+            <FLink href="/pricing">Pricing</FLink>
+            <FLink href={GITHUB_REPO_URL}>Source on GitHub</FLink>
+          </ul>
+          <ul>
+            {LEGAL_PAGES.map((p) => (
+              <FLink key={p.href} href={p.href}>{p.label}</FLink>
+            ))}
+            <FLink href="/contact#team">Team</FLink>
+            {!signedIn && <MotionSwitch />}
+          </ul>
+        </nav>
+      </div>
+    </footer>
+  );
+}
+
 export function Footer({ signedIn = false }: { signedIn?: boolean }) {
   const router = useRouter();
   // The landing page is "/"; every other page
   // already has its own action, so only the landing ends on the form.
-  const onLanding = usePathname() === "/";
+  const path = usePathname();
+  const onLanding = path === "/";
+  // A report (/owner/repo) gets a slim footer: the page is long, and the big sign-off is for the landing.
+  const onReport = isReportPath(path);
   const root = useRef<HTMLElement>(null);
   const cat = useRef<HTMLButtonElement>(null);
   const frame = useRef(0);
@@ -121,6 +167,8 @@ export function Footer({ signedIn = false }: { signedIn?: boolean }) {
     onFocus: () => setHover(m),
     onBlur: () => setHover(null),
   });
+
+  if (onReport) return <ReportFooter signedIn={signedIn} />;
 
   return (
     <footer ref={root} onPointerMove={onMove} className="mt-auto overflow-clip border-t border-line bg-panel">
