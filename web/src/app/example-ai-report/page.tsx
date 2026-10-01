@@ -3,7 +3,7 @@ import Link from "next/link";
 import { MergePlanView } from "@/components/merge-plan/merge-plan-view";
 import { PageTransition } from "@/components/motion/page-transition";
 import { RepoAvatar } from "@/components/repo-card/repo-avatar";
-import { ReportModeLink } from "@/components/report/report-tabs";
+import { ReportBackLink, ReportModeLink } from "@/components/report/report-tabs";
 import { EXAMPLE_PATH } from "@/lib/example-report";
 import { EXAMPLE_PLAN as plan, planRecordedOn } from "@/lib/merge-plan";
 
@@ -42,6 +42,7 @@ export default async function ExampleAiReportPage({ searchParams }: PageProps<"/
           </aside>
 
           <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3">
+            <ReportBackLink href={`/${plan.repo}`} />
             <RepoAvatar repo={plan.repo} size={40} />
             <div className="min-w-0 flex-1">
               <p className="text-[1.05rem] font-semibold tracking-tight [overflow-wrap:anywhere] sm:text-[1.25rem]">

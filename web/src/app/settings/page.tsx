@@ -48,7 +48,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
           <li key={s.id}>
             <Link href={s.href} className="app-row group grid-cols-[minmax(0,1fr)_auto]">
               <span className="min-w-0">
-                <span className="block text-[1.02rem] font-semibold group-hover:text-blue">{s.title}</span>
+                <span className="block text-[0.95rem] font-semibold group-hover:text-blue">{s.title}</span>
                 <span className="mt-1 block font-sans text-[0.9rem] text-muted">{status[s.id] ?? s.blurb}</span>
               </span>
               <span aria-hidden="true" className="text-faint group-hover:text-blue">›</span>

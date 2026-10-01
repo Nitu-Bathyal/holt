@@ -13,7 +13,7 @@ export default async function SettingsLayout({ children }: { children: React.Rea
   return (
     <PageTransition>
       <div className="app-page">
-        <AppPageHeader title="Settings" />
+        <AppPageHeader sentence title="Settings" />
         <SettingsNav alerts={Boolean(alerts?.ok && alerts.data.access.state !== "unavailable")} />
         <div className="min-w-0 max-w-3xl pt-8">{children}</div>
       </div>

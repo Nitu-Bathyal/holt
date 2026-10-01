@@ -60,8 +60,8 @@ const GENERIC = (
 /** Settings pages share a layout, and its loading.tsx only covers the section. */
 const SETTINGS = (
   <div className="app-page">
-    <div className="app-head">
-      <span className="flex h-[clamp(2.09rem,3.96vw,3.3rem)] items-center">
+    <div className="app-head sentence-head">
+      <span className="flex h-[clamp(1.61rem,2.53vw,2.13rem)] items-center">
         <Skeleton className="h-[62%] w-40" />
       </span>
     </div>

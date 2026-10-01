@@ -32,17 +32,17 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
       <>
       <PageHead>
         <p className="rail mb-4 flex gap-2"><strong className="m-0">pricing</strong><span>free where it matters</span></p>
-        <h1 className="display max-w-3xl text-[clamp(2rem,6vw,3.4rem)]">
+        <h1 className="display max-w-3xl text-[clamp(1.9rem,4.5vw,3rem)]">
           Finding a project is free. <span className="text-green">It always will be.</span>
         </h1>
-        <p className="prose-sans mt-5 max-w-2xl text-[1.05rem]">Money never changes a verdict.</p>
+        <p className="prose-sans mt-5 max-w-2xl text-[0.98rem]">Money never changes a verdict.</p>
       </PageHead>
 
-      <div className="wrap py-10 sm:py-14">
+      <div className="wrap py-8 sm:py-10">
         <ul className="grid gap-4 md:grid-cols-2">
           <li className="relative flex flex-col border border-blue bg-panel p-6 shadow-card">
             <p className="text-[0.85rem] uppercase tracking-[0.08em] text-faint">Free</p>
-            <p className="mt-3 text-[2.4rem] font-semibold leading-none tracking-tight">
+            <p className="mt-3 text-[2rem] font-semibold leading-none tracking-tight">
               $0 <span className="text-[0.89rem] font-normal tracking-normal text-muted">forever</span>
             </p>
             <p className="mt-3 font-sans text-muted">Everything you need to pick a project.</p>
@@ -58,13 +58,13 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
                 <p className="text-[0.85rem] uppercase tracking-[0.08em] text-faint">Pro</p>
                 <span className="chip border-amber/60 text-amber">coming soon</span>
               </div>
-              <p className="mt-3 text-[1.6rem] font-semibold leading-tight tracking-tight">Holt watches for you.</p>
+              <p className="mt-3 text-[1.3rem] font-semibold leading-tight tracking-tight">Holt watches for you.</p>
               <p className="mt-3 font-sans text-muted">Your PRs, the repos you follow and the issues you want, plus a plan for getting merged.</p>
             </li>
           ) : (
             <li className="flex flex-col border border-green bg-panel p-6 shadow-card">
               <p className="text-[0.85rem] uppercase tracking-[0.08em] text-faint">Pro</p>
-              <p className="mt-3 text-[1.6rem] font-semibold leading-tight tracking-tight">Holt watches for you.</p>
+              <p className="mt-3 text-[1.3rem] font-semibold leading-tight tracking-tight">Holt watches for you.</p>
               <ul className="mt-5 flex-1 space-y-2 font-sans text-[0.92rem]">
                 {features.map((f) => <Tick key={f.id}>{passFeatureLine(f)}</Tick>)}
               </ul>
@@ -74,7 +74,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
         </ul>
 
         {onSale.length > 0 && (
-          <section id="passes" aria-labelledby="passes-h" className="mt-14 scroll-mt-24">
+          <section id="passes" aria-labelledby="passes-h" className="mt-10 scroll-mt-24">
             <h2 id="passes-h" className="text-[1.2rem] font-semibold tracking-tight">Pro passes</h2>
             <p className="mt-2 max-w-2xl font-sans text-[0.95rem] text-muted">One payment. It doesn&apos;t renew.</p>
             <ul className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -85,7 +85,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
                   <li key={p.id} className={`relative flex flex-col border bg-panel p-6 ${top ? "border-green shadow-card" : "border-line-strong shadow-soft"}`}>
                     {top && <span className="absolute -top-3 left-6 bg-green px-2 py-0.5 text-[0.78rem] font-semibold text-on-accent">a full season</span>}
                     <p className="text-[0.85rem] uppercase tracking-[0.08em] text-faint">{p.name}</p>
-                    <p className="mt-3 text-[2.4rem] font-semibold leading-none tracking-tight">{formatPrice(p.amount, p.currency)}</p>
+                    <p className="mt-3 text-[2rem] font-semibold leading-none tracking-tight">{formatPrice(p.amount, p.currency)}</p>
                     <p className="mt-2 min-h-[1.4rem] font-sans text-[0.9rem] text-muted">{monthly}</p>
                     <BuyPass
                       pass={p.id}
@@ -101,7 +101,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
             </ul>
             <p className="mt-4 max-w-2xl font-sans text-[0.89rem] text-muted">
               Paid in INR through Razorpay (UPI, cards, netbanking), billed as <span className="text-ink">Githolt</span>. See the{" "}
-              <Link href="/refunds" className="text-link">refund policy</Link>.
+              <Link href="/refunds" className="text-green transition-opacity hover:opacity-75">refund policy</Link>.
             </p>
           </section>
         )}

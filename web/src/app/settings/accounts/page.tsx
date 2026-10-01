@@ -57,7 +57,7 @@ export default async function AccountSettings({ searchParams }: PageProps<"/sett
         </div>
       </Block>
 
-      <Block id="github" title="GitHub" className="mt-10">
+      <Block id="github" title="GitHub" className="mt-8">
         {!gh.ok ? (
           <p role="alert" className="border border-orange/50 px-4 py-3 font-sans text-[0.9rem] text-orange">{gh.error.message}</p>
         ) : acct ? (

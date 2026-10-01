@@ -339,8 +339,9 @@
     letter-spacing: -0.05em;
     line-height: 1.08;
   }
-  /* Hacktoberfest's guide headings: section labels under the projects, not page heads. */
-  .h2.hf-h2 {
+  /* A section heading inside a page rather than a page in itself (Hacktoberfest's
+     guide, How it works). */
+  .h2.h2-sm {
     font-size: clamp(1.3rem, 2.4vw, 1.75rem);
     letter-spacing: -0.03em;
   }
@@ -426,21 +427,21 @@
   }
 
   /* Policy pages (/terms, /privacy, /refunds, /contact): long plain-English
-     prose in the sans face, headings in the mono display face. */
+     prose in the sans face, headings in the mono display face. Open, no boxes
+     or rules: space and the headings carry the sections. */
   .legal {
     font-family: var(--font-sans);
+    font-size: 0.94rem;
     color: var(--muted);
     line-height: 1.7;
   }
   .legal h2 {
-    margin-top: 2.5rem;
-    padding-top: 1.5rem;
-    border-top: 1px solid var(--line);
+    margin-top: 2.75rem;
     font-family: var(--font-mono);
-    font-size: 1.15rem;
+    font-size: 1.05rem;
     font-weight: 600;
     letter-spacing: -0.03em;
-    line-height: 1.2;
+    line-height: 1.25;
     color: var(--ink);
   }
   /* Linkable sections (/privacy#google): clear the sticky header when targeted. */
@@ -449,23 +450,21 @@
   }
   .legal h2:first-child {
     margin-top: 0;
-    padding-top: 0;
-    border-top: 0;
   }
   .legal h3 {
     margin-top: 1.5rem;
-    font-size: 0.95rem;
+    font-size: 0.92rem;
     font-weight: 600;
     color: var(--ink);
   }
   .legal p,
   .legal ul,
   .legal ol {
-    margin-top: 0.85rem;
+    margin-top: 0.75rem;
   }
   .legal ul,
   .legal ol {
-    padding-left: 1.4rem;
+    padding-left: 1.3rem;
   }
   .legal ul {
     list-style: disc;
@@ -483,13 +482,74 @@
     font-weight: 600;
     color: var(--ink);
   }
+  /* Links in the prose: green, no underline (the green says it's a link). */
+  .legal .text-link {
+    border-bottom: 0;
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+  @media (hover: hover) {
+    .legal .text-link:hover {
+      opacity: 0.75;
+    }
+  }
+  /* The short version: a green rule at its side and a tick per point, no box. */
   .legal .summary {
-    border: 1px solid var(--line-strong);
-    background: var(--panel);
-    padding: 1rem 1.25rem;
+    margin-bottom: 0.5rem;
+    border-left: 3px solid var(--green);
+    padding: 0.1rem 0 0.1rem 1.25rem;
   }
   .legal .summary p:first-child {
     margin-top: 0;
+  }
+  .legal .summary ul {
+    list-style: none;
+    padding-left: 0;
+  }
+  .legal .summary li {
+    position: relative;
+    padding-left: 1.5rem;
+  }
+  .legal .summary li::before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: var(--green);
+  }
+
+  /* "On this page", sticky beside the policy text. */
+  .legal-toc {
+    position: sticky;
+    top: 6rem;
+    max-height: calc(100svh - 8rem);
+    overflow-y: auto;
+    scrollbar-width: thin;
+    font-size: 0.8rem;
+  }
+  .legal-toc-head {
+    margin-bottom: 10px;
+    font-size: 0.72rem;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--faint);
+  }
+  .legal-toc ol {
+    border-left: 1px solid var(--line-strong);
+  }
+  .legal-toc a {
+    display: block;
+    margin-left: -1px;
+    border-left: 2px solid transparent;
+    padding: 4px 0 4px 12px;
+    line-height: 1.35;
+    color: var(--faint);
+    transition: color var(--dur-fast) var(--ease-out);
+  }
+  .legal-toc a:hover {
+    color: var(--ink);
+  }
+  .legal-toc a[aria-current] {
+    border-left-color: var(--green);
+    color: var(--ink);
   }
 
   /* A full-width tinted band from inside a centred column: section rhythm
@@ -1057,6 +1117,57 @@
   }
   .plog-bar {
     transition: transform 500ms var(--ease-out);
+  }
+  /* A merge plan being made (merge-plan/plan-progress.tsx): a light running
+     along the bar, and the plan's sections lighting up as they're written. */
+  .plan-bar {
+    position: relative;
+    background-image: linear-gradient(90deg, transparent, color-mix(in oklab, white 45%, var(--blue)), transparent);
+    background-size: 40% 100%;
+    background-repeat: no-repeat;
+    background-color: var(--blue);
+  }
+  .plan-shape-lines {
+    opacity: 0.35;
+    transition: opacity var(--dur-base) var(--ease-out);
+  }
+  .plan-shape[data-state="live"] .plan-shape-lines {
+    opacity: 1;
+  }
+  .plan-shape[data-state="done"] .plan-shape-lines .sk {
+    background: color-mix(in oklab, var(--green) 35%, transparent);
+  }
+  .plan-shape[data-state="done"] .plan-shape-lines .sk::after {
+    display: none;
+  }
+  .plan-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--blue);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .plan-bar {
+      animation: plan-sweep 1.4s linear infinite;
+    }
+    .plan-dot {
+      animation: plan-pulse 1.2s ease-in-out infinite;
+    }
+  }
+  @keyframes plan-sweep {
+    from {
+      background-position: -60% 0;
+    }
+    to {
+      background-position: 160% 0;
+    }
+  }
+  @keyframes plan-pulse {
+    50% {
+      opacity: 0.35;
+      transform: scale(0.7);
+    }
   }
   /* Numbers count up once on screen (motion/count-up.tsx); their meters wait with them. */
   [data-count="wait"] .meter > span {
@@ -2273,7 +2384,7 @@
       transition: width var(--dur-slow) var(--ease-move);
     }
     /* Opening, the words fade in once there's room for them. */
-    .rail-panel :is(.side-label, .rail-word, .side-credits, .side-legal) {
+    .rail-panel :is(.side-label, .rail-word, .side-legal) {
       transition: opacity var(--dur-fast) var(--ease-out) var(--dur-base);
     }
   }
@@ -2326,7 +2437,7 @@
   :root[data-rail="collapsed"] :is(.rail-panel, .rail-body) {
     overflow: visible;
   }
-  :root[data-rail="collapsed"] .rail-panel :is(.side-group-label, .side-sub, .side-credits, .side-legal, .rail-cat) {
+  :root[data-rail="collapsed"] .rail-panel :is(.side-group-label, .side-sub, .side-legal, .rail-cat) {
     display: none;
   }
   :root[data-rail="collapsed"] .rail-mark {
@@ -2533,23 +2644,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
   }
-  .side-credits {
-    display: inline-flex;
-    margin: 4px 0 0 12px;
-    border: 1px solid var(--line-strong);
-    border-radius: 999px;
-    padding: 2px 10px;
-    color: var(--muted);
-    font-size: 0.74rem;
-    white-space: nowrap;
-    transition:
-      color var(--dur-fast) var(--ease-out),
-      border-color var(--dur-fast) var(--ease-out);
-  }
-  .side-credits:hover {
-    border-color: var(--blue);
-    color: var(--ink);
-  }
   .side-legal {
     display: flex;
     gap: 12px;
@@ -2612,14 +2706,6 @@
     display: inline-flex;
     min-height: 44px;
     align-items: center;
-  }
-  .drawer .side-credits {
-    position: relative;
-  }
-  .drawer .side-credits::after {
-    position: absolute;
-    inset: -9px -4px;
-    content: "";
   }
   .site-header:has(#app-drawer:popover-open) .icon-open {
     display: none;
@@ -2861,6 +2947,21 @@
     background: var(--header);
     box-shadow: 0 0 0 100vmax var(--header);
     clip-path: inset(0 -100vmax);
+  }
+  /* The tabs and the tray stay under the top bar while results scroll
+     (find-stick.tsx measures where), from tablets up, unless they'd fill
+     most of the screen. */
+  @media (min-width: 768px) {
+    :root:not([data-find-tall]) .find-band {
+      position: sticky;
+      top: var(--find-top, 61px);
+      z-index: 21;
+    }
+    :root:not([data-find-tall]) .app-page .find-tray {
+      position: sticky;
+      top: var(--find-tray-top, 122px);
+      z-index: 20;
+    }
   }
   .find-tray,
   .app-page:not(:has(.find-tray)) .find-band {

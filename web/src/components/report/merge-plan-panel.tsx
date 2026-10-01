@@ -6,6 +6,7 @@
 import Link from "next/link";
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import { MergePlanView } from "@/components/merge-plan/merge-plan-view";
+import { PlanProgress } from "@/components/merge-plan/plan-progress";
 import { failedMessage, leftLabel, planOffer } from "@/lib/merge-plan-offer";
 import type { ApiError, MergePlan, MergePlanState } from "@/lib/types";
 
@@ -105,7 +106,7 @@ export function MergePlanPanel({ repo }: { repo: string }) {
   const running = run.phase === "running";
   const failed = run.phase === "error" && run.failed;
   const actions = running ? (
-    <Making stage={run.stage} progress={run.progress} />
+    <PlanProgress repo={repo} stage={run.stage} progress={run.progress} />
   ) : offer.kind === "off" ? (
     !plan && (
       <div className="mt-3 max-w-3xl font-sans" data-merge-plan-off>
@@ -190,16 +191,5 @@ export function MergePlanPanel({ repo }: { repo: string }) {
       {error}
       {actions}
     </section>
-  );
-}
-
-function Making({ stage, progress }: { stage: string; progress: number }) {
-  return (
-    <div className="mt-5" data-merge-plan-making>
-      <p className="font-sans text-[1rem] text-muted">{stage}…</p>
-      <div className="mt-3 h-1 w-full max-w-md bg-line-strong" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
-        <div className="h-full bg-blue transition-[width] duration-500" style={{ width: `${Math.max(2, Math.round(progress * 100))}%` }} />
-      </div>
-    </div>
   );
 }

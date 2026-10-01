@@ -24,11 +24,11 @@ const TRACE = [
 
 function Block({ n, label, title, children, alt = false }: { n: string; label: string; title: string; children: React.ReactNode; alt?: boolean }) {
   return (
-    <section className={`pane border-t border-line ${alt ? "bg-section-alt" : ""}`}>
+    <section className={`border-t border-line py-10 md:py-14 ${alt ? "bg-section-alt" : ""}`}>
       <div className="wrap grid grid-cols-1 gap-6 md:grid-cols-[148px_minmax(0,1fr)] md:gap-10">
         <aside className="rail"><strong>{n}</strong><span>{label}</span></aside>
         <div>
-          <h2 className="h2 mb-6 max-w-[770px]">{title}</h2>
+          <h2 className="h2 h2-sm mb-5 max-w-[770px]">{title}</h2>
           {children}
         </div>
       </div>
@@ -42,10 +42,10 @@ export default function HowItWorks() {
       <>
         <PageHead>
           <p className="rail mb-4 flex gap-2"><strong className="m-0">how it works</strong><span>for the curious</span></p>
-          <h1 className="display max-w-4xl text-[clamp(2.1rem,6vw,3.8rem)]">
+          <h1 className="display max-w-4xl text-[clamp(1.9rem,4.5vw,3rem)]">
             Models read. <span className="text-orange">Rules decide.</span>
           </h1>
-          <p className="prose-sans mt-6 max-w-2xl text-[1.08rem]">
+          <p className="prose-sans mt-5 max-w-2xl text-[0.98rem]">
             Holt keeps only the evidence it can trace to a real GitHub page, then runs the same written rules on every
             repo.
           </p>
@@ -71,7 +71,7 @@ export default function HowItWorks() {
         </Block>
 
         <Block alt n="02" label="confidence" title="Don't take our word for it.">
-          <p className="prose-sans mb-10 max-w-[740px] text-[1.05rem]">
+          <p className="prose-sans mb-7 max-w-[740px] text-[0.95rem]">
             No verdict is right every time, so the evidence stays on the page. Open any citation and check it against
             the GitHub thread yourself.
           </p>
@@ -82,15 +82,15 @@ export default function HowItWorks() {
               ["every claim", "links to a real GitHub page"],
             ].map(([a, b], i) => (
               <li key={a} className={`py-5 md:px-6 ${i ? "border-t border-line md:border-l md:border-t-0" : "md:pl-0"}`}>
-                <strong className="block text-[1.25rem] font-medium">{a}</strong>
+                <strong className="block text-[1.05rem] font-medium">{a}</strong>
                 <span className="text-[0.82rem] text-faint">{b}</span>
               </li>
             ))}
           </ul>
           <p className="mt-6 text-[0.88rem] text-faint">
             That 55/55 is from Holt&apos;s competition days. Treat it as history, not a promise.{" "}
-            <a className="text-link" href={`${GITHUB_REPO_URL}/blob/main/docs/research/REPRODUCTION.md`}>[ reproduce it → ]</a>{" "}
-            <a className="text-link" href={`${GITHUB_REPO_URL}/blob/main/docs/research/EVALUATION.md`}>[ full evaluation ]</a>
+            <a className="text-green transition-opacity hover:opacity-75" href={`${GITHUB_REPO_URL}/blob/main/docs/research/REPRODUCTION.md`}>[ reproduce it → ]</a>{" "}
+            <a className="text-green transition-opacity hover:opacity-75" href={`${GITHUB_REPO_URL}/blob/main/docs/research/EVALUATION.md`}>[ full evaluation ]</a>
           </p>
         </Block>
 
@@ -98,7 +98,7 @@ export default function HowItWorks() {
           {/* Side by side from lg up, so the screenshot fits the same screen as the install line. */}
           <div className="grid gap-10 lg:grid-cols-[minmax(0,5fr)_minmax(0,6fr)] lg:items-center">
             <div>
-              <p className="prose-sans mb-8 max-w-[740px] text-[1.05rem]">
+              <p className="prose-sans mb-6 max-w-[740px] text-[0.95rem]">
                 Same rules, on your machine, with your own GitHub token. Good for scripts, and for people who never leave
                 the terminal.
               </p>

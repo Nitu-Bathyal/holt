@@ -9,6 +9,7 @@ import Link from "next/link";
 import { findTabs, type FindTab } from "@/lib/find-tabs";
 import { hacktoberfest } from "@/lib/site";
 import { Skeleton } from "../skeleton";
+import { FindStick } from "./find-stick";
 
 export function FindFrame({ tab, title, signedIn, children }: {
   tab: FindTab;
@@ -28,6 +29,7 @@ export function FindFrame({ tab, title, signedIn, children }: {
   const hf = signedIn ? undefined : tabs.find((t) => t.id === "hacktoberfest");
   return (
     <div className="app-page" data-frame="wide">
+      <FindStick />
       <div className="find-band">
         <h1 className="sr-only">{title}</h1>
         <nav aria-label="Find a project" className="find-tabs">

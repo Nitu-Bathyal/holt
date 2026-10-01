@@ -1,14 +1,15 @@
 // The profile form: the same questions in settings and in the onboarding card.
 // Every question changes what /find and /hacktoberfest show (lib/profile.ts).
 import { save } from "@/app/profile/actions";
-import { CONTRIBUTIONS, LANGS, LEVELS, TIME } from "@/lib/profile";
+import { ProfileLangs } from "@/components/profile-langs";
+import { CONTRIBUTIONS, LEVELS, TIME } from "@/lib/profile";
 import type { ProfilePrefs } from "@/lib/types";
 
 const CHIP =
-  "chip min-h-11 cursor-pointer select-none px-4 text-[0.89rem] transition-colors hover:border-blue has-[:checked]:border-blue has-[:checked]:bg-blue has-[:checked]:text-on-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-blue";
+  "chip min-h-11 cursor-pointer select-none px-3.5 text-[0.82rem] transition-colors sm:min-h-9 hover:border-blue has-[:checked]:border-blue has-[:checked]:bg-blue has-[:checked]:text-on-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-blue";
 const BOX =
-  "flex min-h-12 cursor-pointer items-center justify-center border border-line-strong px-3 text-center text-[0.9rem] transition-colors hover:border-blue has-[:checked]:border-green has-[:checked]:bg-green has-[:checked]:font-semibold has-[:checked]:text-on-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-blue";
-const LEGEND = "mb-3 text-[0.85rem] uppercase tracking-[0.08em] text-faint";
+  "flex min-h-11 cursor-pointer items-center justify-center border border-line-strong px-3 text-center text-[0.84rem] transition-colors hover:border-blue has-[:checked]:border-green has-[:checked]:bg-green has-[:checked]:font-semibold has-[:checked]:text-on-accent has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-blue";
+const LEGEND = "mb-2.5 text-[0.78rem] uppercase tracking-[0.08em] text-faint";
 
 export function ProfileForm({
   prefs,
@@ -24,32 +25,16 @@ export function ProfileForm({
   /** Extra buttons next to save (the card's "skip"). */
   children?: React.ReactNode;
 }) {
-  const langs = prefs?.languages ?? [];
-  const known = new Set(LANGS.map((l) => l.toLowerCase()));
   const days = prefs?.days ?? 7;
   const level = prefs?.level ?? "newcomer";
   const types = new Set(prefs?.contributions ?? []);
 
   return (
-    <form action={save} className="space-y-7">
+    <form action={save} className="space-y-6">
       <input type="hidden" name="back" value={back} />
       <fieldset>
         <legend className={LEGEND}>Languages you can read</legend>
-        <div className="flex flex-wrap gap-2">
-          {LANGS.map((l) => (
-            <label key={l} className={CHIP}>
-              <input type="checkbox" name="lang" value={l.toLowerCase()} defaultChecked={langs.includes(l.toLowerCase())} className="sr-only" />
-              {l}
-            </label>
-          ))}
-          {/* Languages saved some other way (the API) stay unless unticked. */}
-          {langs.filter((l) => !known.has(l)).map((l) => (
-            <label key={l} className={CHIP}>
-              <input type="checkbox" name="lang" value={l} defaultChecked className="sr-only" />
-              {l}
-            </label>
-          ))}
-        </div>
+        <ProfileLangs saved={prefs?.languages ?? []} chip={CHIP} />
       </fieldset>
 
       <fieldset>
@@ -85,7 +70,7 @@ export function ProfileForm({
               <input type="radio" name="level" value={l.id} defaultChecked={level === l.id} className="sr-only" />
               <span className="font-semibold">{l.label}</span>
               {/* On the selected card the hint takes the card's text colour: muted grey on green can't be read. */}
-              <span className="font-sans text-[0.87rem] font-normal text-muted group-has-[:checked]:text-on-accent">{l.hint}</span>
+              <span className="font-sans text-[0.8rem] font-normal text-muted group-has-[:checked]:text-on-accent">{l.hint}</span>
             </label>
           ))}
         </div>

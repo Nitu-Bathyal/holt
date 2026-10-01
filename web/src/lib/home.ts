@@ -30,15 +30,6 @@ export function dismissedNudges(cookie: string | undefined): string[] {
   return (cookie ?? "").split(",").filter((n) => n === "profile" || n === "github" || n === "alerts");
 }
 
-/** The line under the heading: "1 PR waiting · 3 AI reports left". Empty when there's nothing to say. */
-export function statusLine(s: { waiting: number; credits: { balance: number; ai_available: boolean } | null }): string {
-  const parts = [
-    s.waiting ? `${s.waiting} PR${s.waiting === 1 ? "" : "s"} waiting for a reply` : null,
-    s.credits?.ai_available ? `${s.credits.balance} AI report${s.credits.balance === 1 ? "" : "s"} left` : null,
-  ];
-  return parts.filter(Boolean).join(" · ");
-}
-
 /**
  * Pull requests to other people's projects. The server already leaves out the
  * user's own repositories; this is the same rule, in case a login changed.

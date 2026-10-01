@@ -29,7 +29,9 @@ import { BackLink } from "@/components/your-repos/back-link";
 import { SaveButton } from "@/components/save-button";
 import { ReportStickyBar, StickySentinel } from "@/components/report/report-sticky-bar";
 import { ShareMenu } from "@/components/report/share-bar";
-import { ReportModeLink } from "@/components/report/report-tabs";
+import { BackButton } from "@/components/report/back-button";
+import { HOME } from "@/lib/home";
+import { ReportBackLink, ReportModeLink } from "@/components/report/report-tabs";
 
 type Props = PageProps<"/[owner]/[repo]">;
 
@@ -130,6 +132,8 @@ export default async function RepoPage({ params, searchParams }: Props) {
         {mode === "rules" && <JsonLd report={report.ok ? report.data : null} name={display} />}
         <BackLink repo={display} />
         <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3">
+          {/* The plan goes back to its report; the report, to wherever you came from. */}
+          {mode === "ai" ? <ReportBackLink href={reportHref(display, days)} /> : <BackButton fallback={user ? HOME : "/"} />}
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={`https://github.com/${dOwner}.png?size=80`}

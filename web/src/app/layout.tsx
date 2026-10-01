@@ -7,7 +7,7 @@ import { MenuAutoClose } from "@/components/motion/menu-autoclose";
 import { RouteFallback } from "@/components/motion/route-fallback";
 import { SmoothScroll } from "@/components/motion/smooth-scroll";
 import { CheckWatch } from "@/components/check-watch";
-import { appShell, creditsLine } from "@/components/shell/app-shell";
+import { appShell } from "@/components/shell/app-shell";
 import { CheckLinks } from "@/components/shell/check-focus";
 import { ShellFrame } from "@/components/shell/shell-frame";
 import { themeScript } from "@/components/theme-toggle";
@@ -65,10 +65,9 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
   // Signed in: the app shell's sidebar and top bar, used on app pages (lib/shell.ts).
   const jar = await cookies();
   const user = await currentUser();
-  const credits = await creditsLine(user);
   // The desktop rail folded or not, on <html> before the first paint (lib/shell.ts).
   const rail = railCollapsed(jar.get(RAIL_COOKIE)?.value);
-  const app = user ? await appShell(user, credits, rail) : null;
+  const app = user ? await appShell(user, rail) : null;
   // The motion setting, on <html> before the first paint (lib/motion.ts).
   const motion = motionAttr(motionFromCookies(jar));
   return (
@@ -83,7 +82,7 @@ export default async function RootLayout({ children }: LayoutProps<"/">) {
         <a href="#content" className="skip-link">
           Skip to content
         </a>
-        <ShellFrame marketingHeader={<MarketingHeader user={user} credits={credits} />} footer={<Footer signedIn={Boolean(user)} />} topBar={app?.topBar ?? null} rail={app?.rail ?? null}>
+        <ShellFrame marketingHeader={<MarketingHeader user={user} />} footer={<Footer signedIn={Boolean(user)} />} topBar={app?.topBar ?? null} rail={app?.rail ?? null}>
           {children}
           <RouteFallback />
         </ShellFrame>
