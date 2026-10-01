@@ -53,7 +53,7 @@ n=$(cat "$STUB_DIR/containers" 2>/dev/null || echo 0)
 case " $* " in
     *" up "*)
         case " $* " in *" --scale "*) echo $((n + 1)) > "$STUB_DIR/containers" ;; esac
-        cp "$HOLT_STAGE_HOME/now.json" "$STUB_DIR/now-while-starting"; env | grep -E '^(STAGING_HOST|HOLT_WEB_URL|AUTH_|NEXT_PUBLIC_|GITHUB_TOKENS=|GITHUB_APP_|HOLT_GITHUB_APP_KEY_GID=|OPENROUTER_|HOLT_AI_|HOLT_PRO_MODEL_|HOLT_PRO_PLAYBOOK_)' | sort > "$STUB_DIR/compose.env" ;;
+        cp "$HOLT_STAGE_HOME/now.json" "$STUB_DIR/now-while-starting"; env | grep -E '^(STAGING_HOST|HOLT_WEB_URL|AUTH_|NEXT_PUBLIC_|GITHUB_TOKENS=|GITHUB_APP_|HOLT_GITHUB_APP_KEY_GID=|OPENROUTER_|HOLT_AI_|HOLT_PRO_MODEL_|HOLT_PRO_PLAYBOOK_|RAZORPAY_|HOLT_PAYMENTS_|HOLT_PASSES_|RESEND_API_KEY=)' | sort > "$STUB_DIR/compose.env" ;;
     *" ps "*) i=1; while [ "$i" -le "$n" ]; do echo "c$i"; i=$((i + 1)); done ;;
     *" config --hash "*) echo "$last stub-hash" ;;
     *" config "*)
@@ -350,6 +350,80 @@ def test_without_an_openai_key_ai_is_off(sandbox: Sandbox) -> None:
     env = dict(line.split("=", 1) for line in
                (sandbox.stub_dir / "compose.env").read_text(encoding="utf-8").splitlines())
     assert env["HOLT_AI_BUDGET_USD"] == "0" and env["OPENROUTER_API_KEY"] == ""
+
+
+def test_alert_emails_get_resends_key_and_nothing_logs_it(sandbox: Sandbox) -> None:
+    sandbox.write_secrets(RESEND_API_KEY="re_secret-value")
+    done = sandbox.run()
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "alert emails: on (Resend)" in done.stdout
+    env = dict(line.split("=", 1) for line in
+               (sandbox.stub_dir / "compose.env").read_text(encoding="utf-8").splitlines())
+    assert env["RESEND_API_KEY"] == "re_secret-value"
+    logs = "".join(p.read_text(encoding="utf-8") for p in (sandbox.state / "logs").glob("*.log"))
+    assert "re_secret-value" not in done.stdout + done.stderr + logs
+
+
+def test_without_resends_key_no_alert_email_is_sent(sandbox: Sandbox) -> None:
+    # Not from the caller's environment or staging's .env either: only the secrets file.
+    done = sandbox.run(RESEND_API_KEY="re_from-the-shell")
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "alert emails: off (no RESEND_API_KEY" in done.stdout
+    env = dict(line.split("=", 1) for line in
+               (sandbox.stub_dir / "compose.env").read_text(encoding="utf-8").splitlines())
+    assert env["RESEND_API_KEY"] == ""
+
+
+PASSES_OFF = {"HOLT_PAYMENTS_ENABLED": "0", "HOLT_PASSES_ON_SALE": "0", "RAZORPAY_KEY_ID": "",
+              "RAZORPAY_KEY_SECRET": "", "RAZORPAY_WEBHOOK_SECRET": ""}
+
+
+def payment_env(started: dict[str, str]) -> dict[str, str]:
+    return {k: started[k] for k in PASSES_OFF}
+
+
+def test_razorpay_test_keys_put_passes_on_sale_and_nothing_logs_them(sandbox: Sandbox) -> None:
+    sandbox.write_secrets(RAZORPAY_KEY_ID="rzp_test_abc", RAZORPAY_KEY_SECRET="rzp-secret-value",
+                          STAGING_RAZORPAY_WEBHOOK_SECRET="hook-secret-value")
+    done = sandbox.run()
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "passes: on sale (Razorpay test mode)" in done.stdout
+    env = dict(line.split("=", 1) for line in
+               (sandbox.stub_dir / "compose.env").read_text(encoding="utf-8").splitlines())
+    assert payment_env(env) == {
+        "HOLT_PAYMENTS_ENABLED": "1", "HOLT_PASSES_ON_SALE": "1", "RAZORPAY_KEY_ID": "rzp_test_abc",
+        "RAZORPAY_KEY_SECRET": "rzp-secret-value", "RAZORPAY_WEBHOOK_SECRET": "hook-secret-value"}
+    logs = "".join(p.read_text(encoding="utf-8") for p in (sandbox.state / "logs").glob("*.log"))
+    for value in ("rzp-secret-value", "hook-secret-value", "rzp_test_abc"):
+        assert value not in done.stdout + done.stderr + logs
+
+
+def test_passes_stay_off_without_razorpay_test_keys(sandbox: Sandbox) -> None:
+    # No keys at all.
+    assert payment_env(sandbox.live()) == PASSES_OFF
+
+    # A live key: refused, and neither it nor its secret reaches staging.
+    sandbox.write_secrets(RAZORPAY_KEY_ID="rzp_live_abc", RAZORPAY_KEY_SECRET="live-secret")
+    done = sandbox.run()
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "not a test key" in done.stdout
+    assert payment_env(sandbox.live()) == PASSES_OFF
+
+    # Half a pair.
+    sandbox.write_secrets(RAZORPAY_KEY_ID="rzp_test_abc")
+    assert payment_env(sandbox.live()) == PASSES_OFF
+
+    # Switches exported by whoever runs the script, or left in .env: ignored.
+    sandbox.write_secrets()
+    assert payment_env(sandbox.live(HOLT_PAYMENTS_ENABLED="1", HOLT_PASSES_ON_SALE="1",
+                                    RAZORPAY_KEY_ID="rzp_live_abc",
+                                    RAZORPAY_KEY_SECRET="live-secret")) == PASSES_OFF
+
+
+def test_staging_compose_hands_the_server_the_payment_settings() -> None:
+    compose = (STAGING / "compose.yml").read_text(encoding="utf-8")
+    for name in PASSES_OFF:
+        assert f"{name}: ${{{name}:-" in compose, name
 
 
 def test_the_smoke_run_gets_the_access_token_and_nothing_logs_it(sandbox: Sandbox) -> None:

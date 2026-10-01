@@ -39,7 +39,7 @@ log = logging.getLogger("holt_server.entitlements")
 
 
 def catalogue(svc: Services) -> pricing.Catalogue:
-    return pricing.cached(svc.settings.pricing_file)
+    return pricing.cached(svc.settings.pricing_file, svc.settings.sell_every_pass)
 
 
 # The `plan_usage` period an allowance in all (`total`) is counted under.

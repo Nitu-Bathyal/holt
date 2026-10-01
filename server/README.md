@@ -76,6 +76,7 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `HOLT_CLAIM_EVERY_DAYS` | `7` | After that, one more can be claimed each time this many days have passed since the last claim (or the welcome grant). |
 | `HOLT_PRICING_FILE` | the catalogue shipped in the package (`holt_server/pricing.json`) | Features, plans and Pro passes, with prices in INR and USD. See [Credits, plans and passes](#credits-plans-and-passes). A file that doesn't parse stops startup. |
 | `HOLT_PAYMENTS_ENABLED` | `0` | `1` switches the pass checkout on (it also needs the Razorpay keys and a pass on sale). See [Pass checkout](#pass-checkout). |
+| `HOLT_PASSES_ON_SALE` | `0` | `1` puts every pass in the catalogue on sale, whatever its `on_sale` says. For staging with Razorpay test keys; **ignored when `HOLT_ENV=production`** (the server logs an error), where only the pricing file puts a pass on sale. |
 | `RAZORPAY_KEY_ID` / `RAZORPAY_KEY_SECRET` | *(empty)* | Razorpay API keys (`rzp_test_…` for test mode). Empty: no checkout. |
 | `RAZORPAY_WEBHOOK_SECRET` | *(empty)* | The secret set on the webhook in the Razorpay dashboard. Empty: webhooks are refused. |
 | `HOLT_ADMIN_USERS` | *(empty)* | Comma-separated user ids that may read `/v1/admin/*`. Empty means nobody. |
@@ -182,7 +183,7 @@ Staging runs with $1.00 for the server and the service together
 
 ## Credits, plans and passes
 
-Payments are off; nothing is on sale. This is the model the payment code
+Payments are off in production; nothing is on sale there. This is the model the payment code
 ([Pass checkout](#pass-checkout)) plugs into.
 
 **Catalogue.** `holt_server/pricing.json` (or `HOLT_PRICING_FILE`) lists the
@@ -234,8 +235,12 @@ Reading is `/v1/admin/*` (API.md), for users in `HOLT_ADMIN_USERS`.
 
 `holt_server/payments.py`: Razorpay, INR, one-time payments for the passes in
 the catalogue. **Off by default**: it needs `HOLT_PAYMENTS_ENABLED=1`, the
-Razorpay keys, and a pass with `on_sale: true` and an `inr_paise` price. The
-flow and the endpoints are in API.md ("Passes"); the short version:
+Razorpay keys, and a pass with `on_sale: true` and an `inr_paise` price.
+Outside production, `HOLT_PASSES_ON_SALE=1` stands in for `on_sale: true` on
+every pass (staging runs that way, on Razorpay test keys;
+`deploy/README.md`). The server logs one `passes:` line at startup saying
+what is on sale. The flow and the endpoints are in API.md ("Passes"); the
+short version:
 
 - An order (`orders` table) copies the pass and price from the catalogue when
   it is created (the pass id in `pack_id`, its days in `expires_days`,
@@ -259,11 +264,10 @@ forwards it here) for `payment.authorized`, `payment.captured`,
 `payment.failed` and `order.paid`, and put its secret in
 `RAZORPAY_WEBHOOK_SECRET`.
 
-Trying it locally in test mode: use `rzp_test_` keys, a pricing file with a
-pass on sale (copy `pricing.json`, set `on_sale: true`, point
-`HOLT_PRICING_FILE` at it) and `HOLT_PAYMENTS_ENABLED=1`. Razorpay can't reach
-a local webhook, so the callback does the giving; test the webhook on
-staging.
+Trying it locally in test mode: use `rzp_test_` keys, `HOLT_ENV=dev`,
+`HOLT_PASSES_ON_SALE=1` and `HOLT_PAYMENTS_ENABLED=1`. Razorpay can't reach
+a local webhook (or staging's, behind Cloudflare Access), so the callback
+does the giving.
 
 Monthly subscriptions were replaced by passes. Their tables
 (`subscriptions`, `subscription_charges`) are still in the schema, unused,

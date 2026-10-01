@@ -296,6 +296,20 @@ To take it away: remove `STAGING_HOLT_PRO_KEY`, run `preview.sh` with
   production uses. Besides those two, only the `STAGING_*` keys above are
   taken from it. Without the contact details the build fails on purpose
   rather than showing the placeholders.
+- PR watch's alert emails use `RESEND_API_KEY` from the same file (Resend,
+  the key production reads), and only while `staging/.env` says
+  `HOLT_PR_WATCH=1`. Without the key no email is sent; alerts still reach
+  the bell.
+- Passes are on sale in Razorpay **test mode**: with `RAZORPAY_KEY_ID`
+  (an `rzp_test_` key) and `RAZORPAY_KEY_SECRET` in the same file,
+  `preview.sh` gives the server those keys, `HOLT_PAYMENTS_ENABLED=1` and
+  `HOLT_PASSES_ON_SALE=1` (every pass on sale, whatever `pricing.json`
+  says). A key that isn't a test key is refused and passes stay off, so
+  staging never takes real money. Production's compose sets none of these,
+  and the server ignores `HOLT_PASSES_ON_SALE` in production. Pay with
+  Razorpay's test cards; the Checkout callback gives the pass. Razorpay's
+  webhook can't get through Cloudflare Access, so it isn't needed
+  (`STAGING_RAZORPAY_WEBHOOK_SECRET` is passed on if you set one up).
 - AI runs on `OPENAI_API_KEY` from the same file (OpenAI's API,
   `gpt-5-mini`), for the server's AI reports and the paid-features service's
   playbooks and pre-flight summaries, under **one hard budget of $1.00 for
