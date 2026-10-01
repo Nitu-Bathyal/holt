@@ -1,7 +1,8 @@
 // The way between a repo's report and its merge plan (the AI tab): one small
 // button in the report header, beside Save, with a PRO sticker. On the report
-// it offers the merge plan; on the plan it leads back. The report page and the
-// example AI report both draw it, so this is the one place it's worded.
+// it offers the merge plan; on the plan it opens the report, and a back arrow
+// at the start of the header (ReportBackLink) goes there too. The report page
+// and the example AI report both draw them, so this is the one place they're worded.
 import Link from "next/link";
 import { LinkHint } from "../motion/link-hint";
 
@@ -17,9 +18,27 @@ export function ReportModeLink({ mode, rulesHref, aiHref, hint = false }: { mode
       {hint && <LinkHint />}
     </Link>
   ) : (
-    <Link href={rulesHref} prefetch={false} className={`${BASE} border-line-strong text-muted hover:border-ink hover:text-ink`} data-report-mode="rules">
-      <span aria-hidden="true">←</span> Report
+    <Link href={rulesHref} prefetch={false} className={`${BASE} border-blue/60 text-blue hover:bg-blue hover:text-on-accent`} data-report-mode="rules">
+      Report
       {hint && <LinkHint />}
+    </Link>
+  );
+}
+
+/** On the merge plan: a back arrow before the repo's name, to its report. */
+export function ReportBackLink({ href }: { href: string }) {
+  return (
+    <Link
+      href={href}
+      prefetch={false}
+      aria-label="Back to the report"
+      title="Back to the report"
+      className="grid size-10 shrink-0 place-items-center self-start border border-line-strong text-muted transition-colors hover:border-ink hover:text-ink"
+      data-report-back
+    >
+      <svg viewBox="0 0 24 24" className="size-[18px]" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M19 12H5M11 6l-6 6 6 6" />
+      </svg>
     </Link>
   );
 }
