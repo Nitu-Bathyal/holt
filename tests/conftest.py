@@ -35,3 +35,21 @@ os.environ["HOLT_DISABLE_GH"] = "1"
 for _name in ("GITHUB_TOKEN", "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "GEMINI_API_KEY",
               "OPENROUTER_API_KEY"):
     os.environ.pop(_name, None)
+
+import pytest  # noqa: E402 -- after the environment above is set
+
+from holt import model as _model  # noqa: E402
+
+
+@pytest.fixture(autouse=True)
+def _pinned_model_defaults():
+    """Every test starts and ends on the pinned model defaults.
+
+    A model chosen in one test (the model switcher, `holt models`) is
+    process-wide. Left behind, it changes the key every later replay in the same
+    pytest-xdist worker looks its recording up by, so those tests fail or pass
+    by which worker they land on.
+    """
+    _model._user_config = None
+    yield
+    _model._user_config = None

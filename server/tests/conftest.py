@@ -20,6 +20,8 @@ from holt_server.main import create_app
 from holt_server.services import Services
 from holt_server.settings import Settings
 
+from holt import model
+
 ROOT = Path(__file__).resolve().parents[2]
 KEY = "test-internal-key"
 H = {"X-Holt-Internal-Key": KEY}
@@ -193,6 +195,17 @@ class Harness:
                 return body
             time.sleep(0.05)
         raise AssertionError(f"job {job_id} did not finish: {body}")
+
+
+@pytest.fixture(autouse=True)
+def pinned_model_defaults():
+    """The server never opts into a user's model choice (`holt models`), so
+    every test runs on the pinned defaults. One left behind by an engine test
+    in the same pytest-xdist worker would make the replayed AI stages miss
+    their recording, which is keyed by model."""
+    model._user_config = None
+    yield
+    model._user_config = None
 
 
 @pytest.fixture
