@@ -130,6 +130,20 @@ class Settings(BaseSettings):
     # My Contributions: re-read connected users' pull requests this often, in
     # the background (contributions.py). 0 = no background refresh.
     contributions_refresh_hours: float = Field(24, alias="HOLT_CONTRIBUTIONS_REFRESH_HOURS")
+    # PR watch (alerts.py, watch.py, mailer.py). Off by default: with it off
+    # nothing checks pull requests, makes alerts or sends email, and alerts
+    # can't be turned on. The owner switches it on deliberately.
+    pr_watch: bool = Field(False, alias="HOLT_PR_WATCH")
+    # Minutes between checks of watched pull requests.
+    pr_watch_minutes: float = Field(30, gt=0, alias="HOLT_PR_WATCH_MINUTES")
+    # Alert emails go through Resend's HTTP API. Empty key: no email is sent
+    # (alerts still reach the bell).
+    resend_api_key: str = Field("", alias="RESEND_API_KEY", repr=False)
+    alert_email_from: str = Field("Holt <alerts@githolt.com>", alias="HOLT_ALERT_EMAIL_FROM")
+    alert_email_reply_to: str = Field("hello@githolt.com", alias="HOLT_ALERT_EMAIL_REPLY_TO")
+    # The provider's daily sending limit (Resend's free tier: 100). The
+    # mailer stops 5 short of it over any 24 hours.
+    alert_email_daily_limit: int = Field(100, ge=0, alias="HOLT_ALERT_EMAIL_DAILY_LIMIT")
     # How long a finished /v1/find result is served for the same search.
     find_cache_hours: float = Field(6, alias="HOLT_FIND_CACHE_HOURS")
     # Pull-request pages crawled per analysis (25 PRs a page).

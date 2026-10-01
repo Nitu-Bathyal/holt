@@ -15,6 +15,9 @@ GitHub calls an owner, member or collaborator, or who approved or asked for
 changes on this pull request (only people with a say do that; staff with a
 private membership read as CONTRIBUTOR). A stranger's "+1" is activity, not a
 reply.
+
+PR watch (watch.py) reads the same query every half hour, which is why it
+also asks whether the pull request is still open.
 """
 
 from __future__ import annotations
@@ -34,7 +37,7 @@ query($ids:[ID!]!) {{
   rateLimit {{ remaining resetAt }}
   nodes(ids:$ids) {{
     ... on PullRequest {{
-      id reviewDecision
+      id reviewDecision state isDraft mergedAt closedAt
       author {{ login }}
       firstComments: comments(first:5) {{ nodes {{ {_PERSON} createdAt }} }}
       comments(last:5) {{ nodes {{ {_PERSON} createdAt }} }}
@@ -63,6 +66,11 @@ class PrState:
     first_reply_at: datetime | None = None
     last_activity_at: datetime | None = None
     review_decision: str | None = None  # approved | changes_requested | review_required
+    # The team member who spoke last after the author's last move, and what
+    # that was: changes (a review asking for them, still standing) | approved
+    # | reply. None when the author acted last.
+    reply_by: str | None = None
+    reply_kind: str | None = None
 
 
 def _when(value: Any) -> datetime | None:
@@ -101,32 +109,48 @@ def derive(node: dict[str, Any], opened: datetime) -> PrState:
     judges = {s["who"].lower() for s in said
               if s["state"] in _VERDICTS and s["who"].lower() != author}
     mine = [opened]
-    team: list[tuple[datetime, str | None]] = []
+    team: list[tuple[datetime, str | None, str]] = []
     others = []
     for s in said:
         who = s["who"].lower()
         if who == author:
             mine.append(s["at"])
         elif s["association"] in TEAM or who in judges:
-            team.append((s["at"], s["state"]))
+            team.append((s["at"], s["state"], s["who"]))
         else:
             others.append(s["at"])
     for c in ((node.get("commits") or {}).get("nodes") or []):
         if at := _when(((c or {}).get("commit") or {}).get("committedDate")):
             mine.append(at)
     last_mine = max(mine)
-    after = sorted(t for t in team if t[0] > last_mine)
+    after = sorted((t for t in team if t[0] > last_mine), key=lambda t: t[0])
     decision = DECISIONS.get(str(node.get("reviewDecision") or ""))
     # A reviewer approving after your last move leaves the merge to them.
     if after and after[-1][1] != "APPROVED":
         turn, turn_at = "yours", after[-1][0]
     else:
         turn, turn_at = "theirs", max([last_mine, *(t[0] for t in after)])
+    reply_by, reply_kind = _last_word(after)
     return PrState(
         turn=turn, turn_at=turn_at,
         first_reply_at=min((t[0] for t in team), default=None),
         last_activity_at=max([*mine, *(t[0] for t in team), *others]),
-        review_decision=decision)
+        review_decision=decision, reply_by=reply_by, reply_kind=reply_kind)
+
+
+def _last_word(after: list[tuple[datetime, str | None, str]]) -> tuple[str | None, str | None]:
+    """(who, what) of the team's word since the author's last move; `after`
+    is oldest first. A request for changes stands until an approval, so a
+    comment after it doesn't turn it into a plain reply."""
+    if not after:
+        return None, None
+    _, state, who = after[-1]
+    if state == "APPROVED":
+        return who, "approved"
+    asked = [t for t in after if t[1] == "CHANGES_REQUESTED"]
+    if asked:
+        return asked[-1][2], "changes"
+    return who, "reply"
 
 
 def read(gql, ids: list[str], timeout: float) -> dict[str, dict[str, Any]]:

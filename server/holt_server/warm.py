@@ -37,8 +37,8 @@ How it stays out of the way:
   details-only pass (`deploy/prod/warm-meta.sh`, a daily timer) keeps the
   rest from going stale. The summary says how many GitHub points it used.
 * Refresh tiers (`--tier`, deploy/prod/warm-refresh.sh): repos someone saved,
-  or viewed in the last INTEREST_DAYS, are the weekly tier; the rest of the
-  seed list is the monthly one. A tier pass runs reports only, the oldest
+  viewed in the last INTEREST_DAYS, or has an open pull request PR watch
+  alerts on, are the weekly tier; the rest of the seed list is the monthly one. A tier pass runs reports only, the oldest
   first, and skips any younger than HOLT_WARM_MAX_AGE_HOURS, which the
   timer sets per tier (a week, a month).
 * Before each report job, and every few other steps, it checks the GitHub
@@ -67,6 +67,8 @@ from holt_server.db import (
     ACTIVE,
     BADGE_PRIORITY,
     ENGINE_VERSION,
+    AlertSettings,
+    Contribution,
     FindCache,
     Job,
     RepoMeta,
@@ -576,16 +578,22 @@ class Warmer:
 
 
 async def tier_repos(svc, tier: str, seeds: list[str]) -> list[str]:
-    """The repos of refresh tier `tier`: "weekly", every repo someone saved or
-    viewed in the last INTEREST_DAYS, seed or not; "monthly", the seeds that
-    aren't weekly."""
+    """The repos of refresh tier `tier`: "weekly", every repo someone saved,
+    viewed in the last INTEREST_DAYS, or has an open pull request on with
+    alerts turned on (PR watch needs the report's timing), seed or not;
+    "monthly", the seeds that aren't weekly."""
     if tier not in TIERS:
         raise ValueError(f"no refresh tier {tier!r}; one of {', '.join(TIERS)}")
     since = now() - timedelta(days=INTEREST_DAYS)
     async with svc.db.session() as s:
         rows = [*(await s.execute(select(SavedRepo.repo_key, SavedRepo.repo))).all(),
                 *(await s.execute(select(RepoView.repo_key, RepoView.repo)
-                                  .where(RepoView.last_viewed_at >= since))).all()]
+                                  .where(RepoView.last_viewed_at >= since))).all(),
+                *(await s.execute(
+                    select(Contribution.repo_key, Contribution.repo)
+                    .join(AlertSettings, AlertSettings.user_id == Contribution.user_id)
+                    .where(AlertSettings.enabled.is_(True), Contribution.state == "open")
+                    .distinct())).all()]
     weekly: dict[str, str] = {}
     for key, repo in rows:
         weekly.setdefault(key, repo)

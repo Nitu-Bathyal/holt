@@ -1460,6 +1460,10 @@ PullState = Literal["open", "merged", "closed"]
 # Holt couldn't read it, and on merged and closed ones.
 Turn = Literal["yours", "theirs", "unknown"]
 ReviewDecision = Literal["approved", "changes_requested", "review_required"]
+# What the team's last word after your last move was: a review asking for
+# changes (it stands until an approval), an approval, or any other comment or
+# review.
+ReplyKind = Literal["changes", "approved", "reply"]
 
 
 class RepoVerdict(Model):
@@ -1516,6 +1520,16 @@ class ContributionPullRequest(Model):
     # The newest push, comment or review from a person (bots don't count).
     last_activity_at: str | None = None
     review_decision: ReviewDecision | None = None
+    # Who on the team spoke last after your last push or comment, and what
+    # that was. Both null when you acted last.
+    reply_by: str | None = None
+    reply_kind: ReplyKind | None = None
+    # PR watch: "on" when Holt alerts on this one, "muted" when its author
+    # muted it. Null when the person gets no alerts now, and on merged,
+    # closed and uncounted ones.
+    watch: Literal["on", "muted"] | None = None
+    # It has an alert the person hasn't opened.
+    unread_alert: bool = False
 
 
 class ContributionSummary(Model):
