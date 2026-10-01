@@ -1,5 +1,6 @@
 import { evidenceLabel, evidenceRef } from "@/lib/format";
 import type { EvidenceItem } from "@/lib/types";
+import { ShowMore } from "./show-more";
 
 function Item({ e }: { e: EvidenceItem }) {
   const { label, bad } = evidenceLabel(e);
@@ -31,13 +32,9 @@ export function EvidenceList({ evidence }: { evidence: EvidenceItem[] }) {
     <div className="border-t border-line-strong">
       <ul>{first.map((e, i) => <Item key={`${i}:${e.id}`} e={e} />)}</ul>
       {rest.length > 0 && (
-        <details className="group">
-          <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 py-3 text-[0.88rem] text-green [&::-webkit-details-marker]:hidden">
-            <span className="group-open:hidden">[ show {rest.length} more ]</span>
-            <span className="hidden group-open:inline">[ show fewer ]</span>
-          </summary>
+        <ShowMore count={rest.length}>
           <ul>{rest.map((e, i) => <Item key={`${i + first.length}:${e.id}`} e={e} />)}</ul>
-        </details>
+        </ShowMore>
       )}
     </div>
   );
