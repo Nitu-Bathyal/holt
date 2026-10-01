@@ -3398,10 +3398,6 @@
 :root:has(.find-band [data-check-target="band"]) .app-bar-frame [data-check-target="bar"] {
   display: none;
 }
-/* Likewise on the home: its repo box sits under the page head, so the top bar's copy steps aside. */
-:root:has(.app-page [data-check-target="inline"]) .app-bar-frame [data-check-target="bar"] {
-  display: none;
-}
 @supports (animation-timeline: scroll()) {
   :root:has(.find-band) .site-header {
     animation: header-line linear both;

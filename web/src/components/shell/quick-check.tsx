@@ -1,8 +1,8 @@
 "use client";
 // A small repo box: type or paste a repo, press enter, read its report. In the
 // top bar on every app page ("bar", from md up; find a project moves it into
-// its tab row, "band"), and on the home under the page head, right-aligned
-// ("inline"; the top bar's copy steps aside there). An unreadable entry gets a
+// its tab row, "band"), and above the home headline on smaller screens
+// ("inline", while the top bar's copy is hidden below md). An unreadable entry gets a
 // hint that goes as soon as you type, leave the box or change page
 // (lib/quick-check.ts).
 import { usePathname, useRouter } from "next/navigation";

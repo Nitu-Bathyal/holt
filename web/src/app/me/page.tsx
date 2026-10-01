@@ -111,7 +111,10 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
     <PageTransition>
       <div className="app-page">
         <FocusOnHash />
-        <MoveHead title={moveTitle(move)} lead={moveLead(move)} mood={mood(move)} step={move.step} aside={<div id="check" className="scroll-mt-24"><QuickCheck variant="inline" /></div>}>
+        <div id="check" className="mb-4 scroll-mt-24 md:hidden">
+          <QuickCheck variant="inline" />
+        </div>
+        <MoveHead title={moveTitle(move)} lead={moveLead(move)} mood={mood(move)} step={move.step}>
           {primary && <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">{primary}</div>}
         </MoveHead>
         {notice && <p role="status" className={`mb-6 border px-4 py-3 font-sans text-[0.9rem] ${notice.tone}`}>{notice.text}</p>}
