@@ -182,7 +182,8 @@ def test_cards_carry_the_main_languages(h):
     assert (card["language"], card["languages"]) == ("Go", ["Go", "TypeScript"])
 
 
-def test_trending_needs_enough_people_this_week(h):
+def test_trending_needs_enough_people_this_week(h, monkeypatch):
+    monkeypatch.setattr(discover, "VIEWS_KEPT_S", 0)  # count on every request
     add(h, report("octo/hot"), report("octo/warm"), report("octo/quiet"),
         report("octo/last-month"),
         *views("octo/hot", 9), *views("octo/warm", 3), *views("octo/warm", 3, day_offset=2),

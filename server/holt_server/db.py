@@ -10,7 +10,10 @@ that is missing.
 
 from __future__ import annotations
 
+import asyncio
+import contextlib
 import uuid
+from collections.abc import AsyncIterator
 from datetime import UTC, date, datetime
 
 from sqlalchemy import (
@@ -27,8 +30,10 @@ from sqlalchemy import (
     UniqueConstraint,
     text,
 )
+from sqlalchemy.engine import make_url
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.pool import AsyncAdaptedQueuePool, NullPool
 
 from holt.engine_version import ENGINE_VERSION
 
@@ -386,15 +391,62 @@ def current_engine():
     return Report.engine_version >= ENGINE_VERSION
 
 
+# `ping` gives up after this long, well inside the container health check's
+# own timeout (deploy/*/compose.yml).
+PING_TIMEOUT_S = 1.5
+
+
 class Database:
-    def __init__(self, url: str) -> None:
-        kwargs = {}
+    """The pool every request and job takes its sessions from, and a few
+    connections of their own beside it (`ping`, `advisory_lock`).
+
+    A session holds a pool connection from its first statement until it
+    commits, rolls back or closes, so keep that short: read, close, then call
+    GitHub or do the slow work. `pool_size` connections are opened as they
+    are needed and kept; a request waits `pool_timeout` seconds for one and
+    then fails (HOLT_DB_POOL_SIZE, HOLT_DB_POOL_TIMEOUT).
+
+    `max_overflow` (HOLT_DB_MAX_OVERFLOW) is 0 unless set: an overflow
+    connection is opened under load and closed when given back, and opening
+    one costs about 0.15 s of this process's CPU (asyncpg does Postgres's
+    SCRAM password check in Python, on the event loop), so under the very load
+    it is meant for it slows every request. A bigger `pool_size` costs that
+    once.
+
+    Every process's worst case has to fit in Postgres's `max_connections`:
+    the budget is in deploy/prod/compose.yml.
+    """
+
+    def __init__(self, url: str, *, pool_size: int = 10, max_overflow: int = 0,
+                 pool_timeout: float = 10.0) -> None:
+        connect: dict = {}
+        pooled = True
         if url.startswith("sqlite"):
-            kwargs["connect_args"] = {"check_same_thread": False}
+            connect["connect_args"] = {"check_same_thread": False}
+            # An in-memory database is one connection, not a pool.
+            pooled = make_url(url).database not in (None, "", ":memory:")
+            if pooled:
+                # SQLAlchemy's default for a file only since 2.0.38.
+                connect["poolclass"] = AsyncAdaptedQueuePool
         else:
-            kwargs.update(pool_size=5, max_overflow=5, pool_pre_ping=True)
-        self.engine: AsyncEngine = create_async_engine(url, **kwargs)
+            connect["pool_pre_ping"] = True
+
+        def pool(size: int, overflow: int, timeout: float) -> dict:
+            return ({"pool_size": size, "max_overflow": overflow, "pool_timeout": timeout}
+                    if pooled else {})
+
+        self.engine: AsyncEngine = create_async_engine(
+            url, **connect, **pool(pool_size, max_overflow, pool_timeout))
         self.session = async_sessionmaker(self.engine, expire_on_commit=False)
+        # The health check's own connection, kept open: it must answer while
+        # every pool connection is busy, without opening one each time.
+        self._health: AsyncEngine = create_async_engine(
+            url, isolation_level="AUTOCOMMIT", **connect, **pool(1, 0, PING_TIMEOUT_S))
+        # Advisory locks: a connection each, opened for the pass and closed
+        # after it, so a lock held for minutes never takes a request's slot.
+        self._locks: AsyncEngine = create_async_engine(
+            url, poolclass=NullPool, isolation_level="AUTOCOMMIT",
+            **{k: v for k, v in connect.items() if k == "connect_args"})
 
     async def migrate(self) -> None:
         """Bring the schema up to date (see `holt_server.migrate`)."""
@@ -404,15 +456,35 @@ class Database:
             await conn.run_sync(upgrade)
 
     async def ping(self) -> bool:
+        """Whether the database answers, asked on a connection of its own:
+        a full pool is slow requests, not a dead database."""
         try:
-            async with self.engine.connect() as conn:
-                await conn.execute(text("select 1"))
+            async with asyncio.timeout(PING_TIMEOUT_S):
+                async with self._health.connect() as conn:
+                    await conn.execute(text("select 1"))
             return True
         except Exception:
             return False
 
+    @contextlib.asynccontextmanager
+    async def advisory_lock(self, lock_id: int) -> AsyncIterator[bool]:
+        """Hold Postgres advisory lock `lock_id` for the block, so one process
+        at a time does the work inside. Yields False when another process
+        holds it. The lock lives on a connection of its own, not the pool's,
+        and closing that connection lets it go whatever happens. Always True
+        on other databases (one process)."""
+        if self.engine.dialect.name != "postgresql":
+            yield True
+            return
+        async with self._locks.connect() as conn:
+            got = bool((await conn.execute(text("SELECT pg_try_advisory_lock(:id)"),
+                                           {"id": lock_id})).scalar())
+            yield got
+
     async def dispose(self) -> None:
         await self.engine.dispose()
+        await self._health.dispose()
+        await self._locks.dispose()
 
 
 class FindCache(Base):

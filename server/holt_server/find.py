@@ -40,7 +40,7 @@ from typing import Any
 
 from holt_server import repos, schema, starter
 from holt_server.discover import (
-    BREAKDOWN, COUNTS, _card, _latest, card_issues, starter_issues, welcoming_key,
+    BREAKDOWN, COUNTS, _latest, card_issues, kept_card, starter_issues, welcoming_key,
 )
 from holt_server.services import Services
 
@@ -83,7 +83,7 @@ async def matches(svc: Services, params: dict[str, Any]) -> list:
     days = int(params.get("days") or 7)
     cards = [c for row in await _latest(svc)  # row[-1] is the repo's RepoMeta
              if row[3] == "viable" and _matches(row[-1], params)
-             and (c := _card(row, {})) is not None and _fits_time(c, days)]
+             and (c := kept_card(svc, row)) is not None and _fits_time(c, days)]
     return sorted(cards, key=welcoming_key)
 
 

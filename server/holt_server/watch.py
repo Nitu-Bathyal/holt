@@ -30,7 +30,7 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from typing import Any
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 
 from holt_server import alerts, contributions, pr_state
 from holt_server.db import (
@@ -48,7 +48,10 @@ from holt_server.services import Services
 
 log = logging.getLogger("holt_server.watch")
 
-LOCK_ID = 7_406_113
+# Its own number: it was repo_stats.py's too, so a statistics rebuild (a
+# user connecting or opting out) waited for the whole pass with a pool
+# connection held.
+LOCK_ID = 7_406_115
 # A watching user's list is searched again this often, to find new pull requests.
 DISCOVER_EVERY = timedelta(hours=6)
 # The search step checks GitHub points every this many users.
@@ -236,16 +239,8 @@ async def check(svc: Services, at: datetime | None = None) -> Pass:
 
 async def check_once(svc: Services) -> Pass | None:
     """One pass; on Postgres only one process runs it (None if another does)."""
-    if svc.db.engine.dialect.name != "postgresql":
-        return await check(svc)
-    async with svc.db.engine.connect() as conn:
-        if not (await conn.execute(text("SELECT pg_try_advisory_lock(:id)"),
-                                   {"id": LOCK_ID})).scalar():
-            return None
-        try:
-            return await check(svc)
-        finally:
-            await conn.execute(text("SELECT pg_advisory_unlock(:id)"), {"id": LOCK_ID})
+    async with svc.db.advisory_lock(LOCK_ID) as got:
+        return await check(svc) if got else None
 
 
 async def schedule(svc: Services, first_delay_s: float = 120.0) -> None:

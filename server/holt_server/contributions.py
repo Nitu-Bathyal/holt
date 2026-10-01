@@ -40,7 +40,7 @@ from datetime import UTC, datetime, timedelta
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
-from sqlalchemy import and_, delete, func, select, text
+from sqlalchemy import and_, delete, func, select
 
 from holt_server import alerts, pr_state, repo_stats, repos, schema
 from holt_server.db import (
@@ -612,16 +612,8 @@ async def refresh_all(svc: Services, max_age: timedelta) -> int:
 
 async def refresh_once(svc: Services, max_age: timedelta) -> int | None:
     """One pass; on Postgres only one process runs it (None if another does)."""
-    if svc.db.engine.dialect.name != "postgresql":
-        return await refresh_all(svc, max_age)
-    async with svc.db.engine.connect() as conn:
-        if not (await conn.execute(text("SELECT pg_try_advisory_lock(:id)"),
-                                   {"id": LOCK_ID})).scalar():
-            return None
-        try:
-            return await refresh_all(svc, max_age)
-        finally:
-            await conn.execute(text("SELECT pg_advisory_unlock(:id)"), {"id": LOCK_ID})
+    async with svc.db.advisory_lock(LOCK_ID) as got:
+        return await refresh_all(svc, max_age) if got else None
 
 
 async def schedule(svc: Services, first_delay_s: float = 300.0) -> None:

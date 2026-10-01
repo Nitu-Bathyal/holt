@@ -37,7 +37,7 @@ from typing import TYPE_CHECKING, Any, Protocol
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 import httpx
-from sqlalchemy import func, select, text, update
+from sqlalchemy import func, select, update
 
 from holt_server import alert_email, alerts
 from holt_server.db import (
@@ -479,16 +479,8 @@ async def _send(svc: Services, row: AlertSettings, access: alerts.Access, email:
 
 async def run_once(svc: Services) -> Run | None:
     """One run; on Postgres only one process does it (None if another is)."""
-    if svc.db.engine.dialect.name != "postgresql":
-        return await run(svc)
-    async with svc.db.engine.connect() as conn:
-        if not (await conn.execute(text("SELECT pg_try_advisory_lock(:id)"),
-                                   {"id": LOCK_ID})).scalar():
-            return None
-        try:
-            return await run(svc)
-        finally:
-            await conn.execute(text("SELECT pg_advisory_unlock(:id)"), {"id": LOCK_ID})
+    async with svc.db.advisory_lock(LOCK_ID) as got:
+        return await run(svc) if got else None
 
 
 async def schedule(svc: Services, first_delay_s: float = 90.0) -> None:
