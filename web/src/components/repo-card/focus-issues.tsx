@@ -48,7 +48,7 @@ export function FocusIssues({ repo, initial }: { repo: string; initial: StarterI
         </a>
       </div>
       {state === null ? (
-        <ul aria-busy="true" aria-label="Loading good first issues" className="mt-2 grid gap-2">
+        <ul aria-busy="true" aria-label="Loading good first issues" className="mt-2 grid min-w-0 grid-cols-1 gap-2">
           {Array.from({ length: SHOWN }, (_, i) => (
             <li key={i} className="h-[3.1rem] animate-pulse border border-line bg-panel-2" />
           ))}
@@ -58,7 +58,7 @@ export function FocusIssues({ repo, initial }: { repo: string; initial: StarterI
           {state === "unavailable" ? "Holt can't list its starter issues right now." : "No open, unclaimed starter issues right now."}
         </p>
       ) : (
-        <ul className="mt-2 grid gap-2">
+        <ul className="mt-2 grid min-w-0 grid-cols-1 gap-2">
           {issues.map((i) => (
             <IssueRow key={i.number} issue={i} />
           ))}
@@ -71,12 +71,12 @@ export function FocusIssues({ repo, initial }: { repo: string; initial: StarterI
 function IssueRow({ issue }: { issue: StarterIssue }) {
   const taken = Boolean(issue.people || issue.open_prs);
   return (
-    <li className="card-hover group relative border border-line bg-panel px-3 py-2">
+    <li className="card-hover group relative min-w-0 border border-line bg-panel px-3 py-2">
       <p className="flex items-baseline gap-2 font-sans text-[0.88rem] font-semibold leading-snug text-ink">
         <span className="shrink-0 font-mono text-[0.8rem] font-normal text-blue">#{issue.number}</span>
         <a href={issue.url} target="_blank" rel="noopener noreferrer" data-umami-event="starter-issue-click" className="min-w-0 truncate after:absolute after:inset-0 group-hover:text-blue">
           {issue.title}
-          <span className="sr-only"> (opens GitHub)</span>
+          <span className="sr-only left-0 top-0"> (opens GitHub)</span>
         </a>
       </p>
       <p className="mt-0.5 flex items-center gap-x-2 overflow-hidden whitespace-nowrap font-sans text-[0.76rem] text-faint">

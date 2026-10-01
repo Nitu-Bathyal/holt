@@ -1,9 +1,11 @@
 "use client";
 
+import type Lenis from "lenis";
 import { useSearchParams } from "next/navigation";
 import { createContext, Suspense, use, useEffect, useRef, useState } from "react";
 import { neighbours, type CardRepo } from "@/lib/repo-card";
 import { savedSet, withSaved } from "@/lib/saved";
+import { useReducedMotion } from "../motion/use-seen";
 import { pauseSmoothScroll } from "../motion/smooth-scroll";
 import { SaveButton } from "../save-button";
 import { RepoCard } from "./repo-card";
@@ -125,6 +127,10 @@ function Focusable({ repos, layout, days, topicBase, card, actionsFor }: ListPro
   const nb = neighbours(repos.map((r) => r.repo), focus);
   const current = nb ? repos[nb.index] : null;
   const dialog = useRef<HTMLDialogElement>(null);
+  const scrollArea = useRef<HTMLDivElement>(null);
+  const previewGlide = useRef<Lenis | null>(null);
+  const reduced = useReducedMotion();
+  const hasCurrent = Boolean(current);
   const pushed = useRef(false);
   const touch = useRef<{ x: number; y: number } | null>(null);
 
@@ -146,18 +152,49 @@ function Focusable({ repos, layout, days, topicBase, card, actionsFor }: ListPro
   useEffect(() => {
     const d = dialog.current;
     if (!d) return;
-    if (current && !d.open) d.showModal();
-    if (!current && d.open) d.close();
-    document.documentElement.style.overflow = current ? "hidden" : "";
-    pauseSmoothScroll(Boolean(current));
+    if (hasCurrent && !d.open) d.showModal();
+    if (!hasCurrent && d.open) d.close();
+    document.documentElement.style.overflow = hasCurrent ? "hidden" : "";
+    pauseSmoothScroll(hasCurrent);
     return () => {
       document.documentElement.style.overflow = "";
       pauseSmoothScroll(false);
     };
-  }, [current]);
+  }, [hasCurrent]);
+  // Give the preview its own wheel glide while the page behind it is paused.
+  // Touch and reduced motion keep native scrolling.
+  useEffect(() => {
+    const wrapper = scrollArea.current;
+    const content = wrapper?.firstElementChild as HTMLElement | null;
+    if (!hasCurrent || reduced || !wrapper || !content || !matchMedia("(hover: hover) and (pointer: fine)").matches) return;
+    let cancelled = false;
+    let cleanup: (() => void) | undefined;
+    import("lenis").then(({ default: Lenis }) => {
+      if (cancelled) return;
+      const glide = new Lenis({ wrapper, content, autoRaf: true, lerp: 0.09, allowNestedScroll: true });
+      previewGlide.current = glide;
+      cleanup = () => {
+        glide.destroy();
+        previewGlide.current = null;
+      };
+    });
+    return () => {
+      cancelled = true;
+      cleanup?.();
+    };
+  }, [hasCurrent, reduced]);
+
   // Moving to another repo starts at its top.
   useEffect(() => {
-    dialog.current?.querySelector("[data-scroll]")?.scrollTo({ top: 0 });
+    const d = dialog.current;
+    // A focused navigation button can become disabled at either end of the
+    // list. Keep keyboard focus in the modal so arrows still work back again.
+    const active = document.activeElement;
+    if (d?.open && (!d.contains(active) || (active instanceof HTMLButtonElement && active.disabled))) {
+      d.querySelector<HTMLButtonElement>('button[aria-label="Close"]')?.focus({ preventScroll: true });
+    }
+    previewGlide.current?.scrollTo(0, { immediate: true, force: true });
+    scrollArea.current?.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [current?.repo]);
 
   return (
@@ -165,17 +202,19 @@ function Focusable({ repos, layout, days, topicBase, card, actionsFor }: ListPro
       <OpenFocus value={open}>{layout(card)}</OpenFocus>
       <dialog
         ref={dialog}
-        // Its own scroll area: the wheel scrolls it natively, never the page behind.
-        data-lenis-prevent
+        // Its own scroll area glides independently of the paused page.
         aria-labelledby="focus-title"
         onClose={() => {
           if (new URLSearchParams(window.location.search).has(PARAM)) close();
         }}
         onClick={(e) => e.target === e.currentTarget && close()}
         onKeyDown={(e) => {
-          if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
-          if (e.key === "ArrowLeft" && nb?.prev) go(nb.prev);
-          if (e.key === "ArrowRight" && nb?.next) go(nb.next);
+          if (e.target instanceof HTMLElement && e.target.closest("input, textarea, select, [contenteditable=true]")) return;
+          if (e.key === "ArrowLeft" || e.key === "ArrowRight") {
+            // Arrow navigation must never also scroll the preview sideways.
+            e.preventDefault();
+            go(e.key === "ArrowLeft" ? nb?.prev ?? null : nb?.next ?? null);
+          }
         }}
         onTouchStart={(e) => {
           touch.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -188,10 +227,10 @@ function Focusable({ repos, layout, days, topicBase, card, actionsFor }: ListPro
           const dy = e.changedTouches[0].clientY - t.y;
           if (Math.abs(dx) > 60 && Math.abs(dx) > 2 * Math.abs(dy)) go(dx < 0 ? nb.next : nb.prev);
         }}
-        className="bg-bg text-ink backdrop:bg-black/60 backdrop:backdrop-blur-[2px] max-sm:m-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:max-w-none sm:m-auto sm:max-h-[90vh] sm:w-[min(40rem,calc(100%-3rem))] sm:border sm:border-line-strong sm:shadow-soft"
+        className="repo-preview overflow-hidden bg-bg text-ink backdrop:bg-black/60 backdrop:backdrop-blur-[2px] max-sm:m-0 max-sm:h-dvh max-sm:max-h-none max-sm:w-full max-sm:max-w-none sm:m-auto sm:max-h-[90vh] sm:w-[calc(100%_-_3rem)] sm:max-w-[40rem] sm:border sm:border-line-strong sm:shadow-soft"
       >
         {current && nb && (
-          <div className="flex h-full flex-col sm:h-auto sm:max-h-[90vh]">
+          <div className="flex h-full min-w-0 flex-col sm:h-auto sm:max-h-[90vh]">
             <div className="flex items-center justify-between gap-3 border-b border-line px-4 py-1.5 font-sans text-[0.85rem] text-muted sm:px-5">
               <span className="tabular-nums">{nb.index + 1} of {repos.length}</span>
               <div className="flex items-center gap-2">
@@ -206,8 +245,12 @@ function Focusable({ repos, layout, days, topicBase, card, actionsFor }: ListPro
                 </button>
               </div>
             </div>
-            <div data-scroll className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 sm:flex-initial sm:px-5 sm:py-4">
-              <RepoFocus key={current.repo} r={current} report={reportHref(current.repo, days)} actions={actionsFor(current.repo, true)} topicBase={topicBase} />
+            <div ref={scrollArea} data-scroll className="min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain p-4 sm:flex-initial sm:px-5 sm:py-4">
+              <div className="min-w-0">
+                <div key={current.repo} className="repo-preview-content min-w-0">
+                  <RepoFocus r={current} report={reportHref(current.repo, days)} actions={actionsFor(current.repo, true)} topicBase={topicBase} />
+                </div>
+              </div>
             </div>
             <p className="hidden border-t border-line px-5 py-1.5 font-sans text-[0.8rem] text-faint sm:block">← → to move between repos · Esc to close</p>
           </div>

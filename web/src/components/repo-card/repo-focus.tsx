@@ -54,7 +54,7 @@ function Numbers({ stats }: { stats: CardStats }) {
     ...(stats.firstTimers ? [{ n: String(stats.firstTimers), label: "first-timers in", tone: "text-ink" }] : []),
   ];
   return (
-    <div className="mt-3 flex items-end gap-x-6 gap-y-2 max-sm:flex-wrap">
+    <div className="mt-3 flex items-end gap-x-6 gap-y-2 flex-wrap">
       <div className="w-[13rem] max-w-full shrink-0 max-sm:w-full">
         <OddsMeter stats={stats} />
       </div>
@@ -81,8 +81,8 @@ function Numbers({ stats }: { stats: CardStats }) {
 export function RepoFocus({ r, report, actions, topicBase }: { r: CardRepo; report: string; actions?: React.ReactNode; topicBase?: string }) {
   const [owner, name] = r.repo.split("/");
   return (
-    <div>
-      <div className="flex items-start gap-3">
+    <div className="min-w-0 [overflow-wrap:anywhere]">
+      <div className="flex min-w-0 items-start gap-3">
         <RepoAvatar repo={r.repo} size={40} />
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">

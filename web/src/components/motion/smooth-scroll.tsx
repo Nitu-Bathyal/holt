@@ -7,15 +7,15 @@
 // What made the old landing-only Lenis feel laggy, and what this does instead:
 // - It loaded once the page was idle, so scrolling changed feel a couple of
 //   seconds into the visit. This starts as soon as the page hydrates.
-// - It eased each wheel notch over 1.15s and 10% shorter. This uses a quick
+// - It eased each wheel notch over 1.15s and 10% shorter. This uses a gentle
 //   lerp and full-length notches.
 // - It only ran on one page. This runs on every page, so the feel is the same
 //   everywhere.
 //
 // Off under reduced motion (lib/motion.ts) and on touch-only devices (they keep native
 // scrolling; loading GSAP there would buy nothing). Nested scroll areas scroll
-// on their own (allowNestedScroll, plus data-lenis-prevent on the focus dialog
-// and the menus), and a modal stops Lenis while it's open (pauseSmoothScroll).
+// on their own (allowNestedScroll, plus data-lenis-prevent on menus), and a
+// modal stops Lenis while it's open (pauseSmoothScroll).
 import type Lenis from "lenis";
 import { usePathname } from "next/navigation";
 import { useEffect } from "react";
@@ -55,7 +55,7 @@ export function SmoothScroll() {
       if (cancelled) return;
       gsap.registerPlugin(ScrollTrigger);
       const l = new Lenis({
-        lerp: 0.15,
+        lerp: 0.09,
         wheelMultiplier: 1,
         syncTouch: false,
         anchors: true,
