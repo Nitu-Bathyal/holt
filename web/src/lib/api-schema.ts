@@ -1689,6 +1689,11 @@ export interface components {
         };
         /** History */
         History: {
+            /**
+             * Cards
+             * @description Holt's current card for each repo in `items` that has one (the latest 7-day rules report, as on saved repos).
+             */
+            cards: components["schemas"]["DiscoverRepo"][];
             /** Items */
             items: components["schemas"]["HistoryItem"][];
         };

@@ -4,7 +4,7 @@ import "server-only";
 import { cache } from "react";
 import type {
   AnalysisStart, ApiError, Checkout, Contributions, Credits, DiscoverOut, DiscoverSort, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection,
-  HistoryItem, JobStatus, Me, MergePlanStart, MergePlanState, Mode, Order, OrderConfirmed, Passes, PlaybookStart, PlaybookState, PreflightStart, PreflightState,
+  History, JobStatus, Me, MergePlanStart, MergePlanState, Mode, Order, OrderConfirmed, Passes, PlaybookStart, PlaybookState, PreflightStart, PreflightState,
   ProfileOut, ProfilePrefs, RazorpaySuccess, Recommendations, RepoSearch, Report, Result, SavedList, SavedState, StarterIssue,
 } from "./types";
 import type { FeedbackInput } from "./feedback";
@@ -244,7 +244,7 @@ export function claimCredit(userId: string): Promise<Result<Credits>> {
   return call("/v1/me/credits/claim", { method: "POST", caller: { userId } });
 }
 
-export function history(userId: string, limit = 50): Promise<Result<{ items: HistoryItem[] }>> {
+export function history(userId: string, limit = 50): Promise<Result<History>> {
   if (MOCK) return mock.history(userId);
   return call(`/v1/me/history?limit=${limit}`, { caller: { userId } });
 }

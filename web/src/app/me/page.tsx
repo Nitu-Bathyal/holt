@@ -66,7 +66,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
   const now = clock();
   const savedItems = saved.ok ? saved.data.saved : [];
   const savedNames = savedItems.map((i) => i.repo);
-  const repos = yourRepos(savedItems, checks.ok ? checks.data.items : [], now);
+  const repos = yourRepos(savedItems, checks.ok ? checks.data.items : [], checks.ok ? checks.data.cards : [], now);
   // Pull requests to other people's projects that count (not left out of your numbers).
   const pulls = prs.ok ? outsidePulls(prs.data.pull_requests, prs.data.login).filter((p) => p.counted) : [];
   const move = nextMove({ pulls, repos, now });
