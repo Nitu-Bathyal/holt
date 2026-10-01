@@ -165,3 +165,25 @@ def test_entitlements_migration_keeps_the_ledger_as_free_credits(db):
     tables = run(db, lambda c: inspect(c).get_table_names())
     assert not {"credit_lots", "plan_events", "plan_usage"} & set(tables)
     assert run(db, lambda c: c.execute(text("SELECT count(*) FROM credit_events")).scalar()) == 3
+
+
+def test_contribution_state_migration_is_idempotent(db):
+    """Staging got 0026's columns under an earlier revision number: upgrading
+    over them, and downgrading when they're gone, both work."""
+    from alembic import command
+
+    state = {"node_id", "turn", "turn_at", "first_reply_at", "last_activity_at",
+             "review_decision"}
+    columns = lambda c: {x["name"] for x in inspect(c).get_columns("contributions")}  # noqa: E731
+    run(db, lambda c: command.upgrade(migrate.config(c), "0026"))
+    assert state <= run(db, columns)
+    run(db, lambda c: command.stamp(migrate.config(c), "0025"))  # columns there, version behind
+    run(db, lambda c: command.upgrade(migrate.config(c), "head"))
+    assert run(db, revision) == head()
+    assert run(db, migrate.differences) == []
+
+    run(db, lambda c: command.downgrade(migrate.config(c), "0025"))
+    assert not state & run(db, columns)
+    run(db, lambda c: command.stamp(migrate.config(c), "0026"))  # version ahead, columns gone
+    run(db, lambda c: command.downgrade(migrate.config(c), "0025"))
+    assert run(db, revision) == "0025"

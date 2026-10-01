@@ -1267,8 +1267,12 @@ export interface components {
             created_at: string;
             /** Draft */
             draft: boolean;
+            /** First Reply At */
+            first_reply_at: string | null;
             /** Found Via Holt */
             found_via_holt: boolean;
+            /** Last Activity At */
+            last_activity_at: string | null;
             /** Merged At */
             merged_at: string | null;
             /** Not Counted Because */
@@ -1277,6 +1281,8 @@ export interface components {
             number: number;
             /** Repo */
             repo: string;
+            /** Review Decision */
+            review_decision: ("approved" | "changes_requested" | "review_required") | null;
             /**
              * State
              * @enum {string}
@@ -1284,6 +1290,14 @@ export interface components {
             state: "open" | "merged" | "closed";
             /** Title */
             title: string;
+            /**
+             * Turn
+             * @default unknown
+             * @enum {string}
+             */
+            turn: "yours" | "theirs" | "unknown";
+            /** Turn At */
+            turn_at: string | null;
             /** Url */
             url: string;
             verdict: components["schemas"]["RepoVerdict"] | null;
@@ -2891,6 +2905,7 @@ export interface components {
             first_reply_hours: number | null;
             /** Headline */
             readonly headline: string;
+            timing: components["schemas"]["Timing"] | null;
             /**
              * Tone
              * @enum {string}

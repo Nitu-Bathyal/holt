@@ -39,7 +39,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import and_, delete, func, select, text
 
-from holt_server import repo_stats, repos, schema
+from holt_server import pr_state, repo_stats, repos, schema
 from holt_server.db import (
     Contribution,
     ContributionChoice,
@@ -82,7 +82,7 @@ query($q:String!, $n:Int!, $cursor:String) {
     pageInfo { hasNextPage endCursor }
     nodes {
       ... on PullRequest {
-        number title url state isDraft createdAt closedAt mergedAt
+        id number title url state isDraft createdAt closedAt mergedAt
         authorAssociation mergedBy { login }
         repository { nameWithOwner isPrivate owner { login } }
       }
@@ -165,12 +165,35 @@ def parse(nodes: Iterable[dict[str, Any] | None], login: str) -> list[dict[str, 
             "state": _state(node), "draft": bool(node.get("isDraft")),
             "created_at": _when(node.get("createdAt")) or now(),
             "closed_at": _when(node.get("closedAt")), "merged_at": _when(node.get("mergedAt")),
+            "node_id": str(node.get("id") or "")[:100] or None,
         })
     return out
 
 
+# The per-pull-request state columns (pr_state.py).
+STATE_FIELDS = ("turn", "turn_at", "first_reply_at", "last_activity_at", "review_decision")
+
+
+def add_state(gql, rows: list[dict[str, Any]]) -> None:
+    """Read where each open pull request stands and put it on its row. A
+    failure is only logged: those rows keep their last known state."""
+    open_ = [r for r in rows if r["state"] == "open" and r.get("node_id")]
+    if not open_:
+        return
+    try:
+        nodes = pr_state.read(gql, [r["node_id"] for r in open_], SEARCH_TIMEOUT_S)
+    except Exception as exc:  # noqa: BLE001
+        log.warning("reading pull request state failed: %s",
+                    getattr(exc, "code", type(exc).__name__))
+        return
+    for r in open_:
+        if (node := nodes.get(r["node_id"])) is not None:
+            r.update(pr_state.derive(node, r["created_at"]).__dict__)
+
+
 def search(svc: Services, login: str) -> tuple[list[dict[str, Any]], bool]:
-    """(pull requests, whether GitHub had more). Blocking; at most two queries."""
+    """(pull requests, whether GitHub had more). Blocking; at most two search
+    queries, then the open ones' state (usually one more, 1 point)."""
     from holt_server.engine import translate
 
     q = search_query(login, now())
@@ -192,7 +215,9 @@ def search(svc: Services, login: str) -> tuple[list[dict[str, Any]], bool]:
         raise
     except Exception as exc:  # noqa: BLE001
         raise translate(exc, login) from exc
-    return parse(rows, login), more
+    out = parse(rows, login)
+    add_state(gql, out)
+    return out, more
 
 
 # --- storing -----------------------------------------------------------------------
@@ -224,6 +249,12 @@ async def _fetch_and_store(svc: Services, user_id: str, login: str) -> bool:
             GitHubConnection.user_id == user_id).with_for_update())).scalar_one_or_none()
         if conn is None or conn.login != login:
             return False
+        before = {(c.repo_key, c.number): c for c in (await s.execute(
+            select(Contribution).where(Contribution.user_id == user_id))).scalars()}
+        for r in rows:
+            old = before.get((r["repo_key"], r["number"]))
+            if "turn" not in r and r["state"] == "open" and old is not None:
+                r.update({f: getattr(old, f) for f in STATE_FIELDS})
         await s.execute(delete(Contribution).where(Contribution.user_id == user_id))
         s.add_all(Contribution(user_id=user_id, **r) for r in rows)
         sync = await s.get(ContributionSync, user_id)
@@ -283,15 +314,17 @@ async def verdicts(s, keys: set[str]) -> dict[str, schema.RepoVerdict]:
               .group_by(Report.repo_key).subquery())
     got = await s.execute(
         select(Report.repo_key, Report.created_at, Report.report["verdict"].as_string(),
-               Report.report["stats"]["median_first_response_hours"].as_float())
+               Report.report["stats"]["median_first_response_hours"].as_float(),
+               Report.report["stats"]["timing"])
         .join(latest, and_(Report.repo_key == latest.c.repo_key,
                            Report.created_at == latest.c.at))
         .where(rules))
     out = {}
-    for key, at, verdict, reply in got:
+    for key, at, verdict, reply, timing in got:
         if verdict in schema.TONES:
-            out[key] = schema.RepoVerdict(verdict=verdict, checked_at=iso(at),
-                                          first_reply_hours=reply)
+            out[key] = schema.RepoVerdict(
+                verdict=verdict, checked_at=iso(at), first_reply_hours=reply,
+                timing=schema.Timing.model_validate(timing) if isinstance(timing, dict) else None)
     return out
 
 
@@ -337,7 +370,10 @@ async def page(svc: Services, user_id: str, conn: GitHubConnection) -> schema.Co
             merged_at=iso(p.merged_at), verdict=verdict,
             found_via_holt=view is not None and after_holt(
                 p.created_at, view.first_viewed_at, view.last_viewed_at),
-            counted=why is None, not_counted_because=why))
+            counted=why is None, not_counted_because=why,
+            **(dict(turn=p.turn, turn_at=iso(p.turn_at), first_reply_at=iso(p.first_reply_at),
+                    last_activity_at=iso(p.last_activity_at),
+                    review_decision=p.review_decision) if p.state == "open" else {})))
     counted = [i for i in items if i.counted]
     merged = sum(i.state == "merged" for i in counted)
     closed = sum(i.state == "closed" for i in counted)

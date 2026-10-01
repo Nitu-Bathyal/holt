@@ -1,6 +1,7 @@
 // Your pull requests (the dashboard plan): is each one going anywhere?
-// Grouped by next move: needs you (waiting longer than the repo usually takes
-// to reply), waiting, merged, closed. Any repo can be left out of your numbers
+// Grouped by next move: your turn (the project replied), needs you (waiting
+// longer than the repo usually takes), waiting, merged, closed. Each open row
+// carries its one line (home.ts `waiting`). Any repo can be left out of your numbers
 // (a friend's project, your team's repo, a hackathon); those collect, undoable,
 // in a folded "Not counted" group.
 import type { Metadata } from "next";
@@ -33,7 +34,7 @@ const NOTICES: Record<string, { tone: string; text: string }> = {
   error: { tone: "text-orange border-orange/50 bg-orange/10", text: "We couldn't reach GitHub just now. Your list below is from the last check; try again in a minute." },
 };
 
-const RULE = { needs: "var(--orange)", waiting: "var(--blue)", merged: "var(--green)", closed: "var(--line-strong)" };
+const RULE = { yours: "var(--orange)", needs: "var(--orange)", waiting: "var(--blue)", merged: "var(--green)", closed: "var(--line-strong)" };
 
 function CountForm({ repo, counted, label, className }: { repo: string; counted: "yes" | "no" | "reset"; label: string; className: string }) {
   return (
@@ -81,6 +82,7 @@ function Groups({ g, preflight }: { g: PrGroups; preflight: boolean }) {
       <a href={w.pr.url} className="text-link tap text-[0.84rem]">open it ↗</a>
     );
   const sections = [
+    { id: "yours", title: "Your turn", n: g.yours.length, rows: g.yours.map((w) => <PrRow key={w.pr.url} p={w.pr} w={w} rule={RULE.yours} action={<a href={w.pr.url} className="text-link tap text-[0.84rem]">open it ↗</a>} />) },
     { id: "needs", title: "Needs you", n: g.needs.length, rows: g.needs.map((w) => <PrRow key={w.pr.url} p={w.pr} w={w} rule={RULE.needs} action={lateAction(w)} />) },
     { id: "waiting", title: "Waiting", n: g.waiting.length, rows: g.waiting.map((w) => <PrRow key={w.pr.url} p={w.pr} w={w} rule={RULE.waiting} />) },
     { id: "merged", title: "Merged", n: g.merged.length, rows: g.merged.map((p) => <PrRow key={p.url} p={p} rule={RULE.merged} />) },
@@ -136,7 +138,7 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
   const g = d ? prGroups(outsidePulls(d.pull_requests, d.login), clock()) : null;
   const s = d?.summary;
   // Nothing to group yet: the head says so, and its one action is finding a repo.
-  const none = !!g && !g.needs.length && !g.waiting.length && !g.merged.length && !g.closed.length;
+  const none = !!g && !g.yours.length && !g.needs.length && !g.waiting.length && !g.merged.length && !g.closed.length;
 
   return (
     <PageTransition>
@@ -156,7 +158,7 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
           </>
         ) : d && g && s && (
           <>
-            <AppPageHeader title={<MarkedTitle title={prsTitle(g)} />} mood={g.needs.length ? "thinking" : g.waiting.length ? "ready" : g.merged.length ? "celebrating" : "ready"}>
+            <AppPageHeader title={<MarkedTitle title={prsTitle(g)} />} mood={g.yours.length || g.needs.length ? "thinking" : g.waiting.length ? "ready" : g.merged.length ? "celebrating" : "ready"}>
               <div className="mt-5 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 text-[0.84rem] text-muted">
                 <p className="flex flex-wrap gap-x-5 gap-y-1">
                   <span><b className="text-ink"><NewCount id={`prs:${d.login}:opened`} value={s.opened} /></b> opened {d.truncated ? "(your latest 200)" : "this year"}</span>

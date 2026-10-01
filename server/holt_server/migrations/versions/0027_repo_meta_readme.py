@@ -1,5 +1,5 @@
-"""repo_meta: the repository's most active committers (login, profile name,
-avatar, commit count), for the report's Contributors card.
+"""repo_meta: the top of the repository's README (Markdown, at most about 6,000
+characters), for the report's README section.
 
 A nullable column only: the release before this one neither reads nor writes
 it, and rows fill in as the warm pass reads each repository again.
@@ -24,9 +24,9 @@ depends_on: str | Sequence[str] | None = None
 
 def upgrade() -> None:
     with op.batch_alter_table('repo_meta') as batch:
-        batch.add_column(sa.Column('top_contributors', sa.JSON(), nullable=True))
+        batch.add_column(sa.Column('readme', sa.Text(), nullable=True))
 
 
 def downgrade() -> None:
     with op.batch_alter_table('repo_meta') as batch:
-        batch.drop_column('top_contributors')
+        batch.drop_column('readme')
