@@ -9,7 +9,7 @@ import { Unsubscribe } from "@/components/alerts/unsubscribe";
 import { PageTransition } from "@/components/motion/page-transition";
 import { unsubscribeToken } from "@/lib/alerts";
 
-export const metadata: Metadata = { title: "Alert emails", robots: { index: false }, referrer: "no-referrer" };
+export const metadata: Metadata = { title: "Emails from Holt", robots: { index: false }, referrer: "no-referrer" };
 
 export default async function UnsubscribePage({ searchParams }: PageProps<"/alerts/unsubscribe">) {
   const { t } = await searchParams;

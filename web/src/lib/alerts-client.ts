@@ -1,6 +1,6 @@
 // The browser's side of PR watch: the bell, My PRs and the alert settings
 // change things through /api/alerts (the browser never calls the Holt API).
-import { ALERTS_EVENT, browserTz, withTz } from "./alerts";
+import { ALERTS_EVENT, browserTz, emailKind, withTz, type EmailKind } from "./alerts";
 import type { AlertList, AlertSettings } from "./types";
 
 const JSON_BODY = { "Content-Type": "application/json" };
@@ -60,11 +60,15 @@ export async function setMute(repo: string, number: number, muted: boolean): Pro
   }
 }
 
-/** The unsubscribe link: alert email off, or back on (undo). The status the server answered, 0 when offline. */
-export async function setEmailByToken(token: string, on: boolean): Promise<number> {
+/**
+ * An email's unsubscribe link: those emails off, or back on (undo). The status
+ * the server answered (0 when offline), and which emails the token was for.
+ */
+export async function setEmailByToken(token: string, on: boolean): Promise<{ status: number; kind: EmailKind | null }> {
   try {
-    return (await fetch(`/api/alerts/${on ? "resubscribe" : "unsubscribe"}`, { method: "POST", headers: JSON_BODY, body: JSON.stringify({ token }) })).status;
+    const res = await fetch(`/api/alerts/${on ? "resubscribe" : "unsubscribe"}`, { method: "POST", headers: JSON_BODY, body: JSON.stringify({ token }) });
+    return { status: res.status, kind: res.ok ? emailKind(await res.json().catch(() => null)) : null };
   } catch {
-    return 0;
+    return { status: 0, kind: null };
   }
 }

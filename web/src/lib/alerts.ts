@@ -172,8 +172,35 @@ export function unsubscribeStep(method: string, token: string | null): "unsubscr
   return token ? "unsubscribe" : "bad";
 }
 
+/**
+ * Which emails a token stops: PR watch's alerts, or the account's own emails
+ * (the server answers `"emails"`). An answer that doesn't say is an alert token.
+ */
+export type EmailKind = "alerts" | "product";
+
+export function emailKind(answer: unknown): EmailKind {
+  return (answer as { emails?: unknown } | null)?.emails === "product" ? "product" : "alerts";
+}
+
 /** The unsubscribe page, from "nothing sent yet" to "undone". */
 export type UnsubState = "idle" | "working" | "off" | "on" | "expired" | "failed";
+
+/** The unsubscribe page's one sentence. Until the server answers, it doesn't know which emails the link is for. */
+export function unsubHeading(state: UnsubState, kind: EmailKind | null): string {
+  const emails = kind === "product" ? "Account emails" : "Alert emails";
+  switch (state) {
+    case "off":
+      return `${emails} are off.`;
+    case "on":
+      return `${emails} are back on.`;
+    case "expired":
+      return "This link doesn't work any more.";
+    case "failed":
+      return "That didn't work.";
+    default:
+      return "Stopping these emails…";
+  }
+}
 
 /** Where the page lands after the server answers: 404 is a link that isn't current any more. */
 export function unsubAfter(on: boolean, status: number): UnsubState {

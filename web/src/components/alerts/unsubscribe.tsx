@@ -1,31 +1,27 @@
 "use client";
-// The page behind an alert email's "Stop these emails" link. The email is
-// turned off from here, in the browser, once the page is open: never while the
+// The page behind an email's "Stop these emails" link. The emails are turned
+// off from here, in the browser, once the page is open: never while the
 // server renders it, because mail scanners and link previews fetch every link
 // in an email and a fetch alone must not unsubscribe anyone. Then one undo.
+// The same link works for PR watch's alerts and for the account's own emails;
+// the server's answer says which.
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { unsubAfter, type UnsubState } from "@/lib/alerts";
+import { unsubAfter, unsubHeading, type EmailKind, type UnsubState } from "@/lib/alerts";
 import { setEmailByToken } from "@/lib/alerts-client";
-import { ALERT_SETTINGS } from "@/lib/settings";
-
-const HEADING: Record<UnsubState, string> = {
-  idle: "Stopping alert emails…",
-  working: "Stopping alert emails…",
-  off: "Alert emails are off.",
-  on: "Alert emails are back on.",
-  expired: "This link doesn't work any more.",
-  failed: "That didn't work.",
-};
+import { ALERT_SETTINGS, SETTINGS } from "@/lib/settings";
 
 export function Unsubscribe({ token }: { token: string | null }) {
   const [state, setState] = useState<UnsubState>(token ? "idle" : "expired");
+  const [kind, setKind] = useState<EmailKind | null>(null);
   const sent = useRef(false);
 
   async function send(on: boolean) {
     if (!token) return;
     setState("working");
-    setState(unsubAfter(on, await setEmailByToken(token, on)));
+    const r = await setEmailByToken(token, on);
+    if (r.kind) setKind(r.kind);
+    setState(unsubAfter(on, r.status));
   }
 
   // Once, when a browser opens the page.
@@ -39,13 +35,15 @@ export function Unsubscribe({ token }: { token: string | null }) {
   return (
     <div className="wrap max-w-2xl py-20">
       <div role="status">
-        <h1 className="display text-[clamp(1.8rem,5vw,2.4rem)]">{HEADING[state]}</h1>
+        <h1 className="display text-[clamp(1.8rem,5vw,2.4rem)]">{unsubHeading(state, kind)}</h1>
       </div>
       <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-3">
         {state === "off" && <button type="button" onClick={() => void send(true)} className="btn-ghost">undo</button>}
         {state === "on" && <button type="button" onClick={() => void send(false)} className="btn-ghost">stop these emails</button>}
         {state === "failed" && <button type="button" onClick={() => void send(false)} className="btn-ghost">try again</button>}
-        {state !== "idle" && state !== "working" && <Link href={ALERT_SETTINGS} className="text-link text-[0.9rem]">alert settings</Link>}
+        {state !== "idle" && state !== "working" && (
+          <Link href={kind === "alerts" ? ALERT_SETTINGS : SETTINGS} className="text-link text-[0.9rem]">{kind === "alerts" ? "alert settings" : "settings"}</Link>
+        )}
       </div>
     </div>
   );

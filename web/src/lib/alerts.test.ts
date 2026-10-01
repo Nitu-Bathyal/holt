@@ -2,8 +2,8 @@ import assert from "node:assert/strict";
 import { readdirSync, readFileSync, statSync } from "node:fs";
 import { test } from "node:test";
 import {
-  accessNote, alertLinks, alertView, badge, browserTz, dayMonth, EMAIL_MODES, sampleAlerts, settingsBody, showFirstTime, turnOnDetour, unsubAfter,
-  unsubscribeStep, unsubscribeToken, watchingLine, withTz,
+  accessNote, alertLinks, alertView, badge, browserTz, dayMonth, EMAIL_MODES, emailKind, sampleAlerts, settingsBody, showFirstTime, turnOnDetour, unsubAfter,
+  unsubHeading, unsubscribeStep, unsubscribeToken, watchingLine, withTz,
 } from "./alerts.ts";
 import type { Timing } from "./api-schema";
 import type { AlertAccess, ContributionPR } from "./types";
@@ -178,6 +178,21 @@ test("the unsubscribe page after the server answers", () => {
   assert.equal(unsubAfter(false, 400), "expired");
   assert.equal(unsubAfter(false, 502), "failed");
   assert.equal(unsubAfter(true, 0), "failed"); // offline
+});
+
+test("the page says which emails stopped: alerts, or the account's own", () => {
+  assert.equal(emailKind({ email_on: false, emails: "alerts" }), "alerts");
+  assert.equal(emailKind({ email_on: false, emails: "product" }), "product");
+  assert.equal(emailKind({ email_on: false }), "alerts"); // a server that doesn't say yet
+  assert.equal(emailKind(null), "alerts");
+  assert.equal(unsubHeading("off", "alerts"), "Alert emails are off.");
+  assert.equal(unsubHeading("on", "alerts"), "Alert emails are back on.");
+  assert.equal(unsubHeading("off", "product"), "Account emails are off.");
+  assert.equal(unsubHeading("on", "product"), "Account emails are back on.");
+  assert.equal(unsubHeading("idle", null), "Stopping these emails…");
+  assert.equal(unsubHeading("working", "product"), "Stopping these emails…");
+  assert.equal(unsubHeading("expired", null), "This link doesn't work any more.");
+  assert.equal(unsubHeading("failed", null), "That didn't work.");
 });
 
 // The rule in API.md: the page sends the token from the browser, never while
