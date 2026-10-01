@@ -55,6 +55,7 @@ const pull = (repo: string, number: number, state: ContributionPR["state"], crea
   repo, number, state, title: `PR ${number}`, url: `https://github.com/${repo}/pull/${number}`, draft: false,
   created_at: created, closed_at: null, merged_at: state === "merged" ? created : null, verdict: null, found_via_holt: false,
   counted: true, not_counted_because: null, turn: "unknown", turn_at: null, first_reply_at: null, last_activity_at: null, review_decision: null,
+  reply_by: null, reply_kind: null, watch: null, unread_alert: false,
 });
 
 test("pull requests to your own repos are left out, whatever the case", () => {

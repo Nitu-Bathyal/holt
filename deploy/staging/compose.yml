@@ -102,6 +102,11 @@ services:
       # the service isn't running, which turns paid features off.
       HOLT_PRO_URL: ${HOLT_PRO_URL:-}
       HOLT_PRO_KEY: ${HOLT_PRO_KEY:-}
+      # PR watch (server/README.md, "PR watch"): off unless staging's .env
+      # says HOLT_PR_WATCH=1. Alert emails need RESEND_API_KEY there too;
+      # without it none are sent.
+      HOLT_PR_WATCH: ${HOLT_PR_WATCH:-0}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
       HOLT_JOB_CONCURRENCY: ${HOLT_JOB_CONCURRENCY:-1}
       # Background workers (badges, warm passes) and the warm pass's reports
       # in flight: two, inside the 512m below.

@@ -90,6 +90,11 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `HOLT_FIND_CACHE_HOURS` | `6` | How long a finished `/v1/find` search is served to anyone asking the same thing. |
 | `HOLT_WARM_INTERVAL_HOURS` | `0` (off) | Run a warm pass in the API process every N hours (one process at a time; Postgres advisory lock). Each pass also refreshes Discover's repository details (`repo_meta`) once a day, about one GraphQL point per hundred repos. |
 | `HOLT_CONTRIBUTIONS_REFRESH_HOURS` | `24` | Re-read connected users' public pull requests (My Contributions) every N hours in the API process; stops when GitHub points drop below `HOLT_WARM_MIN_POINTS`. `0` = off. |
+| `HOLT_PR_WATCH` | `0` (off) | The switch for PR watch. `1` starts the checker and the mailer in the API process and lets people turn alerts on. Off, nothing checks pull requests, makes alerts or sends email. See [PR watch](#pr-watch). |
+| `HOLT_PR_WATCH_MINUTES` | `30` | Minutes between checks of watched pull requests. |
+| `RESEND_API_KEY` | *(empty)* | Resend's API key, for alert emails. Empty: no email is sent (logged once); alerts still reach the bell. Never logged. Emails also need `HOLT_SECRET_KEY`, which makes the unsubscribe links. |
+| `HOLT_ALERT_EMAIL_FROM`, `HOLT_ALERT_EMAIL_REPLY_TO` | `Holt <alerts@githolt.com>`, `hello@githolt.com` | The sender and the reply address of alert emails. The sender's domain must be verified with Resend. |
+| `HOLT_ALERT_EMAIL_DAILY_LIMIT` | `100` | The provider's daily sending limit (Resend's free tier). The mailer stops 5 short of it in any 24 hours: "your turn" emails go first, daily emails that don't fit go out once there is room. |
 | `HOLT_WARM_SEEDS` | the list shipped in the package (`holt_server/seeds/repos.txt`) | The warm pass's seed list. |
 | `HOLT_WARM_MAX_AGE_HOURS` | `20` | A warm pass skips repos whose report is younger than this. |
 | `HOLT_WARM_MIN_POINTS` | `1500` | A warm pass stops when any GitHub token has fewer GraphQL points left, counting 20 for each report still in flight. |
@@ -267,6 +272,39 @@ until a migration drops them.
 Per process (fine for one server; revisit with more): rate-limit counters,
 the badge lane's concurrency count and the repo-name cache are in memory. SSE
 fan-out is in memory but falls back to re-reading the jobs table every 15s.
+
+## PR watch
+
+Alerts about a connected user's open pull requests, on the bell and by email
+(`API.md`, "PR watch"). Four modules:
+
+- `alerts.py`: the rules, pure. `events(old, new)` is what changed between two
+  reads of a pull request; `overdue(pr, timing, now)` is what its wait says
+  against the repository's report. Also the line each alert reads as, and who
+  has access (a plan that covers `pr_watch`, or 14 free days from the first
+  time alerts are turned on, kept on `users.alerts_trial_ends_at`).
+- `watch.py`: the checker. Every `HOLT_PR_WATCH_MINUTES` it re-reads the open
+  pull requests of everyone with alerts on and access, by node ID, as the
+  GitHub App (about 5 points per 100), and stops reading GitHub under
+  `HOLT_WARM_MIN_POINTS`. A contributions fetch makes the same alerts for what
+  it sees change. Advisory lock 7406113.
+- `mailer.py`: every 5 minutes, under its own advisory lock (7406114), it
+  decides what to email (`plan`, pure) and sends through Resend. It reads no
+  GitHub.
+- `alert_email.py`: the two emails, HTML and text.
+
+**Turning it on.** It is off until the owner sets `HOLT_PR_WATCH=1` and
+restarts the server. For email, also set `RESEND_API_KEY`, and verify the
+sending domain with Resend first; without the key everything else works and no
+email goes out. `HOLT_PR_WATCH=0` again stops both loops; stored alerts stay.
+
+```sh
+python -m holt_server.watch     # one check now
+python -m holt_server.mailer    # one mailer run now
+```
+
+Watched repositories join the weekly refresh tier of the warm pass, so each
+gets a report (the waits need its timing).
 
 ## Changing the schema
 

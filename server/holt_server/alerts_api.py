@@ -25,9 +25,9 @@ from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 
 from holt_server import alerts, credits, mailer, repos, schema, watch
+from holt_server.db import AlertSettings as SettingsRow
 from holt_server.db import (
     Alert,
-    AlertSettings,
     Contribution,
     GitHubConnection,
     User,
@@ -78,6 +78,9 @@ class AlertList(Model):
     # Alerts not opened yet (all of them, not only this page). 0 without access.
     unread: int
     access: AlertAccess
+    # The person's own switch (settings). With access and this off, the bell
+    # offers to turn alerts on.
+    enabled: bool
     # Open pull requests Holt is watching for this user now.
     watching: int
     # Newest first.
@@ -97,7 +100,7 @@ class AlertReadBody(Model):
     all: bool = False
 
 
-class AlertSettingsOut(Model):
+class AlertSettings(Model):
     # The top switch: Holt watches this person's pull requests.
     enabled: bool
     # Where alert emails go; null: the bell only.
@@ -159,6 +162,7 @@ async def get_alerts(request: Request, limit: int = Query(20, ge=1, le=MAX_PAGE)
     user_id = signed_in(who)
     async with svc.db.session() as s:
         access = alerts.access_for(svc, await s.get(User, user_id))
+        row = await s.get(SettingsRow, user_id)
         q = select(Alert).where(Alert.user_id == user_id)
         if before is not None:
             q = q.where(Alert.id < before)
@@ -167,7 +171,8 @@ async def get_alerts(request: Request, limit: int = Query(20, ge=1, le=MAX_PAGE)
         watching = await _watching(s, svc, user_id)
     more = len(rows) > limit
     rows = rows[:limit]
-    return AlertList(unread=unread, access=access_body(access), watching=watching,
+    return AlertList(unread=unread, access=access_body(access),
+                     enabled=bool(row and row.enabled), watching=watching,
                      items=[_item(a) for a in rows],
                      next_before=rows[-1].id if more else None)
 
@@ -202,9 +207,9 @@ async def read_alerts(body: AlertReadBody, request: Request,
 # --- settings ---------------------------------------------------------------------------
 
 
-def _settings_body(svc: Services, row: AlertSettings | None, access: alerts.Access,
-                   watching: int) -> AlertSettingsOut:
-    return AlertSettingsOut(
+def _settings_body(svc: Services, row: SettingsRow | None, access: alerts.Access,
+                   watching: int) -> AlertSettings:
+    return AlertSettings(
         enabled=bool(row and row.enabled), email=row.email if row else None,
         email_on=row.email_on if row else True,
         email_mode=row.email_mode if row else "turn", tz=row.tz if row else "UTC",
@@ -214,11 +219,11 @@ def _settings_body(svc: Services, row: AlertSettings | None, access: alerts.Acce
 
 @router.get("/me/alerts/settings")
 async def get_alert_settings(request: Request,
-                             who: Caller = Depends(caller)) -> AlertSettingsOut:
+                             who: Caller = Depends(caller)) -> AlertSettings:
     svc = services(request)
     user_id = signed_in(who)
     async with svc.db.session() as s:
-        row = await s.get(AlertSettings, user_id)
+        row = await s.get(SettingsRow, user_id)
         access = alerts.access_for(svc, await s.get(User, user_id))
         return _settings_body(svc, row, access, await _watching(s, svc, user_id))
 
@@ -233,7 +238,7 @@ def _zone(name: str) -> str:
 
 @router.put("/me/alerts/settings")
 async def put_alert_settings(body: AlertSettingsBody, request: Request,
-                             who: Caller = Depends(caller)) -> AlertSettingsOut:
+                             who: Caller = Depends(caller)) -> AlertSettings:
     """Change the fields sent. The first `enabled: true` starts the free
     taste (`alerts.TRIAL_DAYS` days, once per account) for someone without a
     pass that covers alerts."""
@@ -249,7 +254,7 @@ async def put_alert_settings(body: AlertSettingsBody, request: Request,
     async with svc.db.session() as s:
         user = (await s.execute(select(User).where(User.id == user_id)
                                 .with_for_update())).scalar_one()
-        row = await s.get(AlertSettings, user_id)
+        row = await s.get(SettingsRow, user_id)
         if row is None:
             row = alerts.new_settings(svc, user_id)
             s.add(row)
@@ -340,8 +345,8 @@ async def unmute(owner: str, name: str, number: int, request: Request,
 
 async def _set_email(svc: Services, token: str, on: bool) -> Unsubscribed:
     async with svc.db.session() as s:
-        row = (await s.execute(select(AlertSettings).where(
-            AlertSettings.unsubscribe_hash == alerts.token_hash(token)))).scalar_one_or_none()
+        row = (await s.execute(select(SettingsRow).where(
+            SettingsRow.unsubscribe_hash == alerts.token_hash(token)))).scalar_one_or_none()
         if row is None:
             raise ApiError("not_found", "That link doesn't work any more. You can change "
                            "your alert emails in your settings.")
