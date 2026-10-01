@@ -65,11 +65,11 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `HOLT_AI_BUDGET_USD` | `0` (AI off) | The most this environment may ever spend on AI models, in USD: AI reports and the paid-features service's playbooks and summaries together. See [AI budget](#ai-budget). `0` turns every AI feature off (they answer `ai_unavailable` and charge nothing). |
 | `HOLT_AI_BUDGET_OWNER_OK` | `0` | With `HOLT_ENV=production`, a budget counts only when this is `1` too: the owner's explicit say-so. Without it AI stays off and startup logs an error. |
 | `HOLT_AI_RUN_MAX_USD` | `0.10` | The most one AI report may cost. Held from the budget while it runs; its model calls are refused once the next could pass it. |
-| `HOLT_AI_PRO_RUN_MAX_USD` | `0.05` | The same for a playbook or pre-flight summary from the paid-features service. |
+| `HOLT_AI_PRO_RUN_MAX_USD` | `0.05` | The same for a playbook, pre-flight summary or merge plan from the paid-features service. A merge plan holds this plus `HOLT_AI_RUN_MAX_USD`, since it may run an AI report's stages first. |
 | `HOLT_MODEL_REASONING_EFFORT` | *(empty)* | `minimal`, `low`, `medium` or `high` for reasoning models (gpt-5, o-series). Empty sends nothing and the provider's default applies. |
 | `HOLT_JOB_CONCURRENCY` | `2` | User lane: people's analyses and finds running at once in this process. Each holds a thread and some memory. |
 | `HOLT_JOB_TIMEOUT_RULES` | `180` | Seconds a rules report may run before it is stopped and fails with a plain "took too long" error. |
-| `HOLT_JOB_TIMEOUT_AI` | `480` | The same, for AI reports and PR pre-flight checks (refunded when stopped). |
+| `HOLT_JOB_TIMEOUT_AI` | `480` | The same, for AI reports and PR pre-flight checks (refunded when stopped). A merge plan gets this for its AI stages plus 330 s for the service. |
 | `HOLT_JOB_TIMEOUT_FIND` | `300` | The same, for `/v1/find`. |
 | `HOLT_CACHE_HOURS` | `24` | How long a finished report is served instead of re-running. |
 | `HOLT_SIGNUP_AI_CREDITS` | `0` | Free AI reports every signed-in user gets once, on their first visit. 0 since the 3 free merge plans replaced them: new accounts get none and no weekly claim; accounts welcomed before keep theirs. |
@@ -145,7 +145,7 @@ default, turns AI off; production also needs `HOLT_AI_BUDGET_OWNER_OK=1`
 names).
 
 - **Queueing** an AI job holds its most possible cost (`HOLT_AI_RUN_MAX_USD`,
-  or `HOLT_AI_PRO_RUN_MAX_USD` for the service) from the budget, in the
+  or `HOLT_AI_PRO_RUN_MAX_USD` for the service, or both for a merge plan) from the budget, in the
   transaction that charges the user's credit, with a guarded `UPDATE` on the
   single `ai_budget` row. A job that doesn't fit is refused with
   `ai_unavailable` ("The AI budget for this environment is used up ... Nothing

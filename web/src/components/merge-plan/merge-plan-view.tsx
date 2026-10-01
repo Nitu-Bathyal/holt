@@ -16,6 +16,8 @@ const dateLabel = (iso: string) =>
 
 export function MergePlanView({ plan, locked = false }: { plan: MergePlan; locked?: boolean }) {
   const cited = citedLinks(plan).length;
+  // Every pull request counted was an outside one (the note is about more than that).
+  const outsideOnly = plan.sample.merged === plan.sample.merged_outside && plan.sample.closed === plan.sample.closed_outside;
   const sections = [
     ...(plan.ai ? [["ai", "What the AI found"]] : []),
     ["first-pr", "Your first pull request"],
@@ -106,7 +108,7 @@ export function MergePlanView({ plan, locked = false }: { plan: MergePlan; locke
             </div>
 
             <p className="border-t border-dashed border-line-strong pt-4 font-sans text-[0.85rem] leading-relaxed text-faint">
-              Counted from {plan.sample.merged} merged and {plan.sample.closed} closed {plan.note ? "" : "outside "}pull requests since {dateLabel(plan.window.since)}
+              Counted from {plan.sample.merged} merged and {plan.sample.closed} closed {outsideOnly ? "outside " : ""}pull requests since {dateLabel(plan.window.since)}
               {plan.ai && <>; the AI read {plan.ai.threads} of their threads</>}. The rules picked the verdict, not the AI. Cites {cited} pull
               requests.
               {plan.note && <> {plan.note}</>}

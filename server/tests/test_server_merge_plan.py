@@ -12,13 +12,16 @@ import json
 import threading
 import time
 
+from datetime import timedelta
+
 import httpx
 import pytest
-from conftest import canned_report
-from holt_server import entitlements, merge_plan, pro
+from conftest import ROOT, canned_report
+from holt_server import budget, engine, entitlements, merge_plan, pro
 from holt_server.db import (
     ENGINE_VERSION,
     AiBudget,
+    AiRun,
     CreditEvent,
     Job,
     MergePlan,
@@ -29,6 +32,11 @@ from holt_server.db import (
     now,
 )
 from sqlalchemy import select
+
+from holt.agent import pipeline
+from holt.evidence.fixtures import FixtureProvider
+from holt.model import ReplayModel
+from holt.types import T_CUTOFF, Window
 
 KEY = "pro-secret-key-value"
 URL = "http://pro:8000"
@@ -519,7 +527,9 @@ def test_an_allowance_is_monthly_in_all_or_unlimited_never_two():
 
 # --- the AI budget's hold on a failure ---------------------------------------------------
 
-HOLD = 50_000  # HOLT_AI_PRO_RUN_MAX_USD's default, in micro-dollars
+# HOLT_AI_RUN_MAX_USD's default for the AI stages, and HOLT_AI_PRO_RUN_MAX_USD's
+# for the service, in micro-dollars.
+HOLD = 150_000
 
 
 def committed(h) -> int:
@@ -547,3 +557,226 @@ def test_a_timeout_keeps_the_hold(hp):
     hp.svc.pro = pro.ProClient(URL, KEY, transport=httpx.MockTransport(slow), retry_delay=0)
     assert wait(hp, ask(hp).json()["job_id"])["status"] == "error"
     assert committed(hp) == HOLD
+
+
+# --- what the AI found: the AI stages inside the job -------------------------------------
+
+NIX = "NixOS/nixpkgs"
+NIX_PLAN = {**PRO_PLAN, "repo": NIX}
+TRAJECTORY = ROOT / "fixtures" / "trajectories" / "NixOS__nixpkgs.jsonl"
+
+
+def replay(make_harness, fake: FakePro, **overrides):
+    """A harness whose AI stages are the real engine over the committed
+    fixtures, with the model's recorded answers: no network."""
+    h = with_pro(make_harness(HOLT_PRO_URL=URL, HOLT_PRO_KEY=KEY,
+                              OPENROUTER_API_KEY="sk-unused", **overrides), fake)
+    h.svc.analysis_fn = engine.analyze
+    h.svc.provider_factory = lambda repo, as_of: FixtureProvider(Window.PRE_T,
+                                                                 root=ROOT / "fixtures")
+    h.svc.model_factory = lambda spec: ReplayModel(TRAJECTORY)
+    fake.answer = httpx.Response(200, json=NIX_PLAN)
+    seed(h, NIX, issues=[])
+    return h
+
+
+def ask_nix(h, user: str = "u") -> dict:
+    r = ask(h, user, repo=NIX)
+    assert r.status_code == 202, r.text
+    return wait(h, r.json()["job_id"])
+
+
+def stages_heard(h) -> list[str]:
+    heard: list[str] = []
+    publish = h.svc.runner.hub.publish
+
+    def spy(job_id, event, data):
+        if event == "stage":
+            heard.append(data["stage"])
+        publish(job_id, event, data)
+
+    h.svc.runner.hub.publish = spy
+    return heard
+
+
+def ai_reports(h, repo: str = NIX) -> list[Report]:
+    return rows(h, Report, Report.repo_key == repo.lower(), Report.mode == "ai")
+
+
+def test_with_no_ai_report_the_job_runs_the_ai_stages(make_harness, fake):
+    h = replay(make_harness, fake)
+    heard = stages_heard(h)
+    body = ask_nix(h)
+    assert body["status"] == "done", body
+
+    # The service was sent a fresh AI report, with the model's verified findings.
+    sent = fake.bodies()[0]["report"]
+    assert sent["mode"] == "ai"
+    kinds = {e["kind"] for e in sent["evidence"]}
+    assert "outcome" in kinds
+    # The verdict is the rules' own.
+    rules, _ = pipeline.analyze_without_model(
+        NIX, FixtureProvider(Window.PRE_T, root=ROOT / "fixtures"), 7, as_of=T_CUTOFF)
+    assert sent["verdict"] == rules.verdict.value
+    assert body["plan"]["ai"]["signals"]
+
+    # Kept for anyone's next plan (and the report page).
+    [kept] = ai_reports(h)
+    assert kept.days == 7 and kept.engine_version == ENGINE_VERSION
+
+    # Plain-English progress, the stages before the service.
+    assert "Reading the pull request threads" in heard, heard
+    assert heard.index("Reading the pull request threads") < heard.index(merge_plan.WRITING), heard
+    assert not any("_" in stage for stage in heard)
+
+    # One merge plan charged, and nothing else.
+    assert state(h, NIX)["access"]["left"] == 2
+    assert {u.feature for u in plan_rows(h)} == {"merge_plan"}
+    assert rows(h, PlanUsage, PlanUsage.feature != "merge_plan") == []
+
+    # Both costs count; the model is recorded internally and never sent.
+    [run] = rows(h, AiRun)
+    stages_usd = kept.report["cost"]["usd"]
+    assert run.kind == "merge_plan" and run.reserved_micros == HOLD
+    assert stages_usd > 0
+    assert run.cost_micros == pytest.approx(budget.to_micros(stages_usd + 0.0057), abs=10)
+    assert run.model and "gpt" in run.model
+    events = h.get(f"/v1/merge-plan-jobs/{r_id(h)}/events").text
+    assert "gpt" not in events and "gpt" not in json.dumps(state(h, NIX))
+
+
+def r_id(h) -> str:
+    return rows(h, Job, Job.kind == "merge_plan")[-1].id
+
+
+def test_a_fresh_ai_report_made_by_anyone_is_reused(make_harness, fake):
+    h = replay(make_harness, fake)
+    seed(h, NIX, mode="ai", issues=None)
+    calls = []
+    h.svc.model_factory = lambda spec: calls.append(spec)
+    assert ask_nix(h)["status"] == "done"
+    assert calls == [] and len(ai_reports(h)) == 1
+    assert fake.bodies()[0]["report"]["mode"] == "ai"
+    # Only the service's cost was spent.
+    assert rows(h, AiRun)[0].cost_micros == 5700
+
+
+@pytest.mark.parametrize("age_hours,engine_version", [(30, ENGINE_VERSION),
+                                                       (1, ENGINE_VERSION - 1)])
+def test_an_old_ai_report_is_made_again(make_harness, fake, age_hours, engine_version):
+    h = replay(make_harness, fake)
+
+    async def old():
+        async with h.svc.db.session() as s:
+            s.add(Report(repo=NIX, repo_key=NIX.lower(), mode="ai", days=7,
+                         report=canned_report(NIX, "ai"), engine_version=engine_version,
+                         created_at=now() - timedelta(hours=age_hours)))
+            await s.commit()
+
+    call(h, old)
+    assert ask_nix(h)["status"] == "done"
+    assert len(ai_reports(h)) == 2
+    assert fake.bodies()[0]["report"]["summary"] != "ok"  # the new one, not the canned one
+
+
+def test_when_the_stages_fail_the_plan_is_made_without_ai(make_harness, fake):
+    h = replay(make_harness, fake)
+
+    def broken(spec):
+        raise RuntimeError("the model is down")
+
+    h.svc.model_factory = broken
+    fake.answer = httpx.Response(200, json={**NIX_PLAN, "ai": None,
+                                            "note": "Only 2 merged pull requests."})
+    body = ask_nix(h)
+    assert body["status"] == "done"
+    assert fake.bodies()[0]["report"]["mode"] == "rules"
+    assert body["plan"]["ai"] is None
+    assert body["plan"]["note"] == f"Only 2 merged pull requests. {merge_plan.NO_AI}"
+    assert ai_reports(h) == []
+    # A plan was made, so it was charged; the stages spent nothing.
+    assert state(h, NIX)["access"]["left"] == 2
+    assert rows(h, AiRun)[0].cost_micros == 5700
+
+
+def test_a_stage_failure_mid_run_counts_what_they_spent(make_harness, fake):
+    h = replay(make_harness, fake)
+
+    class Tired:
+        """The recorded model, failing after its first answer."""
+
+        def __init__(self) -> None:
+            self.inner = ReplayModel(TRAJECTORY)
+            self.usage = self.inner.usage
+
+        def complete(self, **kw):
+            if self.usage.calls:
+                raise RuntimeError("the model went away")
+            return self.inner.complete(**kw)
+
+        def __getattr__(self, name):
+            return getattr(self.inner, name)
+
+    models: list[Tired] = []
+    h.svc.model_factory = lambda spec: models.append(Tired()) or models[-1]
+    fake.answer = httpx.Response(200, json={**NIX_PLAN, "ai": None, "note": None})
+    body = ask_nix(h)
+    assert body["status"] == "done" and body["plan"]["note"] == merge_plan.NO_AI
+    assert ai_reports(h) == []
+    spent = models[0].usage.cost_usd
+    assert spent > 0
+    assert rows(h, AiRun)[0].cost_micros == budget.to_micros(spent + 0.0057)
+
+
+def test_when_the_service_fails_after_the_stages_the_plan_is_refunded(make_harness, fake):
+    h = replay(make_harness, fake)
+    fake.answer = httpx.Response(502, json={"error": {"code": "upstream", "message": "m"}})
+    body = ask_nix(h)
+    assert body["status"] == "error" and "count against" in body["error"]["message"]
+    assert state(h, NIX)["access"]["left"] == 3
+    # The AI report the stages made is kept: asking again reuses it.
+    assert len(ai_reports(h)) == 1
+    fake.answer = httpx.Response(200, json=NIX_PLAN)
+    h.svc.model_factory = lambda spec: pytest.fail("the stages ran again")
+    assert ask_nix(h)["status"] == "done"
+
+
+def test_the_hold_covers_the_stages_and_the_service(make_harness, fake):
+    h = replay(make_harness, fake)
+    fake.gate.clear()
+    job_id = ask(h, repo=NIX).json()["job_id"]
+    assert committed(h) == HOLD
+    fake.gate.set()
+    wait(h, job_id)
+    assert committed(h) == rows(h, AiRun)[0].cost_micros < HOLD
+    assert budget.run_max_usd(h.svc.settings, budget.MERGE_PLAN) == pytest.approx(0.15)
+
+
+def test_a_budget_too_small_for_both_refuses_the_plan(make_harness, fake):
+    h = replay(make_harness, fake, HOLT_AI_BUDGET_USD=0.12)
+    r = ask(h, repo=NIX)
+    assert r.status_code == 503 and r.json()["error"]["code"] == "ai_unavailable"
+    assert state(h, NIX)["access"]["left"] == 3 and fake.requests == []
+
+
+def test_the_time_limit_covers_the_stages_and_the_service(make_harness, fake):
+    h = replay(make_harness, fake)
+    assert merge_plan.time_limit(h.svc.settings) == 480 + 300 + 30
+    job = Job(kind="merge_plan", repo=NIX, repo_key=NIX.lower(), mode="ai", days=365)
+    assert h.svc.runner.timeout_for(job) == 810
+
+
+def test_stages_past_their_limit_give_a_plan_without_ai(make_harness, fake):
+    h = replay(make_harness, fake, HOLT_JOB_TIMEOUT_AI=0.5)
+    h.svc.analysis_fn = h.engine  # the fake engine, held at its gate
+    h.engine.gate.clear()
+    fake.answer = httpx.Response(200, json={**NIX_PLAN, "ai": None, "note": None})
+    try:
+        body = ask_nix(h)
+    finally:
+        h.engine.gate.set()
+    assert body["status"] == "done" and body["plan"]["note"] == merge_plan.NO_AI
+    assert fake.bodies()[0]["report"]["mode"] == "rules"
+    # The stages may still be running: all they may spend is counted.
+    assert rows(h, AiRun)[0].cost_micros == 100_000 + 5700
+    assert state(h, NIX)["access"]["left"] == 2
