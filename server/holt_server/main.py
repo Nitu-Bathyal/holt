@@ -50,6 +50,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         warming = None
         level, line = budget.startup_line(svc.settings)
         logging.getLogger("holt_server.budget").log(level, line)
+        payments.log.log(*payments.startup_line(svc))
         # A readiness line in the log; it never holds up startup.
         pro_check = asyncio.create_task(_log_pro(svc), name="holt-pro-check")
         if run_jobs and svc.settings.warm_interval_hours > 0:

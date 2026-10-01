@@ -3,7 +3,8 @@
 A pass is one payment for a fixed number of days of Pro. It never renews.
 Off by default. Passes are offered and orders created only when
 `HOLT_PAYMENTS_ENABLED=1`, the Razorpay keys are set, and the pass is on sale
-with a price in pricing.json. Everything about an order (pass, days, price)
+with a price in pricing.json (outside production, `HOLT_PASSES_ON_SALE=1`
+puts every pass on sale). Everything about an order (pass, days, price)
 comes from that file when the order is created, never from the browser.
 
 The flow:
@@ -195,6 +196,24 @@ def passes_body(svc: Services) -> schema.Passes:
                                    unlimited=a.unlimited)
                 for f, a in cat.plans[pricing.PRO].features.items()]
     return schema.Passes(on_sale=True, passes=out, features=features)
+
+
+def startup_line(svc: Services) -> tuple[int, str]:
+    """The one line the server logs about passes at startup, and its level."""
+    s = svc.settings
+    if s.passes_on_sale and not s.sell_every_pass:
+        return logging.ERROR, ("passes: HOLT_PASSES_ON_SALE is set in production, so it is "
+                               "ignored; only the pricing file puts a pass on sale there")
+    if not s.payments_enabled:
+        return logging.INFO, "passes: off (HOLT_PAYMENTS_ENABLED is 0)"
+    if svc.razorpay is None:
+        return logging.INFO, "passes: off (no Razorpay keys)"
+    ids = [p.id for p in passes_body(svc).passes]
+    if not ids:
+        return logging.INFO, "passes: off (no pass is on sale)"
+    how = " (HOLT_PASSES_ON_SALE)" if s.sell_every_pass else ""
+    mode = "test" if svc.razorpay.key_id.startswith("rzp_test_") else "LIVE"
+    return logging.INFO, f"passes: on sale{how}: {', '.join(ids)}; Razorpay {mode} keys"
 
 
 def order_name(o: Order, p: pricing.Pass | None) -> str:

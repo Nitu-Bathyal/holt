@@ -106,6 +106,15 @@ services:
       # says HOLT_PR_WATCH=1. Alert emails need RESEND_API_KEY there too;
       # without it none are sent.
       HOLT_PR_WATCH: ${HOLT_PR_WATCH:-0}
+      # Pass checkout in Razorpay TEST mode, every pass on sale: preview.sh
+      # sets all of these from RAZORPAY_KEY_ID/SECRET in secrets.env, and
+      # only when the key is a test key (rzp_test_). Off otherwise.
+      # Production's compose has none of them.
+      HOLT_PAYMENTS_ENABLED: ${HOLT_PAYMENTS_ENABLED:-0}
+      HOLT_PASSES_ON_SALE: ${HOLT_PASSES_ON_SALE:-0}
+      RAZORPAY_KEY_ID: ${RAZORPAY_KEY_ID:-}
+      RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
+      RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       HOLT_JOB_CONCURRENCY: ${HOLT_JOB_CONCURRENCY:-1}
       # Background workers (badges, warm passes) and the warm pass's reports

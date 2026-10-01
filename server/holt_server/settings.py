@@ -90,6 +90,10 @@ class Settings(BaseSettings):
     # are set: with it off, no pass is offered and no order can be created.
     # Orders already paid for are still confirmed.
     payments_enabled: bool = Field(False, alias="HOLT_PAYMENTS_ENABLED")
+    # 1 puts every pass in the pricing file on sale, whatever its `on_sale`
+    # says: for trying checkout on staging with Razorpay test keys. Ignored
+    # with HOLT_ENV=production, where only the pricing file decides.
+    passes_on_sale: bool = Field(False, alias="HOLT_PASSES_ON_SALE")
     razorpay_key_id: str = Field("", alias="RAZORPAY_KEY_ID")
     razorpay_key_secret: str = Field("", alias="RAZORPAY_KEY_SECRET")
     # Set in the Razorpay dashboard with the webhook URL. Empty: webhooks refused.
@@ -158,6 +162,11 @@ class Settings(BaseSettings):
     # its repo's refresh tier (above), or than this if it is longer, instead
     # of reading GitHub. 0 = always read GitHub.
     evidence_reuse_hours: float = Field(168, ge=0, alias="HOLT_EVIDENCE_REUSE_HOURS")
+
+    @property
+    def sell_every_pass(self) -> bool:
+        """Whether HOLT_PASSES_ON_SALE applies here: never in production."""
+        return self.passes_on_sale and self.env != "production"
 
     @property
     def token_list(self) -> list[str]:

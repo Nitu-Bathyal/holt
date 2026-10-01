@@ -7,7 +7,8 @@ is one payment for a fixed number of days of Pro; it never renews, and a
 second pass adds its days to the first. Prices are in minor units (paise,
 cents). Nothing here takes money: the payment code (payments.py) reads
 `on_sale` and the prices, and extends the user's plan once a payment is
-confirmed.
+confirmed. `HOLT_PASSES_ON_SALE=1` puts every pass on sale outside production
+(staging tries checkout that way); in production only this file decides.
 
 A feature a plan doesn't cover can still be used by spending its `credits`
 (null: plan only). `free_credits` says whether the free weekly credits may
@@ -107,6 +108,11 @@ class Catalogue(Strict):
         return (pro is not None and feature in pro.features
                 and any(p.on_sale for p in self.passes.values()))
 
+    def selling_every_pass(self) -> Catalogue:
+        """This catalogue with every pass on sale (HOLT_PASSES_ON_SALE)."""
+        return self.model_copy(update={"passes": {
+            pid: p.model_copy(update={"on_sale": True}) for pid, p in self.passes.items()}})
+
 
 def load(path: str | Path | None = None) -> Catalogue:
     """Read and check a catalogue. Raises ValueError with what is wrong."""
@@ -119,21 +125,24 @@ def load(path: str | Path | None = None) -> Catalogue:
 
 
 @lru_cache
-def cached(path: str) -> Catalogue:
-    return load(path or None)
+def cached(path: str, every_pass_on_sale: bool = False) -> Catalogue:
+    cat = load(path or None)
+    return cat.selling_every_pass() if every_pass_on_sale else cat
 
 
 def main() -> int:
     from holt_server.settings import get_settings
 
-    path = get_settings().pricing_file
+    settings = get_settings()
+    path = settings.pricing_file
     try:
-        cat = load(path or None)
+        cat = cached(path, settings.sell_every_pass)
     except ValueError as exc:
         print(exc)
         return 1
+    on_sale = sorted(pid for pid, p in cat.passes.items() if p.on_sale)
     print(f"{path or DEFAULT_FILE}: {len(cat.features)} features, "
-          f"plans {sorted(cat.plans)}, passes {sorted(cat.passes)}"
+          f"plans {sorted(cat.plans)}, passes {sorted(cat.passes)}, on sale {on_sale}"
           + (" (prices TBD)" if cat.tbd else ""))
     return 0
 
