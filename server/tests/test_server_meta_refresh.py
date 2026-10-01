@@ -84,8 +84,8 @@ def test_a_slow_details_read_does_not_hold_the_report(h):
 def test_details_are_not_read_again_within_a_day(h):
     h.svc.lookup.details.known = {"octo/one": details("octo/one"),
                                   "octo/two": details("octo/two")}
-    add(h, RepoMeta(repo_key="octo/one", repo="octo/one", fetched_at=now() - timedelta(hours=2)),
-        RepoMeta(repo_key="octo/two", repo="octo/two", fetched_at=now() - timedelta(hours=25)))
+    add(h, RepoMeta(repo_key="octo/one", repo="octo/one", links=[], fetched_at=now() - timedelta(hours=2)),
+        RepoMeta(repo_key="octo/two", repo="octo/two", links=[], fetched_at=now() - timedelta(hours=25)))
     check(h, "octo/one")
     check(h, "octo/two")
     drain(h)

@@ -306,6 +306,10 @@ async def stale_meta(svc: Services, extra: list[str] = ()) -> list[str]:
             .where(Report.mode == "rules").group_by(Report.repo_key))).all()
         fetched = dict((await s.execute(
             select(RepoMeta.repo_key, RepoMeta.fetched_at))).all())
+        # Read before the README, links and release were kept: read again now,
+        # not in a day, so a report shows them as soon as the next pass runs.
+        old_shape = set((await s.execute(
+            select(RepoMeta.repo_key).where(RepoMeta.links.is_(None)))).scalars())
         finds = (await s.execute(
             select(FindCache.results).where(FindCache.created_at >= cutoff))).scalars()
         found = [r["repo"] for results in finds for r in results or []
@@ -314,7 +318,7 @@ async def stale_meta(svc: Services, extra: list[str] = ()) -> list[str]:
     for repo in [*found, *extra]:
         names.setdefault(repos.key(repo), repo)
     return [repo for key, repo in names.items()
-            if key not in fetched or utc(fetched[key]) < cutoff]
+            if key not in fetched or key in old_shape or utc(fetched[key]) < cutoff]
 
 
 async def with_meta(s, results: list[dict[str, Any]]) -> list[dict[str, Any]]:
