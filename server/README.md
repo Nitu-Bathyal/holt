@@ -405,19 +405,24 @@ GITHUB_TOKEN=... uv run python server/scripts/build_seeds.py --total 300
 ```
 
 Below its marker line, the list continues with blocks built by
-`scripts/build_seed_list.py` from free public lists, no GitHub search: GSoC
-2026 organisations (CNCF through its landscape), goodfirstissue.dev,
-awesome-for-beginners and up-for-grabs. It drops catalogues and farms by
-name, and `--check` drops repos that are gone, archived, forks, under 20 stars
-or not pushed since 2025 (one batched GraphQL pass, ~16 points). Each script
-keeps the other's part:
+`scripts/build_seed_list.py`: GSoC organisations 2023-2026 (CNCF through its
+landscape), LFX Mentorship, Outreachy, goodfirstissue.dev,
+awesome-for-beginners and up-for-grabs, all free public lists. With `--check`
+it also searches GitHub (repositories with open good-first-issue and
+help-wanted issues in 13 languages, then the hacktoberfest topic from the
+most-starred down until the list reaches `--target`, 5,000 by default) and
+drops repos that are gone, archived, forks or mirrors, under 20 stars, not
+pushed since June 2026 or closed to outside pull requests (~70 points in
+all). It drops catalogues and farms by name. Each script keeps the other's
+part:
 
 ```sh
 GITHUB_TOKEN=$(gh auth token) uv run python scripts/build_seed_list.py --check
 ```
 
-With ~1,550 seeds a cold pass is about 1,550 × ~15 ≈ 23,000 points, so warm a
-new list in `--limit` steps over several days rather than in one pass.
+With ~5,000 seeds a cold pass is about 5,000 × ~9 ≈ 45,000 points, so warm a
+new list with `--wait-for-budget` or in `--limit` steps rather than in one
+burst.
 
 ## Tests
 
