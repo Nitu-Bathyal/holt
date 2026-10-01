@@ -14,13 +14,14 @@ import { ProfileFlow } from "@/components/profile-flow";
 import { RepoGrid } from "@/components/repo-card/repo-grid";
 import { SaveButton } from "@/components/save-button";
 import { SectionHead } from "@/components/shell/app-page";
+import { Icon } from "@/components/shell/icons";
 import { FocusOnHash } from "@/components/shell/check-focus";
 import { QuickCheck } from "@/components/shell/quick-check";
 import { RepoRows } from "@/components/your-repos/repo-rows";
 import { contributions, getProfile, history, preflightState, recommendations, savedRepos, starterIssues } from "@/lib/api";
 import type { CatMood } from "@/lib/cat";
 import { timeAgo } from "@/lib/format";
-import { alsoForYou, clock, dismissedNudges, homeNudge, moveLead, moveTitle, needsYou, nextMove, NUDGE_COOKIE, othersInFlight, outsidePulls, type NextMove, type Nudge } from "@/lib/home";
+import { alsoForYou, clock, dismissedNudges, homeFacts, homeNudge, moveLead, moveTitle, needsYou, nextMove, NUDGE_COOKIE, othersInFlight, outsidePulls, type NextMove, type Nudge } from "@/lib/home";
 import { showPreflight } from "@/lib/preflight";
 import { SKIP_COOKIE } from "@/lib/profile";
 import { basisLine, lockedLine } from "@/lib/recommendations";
@@ -84,6 +85,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
   const notice = typeof sp.profile === "string" ? NOTICES[sp.profile] : undefined;
   const preflight = pre.ok && showPreflight(pre.data);
   const firstPicks = move.kind === "first" && pickCards.length > 0;
+  const facts = homeFacts({ repos, pulls });
 
   let primary: React.ReactNode = null;
   if (move.kind === "waiting") {
@@ -104,7 +106,16 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
       </>
     );
   } else if (move.kind === "first" && !askingProfile) {
-    primary = <Link href="/find" className="btn-primary">find a project →</Link>;
+    primary = (
+      <Link href="/find" className="find-cta">
+        <span aria-hidden="true" className="find-cta-icon"><Icon name="find" className="size-5" /></span>
+        <span className="min-w-0">
+          <span className="find-cta-title">Find a project</span>
+          <span className="find-cta-sub">Repos where outside PRs get merged</span>
+        </span>
+        <span aria-hidden="true" className="find-cta-arrow">→</span>
+      </Link>
+    );
   }
 
   return (
@@ -114,8 +125,13 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
         <div id="check" className="mb-4 scroll-mt-24 md:hidden">
           <QuickCheck variant="inline" />
         </div>
-        <MoveHead title={moveTitle(move)} lead={moveLead(move)} mood={mood(move)} step={move.step}>
-          {primary && <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">{primary}</div>}
+        <MoveHead title={moveTitle(move)} lead={moveLead(move, repos)} mood={mood(move)} step={move.step} loop={repos.length > 0 || pulls.length > 0}>
+          {facts.length > 0 && (
+            <p className="mt-3 flex flex-wrap gap-x-2 text-[0.8rem] text-faint">
+              {facts.map((f, i) => <span key={f}>{i > 0 && <span aria-hidden="true">· </span>}{f}</span>)}
+            </p>
+          )}
+          {primary && <div className="mt-5 flex flex-wrap items-center gap-x-5 gap-y-3">{primary}</div>}
         </MoveHead>
         {notice && <p role="status" className={`mb-6 border px-4 py-3 font-sans text-[0.9rem] ${notice.tone}`}>{notice.text}</p>}
 
@@ -234,7 +250,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
           {repos.length > 0 && (
             <section aria-labelledby="mine-h" className="home-section">
               <SectionHead id="mine-h" title="Your repos" more={{ href: "/me/repos", label: `all ${repos.length}` }} />
-              <RepoRows rows={repos.slice(0, 4)} saved={savedNames} compact iconSave />
+              <RepoRows rows={repos.slice(0, 4)} saved={savedNames} compact />
             </section>
           )}
         </div>

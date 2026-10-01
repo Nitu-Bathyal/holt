@@ -6,10 +6,11 @@ import Link from "next/link";
 import { CatFace } from "@/components/cat-face";
 import { CAT, TONE_TEXT, type CatMood } from "@/lib/cat";
 
-export function AppPageHeader({ title, lead, mood, children }: { title: React.ReactNode; lead?: React.ReactNode; mood?: CatMood; children?: React.ReactNode }) {
+/** `sentence`: the head is a line to read, sized like the home's (globals.css, .sentence-head), with the cat beside it as on the home. */
+export function AppPageHeader({ title, lead, mood, sentence = false, children }: { title: React.ReactNode; lead?: React.ReactNode; mood?: CatMood; sentence?: boolean; children?: React.ReactNode }) {
   return (
-    <header className="app-head">
-      <div className="flex items-start justify-between gap-6">
+    <header className={`app-head ${sentence ? "sentence-head" : ""}`}>
+      <div className={`flex items-start ${sentence ? "gap-4" : "justify-between gap-6"}`}>
         <div className="min-w-0">
           <h1 className="app-h1">{title}</h1>
           {lead && <p className="app-lead">{lead}</p>}

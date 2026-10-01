@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { afterSignIn, alsoForYou, dismissedNudges, homeNudge, moveLead, moveTitle, nextMove, othersInFlight, outsidePulls, statusLine, waiting, waitPhrase } from "./home.ts";
+import { afterSignIn, alsoForYou, dismissedNudges, homeFacts, homeNudge, moveLead, moveTitle, nextMove, othersInFlight, outsidePulls, statusLine, waiting, waitPhrase } from "./home.ts";
 import type { YourRepo } from "./your-repos.ts";
 import type { ContributionPR } from "./types";
 import type { Timing } from "./api-schema";
@@ -78,7 +78,7 @@ const pr = (repo: string, state: ContributionPR["state"], openedHoursAgo: number
 } as ContributionPR);
 const repo = (name: string, tone: YourRepo["tone"], saved: boolean): YourRepo => ({
   repo: name, savedAt: saved ? hoursAgo(10) : null, checkedAt: saved ? null : hoursAgo(10), ai: false, checking: false,
-  headline: tone === "good" ? "Worth your time" : "Not worth your time", tone, stats: null, stars: null, at: hoursAgo(10),
+  headline: tone === "good" ? "Worth your time" : "Not worth your time", tone, verdict: tone === "good" ? "viable" : "not_viable", stats: null, stars: null, at: hoursAgo(10),
 });
 
 test("the next move: a fresh merge, then an open PR, then a repo worth your time, then finding one", () => {
@@ -206,4 +206,20 @@ test("your checks running or just finished lead Also for you", () => {
   assert.deepEqual(also.map((a) => [a.kind, a.kind === "pr" ? a.wait.pr.repo : a.repo.repo]), [
     ["checking", "a/running"], ["ready", "b/ready"], ["turned", "d/turned"],
   ]);
+});
+
+test("under the headline: why the next repo, or why none of yours is yet", () => {
+  const click = { ...repo("pallets/click", "good", true), stats: { outsider_attempts: 12, outsider_merged: 4, median_first_response_hours: 50 } as YourRepo["stats"] };
+  assert.equal(moveLead({ kind: "issue", step: 1, repo: "Pallets/Click" }, [click]), "Holt says it's worth your time: 4 of 12 outside PRs merged, first reply in 2 days. Start small with one of its good first issues.");
+  assert.equal(moveLead({ kind: "issue", step: 1, repo: "a/b" }, []), "Holt says it's worth your time. Start small with one of its good first issues.");
+  assert.match(moveLead({ kind: "first", step: 0, again: false }, [repo("x/y", "bad", true), repo("x/z", "bad", false)])!, /^None of the 2 repos you saved or checked/);
+  assert.match(moveLead({ kind: "first", step: 0, again: true })!, /^Your last pull requests are wrapped up/);
+  assert.match(moveLead({ kind: "first", step: 0, again: false })!, /^Holt reads a repo's recent pull requests/);
+});
+
+test("the small numbers under the head", () => {
+  assert.deepEqual(homeFacts({ repos: [], pulls: [] }), []);
+  const repos = [repo("a/b", "good", true), repo("c/d", "bad", false), repo("e/f", "bad", false)];
+  const pulls = [pr("o/one", "open", 10), pr("o/two", "merged", 10), pr("o/three", "merged", 20)];
+  assert.deepEqual(homeFacts({ repos, pulls }), ["1 saved", "2 checked", "1 PR open", "2 merged this year"]);
 });

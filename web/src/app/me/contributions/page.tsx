@@ -156,7 +156,7 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
       <div className="app-page">
         {notConnected ? (
           <>
-            <AppPageHeader title="Your pull requests" mood="thinking">
+            <AppPageHeader sentence title="Your pull requests" mood="thinking">
               <div className="mt-7">
                 <Link href={CONNECT_GITHUB} className="btn-primary">connect GitHub →</Link>
               </div>
@@ -164,12 +164,12 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
           </>
         ) : !r.ok ? (
           <>
-            <AppPageHeader title="Your pull requests" />
+            <AppPageHeader sentence title="Your pull requests" />
             <ErrorPanel error={r.error} retryHref="/me/contributions" />
           </>
         ) : d && g && s && (
           <>
-            <AppPageHeader title={<MarkedTitle title={prsTitle(g)} />} mood={g.yours.length || g.needs.length ? "thinking" : g.waiting.length ? "ready" : g.merged.length ? "celebrating" : "ready"}>
+            <AppPageHeader sentence title={<MarkedTitle title={prsTitle(g)} />} mood={g.yours.length || g.needs.length ? "thinking" : g.waiting.length ? "ready" : g.merged.length ? "celebrating" : "ready"}>
               <div className="mt-5 flex flex-wrap items-center justify-between gap-x-6 gap-y-3 text-[0.84rem] text-muted">
                 <p className="flex flex-wrap gap-x-5 gap-y-1">
                   <span><b className="text-ink"><NewCount id={`prs:${d.login}:opened`} value={s.opened} /></b> opened {d.truncated ? "(your latest 200)" : "this year"}</span>
