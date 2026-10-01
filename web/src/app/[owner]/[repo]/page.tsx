@@ -6,14 +6,12 @@ import { notFound, redirect } from "next/navigation";
 import { after } from "next/server";
 import { ErrorPanel } from "@/components/error-panel";
 import { AnalysisRunner } from "@/components/report/analysis-runner";
-import { BudgetPicker } from "@/components/report/budget-picker";
 import { MergePlanPanel } from "@/components/report/merge-plan-panel";
 import { PartialReport } from "@/components/report/partial-report";
 import { ReportTeaser } from "@/components/report/report-teaser";
-import { ReportView } from "@/components/report/report-view";
+import { ReportView, VerdictTag } from "@/components/report/report-view";
 import { RepoAbout } from "@/components/report/repo-about";
 import { StarterIssues, StarterIssuesSkeleton } from "@/components/report/starter-issues";
-import { LinkHint } from "@/components/motion/link-hint";
 import { SkeletonReveal } from "@/components/motion/reveal";
 import { isBot, mintTicket } from "@/lib/anon-check";
 import { getReport, recordView, savedState, starterIssues } from "@/lib/api";
@@ -28,6 +26,9 @@ import { SITE_URL } from "@/lib/site";
 import type { Mode, Report } from "@/lib/types";
 import { PageTransition } from "@/components/motion/page-transition";
 import { SaveButton } from "@/components/save-button";
+import { ReportStickyBar, StickySentinel } from "@/components/report/report-sticky-bar";
+import { ShareMenu } from "@/components/report/share-bar";
+import { ReportModeLink } from "@/components/report/report-tabs";
 
 type Props = PageProps<"/[owner]/[repo]">;
 
@@ -121,11 +122,13 @@ export default async function RepoPage({ params, searchParams }: Props) {
   const shows = reportShows({ repo: display, signedIn, found, anonymousCheck: ticket !== null });
   const teaser = shows === "teaser" || shows === "sign-in";
 
+  // The verdict's name, in the header: only on the free report's full view.
+  const aboutShown = report.ok && Boolean(report.data.about);
+  const tag = report.ok && mode === "rules" && !teaser && !(report.data.outdated && signedIn) ? <VerdictTag report={report.data} inRow={aboutShown} /> : null;
+
   return (
     <PageTransition>
       <div className="relative">
-      {/* The same backdrop as the landing hero, behind the repo header and verdict. */}
-      <div aria-hidden="true" className="hero-backdrop bottom-auto h-[560px] [mask-image:linear-gradient(#000_55%,transparent)]" />
       <div className="report-wide relative py-8 sm:py-12">
         {mode === "rules" && <JsonLd report={report.ok ? report.data : null} name={display} />}
         <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3">
@@ -143,7 +146,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
           />
           {report.ok && report.data.about ? (
             <div className="min-w-0 flex-1">
-              <RepoAbout about={report.data.about} repo={display} />
+              <RepoAbout about={report.data.about} repo={display} verdict={tag} />
             </div>
           ) : (
           <div className="min-w-0 flex-1">
@@ -158,38 +161,27 @@ export default async function RepoPage({ params, searchParams }: Props) {
           )}
           {/* A failed lookup shows "save"; saving again is harmless. Keyed so
               moving to another repo's report starts from that repo's state. */}
-          <SaveButton small key={display} repo={display} saved={user ? Boolean(saved?.ok && saved.data.saved) : null} />
-          <nav aria-label="Report type" className="relative grid w-full grid-cols-2 border border-line-strong text-center text-[0.85rem] sm:w-auto">
-            {/* One pill under both tabs; it slides to the current one. */}
-            <span aria-hidden="true" className={`tab-pill absolute inset-y-0 left-0 w-1/2 ${mode === "ai" ? "translate-x-full bg-blue" : "bg-ink"}`} />
-            {/* No prefetch: one tab is this page, the other is sign-in for most visitors. */}
-            <Link
-              href={reportHref(display, days)}
-              prefetch={false}
-              aria-current={mode === "rules" ? "page" : undefined}
-              className={`relative inline-flex min-h-11 items-center justify-center px-3 transition-colors ${mode === "rules" ? "text-bg" : "text-muted hover:text-ink"}`}
-            >
-              free report
-              <LinkHint />
-            </Link>
-            <Link
-              href={signedIn ? `/${display}?mode=ai` : `/signin?callbackUrl=${encodeURIComponent(`/${display}?mode=ai`)}`}
-              prefetch={false}
-              aria-current={mode === "ai" ? "page" : undefined}
-              className={`relative inline-flex min-h-11 items-center justify-center px-3 transition-colors ${mode === "ai" ? "text-on-accent" : "text-muted hover:text-ink"}`}
-            >
-              AI report ✦
-              <LinkHint />
-            </Link>
-          </nav>
-        </div>
-        {/* Free report only: on the AI tab another budget would be another paid run.
-            Signed in only: another budget is another check. Its own line, so the
-            header above is the same on both tabs and the switch never moves. */}
-        {mode === "rules" && signedIn && (
-          <div className="-mt-3 mb-6 flex justify-end">
-            <BudgetPicker repo={display} days={days} />
+          {/* Save, and under it share: two quiet icons, the bookmark's right edge shared. */}
+          <div className="flex w-full shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 sm:w-auto sm:flex-col sm:items-end sm:justify-start">
+            <div className="flex items-center gap-3">
+              {/* No details row to hold it: kept for screen readers (the page's h1), not shown beside Save. */}
+              {!aboutShown && tag && <div className="sr-only">{tag}</div>}
+              <ReportModeLink
+                mode={mode}
+                rulesHref={reportHref(display, days)}
+                aiHref={signedIn ? `/${display}?mode=ai` : `/signin?callbackUrl=${encodeURIComponent(`/${display}?mode=ai`)}`}
+                hint
+              />
+              <SaveButton small key={display} repo={display} saved={user ? Boolean(saved?.ok && saved.data.saved) : null} />
+            </div>
+            <ShareMenu url={`${SITE_URL}/${display}`} text={report.ok ? `${display} on Holt: ${report.data.headline}.` : `${display} on Holt.`} />
           </div>
+        </div>
+        <StickySentinel />
+        {report.ok && mode === "rules" && !teaser && (
+          <ReportStickyBar repo={display}>
+            <SaveButton small key={`bar-${display}`} repo={display} saved={user ? Boolean(saved?.ok && saved.data.saved) : null} />
+          </ReportStickyBar>
         )}
 
         {!signedIn && access === "full" && report.ok && <ExampleNote />}
@@ -245,7 +237,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
 function ExampleNote() {
   return (
     <p className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 border border-line-strong bg-panel-2 px-4 py-3 font-sans text-[0.9rem] text-muted" data-example-note>
-      <span className="border border-blue px-2 py-0.5 font-mono text-[0.78rem] uppercase tracking-[0.08em] text-blue">Example report</span>
+      <span className="border border-blue px-2 py-0.5 font-mono text-[0.85rem] text-blue">Example report</span>
       <span className="min-w-0 flex-1">Sign in to check any repo you like.</span>
       <span className="flex flex-wrap gap-x-4 gap-y-5">
         <Link href="/signin" prefetch={false} className="text-link tap">sign in</Link>

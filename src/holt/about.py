@@ -109,6 +109,31 @@ def readme_line(text: str | None) -> str | None:
     return None
 
 
+# The longest README kept for the report's README section, cut at a paragraph.
+MAX_README = 6000
+_FENCE_LINE = re.compile(r"^\s*(```|~~~)", re.M)
+
+
+def readme_excerpt(text: str | None) -> str | None:
+    """The top of a Markdown README, at most MAX_README characters, cut at a
+    blank line and never inside a code block: what the report's README section
+    shows. None when there is nothing to show."""
+    if not text or not text.strip():
+        return None
+    text = _COMMENT.sub("", "\n".join(text.splitlines())).strip()
+    if re.fullmatch(r"[\w./@~-]+", text):
+        return None  # a symlinked README reads as its target's path (vercel/next.js)
+    if len(text) <= MAX_README:
+        return text or None
+    cut = text[:MAX_README]
+    if "\n\n" in cut:
+        cut = cut[:cut.rindex("\n\n")]
+    fences = list(_FENCE_LINE.finditer(cut))
+    if len(fences) % 2:  # ended inside a code block: stop before it opened
+        cut = cut[:fences[-1].start()]
+    return cut.rstrip() or None
+
+
 # Where a README sends people for help: chat rooms and the project's docs. The
 # first of each kind wins; a badge's image URL (shields.io, badges.gitter.im)
 # never matches, only where the badge links to.
@@ -124,19 +149,26 @@ HELP_PATTERNS = (
 MAX_URL = 300
 
 
-def help_links(text: str | None) -> list[dict[str, str]]:
+def help_links(text: str | None, repo: str | None = None) -> list[dict[str, str]]:
     """The README's links to its docs and chat rooms, as [{"kind", "url"}],
-    in HELP_PATTERNS order, one per kind."""
+    in HELP_PATTERNS order, one per kind. With `repo` ("owner/name"), a docs
+    link counts only when it names the project: a README often links to the
+    docs of something it builds on (Flask's to WSGI's), and a wrong docs link
+    is worse than none."""
     if not text:
         return []
     text = _COMMENT.sub("", text)
+    name = re.sub(r"[^a-z0-9]", "", (repo or "").rpartition("/")[2].lower())
     out = []
     for kind, pattern in HELP_PATTERNS:
         for m in pattern.finditer(text):
             url = m.group(0).rstrip(".,;:!?")
-            if len(url) <= MAX_URL:
-                out.append({"kind": kind, "url": url})
-                break
+            if len(url) > MAX_URL:
+                continue
+            if kind == "docs" and name and name not in re.sub(r"[^a-z0-9]", "", url.lower()):
+                continue
+            out.append({"kind": kind, "url": url})
+            break
     return out
 
 

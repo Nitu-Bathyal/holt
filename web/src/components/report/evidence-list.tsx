@@ -5,7 +5,7 @@ function Item({ e }: { e: EvidenceItem }) {
   const { label, bad } = evidenceLabel(e);
   return (
     <li className="grid gap-1 border-b border-line py-4 sm:grid-cols-[150px_1fr_auto] sm:gap-5">
-      <span className={`text-[0.8rem] uppercase tracking-[0.06em] ${bad ? "text-orange" : "text-green"}`}>{label}</span>
+      <span className={`text-[0.85rem] ${bad ? "text-orange" : "text-green"}`}>{label}</span>
       <div className="min-w-0">
         <p className="font-sans text-[0.93rem] text-ink">{e.text}</p>
         {e.quote && <blockquote className="mt-1.5 border-l-2 border-line-strong pl-3 font-sans text-[0.9rem] italic text-muted">“{e.quote}”</blockquote>}

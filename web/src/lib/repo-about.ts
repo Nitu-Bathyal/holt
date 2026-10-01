@@ -103,3 +103,27 @@ export function flags(a: RepoAbout): Flag[] {
   else if (a.fork) out.push({ kind: "fork", text: "A fork" });
   return out;
 }
+
+export type Ask = Report["asks"][number];
+
+/**
+ * What the project asks before a pull request, as one plain instruction each
+ * (the server's `asks`, read from a bot's comment, a pull request, CONTRIBUTING
+ * or an AI policy), with where Holt read it. Advice only; it never decides.
+ */
+export function houseRules(asks: Ask[]): { text: string; url: string }[] {
+  const said: Record<Ask["code"], (a: Ask) => string> = {
+    issue_first: () => "Open an issue and agree on the change before sending a pull request.",
+    ticket_first: () => "Get an accepted ticket first: a bot closes pull requests without one.",
+    cla: () => "Sign the contributor licence agreement (CLA) when the bot asks.",
+    dco: () => "Sign off each commit (git commit -s).",
+    ai_disclosure: () => "Say whether you used AI.",
+    no_ai_prs: () => "AI-written pull requests are turned down.",
+    ok_to_test: () => "A maintainer has to approve before the tests run on your pull request.",
+    sig_team: () => "Pull requests go to the team that owns that part of the code.",
+    duplicates: () => "Check nobody has already sent the same fix: duplicates are closed.",
+    stale_bot: (a) => (a.days ? `A bot closes pull requests that go quiet for ${a.days} days.` : "A bot closes pull requests that go quiet."),
+  };
+  const seen = new Set<string>();
+  return asks.filter((a) => a.code in said && !seen.has(a.code) && seen.add(a.code)).map((a) => ({ text: said[a.code](a), url: a.url }));
+}

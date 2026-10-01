@@ -141,7 +141,7 @@ def meta(repo, **kw):
     return RepoMeta(repo_key=repo.lower(), repo=repo, description=kw.get("description"),
                     language=kw.get("language"), stars=kw.get("stars", 0), topics=[],
                     open_issues=kw.get("open_issues"), pull_requests=kw.get("pull_requests"),
-                    open_pull_requests=kw.get("open_pull_requests"), contributors=kw.get("contributors"))
+                    open_pull_requests=kw.get("open_pull_requests"), contributors=kw.get("contributors"), links=[])
 
 
 def details(results):

@@ -4,7 +4,7 @@ import { Skeleton, SkeletonRegion } from "../skeleton";
 
 export function StarterIssueCard({ issue, compact = false }: { issue: StarterIssue; compact?: boolean }) {
   return (
-    <li className="card-hover group relative border border-line bg-panel p-4 shadow-soft sm:p-5">
+    <li className="card-hover group relative border border-line bg-panel p-4 sm:p-5">
       <div className="flex flex-wrap items-center gap-2 text-[0.8rem] text-faint">
         <span className="text-blue">#{issue.number}</span>
         {issue.labels.slice(0, 3).map((l) => (
@@ -34,7 +34,7 @@ export function StarterIssueCard({ issue, compact = false }: { issue: StarterIss
           ))}
         </ul>
       )}
-      <p className="mt-3 flex gap-2 border-t border-dashed border-line pt-3 font-sans text-[0.9rem] text-green">
+      <p className="mt-3 flex gap-2 border-t border-line pt-3 font-sans text-[0.9rem] text-green">
         <span aria-hidden="true">→</span>
         <span>
           <span className="sr-only">What to do next: </span>
@@ -54,24 +54,28 @@ export function StarterIssueRow({ issue }: { issue: StarterIssue }) {
   const taken = Boolean(issue.people || issue.open_prs);
   const step = nextStep(issue);
   return (
-    <li className="group relative flex flex-wrap items-baseline gap-x-3 gap-y-0.5 py-1.5 hover:bg-panel-2/50 sm:flex-nowrap" title={step}>
-      <span className="shrink-0 font-mono text-[0.82rem] text-blue">#{issue.number}</span>
-      <a href={issue.url} target="_blank" rel="noopener noreferrer" data-umami-event="starter-issue-click" className="min-w-0 flex-1 basis-full truncate font-sans text-[0.93rem] font-medium text-ink after:absolute after:inset-0 group-hover:text-blue sm:basis-auto">
+    // The title gets its own line, so it is never squeezed by the details;
+    // whether anyone is on it, the comments and the age go under it.
+    <li className="group relative grid grid-cols-[auto_minmax(0,1fr)] gap-x-3 py-2 hover:bg-panel-2/50" title={step}>
+      <span className="font-mono text-[0.82rem] leading-[1.45] text-blue">#{issue.number}</span>
+      <a href={issue.url} target="_blank" rel="noopener noreferrer" data-umami-event="starter-issue-click" className="min-w-0 truncate font-sans text-[0.93rem] font-medium leading-[1.4] text-ink after:absolute after:inset-0 group-hover:text-blue">
         {issue.title}
         <span className="sr-only"> (opens GitHub). {step}</span>
       </a>
-      {issue.labels.length > 0 && (
-        <span className="hidden shrink-0 gap-1.5 text-[0.74rem] text-faint md:flex">
-          {issue.labels.slice(0, 2).map((l) => (
-            <span key={l} className="max-w-[9rem] truncate">{l}</span>
-          ))}
+      <p className="col-start-2 mt-0.5 flex min-w-0 flex-wrap gap-x-2 font-sans text-[0.78rem] text-faint">
+        <span className={taken ? "text-amber" : "text-green"}>{issue.on_it ?? (taken ? "Someone is on it" : "Nobody on it yet")}</span>
+        <span aria-hidden="true">·</span>
+        <span>
+          {issue.comments} comment{issue.comments === 1 ? "" : "s"}
+          {issue.created_at && <> · {timeAgo(issue.created_at)}</>}
         </span>
-      )}
-      <span className={`shrink-0 font-sans text-[0.8rem] ${taken ? "text-amber" : "text-green"}`}>{issue.on_it ?? (taken ? "Someone is on it" : "Nobody on it yet")}</span>
-      <span className="shrink-0 font-sans text-[0.78rem] text-faint">
-        {issue.comments} comment{issue.comments === 1 ? "" : "s"}
-        {issue.created_at && <> · {timeAgo(issue.created_at)}</>}
-      </span>
+        {issue.labels.length > 0 && (
+          <>
+            <span aria-hidden="true" className="hidden sm:inline">·</span>
+            <span className="hidden max-w-[16rem] truncate sm:inline">{issue.labels.slice(0, 2).join(", ")}</span>
+          </>
+        )}
+      </p>
     </li>
   );
 }
@@ -116,8 +120,9 @@ export function StarterIssuesSkeleton() {
   return (
     <SkeletonRegion as="ul" label="Loading starter issues…" className="divide-y divide-line border-y border-line">
       {[0, 1, 2].map((i) => (
-        <li key={i} className="py-1.5">
-          <Skeleton className="h-5 w-full" />
+        <li key={i} className="space-y-1.5 py-2.5">
+          <Skeleton className="h-4 w-4/5" />
+          <Skeleton className="h-3 w-2/5" />
         </li>
       ))}
     </SkeletonRegion>

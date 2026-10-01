@@ -21,7 +21,10 @@ const dev = process.env.NODE_ENV !== "production";
 // Next inlines its RSC payload and the theme script, and React sets style
 // attributes; nonces would force every page to render per request. Fonts are
 // self-hosted by next/font. Images: GitHub avatars (github.com/o.png redirects
-// to avatars.githubusercontent.com) and Google profile pictures.
+// to avatars.githubusercontent.com), the pictures in a repository's README
+// (GitHub's own hosts, and img.shields.io for badges; keep this list in step with
+// IMAGE_HOSTS in lib/readme-md.ts, which leaves out any other host), and Google
+// profile pictures.
 // form-action: signing in without JS posts, then redirects to the provider.
 // Razorpay Checkout (credit packs): its script from checkout.razorpay.com,
 // which loads Razorpay's fraud check from cdn.razorpay.com, opens the payment
@@ -36,7 +39,7 @@ const csp = [
   "default-src 'self'",
   `script-src 'self' 'unsafe-inline' ${razorpay.script}${dev ? " 'unsafe-eval'" : ""}`,
   "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob: https://github.com https://avatars.githubusercontent.com https://*.googleusercontent.com",
+  "img-src 'self' data: blob: https://github.com https://*.githubusercontent.com https://img.shields.io https://*.googleusercontent.com",
   "font-src 'self' data:",
   `connect-src 'self' ${razorpay.connect}${dev ? " ws:" : ""}`,
   `frame-src ${razorpay.frame}`,

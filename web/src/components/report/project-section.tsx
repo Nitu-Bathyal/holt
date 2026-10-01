@@ -1,110 +1,123 @@
-// "About this project", right under the verdict: what the project is, how big
-// and alive it is, what you'd need to know to work on it, and where to ask for
-// help. GitHub's own facts (the server's `about`, API.md); nothing here feeds
-// the verdict, and a fact GitHub didn't give is left out, not guessed.
-// Compact on purpose: two columns from `md` up, so it fits beside the fold.
+// "Contributing here": what it is like to send work to this project, in the
+// few lines the README and the sidebar don't already say. Who works on it, what
+// it asks before a pull request (the report's `asks`), how active it is, and
+// where to ask. The description is in the page header and the numbers are in
+// the sidebar, so neither is repeated here. GitHub's own facts and Holt's
+// reading of the threads; nothing here feeds the verdict, and a fact that
+// isn't known is left out, not guessed.
 import { timeAgo } from "@/lib/format";
-import { helpLinks, projectFacts, readmeShown, share, type RepoAbout } from "@/lib/repo-about";
-import { langColor } from "@/lib/repo-card";
+import { compactCount, helpLinks, houseRules, type Ask, type HelpLink, type RepoAbout } from "@/lib/repo-about";
 
-export function ProjectSection({ about }: { about: RepoAbout }) {
-  const readme = readmeShown(about);
-  const facts = projectFacts(about);
+// Somewhere to ask a question, before the contributing guide or the project's site.
+const ASK_FIRST = ["GitHub Discussions", "Discord chat", "Slack chat", "Zulip chat", "Matrix chat", "Gitter chat"];
+
+function Row({ label, children }: { label: string; children: React.ReactNode }) {
+  return (
+    <div className="grid gap-1 py-3 sm:grid-cols-[8rem_minmax(0,1fr)] sm:gap-x-6">
+      <dt className="text-[0.85rem] leading-[1.6] text-faint">{label}</dt>
+      <dd className="font-sans text-[0.93rem] leading-snug text-ink">{children}</dd>
+    </div>
+  );
+}
+
+/** Links in a line, each with its note for anyone hovering or listening. */
+function Links({ links }: { links: HelpLink[] }) {
+  return (
+    <span className="flex flex-wrap gap-x-4 gap-y-1">
+      {links.map((l) => (
+        <a key={l.url} href={l.url} target="_blank" rel="noopener noreferrer nofollow" title={l.note} className="text-link">
+          {l.label} <span aria-hidden="true">↗</span>
+          <span className="sr-only"> ({l.note}; opens in a new tab)</span>
+        </a>
+      ))}
+    </span>
+  );
+}
+
+export function ProjectSection({ about, asks }: { about: RepoAbout; asks: Ask[] }) {
+  const rules = houseRules(asks);
   const help = helpLinks(about);
-  const langs = about.languages;
-  const text = about.description || readme;
-  if (!text && !facts.length && !langs.length && !help.length) return null;
-  const side = langs.length > 0 || help.length > 0;
+  // The rules to read, and somewhere to talk: the sidebar no longer repeats either.
+  const read = help.filter((l) => !ASK_FIRST.includes(l.label));
+  const ask = help.filter((l) => ASK_FIRST.includes(l.label));
+  const release = about.latest_release;
+  const people = about.contributors;
+
+  const rows: { label: string; body: React.ReactNode }[] = [];
+  if (people != null && people > 0) {
+    rows.push({
+      label: "who's here",
+      body: (
+        <>
+          {compactCount(people)} {people === 1 ? "person has" : "people have"} had code accepted here
+          {about.open_pull_requests != null && <span className="text-muted">, with {compactCount(about.open_pull_requests)} pull requests open now</span>}.
+        </>
+      ),
+    });
+  }
+  if (read.length) {
+    rows.push({
+      label: "read first",
+      body: <Links links={read} />,
+    });
+  }
+  if (rules.length) {
+    rows.push({
+      label: "before your PR",
+      body: (
+        <ul className="space-y-1">
+          {rules.map((r) => (
+            <li key={r.text}>
+              {r.text}{" "}
+              <a href={r.url} target="_blank" rel="noopener noreferrer" className="text-[0.82rem] text-faint hover:text-blue">
+                where it says so <span aria-hidden="true">↗</span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      ),
+    });
+  }
+  if (release?.published_at || about.pushed_at) {
+    rows.push({
+      label: "how active",
+      body: (
+        <>
+          {release?.published_at && (
+            <>
+              Last release{" "}
+              <a href={release.url} target="_blank" rel="noopener noreferrer" className="text-link">{release.tag}</a>,{" "}
+              <time dateTime={release.published_at} suppressHydrationWarning>{timeAgo(release.published_at)}</time>
+            </>
+          )}
+          {release?.published_at && about.pushed_at && <span className="text-faint"> · </span>}
+          {about.pushed_at && (
+            <>
+              {release?.published_at ? "last" : "Last"} code pushed{" "}
+              <time dateTime={about.pushed_at} suppressHydrationWarning>{timeAgo(about.pushed_at)}</time>
+            </>
+          )}
+          .
+        </>
+      ),
+    });
+  }
+  if (ask.length) {
+    rows.push({
+      label: "ask questions",
+      body: <Links links={ask} />,
+    });
+  }
+  if (!rows.length) return null;
 
   return (
-    <section aria-labelledby="project" className="border-t border-line pt-5">
-      <h2 id="project" className="mb-3 text-[1.05rem] font-semibold tracking-tight sm:text-[1.15rem]">About this project</h2>
-      <div className={`grid gap-x-8 gap-y-4 ${side ? "md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]" : ""}`} data-project>
-        <div className="min-w-0">
-          {text && (
-            <p className="font-sans text-[0.95rem] leading-snug text-ink">
-              {about.description}
-              {about.description && readme && " "}
-              {readme && <span className="text-muted">{readme}</span>}
-            </p>
-          )}
-
-          {about.topics.length > 0 && (
-            <ul aria-label="Topics" className="mt-2 flex flex-wrap gap-1.5 text-[0.75rem]">
-              {about.topics.slice(0, 8).map((t) => (
-                <li key={t} className="border border-blue/30 bg-blue/5 px-1.5 py-px text-blue">{t}</li>
-              ))}
-            </ul>
-          )}
-
-          {facts.length > 0 && (
-            <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-2" data-project-facts>
-              {facts.map((f) => (
-                <div key={f.label} className="flex items-baseline gap-1.5">
-                  <dd className="text-[0.95rem] font-semibold text-ink">
-                    {f.href ? (
-                      <a href={f.href} target="_blank" rel="noopener noreferrer" className="hover:text-blue">
-                        {f.value}
-                        <span className="sr-only"> (opens GitHub)</span>
-                      </a>
-                    ) : (
-                      f.value
-                    )}
-                    {f.since && (
-                      <time dateTime={f.since} suppressHydrationWarning className={f.value ? "ml-1.5 text-[0.82rem] font-normal text-muted" : ""}>
-                        {timeAgo(f.since)}
-                      </time>
-                    )}
-                  </dd>
-                  <dt className="text-[0.8rem] text-faint">{f.label}</dt>
-                </div>
-              ))}
-            </dl>
-          )}
-        </div>
-
-        {side && (
-          <div className="min-w-0 space-y-3">
-            {langs.length > 0 && (
-              <div data-project-languages>
-                <h3 className="text-[0.78rem] uppercase tracking-[0.08em] text-faint">What you&apos;d need to know</h3>
-                {/* One rounded bar cut into each language's share, then a key with a dot and its share. */}
-                <div role="img" aria-label={langs.map((l) => `${l.name} ${share(l.share)}`).join(", ")} className="mt-2 flex h-2.5 gap-0.5 overflow-hidden rounded-full bg-line/60">
-                  {langs.map((l) => (
-                    <span key={l.name} className="min-w-1.5 first:rounded-l-full last:rounded-r-full" style={{ flexGrow: Math.max(l.share, 0.02), flexBasis: 0, background: langColor(l.name) ?? "var(--color-faint, #8b8b8b)" }} />
-                  ))}
-                </div>
-                <ul className="mt-2.5 flex flex-wrap gap-1.5 font-sans text-[0.85rem]">
-                  {langs.map((l) => (
-                    <li key={l.name} className="inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-panel-2/60 px-2.5 py-0.5">
-                      <span aria-hidden="true" className="size-2 rounded-full" style={{ background: langColor(l.name) ?? "var(--color-faint, #8b8b8b)" }} />
-                      <span className="font-medium text-ink">{l.name}</span>
-                      <span className="tabular-nums text-faint">{share(l.share)}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {help.length > 0 && (
-              <div data-project-help>
-                <h3 className="text-[0.78rem] uppercase tracking-[0.08em] text-faint">Rules and help</h3>
-                <ul className="mt-1.5 flex flex-wrap gap-1.5">
-                  {help.map((l) => (
-                    <li key={l.url}>
-                      <a href={l.url} target="_blank" rel="noopener noreferrer nofollow" title={l.note} className="inline-flex min-h-8 items-center gap-1 border border-line-strong px-2 py-1 text-[0.82rem] text-ink hover:border-blue hover:text-blue">
-                        {l.label}
-                        <span aria-hidden="true" className="text-faint">↗</span>
-                        <span className="sr-only"> ({l.note}; opens in a new tab)</span>
-                      </a>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-          </div>
-        )}
-      </div>
+    <section aria-labelledby="project">
+      <h2 id="project" className="mb-2 text-[1.05rem] font-semibold tracking-tight sm:text-[1.15rem]">Contributing here</h2>
+      <dl className="divide-y divide-dashed divide-line border-y border-line">
+        {rows.map((r) => (
+          <Row key={r.label} label={r.label}>{r.body}</Row>
+        ))}
+      </dl>
     </section>
   );
 }

@@ -20,6 +20,28 @@ export function parseList(v: string | string[] | undefined): string[] {
   return out.slice(0, MAX);
 }
 
+/**
+ * Words typed where a repo goes that aren't owner/name or a link: "excalidraw".
+ * Lower-cased, de-duplicated, in order; the page looks each one up. Anything
+ * with a slash, a colon or other odd characters is left out (it isn't a name).
+ */
+export function bareNames(v: string | string[] | undefined): string[] {
+  const raw = (Array.isArray(v) ? v.join(",") : v ?? "").split(/[,\s]+/);
+  const out: string[] = [];
+  for (const r of raw) {
+    const name = r.trim().toLowerCase();
+    if (!name || parseRepoInput(r)) continue;
+    if (/^[a-z0-9][a-z0-9._-]{0,59}$/.test(name) && !out.includes(name)) out.push(name);
+  }
+  return out;
+}
+
+/** Which search result a typed name means: the most starred one named exactly that (results come most starred first), else the top one. */
+export function pickRepo(name: string, results: { repo: string }[]): string | null {
+  const exact = results.find((r) => r.repo.split("/")[1]?.toLowerCase() === name.toLowerCase());
+  return (exact ?? results[0])?.repo ?? null;
+}
+
 export function compareHref(list: string[]): string {
   return list.length ? `/compare?repos=${list.join(",")}` : "/compare";
 }

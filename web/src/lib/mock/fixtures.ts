@@ -449,6 +449,49 @@ function fromSeed(seed: Seed, mode: "rules" | "ai", days: number): Report {
   });
 }
 
+// A README for the report's README section: a badge row, a short pitch, install steps, a snippet and links.
+function mockReadme(name: string): string {
+  return `[![CI](https://img.shields.io/badge/ci-passing-green.svg)](https://example.org/ci)
+
+# ${name}
+
+${name} is a small, carefully made library for mock mode. It does one thing and does it well, with **no dependencies** and a tiny API you can read in an afternoon.
+
+## Why use it
+
+- Fast to start: one install, three lines of code
+- Friendly to read: every function has a short example
+- Well tested: the suite runs in under ten seconds
+
+## Install
+
+\`\`\`bash
+pip install ${name.toLowerCase()}
+\`\`\`
+
+## A first example
+
+\`\`\`python
+import ${name.toLowerCase().replace(/[^a-z0-9]/g, "_")}
+
+app = ${name.toLowerCase().replace(/[^a-z0-9]/g, "_")}.create()
+app.run()
+\`\`\`
+
+## Learn more
+
+Start with the [quickstart](docs/quickstart.md), then read the [contributing guide](CONTRIBUTING.md) before opening a pull request. Questions are welcome in [Discussions](https://github.com/example/${name}/discussions).
+
+## Contributing
+
+Small fixes are the best first contribution: a typo in the docs, a missing test, a clearer error message. Look for issues labelled *good first issue*, say you'd like to take one, and open a small pull request. We try to reply within two days.
+
+## License
+
+MIT
+`;
+}
+
 // "About this repo": made up from the name, except where a real-looking one reads better.
 export function mockAbout(repo: string): Report["about"] {
   if (repo.toLowerCase().includes("no-about")) return null;
@@ -480,9 +523,19 @@ export function mockAbout(repo: string): Report["about"] {
       { kind: "discord", url: "https://discord.gg/mock" },
     ],
     latest_release: { tag: "v1.4.0", published_at: hoursAgo(24 * 20), url: `https://github.com/${repo}/releases/tag/v1.4.0` },
+    readme: mockReadme(repo.split("/")[1]),
+    // Made-up people, no avatars: the card shows each one's initial instead.
+    top_contributors: MOCK_PEOPLE.slice(0, 3 + Math.floor(r() * 5)).map(([login, name], i) => ({
+      login, name, url: `https://github.com/${login}`, avatar_url: null, contributions: Math.floor(1800 / (i + 1) + r() * 40),
+    })),
     fetched_at: hoursAgo(3),
   };
 }
+
+const MOCK_PEOPLE: [string, string | null][] = [
+  ["mock-maintainer", "Mo Maintainer"], ["sam-patches", "Sam Patches"], ["octo-dev", null], ["rina-docs", "Rina Docs"],
+  ["tests-tom", "Tom Tests"], ["lee-fixes", null], ["ana-builds", "Ana Builds"], ["kit-refactor", "Kit Refactor"],
+];
 
 // "Holt users who sent pull requests here": only repos where 5+ people would make it up.
 const HOLT_USERS: Record<string, Report["holt_users"]> = {
