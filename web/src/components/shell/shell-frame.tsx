@@ -3,6 +3,8 @@
 // mounted across client navigations, so this decides from the live pathname,
 // not from the request that first rendered the layout.
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { notePage } from "@/lib/in-app-history";
 import { shellFor } from "@/lib/shell";
 import styles from "./shell-frame.module.css";
 
@@ -14,7 +16,13 @@ export function ShellFrame({ marketingHeader, footer, topBar, rail, children }: 
   rail: React.ReactNode | null;
   children: React.ReactNode;
 }) {
-  const kind = shellFor(usePathname(), topBar !== null);
+  const pathname = usePathname();
+  // For the report's back arrow (back-button.tsx): the pages this tab has been through.
+  // After the move, so the address (query included) is the new page's.
+  useEffect(() => {
+    notePage(window.location.pathname + window.location.search);
+  }, [pathname]);
+  const kind = shellFor(pathname, topBar !== null);
   if (kind === "app") {
     return (
       // The rail runs the full height on desktop; the top bar and the page
