@@ -296,10 +296,6 @@ To take it away: remove `STAGING_HOLT_PRO_KEY`, run `preview.sh` with
   production uses. Besides those two, only the `STAGING_*` keys above are
   taken from it. Without the contact details the build fails on purpose
   rather than showing the placeholders.
-- PR watch's alert emails use `RESEND_API_KEY` from the same file (Resend,
-  the key production reads), and only while `staging/.env` says
-  `HOLT_PR_WATCH=1`. Without the key no email is sent; alerts still reach
-  the bell.
 - AI runs on `OPENAI_API_KEY` from the same file (OpenAI's API,
   `gpt-5-mini`), for the server's AI reports and the paid-features service's
   playbooks and pre-flight summaries, under **one hard budget of $1.00 for
