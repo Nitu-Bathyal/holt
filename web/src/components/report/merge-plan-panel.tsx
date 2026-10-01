@@ -107,18 +107,54 @@ export function MergePlanPanel({ repo }: { repo: string }) {
   const actions = running ? (
     <Making stage={run.stage} progress={run.progress} />
   ) : offer.kind === "off" ? (
-    !plan && <p className="mt-3 font-sans text-muted" data-merge-plan-off>Merge plans aren&apos;t available yet.</p>
+    !plan && (
+      <div className="mt-3 max-w-3xl font-sans" data-merge-plan-off>
+        <p className="text-[1rem] leading-snug text-muted sm:text-[1.05rem]">
+          Merge plans aren&apos;t available yet. When they are, one reads this repo&apos;s pull request threads and gives you a step-by-step plan for your first
+          pull request.
+        </p>
+        <Link href="/example-ai-report" className="text-link tap mt-4 inline-block text-[0.92rem]">
+          see an example plan →
+        </Link>
+      </div>
+    )
   ) : offer.kind === "locked" ? (
-    <p className="mt-5 font-sans text-muted" data-merge-plan-locked>
+    <p className="mt-3 max-w-3xl font-sans text-[1rem] leading-snug text-muted sm:text-[1.05rem]" data-merge-plan-locked>
       {offer.message} <Link href="/pricing" className="text-link">See Pro</Link>
     </p>
   ) : (
-    <div className="mt-6 flex flex-wrap items-center gap-3">
-      <button type="button" onClick={make} className={plan ? "text-link text-[0.9rem]" : "btn-primary bg-blue"} data-merge-plan-make>
-        {plan ? "make a new one" : failed ? "try again" : "make my merge plan"} <span aria-hidden="true">→</span>
-      </button>
-      {leftLabel(offer.left) && <span className="text-[0.82rem] text-faint">{leftLabel(offer.left)}</span>}
-    </div>
+    plan ? (
+      // Under a plan already made: a quiet way to make it again.
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <button type="button" onClick={make} className="text-link tap text-[0.9rem]" data-merge-plan-make>
+          make a new one <span aria-hidden="true">→</span>
+        </button>
+        {leftLabel(offer.left) && <span className="text-[0.82rem] text-faint">{leftLabel(offer.left)}</span>}
+      </div>
+    ) : (
+      <div className="mt-3 max-w-3xl">
+        {!failed && (
+          <p className="font-sans text-[1rem] leading-snug text-muted sm:text-[1.05rem]">
+            Holt reads this repo&apos;s pull request threads and gives you a step-by-step plan for your first pull request: what gets merged, what gets
+            closed and who reviews.
+          </p>
+        )}
+        <div className="mt-5 flex flex-wrap items-center gap-x-4 gap-y-3">
+          <button type="button" onClick={make} className="btn-primary min-h-11 bg-blue px-5" data-merge-plan-make>
+            {failed ? "try again" : "make my merge plan"} <span aria-hidden="true">→</span>
+          </button>
+          {leftLabel(offer.left) && (
+            <span className="inline-flex min-h-8 items-center border border-line-strong px-2.5 text-[0.78rem] text-muted">
+              <span className="mr-1 tabular-nums text-ink">{offer.left}</span> left
+            </span>
+          )}
+          <Link href="/example-ai-report" className="text-link tap text-[0.88rem]">
+            see an example
+          </Link>
+        </div>
+        <p className="mt-3 text-[0.78rem] text-faint">A plan that fails doesn&apos;t count.</p>
+      </div>
+    )
   );
   const error = run.phase === "error" && (
     <p role="alert" className="mt-4 border border-orange/50 px-3 py-2 font-sans text-[0.9rem] text-orange" data-merge-plan-error>
@@ -141,10 +177,15 @@ export function MergePlanPanel({ repo }: { repo: string }) {
   }
 
   return (
-    <section aria-labelledby="merge-plan" className="border border-line-strong bg-panel p-5 sm:p-8" data-merge-plan-panel>
-      <p className="text-[0.85rem] text-blue">Merge plan · {s.repo}</p>
-      <h1 id="merge-plan" className="mt-2 text-[1.6rem] font-semibold tracking-tight sm:text-[2rem]">
+    // Set like the report's verdict block (and the plan's own, merge-plan-view.tsx): a bar down the side, the label, the heading.
+    <section aria-labelledby="merge-plan" className={`border-l-4 pl-4 sm:pl-6 ${failed ? "border-orange" : "border-blue"}`} data-merge-plan-panel>
+      <p className="flex items-center gap-2 text-[0.76rem] uppercase tracking-[0.08em] text-faint">
+        <span className="border border-line-strong px-1.5 py-0.5 tracking-[0.12em] text-ink">pro</span>
+        merge plan
+      </p>
+      <h1 id="merge-plan" className={`display mt-3 text-[1.6rem] leading-none sm:text-[2.25rem] ${failed ? "text-orange" : "text-ink"}`}>
         {failed ? "Your merge plan couldn't be made" : "Your merge plan"}
+        <span className="text-blue">.</span>
       </h1>
       {error}
       {actions}
@@ -155,7 +196,7 @@ export function MergePlanPanel({ repo }: { repo: string }) {
 function Making({ stage, progress }: { stage: string; progress: number }) {
   return (
     <div className="mt-5" data-merge-plan-making>
-      <p className="font-sans text-muted">{stage}…</p>
+      <p className="font-sans text-[1rem] text-muted">{stage}…</p>
       <div className="mt-3 h-1 w-full max-w-md bg-line-strong" role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress * 100)}>
         <div className="h-full bg-blue transition-[width] duration-500" style={{ width: `${Math.max(2, Math.round(progress * 100))}%` }} />
       </div>
