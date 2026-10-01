@@ -37,6 +37,7 @@ from typing import Any, Literal
 from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, Query, Request
+from holt.about import MAX_README
 from pydantic import Field
 from sqlalchemy import func, select
 
@@ -417,6 +418,24 @@ def _release(value: Any) -> dict[str, Any] | None:
     return {"tag": str(value["tag"])[:100], "published_at": value.get("published_at"), "url": value["url"]}
 
 
+def _people(value: Any) -> list[dict[str, Any]]:
+    """Contributors as stored and served: a login, a GitHub profile and avatar
+    address, a commit count and the profile name when there is one. Anything
+    else is dropped."""
+    out = []
+    for p in value or []:
+        if not isinstance(p, dict) or not isinstance(p.get("login"), str) or not p["login"]:
+            continue
+        url = _web_url(p.get("url"))
+        if not url or not url.startswith("https://github.com/"):
+            continue
+        avatar = _web_url(p.get("avatar_url"))
+        out.append({"login": p["login"][:100], "name": (str(p.get("name") or "").strip()[:100]) or None,
+                    "url": url, "avatar_url": avatar if avatar and avatar.startswith("https://") else None,
+                    "contributions": _int(p.get("contributions"))})
+    return out
+
+
 async def store_meta(svc: Services, details: dict[str, dict[str, Any] | None]) -> int:
     """Save what `GitHubLookup.details` returned; missing repos are left alone.
     Returns how many rows were written."""
@@ -450,8 +469,12 @@ async def store_meta(svc: Services, details: dict[str, dict[str, Any] | None]) -
             row.default_branch = (d.get("default_branch") or "")[:200] or None
             row.fork_of = (d.get("fork_of") or "")[:200] or None
             row.readme_line = (d.get("readme_line") or "")[:500] or None
+            row.readme = (d.get("readme") or "")[:MAX_README] or None
             row.links = _links(d.get("links"))
             row.latest_release = _release(d.get("latest_release"))
+            # A list GitHub wouldn't give this time keeps yesterday's.
+            if d.get("top_contributors") is not None:
+                row.top_contributors = _people(d.get("top_contributors"))
             row.fetched_at = now()
             s.add(row)
             written += 1
@@ -469,7 +492,7 @@ def counts(meta: RepoMeta | None) -> dict[str, int | None]:
 
 def about_view(meta: RepoMeta) -> schema.RepoAbout:
     return schema.RepoAbout(
-        description=meta.description, readme_line=meta.readme_line, homepage=meta.homepage,
+        description=meta.description, readme_line=meta.readme_line, readme=meta.readme, homepage=meta.homepage,
         stars=meta.stars, forks=meta.forks, open_issues=meta.open_issues,
         pull_requests=meta.pull_requests, open_pull_requests=meta.open_pull_requests,
         contributors=meta.contributors,
@@ -481,6 +504,7 @@ def about_view(meta: RepoMeta) -> schema.RepoAbout:
         default_branch=meta.default_branch, archived=bool(meta.archived),
         fork=bool(meta.fork), fork_of=meta.fork_of,
         links=_links(meta.links), latest_release=_release(meta.latest_release),
+        top_contributors=_people(meta.top_contributors),
         fetched_at=iso(meta.fetched_at))
 
 
