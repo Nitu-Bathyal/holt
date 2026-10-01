@@ -6,10 +6,8 @@ import { prGroups } from "@/lib/contributions";
 import { clock, statusLine } from "@/lib/home";
 import type { SessionUser } from "@/lib/session";
 import { sidebarGroups } from "@/lib/shell";
-import { hacktoberfest } from "@/lib/site";
 import { BellSlot } from "../alerts/bell-slot";
 import { AppTopBar } from "../header";
-import { Icon } from "./icons";
 import { Drawer, Sidebar } from "./sidebar";
 
 /** "3 AI reports left", or null when AI reports are off or the server didn't say. */
@@ -37,7 +35,6 @@ async function NeedsYouBadge({ userId }: { userId: string }) {
 }
 
 export async function appShell(user: SessionUser, credits: string | null, railCollapsed: boolean) {
-  const season = hacktoberfest();
   const badges: Record<string, React.ReactNode> = {
     // Streams in, so the shell never waits on it.
     prs: (
@@ -46,13 +43,6 @@ export async function appShell(user: SessionUser, credits: string | null, railCo
       </Suspense>
     ),
   };
-  if (season?.live)
-    badges.find = (
-      <span className="side-badge" data-tone="leaf" title={season.text}>
-        <Icon name="leaf" className="size-3" />
-        <span className="sr-only"> ({season.text})</span>
-      </span>
-    );
   const nav = { groups: sidebarGroups(), badges, user: { name: user.name || user.email || "You", image: user.image ?? null }, credits };
   return {
     topBar: (

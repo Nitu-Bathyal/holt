@@ -3192,6 +3192,40 @@
     }
   }
 
+  /* Keep the preview within its viewport, including long issue titles. */
+  .repo-preview {
+    opacity: 0;
+    transition:
+      opacity 280ms var(--ease-out),
+      display 280ms allow-discrete,
+      overlay 280ms allow-discrete;
+  }
+  .repo-preview[open] {
+    opacity: 1;
+  }
+  .repo-preview::backdrop {
+    opacity: 0;
+    transition:
+      opacity 280ms var(--ease-out),
+      display 280ms allow-discrete,
+      overlay 280ms allow-discrete;
+  }
+  .repo-preview[open]::backdrop {
+    opacity: 1;
+  }
+  @starting-style {
+    .repo-preview[open],
+    .repo-preview[open]::backdrop {
+      opacity: 0;
+    }
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .repo-preview-content {
+      animation: reveal 280ms var(--ease-out);
+      --shift: 6px;
+    }
+  }
+
   /* A card's odds bar fills from the left as the card appears (after the card's
      own reveal, on its --i stagger), then its "% merged" flag and tick fade in. */
   @media (prefers-reduced-motion: no-preference) {
@@ -3203,6 +3237,18 @@
     .odds-meter .odds-flag {
       animation: odds-flag var(--dur-slow) var(--ease-out) both;
       animation-delay: calc(650ms + min(var(--i, 0), 6) * var(--stagger));
+    }
+  }
+
+  /* Paging previews should show the outcome immediately, without refilling. */
+  .repo-preview .odds-fill,
+  .repo-preview .odds-flag {
+    animation: none;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .repo-preview,
+    .repo-preview::backdrop {
+      transition: none;
     }
   }
 
@@ -3429,10 +3475,6 @@
 }
 /* The repo box lives in the tab row there, so the top bar's copy steps aside. */
 :root:has(.find-band [data-check-target="band"]) .app-bar-frame [data-check-target="bar"] {
-  display: none;
-}
-/* Likewise on the home: its repo box sits under the page head, so the top bar's copy steps aside. */
-:root:has(.app-page [data-check-target="inline"]) .app-bar-frame [data-check-target="bar"] {
   display: none;
 }
 @supports (animation-timeline: scroll()) {
