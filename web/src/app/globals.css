@@ -2735,6 +2735,18 @@
     text-wrap: balance;
     overflow-wrap: anywhere;
   }
+  /* The home's sentence is a line to act on, not a banner: smaller than the other pages' heads. */
+  .app-h1.home-h1 {
+    font-size: clamp(1.4rem, 2.2vw, 1.85rem);
+    line-height: 1.15;
+  }
+  .app-head.home-head {
+    padding: clamp(16px, 3.5svh, 36px) 0 16px;
+  }
+  .app-head-cat.home-cat {
+    padding-top: 2px;
+    font-size: clamp(1.15rem, 1.7vw, 1.55rem);
+  }
   .app-lead {
     margin-top: 12px;
     max-width: 44rem;
@@ -2878,6 +2890,43 @@
     background: var(--rule, var(--line-strong));
     content: "";
   }
+  /* The home's lists: one bordered block, rows divided by hairlines. */
+  .home-list {
+    border: 1px solid var(--line-strong);
+    background: var(--panel);
+  }
+  .home-list > .app-row {
+    padding: 10px 14px;
+  }
+  .home-section .section-head {
+    margin-bottom: 10px;
+    padding-bottom: 8px;
+  }
+  .home-section .section-head :is(h2, h3) {
+    font-size: 0.92rem;
+  }
+  .home-section .section-head > span {
+    font-size: 0.78rem;
+  }
+  /* The home's quiet action: ink, not the site's green. */
+  .home-btn {
+    display: inline-flex;
+    min-height: 36px;
+    align-items: center;
+    justify-content: center;
+    padding: 0 14px;
+    background: var(--ink);
+    color: var(--bg);
+    font-size: 0.8rem;
+    font-weight: 600;
+    transition: opacity var(--dur-fast) var(--ease-out);
+  }
+  .home-btn:hover {
+    opacity: 0.85;
+  }
+  .home-list > .app-row:last-child {
+    border-bottom: 0;
+  }
   .app-tabs {
     display: flex;
     gap: 4px;
@@ -2926,68 +2975,52 @@
         move-mark 600ms var(--ease-out) both;
       animation-delay: calc(var(--i) * 55ms), calc(var(--i) * 55ms + 380ms);
     }
-    .loop-fill,
     .wait-bar > span {
       animation: grow-x 700ms var(--ease-out) 250ms both;
     }
   }
 
-  /* The loop: find a repo → pick an issue → open a PR → get it merged. */
+  /* The loop: find a repo, pick an issue, open a PR, get it merged. Four segments; the steps behind you are filled. */
   .loop {
-    position: relative;
     display: grid;
-    max-width: 44rem;
+    max-width: 40rem;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    margin-top: 32px;
-  }
-  .loop::before,
-  .loop-fill {
-    position: absolute;
-    top: 6px;
-    left: 6px;
-    height: 2px;
-    background: var(--line-strong);
-    content: "";
-  }
-  .loop::before {
-    right: calc(25% - 6px);
-  }
-  .loop-fill {
-    z-index: 0;
-    width: var(--p);
-    background: var(--green);
-    transform-origin: left;
+    gap: 8px;
+    margin-top: 20px;
   }
   .loop-step {
-    position: relative;
     display: flex;
     flex-direction: column;
-    gap: 10px;
-    padding-right: 10px;
+    gap: 8px;
     font-size: clamp(0.72rem, 2.6vw, 0.8rem);
     color: var(--faint);
   }
-  .loop-dot {
-    width: 14px;
-    height: 14px;
-    border: 2px solid var(--line-strong);
-    border-radius: 50%;
-    background: var(--bg);
+  .loop-seg {
+    height: 3px;
+    background: var(--line-strong);
+    transform-origin: left;
+  }
+  .loop-n {
+    margin-right: 2px;
+    font-variant-numeric: tabular-nums;
   }
   .loop-step[data-s="done"] {
     color: var(--muted);
   }
-  .loop-step[data-s="done"] .loop-dot {
-    border-color: var(--green);
+  .loop-step[data-s="done"] .loop-seg {
     background: var(--green);
   }
   .loop-step[data-s="now"] {
     color: var(--ink);
     font-weight: 600;
   }
-  .loop-step[data-s="now"] .loop-dot {
-    border-color: var(--blue);
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--blue) 18%, transparent);
+  .loop-step[data-s="now"] .loop-seg {
+    background: var(--blue);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .loop-seg {
+      animation: grow-x 600ms var(--ease-out) 250ms both;
+    }
   }
 
   .wait-bar {
@@ -3317,6 +3350,10 @@
 }
 /* The repo box lives in the tab row there, so the top bar's copy steps aside. */
 :root:has(.find-band [data-check-target="band"]) .app-bar-frame [data-check-target="bar"] {
+  display: none;
+}
+/* Likewise on the home: its repo box sits under the page head, so the top bar's copy steps aside. */
+:root:has(.app-page [data-check-target="inline"]) .app-bar-frame [data-check-target="bar"] {
   display: none;
 }
 @supports (animation-timeline: scroll()) {

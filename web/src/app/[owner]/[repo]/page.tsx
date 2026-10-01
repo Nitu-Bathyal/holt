@@ -164,7 +164,8 @@ export default async function RepoPage({ params, searchParams }: Props) {
           {/* Save, and under it share: two quiet icons, the bookmark's right edge shared. */}
           <div className="flex w-full shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 sm:w-auto sm:flex-col sm:items-end sm:justify-start">
             <div className="flex items-center gap-3">
-              {!aboutShown && tag}
+              {/* No details row to hold it: kept for screen readers (the page's h1), not shown beside Save. */}
+              {!aboutShown && tag && <div className="sr-only">{tag}</div>}
               <ReportModeLink
                 mode={mode}
                 rulesHref={reportHref(display, days)}
@@ -178,7 +179,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
         </div>
         <StickySentinel />
         {report.ok && mode === "rules" && !teaser && (
-          <ReportStickyBar repo={display} verdict={report.data.headline}>
+          <ReportStickyBar repo={display}>
             <SaveButton small key={`bar-${display}`} repo={display} saved={user ? Boolean(saved?.ok && saved.data.saved) : null} />
           </ReportStickyBar>
         )}
