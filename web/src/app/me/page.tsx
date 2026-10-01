@@ -12,7 +12,6 @@ import { WaitBar } from "@/components/home/wait-bar";
 import { PageTransition } from "@/components/motion/page-transition";
 import { ProfileFlow } from "@/components/profile-flow";
 import { RepoGrid } from "@/components/repo-card/repo-grid";
-import { VerdictPill } from "@/components/report/verdict-pill";
 import { SaveButton } from "@/components/save-button";
 import { SectionHead } from "@/components/shell/app-page";
 import { FocusOnHash } from "@/components/shell/check-focus";
@@ -112,48 +111,50 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
     <PageTransition>
       <div className="app-page">
         <FocusOnHash />
-        <div id="check" className="scroll-mt-24 pt-6 md:hidden">
-          <QuickCheck variant="inline" />
-        </div>
-        <MoveHead title={moveTitle(move)} lead={moveLead(move)} mood={mood(move)} step={move.step}>
-          {primary && <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-3">{primary}</div>}
+        <MoveHead title={moveTitle(move)} lead={moveLead(move)} mood={mood(move)} step={move.step} aside={<div id="check" className="scroll-mt-24"><QuickCheck variant="inline" /></div>}>
+          {primary && <div className="mt-4 flex flex-wrap items-center gap-x-5 gap-y-3">{primary}</div>}
         </MoveHead>
         {notice && <p role="status" className={`mb-6 border px-4 py-3 font-sans text-[0.9rem] ${notice.tone}`}>{notice.text}</p>}
 
         {askingProfile && (
-          <div className="mt-10">
+          <div className="mt-8">
             <ProfileFlow adultConfirmed={profile.ok && profile.data.adult_confirmed} />
           </div>
         )}
 
         {move.kind === "issue" && (
-          <section aria-labelledby="issues-h" className="mt-12">
-            <SectionHead id="issues-h" title="Starter issues" more={{ href: `/${move.repo}`, label: "the report" }} />
+          <section aria-labelledby="issues-h" className="home-section mt-9">
+            <SectionHead id="issues-h" title="Good first issues" more={{ href: `/${move.repo}`, label: "See the report" }} />
             {issues?.ok && issues.data.issues.length > 0 ? (
-              <ul>
+              <ul className="home-list" data-stack>
                 {issues.data.issues.map((iss, i) => (
-                  <li key={iss.number} data-rule data-stack className="app-row grid-cols-[minmax(0,1fr)_auto]" style={{ "--rule": "var(--blue)" } as React.CSSProperties}>
-                    <div className="min-w-0 pl-2">
-                      <p className="font-sans text-[0.95rem]"><span className="text-blue">#{iss.number}</span> {iss.title}</p>
-                      <p className="mt-1 text-[0.76rem] text-faint">
-                        {iss.labels.slice(0, 3).join(" · ")}
-                        {iss.created_at && <> · opened {timeAgo(iss.created_at)}</>}
+                  <li key={iss.number} className="app-row grid-cols-[minmax(0,1fr)_auto]">
+                    <div className="min-w-0">
+                      <p className="font-sans text-[0.86rem] leading-snug">
+                        <span className="mr-2 font-mono text-[0.76rem] text-faint">#{iss.number}</span>
+                        {iss.title}
+                      </p>
+                      <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.72rem] text-faint">
+                        {iss.labels.slice(0, 3).map((l) => (
+                          <span key={l} className="border border-line-strong px-1.5 py-px text-muted">{l}</span>
+                        ))}
+                        {iss.created_at && <span>opened {timeAgo(iss.created_at)}</span>}
                       </p>
                     </div>
-                    <a href={iss.url} className={i === 0 ? "btn-primary min-h-11 px-4 text-[0.84rem] sm:min-h-10" : "text-link tap text-[0.84rem]"}>
-                      {i === 0 ? "take this one ↗" : "open ↗"}
+                    <a href={iss.url} className={i === 0 ? "home-btn" : "text-link tap text-[0.8rem]"}>
+                      {i === 0 ? "Start here" : "Open"}
                     </a>
                   </li>
                 ))}
               </ul>
             ) : (
-              <Link href={`/${move.repo}`} className="btn-primary mt-2">see what to work on →</Link>
+              <Link href={`/${move.repo}`} className="home-btn mt-2">See what to work on</Link>
             )}
           </section>
         )}
 
         {nudge && (
-          <form action={dismissNudge} className="mt-8 flex flex-wrap items-center gap-x-3 gap-y-1 border-l-2 border-blue py-1 pl-3 font-sans text-[0.9rem] text-muted">
+          <form action={dismissNudge} className="mt-6 flex flex-wrap items-center gap-x-3 gap-y-1 border-l-2 border-blue py-1 pl-3 font-sans text-[0.9rem] text-muted">
             <input type="hidden" name="nudge" value={nudge} />
             <span>{NUDGES[nudge].text}</span>
             <Link href={NUDGES[nudge].href} className="inline-flex min-h-11 items-center font-mono text-[0.86rem] text-blue hover:underline sm:min-h-0">{NUDGES[nudge].cta}</Link>
@@ -161,39 +162,35 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
           </form>
         )}
 
-        <div className="mt-14 space-y-14">
+        <div className="mt-10 space-y-10">
           {also.length > 0 && (
-            <section aria-labelledby="also-h">
-              <SectionHead id="also-h" title="Also for you" />
-              <ul data-stack>
+            <section aria-labelledby="also-h" className="home-section">
+              <SectionHead id="also-h" title="Updates" />
+              <ul className="home-list" data-stack>
                 {also.map((a) =>
                   a.kind === "checking" || a.kind === "ready" ? (
-                    <li key={a.repo.repo} data-rule className="app-row grid-cols-[minmax(0,1fr)_auto]" style={{ "--rule": a.kind === "ready" ? "var(--green)" : "var(--blue)" } as React.CSSProperties}>
-                      <p className="pl-2 font-sans text-[0.95rem]">
-                        {a.kind === "checking" ? (
-                          <>Holt is checking <span className="font-mono font-semibold">{a.repo.repo}</span>.</>
-                        ) : (
-                          <>
-                            <span className="font-mono font-semibold">{a.repo.repo}</span> is checked:{" "}
-                            {a.repo.headline && a.repo.tone && <VerdictPill headline={a.repo.headline} tone={a.repo.tone} className="px-1.5 py-0.5 text-[0.74rem]" />}
-                          </>
-                        )}
+                    <li key={a.repo.repo} className="app-row grid-cols-[minmax(0,1fr)_auto]">
+                      <p className="min-w-0 font-sans text-[0.86rem] [overflow-wrap:anywhere]">
+                        <span className="font-mono font-semibold">{a.repo.repo}</span>
+                        <span className="text-muted">{a.kind === "checking" ? ": the check is still running." : ": the report is ready."}</span>
                       </p>
-                      <Link href={`/${a.repo.repo}${a.repo.ai ? "?mode=ai" : ""}`} className="text-link text-[0.84rem]">{a.kind === "checking" ? "watch it →" : "open it →"}</Link>
+                      <Link href={`/${a.repo.repo}${a.repo.ai ? "?mode=ai" : ""}`} className="text-link text-[0.8rem]">{a.kind === "checking" ? "Watch" : "Open"}</Link>
                     </li>
                   ) : a.kind === "late" ? (
-                    <li key={a.wait.pr.url} data-rule className="app-row grid-cols-[minmax(0,1fr)_auto]" style={{ "--rule": "var(--orange)" } as React.CSSProperties}>
-                      <p className="pl-2 font-sans text-[0.95rem]">
-                        Your PR to <span className="font-mono font-semibold">{a.wait.pr.repo}</span> has waited {humanHours(a.wait.hours)}. Replies there usually take {humanHours(a.wait.typical)}.
+                    <li key={a.wait.pr.url} className="app-row grid-cols-[minmax(0,1fr)_auto]">
+                      <p className="min-w-0 font-sans text-[0.86rem] [overflow-wrap:anywhere]">
+                        <span className="font-mono font-semibold">{a.wait.pr.repo}</span>
+                        <span className="text-muted">: your pull request has waited {humanHours(a.wait.hours)}. Replies there usually take {humanHours(a.wait.typical)}.</span>
                       </p>
-                      <a href={a.wait.pr.url} className="text-link text-[0.84rem]">open it ↗</a>
+                      <a href={a.wait.pr.url} className="text-link text-[0.8rem]">Open</a>
                     </li>
                   ) : (
-                    <li key={a.repo.repo} data-rule className="app-row grid-cols-[minmax(0,1fr)_auto]" style={{ "--rule": "var(--orange)" } as React.CSSProperties}>
-                      <p className="pl-2 font-sans text-[0.95rem]">
-                        You saved <Link href={`/${a.repo.repo}`} className="font-mono font-semibold hover:text-blue">{a.repo.repo}</Link>. Holt now says <span className="text-orange">{a.repo.headline?.toLowerCase()}</span>.
+                    <li key={a.repo.repo} className="app-row grid-cols-[minmax(0,1fr)_auto]">
+                      <p className="min-w-0 font-sans text-[0.86rem] [overflow-wrap:anywhere]">
+                        <Link href={`/${a.repo.repo}`} className="font-mono font-semibold hover:text-blue">{a.repo.repo}</Link>
+                        <span className="text-muted">: the report changed since you saved it.</span>
                       </p>
-                      <SaveButton repo={a.repo.repo} saved compact />
+                      <SaveButton repo={a.repo.repo} saved compact icon />
                     </li>
                   ),
                 )}
@@ -204,12 +201,12 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
           {flying.length > 0 && (
             <section aria-labelledby="flight-h">
               <SectionHead id="flight-h" title="In flight" more={{ href: "/me/contributions", label: "all your pull requests" }} />
-              <ul>
+              <ul className="home-list">
                 {flying.map((w) => (
-                  <li key={w.pr.url} data-rule className="app-row grid-cols-[minmax(0,1fr)]" style={{ "--rule": "var(--blue)" } as React.CSSProperties}>
-                    <div className="min-w-0 pl-2">
-                      <p className="text-[0.9rem]"><span className="font-semibold">{w.pr.repo}</span> <span className="text-faint">#{w.pr.number}</span></p>
-                      <a href={w.pr.url} className="block truncate font-sans text-[0.95rem] after:absolute after:inset-0 hover:underline">{w.pr.title}</a>
+                  <li key={w.pr.url} className="app-row grid-cols-[minmax(0,1fr)]">
+                    <div className="min-w-0">
+                      <p className="text-[0.82rem]"><span className="font-semibold">{w.pr.repo}</span> <span className="text-faint">#{w.pr.number}</span></p>
+                      <a href={w.pr.url} className="block truncate font-sans text-[0.86rem] after:absolute after:inset-0 hover:underline">{w.pr.title}</a>
                       <WaitBar w={w} />
                     </div>
                   </li>
@@ -232,9 +229,9 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
           )}
 
           {repos.length > 0 && (
-            <section aria-labelledby="mine-h">
+            <section aria-labelledby="mine-h" className="home-section">
               <SectionHead id="mine-h" title="Your repos" more={{ href: "/me/repos", label: `all ${repos.length}` }} />
-              <RepoRows rows={repos.slice(0, 4)} saved={savedNames} compact />
+              <RepoRows rows={repos.slice(0, 4)} saved={savedNames} compact iconSave />
             </section>
           )}
         </div>

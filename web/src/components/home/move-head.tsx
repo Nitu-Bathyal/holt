@@ -37,30 +37,35 @@ export function MarkedTitle({ title }: { title: string }) {
   );
 }
 
-/** Where you are in the loop. Step 4 means just merged: every step is done. */
+/** Where you are in the loop: four numbered segments, the ones behind you filled. Step 4 means just merged: every step is done. */
 export function Loop({ step }: { step: NextMove["step"] }) {
   return (
     <ol className="loop" aria-label={step === 4 ? "Merged. The loop starts again." : `Step ${step + 1} of 4: ${STEPS[step]}`}>
-      <span aria-hidden="true" className="loop-fill" style={{ "--p": `${Math.min(step, 3) * 25}%` } as React.CSSProperties} />
       {STEPS.map((s, i) => (
         <li key={s} className="loop-step" data-s={i < step ? "done" : i === step ? "now" : "todo"}>
-          <span aria-hidden="true" className="loop-dot" />
-          <span>{s}</span>
+          <span aria-hidden="true" className="loop-seg" />
+          <span className="loop-label">
+            <span aria-hidden="true" className="loop-n">{i + 1}</span> {s}
+          </span>
         </li>
       ))}
     </ol>
   );
 }
 
-export function MoveHead({ title, lead, mood, step, children }: { title: string; lead: string | null; mood: CatMood; step: NextMove["step"]; children?: React.ReactNode }) {
+/** `aside`: sits level with the headline, at the right (the repo box). */
+export function MoveHead({ title, lead, mood, step, aside, children }: { title: string; lead: string | null; mood: CatMood; step: NextMove["step"]; aside?: React.ReactNode; children?: React.ReactNode }) {
   return (
-    <header className="app-head">
-      <div className="flex items-start justify-between gap-6">
-        <div className="min-w-0">
-          <h1 className="app-h1"><MarkedTitle title={title} /></h1>
-          {lead && <p className="app-lead">{lead}</p>}
+    <header className="app-head home-head">
+      <div className="flex flex-wrap items-start justify-between gap-x-8 gap-y-4">
+        <div className="flex min-w-0 items-start gap-4">
+          <div className="min-w-0">
+            <h1 className="app-h1 home-h1"><MarkedTitle title={title} /></h1>
+            {lead && <p className="app-lead">{lead}</p>}
+          </div>
+          <CatFace mood={mood} className={`app-head-cat home-cat hidden sm:block ${TONE_TEXT[CAT[mood].tone]}`} />
         </div>
-        <CatFace mood={mood} className={`app-head-cat hidden sm:block ${TONE_TEXT[CAT[mood].tone]}`} />
+        {aside && <div className="w-full sm:w-80 lg:w-96">{aside}</div>}
       </div>
       {children}
       <Loop step={step} />
