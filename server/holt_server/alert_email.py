@@ -6,7 +6,11 @@ Built from the template every Holt email shares (email_kit.py): a heading,
 then one item card per alert with the colour of its rule, its line, the pull
 request and its title, a button to the pull request and a link to Holt's
 report. An email about one pull request has that button solid; one about
-several outlines them and ends on the one solid button, to My PRs.
+several outlines them and ends on the one solid button, to Your pull requests.
+
+They lead with the news: a "your turn" email about one pull request has what
+happened as its subject and heading ("@mkoval asked for changes on click
+#2811"), and its card then shows the pull request's title.
 
 It lives here, not in the web app, because the mailer runs in this process
 with no request to render in, and the alert's line is already built here.
@@ -53,10 +57,15 @@ class EmailFrame:
     home_url: str
 
 
-def _alert_block(a: EmailAlert, line: str, solid: bool, top: int) -> str:
-    return kit.item(f"""<p class="h-ink" style="margin:0;font-family:{kit.SANS};font-size:17px;line-height:25px;font-weight:600;color:{kit.INK};">{esc(line)}</p>
-                          <p class="h-muted" style="margin:8px 0 0 0;font-family:{kit.MONO};font-size:13px;line-height:20px;color:{kit.MUTED};">{esc(a.pr)}</p>
-                          <p class="h-muted" style="margin:2px 0 0 0;font-family:{kit.SANS};font-size:14px;line-height:21px;color:{kit.MUTED};">{esc(a.title)}</p>
+def _alert_block(a: EmailAlert, line: str | None, solid: bool, top: int) -> str:
+    """`line` None: the heading already said it, so the card leads with the
+    pull request's title."""
+    lead, second = (line, a.title) if line else (a.title, None)
+    title = (f"""
+                          <p class="h-muted" style="margin:2px 0 0 0;font-family:{kit.SANS};font-size:14px;line-height:21px;color:{kit.MUTED};">{esc(second)}</p>"""
+             if second else "")
+    return kit.item(f"""<p class="h-ink" style="margin:0;font-family:{kit.SANS};font-size:17px;line-height:25px;font-weight:600;color:{kit.INK};">{esc(lead)}</p>
+                          <p class="h-muted" style="margin:8px 0 0 0;font-family:{kit.MONO};font-size:13px;line-height:20px;color:{kit.MUTED};">{esc(a.pr)}</p>{title}
                           <table role="presentation" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;">
                             <tr>
                               <td style="padding:16px 18px 0 0;">{kit.button(a.pr_url, "open the PR →", solid)}</td>
@@ -66,7 +75,7 @@ def _alert_block(a: EmailAlert, line: str, solid: bool, top: int) -> str:
 
 
 def _page(subject: str, preheader: str, heading: str, sub: str | None,
-          alerts: list[EmailAlert], lines: list[str], tone: str, f: EmailFrame) -> str:
+          alerts: list[EmailAlert], lines: list[str | None], tone: str, f: EmailFrame) -> str:
     one = len(alerts) == 1
     rows = [kit.heading(heading)]
     if sub:
@@ -102,16 +111,23 @@ def _turn_line(a: EmailAlert) -> str:
 
 def your_turn_email(alerts: list[EmailAlert], f: EmailFrame) -> RenderedEmail:
     """"Your turn": a maintainer replied or asked for changes. One email for
-    everything one check found."""
-    if len(alerts) == 1:
-        subject = f"Your turn on {alerts[0].pr.split('/')[1]}"
-    else:
-        subject = f"Your turn on {len(alerts)} pull requests"
+    everything one check found. It leads with the news."""
     lines = [_turn_line(a) for a in alerts]
     preheader = " ".join(lines)
+    if len(alerts) == 1:
+        # "@mkoval asked for changes on click #2811"
+        subject = lines[0].removesuffix(".")
+        subject = subject[0].upper() + subject[1:]
+        html = _page(subject, f"Your turn. {alerts[0].title}", f"{subject}.", "Your turn.",
+                     alerts, [None], "turn", f)
+        return RenderedEmail(subject, f"Your turn. {alerts[0].title}", html,
+                             _text(f"{subject}.", alerts, ["Your turn."], f))
+    subject = f"Your turn on {len(alerts)} pull requests"
+    heading = f"Maintainers replied on {len(alerts)} of your pull requests."
     return RenderedEmail(subject, preheader,
-                         _page(subject, preheader, subject, None, alerts, lines, "turn", f),
-                         _text(subject, alerts, lines, f))
+                         _page(subject, preheader, heading, "Your turn.", alerts, lines,
+                               "turn", f),
+                         _text(heading, alerts, lines, f))
 
 
 def daily_email(alerts: list[EmailAlert], f: EmailFrame, date: str) -> RenderedEmail:
@@ -120,7 +136,7 @@ def daily_email(alerts: list[EmailAlert], f: EmailFrame, date: str) -> RenderedE
     subject = f"{len(alerts)} update{'' if len(alerts) == 1 else 's'} on your pull requests"
     lines = [a.line for a in alerts]
     preheader = " ".join(lines)
+    heading = "Where your pull requests stand"
     return RenderedEmail(subject, preheader,
-                         _page(subject, preheader, "Your pull requests", date, alerts, lines,
-                               "late", f),
-                         _text(f"Your pull requests, {date}", alerts, lines, f))
+                         _page(subject, preheader, heading, date, alerts, lines, "late", f),
+                         _text(f"{heading}, {date}", alerts, lines, f))

@@ -199,17 +199,13 @@ def money(amount: int, currency: str) -> str:
     return f"₹{number}" if currency == "INR" else f"{number} {currency}"
 
 
-def included(cat: pricing.Catalogue) -> str:
-    """What Pro gives, as the receipt says it: "30 merge plans a month and PR alerts"."""
+def pro_gives(cat: pricing.Catalogue) -> tuple[int | None, bool]:
+    """What Pro gives, for the confirmation: merge plans a month (None when
+    they aren't part of it), and whether PR alerts are."""
     pro = cat.plans.get(pricing.PRO)
     features = pro.features if pro else {}
-    parts = []
     plans = features.get("merge_plan")
-    if plans is not None and plans.per_month:
-        parts.append(f"{plans.per_month} merge plans a month")
-    if alerts.FEATURE in features:
-        parts.append("PR alerts")
-    return " and ".join(parts) or "Holt Pro"
+    return (plans.per_month if plans is not None else None), alerts.FEATURE in features
 
 
 def pass_name(cat: pricing.Catalogue, pass_id: str, days: int | None) -> str:
@@ -254,13 +250,18 @@ def render(svc: Services, kind: str, f: account_email.Frame, tz: ZoneInfo, *,
     if kind == "receipt":
         cat = entitlements.catalogue(svc)
         until = utc(user.plan_expires_at) if user and user.plan == pricing.PRO else None
+        paid = utc(order.paid_at) or now()
+        merge_plans, with_alerts = pro_gives(cat)
         return account_email.receipt_email(
             f, pass_name=pass_name(cat, order.pack_id, order.expires_days),
-            amount=money(order.amount, order.currency),
-            paid_on=day_year(utc(order.paid_at) or now(), tz),
-            until=day_year(until, tz) if until else None, included=included(cat),
-            payment=order.provider_payment_id or "", open_url=u.me,
-            refunds_url=u.refunds)
+            amount=money(order.amount, order.currency), paid_on=mailer.short_date(
+                paid.astimezone(tz)),
+            # The year only when the pass runs into another one.
+            until=(day(until, tz) if until.astimezone(tz).year == paid.astimezone(tz).year
+                   else day_year(until, tz)) if until else None,
+            merge_plans=merge_plans, alerts=with_alerts,
+            payment=order.provider_payment_id or "", plan_url=u.home,
+            alerts_url=u.alerts if svc.settings.pr_watch else None, refunds_url=u.refunds)
     if kind in ("trial_ending", "trial_ended"):
         make = (account_email.trial_ending_email if kind == "trial_ending"
                 else account_email.trial_ended_email)

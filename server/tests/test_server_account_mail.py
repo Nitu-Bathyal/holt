@@ -123,7 +123,7 @@ def test_the_welcome_leaves_alerts_out_while_pr_watch_is_off(make_harness):
     h.svc.mailer = h.outbox = FakeMailer()
     sign_in(h, first=True)
     [msg] = h.outbox.sent
-    assert "Find a project" in msg.text
+    assert "Find a project" in msg.text and "Go get merged." in msg.text
     assert "Turn on PR alerts" not in msg.text + msg.html and "settings/alerts" not in msg.html
 
 
@@ -172,7 +172,7 @@ def test_the_ending_emails_respect_the_switch(hm):
     assert run(hm, in_daytime(hm)).sent == 0 and log(hm) == []
     hm.put("/v1/me/emails", {"product_emails": True}, user="u1")
     assert run(hm, in_daytime(hm)).sent == 1
-    assert hm.outbox.sent[0].subject.startswith("Your PR alerts end on ")
+    assert hm.outbox.sent[0].subject.startswith("Your free PR alerts end on ")
 
 
 def in_daytime(h) -> datetime:
@@ -231,12 +231,19 @@ def paid(h, user="u1", order_id="o1", payment="pay_A1") -> bool:
 
 
 def receipt_subject(h, user: str) -> str:
+    return "You're on Holt Pro"
+
+
+def pro_until(h, user: str) -> str:
+    """"31 October", with the year when the pass runs into the next one."""
     async def go(s):
         return (await s.get(User, user)).plan_expires_at
     ends = call(h, go)
     if ends.tzinfo is None:
         ends = ends.replace(tzinfo=UTC)
-    return f"Holt Pro until {account_mail.day_year(ends, mailer.zone('UTC'))}"
+    utc_ = mailer.zone("UTC")
+    same_year = ends.year == now().year
+    return account_mail.day(ends, utc_) if same_year else account_mail.day_year(ends, utc_)
 
 
 def test_a_paid_pass_gets_a_receipt_once(hm):
@@ -244,10 +251,17 @@ def test_a_paid_pass_gets_a_receipt_once(hm):
     assert paid(hm) is True
     [msg] = hm.outbox.sent
     assert msg.to == YOU and msg.subject == receipt_subject(hm, "u1")
-    for line in ("Pass: 1 month", "Paid: ₹99 on ", "Pro until: ",
-                 "Includes: 30 merge plans a month and PR alerts", "Payment: pay_A1",
-                 "It doesn't renew.", "Refund policy: https://githolt.com/refunds"):
+    for line in ("Thanks, you're on Pro.", f"Here's what's yours until {pro_until(hm, 'u1')}.",
+                 "30 merge plans a month: ", "PR alerts: ",
+                 "Make a merge plan: https://githolt.com",
+                 "Turn on PR alerts: https://githolt.com/settings/alerts",
+                 "₹99 · 1 month pass · paid ", " · one-time, no auto-renewal",
+                 "Payment ID pay_A1 (keep it for refunds)",
+                 "Refund policy: https://githolt.com/refunds"):
         assert line in msg.text
+    # The payment details are small print, under the one solid button.
+    assert msg.html.count('class="h-btn"') == 1
+    assert msg.html.index("make a merge plan") < msg.html.index("Payment ID pay_A1")
     # Transactional: no unsubscribe header or link.
     assert msg.headers == {} and "Stop these emails" not in msg.text + msg.html
     assert log(hm) == [("u1", "receipt:o1", "sent")]
@@ -257,7 +271,17 @@ def test_a_paid_pass_gets_a_receipt_once(hm):
     assert run(hm).sent == 0 and len(hm.outbox.sent) == 1
     # A second pass is a second receipt.
     paid(hm, order_id="o2", payment="pay_B2")
-    assert len(hm.outbox.sent) == 2 and "Payment: pay_B2" in hm.outbox.sent[1].text
+    assert len(hm.outbox.sent) == 2 and "Payment ID pay_B2" in hm.outbox.sent[1].text
+
+
+def test_a_session_from_before_these_emails_still_gets_its_receipt(hm):
+    """Checkout reports the session's address (web's order route), as a
+    sign-in would, without making a welcome due."""
+    hm.post("/v1/me/sign-in", {"email": YOU, "first": False}, user="old")
+    settle(hm)
+    assert hm.outbox.sent == []
+    paid(hm, user="old")
+    assert [(m.to, m.subject) for m in hm.outbox.sent] == [(YOU, "You're on Holt Pro")]
 
 
 def test_a_receipt_goes_out_past_the_margin_the_other_emails_keep(make_harness):
@@ -303,8 +327,9 @@ def test_two_days_before_and_once_when_they_end(hm):
     assert run(hm, NOON - timedelta(hours=1)).sent == 0  # more than two days left
     assert run(hm, NOON).sent == 1
     [msg] = hm.outbox.sent
-    assert msg.subject == "Your PR alerts end on 12 October"
-    assert "The 14 free days are almost over." in msg.text
+    assert msg.subject == "Your free PR alerts end on 12 October"
+    assert "That's the end of your 14 free days." in msg.text
+    assert "Reports, Find and your pull requests page stay free." in msg.text
     assert "https://githolt.com/me/contributions" in msg.text
     # No pass is on sale here: no link to pricing.
     assert "pricing" not in msg.text + msg.html
@@ -312,8 +337,9 @@ def test_two_days_before_and_once_when_they_end(hm):
     assert run(hm, NOON + timedelta(days=1)).sent == 0
     assert run(hm, ends + timedelta(minutes=5)).sent == 1
     ended = hm.outbox.sent[1]
-    assert ended.subject == "Your PR alerts have stopped"
-    assert "The 14 free days ended on 12 October." in ended.text
+    assert ended.subject == "Your free PR alerts have ended"
+    assert "Your 14 days of PR alerts are up." in ended.text
+    assert "maintainer replies on 12 October." in ended.text
     assert run(hm, ends + timedelta(days=1)).sent == 0
     assert [k for _, k, _ in log(hm)] == ["trial_ending", "trial_ended"]
 
@@ -338,11 +364,11 @@ def test_the_pricing_link_is_there_only_while_a_pass_is_on_sale():
     kw = dict(day="12 October", days=14, prs_url="https://githolt.com/me/contributions")
     on = account_email.trial_ended_email(f, pricing_url="https://githolt.com/pricing", **kw)
     off = account_email.trial_ended_email(f, pricing_url=None, **kw)
-    assert "Alerts come with Holt Pro: https://githolt.com/pricing" in on.text
+    assert "Get the alerts back with Holt Pro: https://githolt.com/pricing" in on.text
     assert 'href="https://githolt.com/pricing"' in on.html
     assert "pricing" not in off.text + off.html
     ending = account_email.trial_ending_email(f, pricing_url="https://githolt.com/pricing", **kw)
-    assert "Keep alerts with Holt Pro: https://githolt.com/pricing" in ending.text
+    assert "Keep the alerts with Holt Pro: https://githolt.com/pricing" in ending.text
 
 
 # --- a pass ending ----------------------------------------------------------------------------
@@ -368,7 +394,8 @@ def test_three_days_before_a_pass_ends_and_again_for_the_next_pass(hm):
     assert run(hm, NOON).sent == 1
     [msg] = hm.outbox.sent
     assert msg.subject == "Your Holt Pro pass ends on 13 October"
-    assert "It doesn't renew. After that you're on the free plan." in msg.text
+    assert "It was a one-time pass, so it won't renew or charge you again." in msg.text
+    assert "Reports, Find and your pull requests page stay free." in msg.text
     assert "Open Holt: https://githolt.com/me" in msg.text and unsubscribe_token(msg)
     assert run(hm, NOON + timedelta(days=1)).sent == 0
     # Another pass moves the end: that end gets its own email, three days before.
@@ -480,9 +507,9 @@ def test_the_lab_serves_every_email_outside_production(make_harness):
 def test_text_from_outside_is_escaped():
     f = account_email.Frame('a"<b>@example.com', "https://githolt.com", "https://x/?a=1&b=2")
     out = account_email.receipt_email(
-        f, pass_name="<i>1 month</i>", amount="₹99", paid_on="1 October 2026",
-        until="31 October 2026", included="PR alerts", payment="pay_<x>",
-        open_url="https://githolt.com/me", refunds_url="https://githolt.com/refunds")
+        f, pass_name="<i>1 month</i>", amount="₹99", paid_on="1 Oct", until="31 October",
+        merge_plans=30, alerts=True, payment="pay_<x>", plan_url="https://githolt.com",
+        alerts_url=None, refunds_url="https://githolt.com/refunds")
     assert "<i>" not in out.html and "pay_<x>" not in out.html
     assert "&lt;i&gt;1 month&lt;/i&gt;" in out.html and "a&quot;&lt;b&gt;@example.com" in out.html
 

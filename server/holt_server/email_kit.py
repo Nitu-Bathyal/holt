@@ -239,6 +239,38 @@ def facts(pairs: list[tuple[str, str]]) -> str:
             f'style="border-collapse:collapse;">{rows}</table>')
 
 
+def points(rows: list[tuple[str, str | None, str]]) -> str:
+    """A short list, for inside an item card: each row a bold title (a link
+    when it has an href) and one line under it."""
+    out = []
+    for i, (title, href, line) in enumerate(rows):
+        head = (f'<a class="h-ink" href="{esc(href)}" style="color:{INK};text-decoration:'
+                f'underline;">{esc(title)}</a>' if href else esc(title))
+        out.append(
+            f'<p class="h-ink" style="margin:{0 if i == 0 else 16}px 0 0 0;font-family:{SANS};'
+            f'font-size:16px;line-height:24px;font-weight:600;color:{INK};">{head}</p>'
+            f'<p class="h-muted" style="margin:2px 0 0 0;font-family:{SANS};font-size:15px;'
+            f'line-height:22px;color:{MUTED};">{esc(line)}</p>')
+    return "\n                          ".join(out)
+
+
+def small_print(lines: list[str], top: int = 32) -> str:
+    """Muted small lines under a divider, at the end of the card: a receipt's
+    payment details. Each line is HTML (already escaped)."""
+    body = "".join(
+        f'<p class="h-muted" style="margin:{0 if i == 0 else 4}px 0 0 0;font-family:{SANS};'
+        f'font-size:13px;line-height:20px;color:{MUTED};">{line}</p>'
+        for i, line in enumerate(lines))
+    return _row(top, f'<div class="h-divider" style="padding-top:20px;border-top:1px solid '
+                     f'{LINE};">{body}</div>')
+
+
+def aside(text: str, top: int = 24) -> str:
+    """One quiet line after the button."""
+    return _row(top, f'<p class="h-muted" style="margin:0;font-family:{SANS};font-size:15px;'
+                     f'line-height:22px;color:{MUTED};">{esc(text)}</p>')
+
+
 def links_row(links: list[Link], top: int = 32) -> str:
     """Quiet links under a divider, at the end of the card."""
     joined = "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;".join(link(href, label) for label, href in links)

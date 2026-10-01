@@ -254,14 +254,22 @@ def test_pull_request_titles_are_escaped():
 
 
 def test_subjects():
-    assert alert_email.your_turn_email(TURN[:1], FRAME).subject == "Your turn on click #2811"
+    one = alert_email.your_turn_email(TURN[:1], FRAME)
+    # One pull request: the news is the subject and the heading.
+    assert one.subject == "@mkoval asked for changes on click #2811"
+    assert one.text.startswith("@mkoval asked for changes on click #2811.\n\nYour turn.\n")
+    unnamed = alert_email.your_turn_email(
+        [item("Your turn: a reviewer replied on b #1.", "a/b #1", "T", "turn")], FRAME)
+    assert unnamed.subject == "A reviewer replied on b #1"
+    two = alert_email.your_turn_email(TURN, FRAME)
+    assert two.text.startswith("Maintainers replied on 2 of your pull requests.\n")
     assert alert_email.your_turn_email(TURN, FRAME).subject == "Your turn on 2 pull requests"
     assert alert_email.daily_email(DAILY[:1], FRAME, "x").subject == (
         "1 update on your pull requests")
     assert alert_email.daily_email(DAILY, FRAME, "x").subject == (
         "4 updates on your pull requests")
     text = alert_email.daily_email(DAILY[:1], FRAME, "Wednesday 1 October").text
-    assert text.startswith("Your pull requests, Wednesday 1 October\n")
+    assert text.startswith("Where your pull requests stand, Wednesday 1 October\n")
     assert "Open the PR: https://github.com/processing/p5.js/pull/7120" in text
     assert text.endswith("Stop these emails: https://githolt.com/alerts/unsubscribe?t=abc&x=1")
 
@@ -396,7 +404,8 @@ def test_a_run_sends_your_turn_and_records_it(hm):
     got = run(hm, at)
     assert (got.sent, got.failed, got.held) == (1, 0, 0)
     [msg] = hm.outbox.sent
-    assert msg.to == "you@example.com" and msg.subject == "Your turn on click #2811"
+    assert msg.to == "you@example.com"
+    assert msg.subject == "@lead asked for changes on click #2811"
     assert "@lead asked for changes on click #2811." in msg.text
     assert "Title of 2811 &lt;i&gt;" in msg.html and "moment" not in msg.html
     assert "Alerts until 11 Oct. Your turn right away, the rest at 8:00." in msg.text
@@ -450,7 +459,7 @@ def test_the_daily_email_carries_the_rest(hm):
     assert run(hm, at).sent == 1
     [msg] = hm.outbox.sent
     assert msg.subject == "2 updates on your pull requests"
-    assert msg.text.startswith("Your pull requests, Friday 2 October\n")
+    assert msg.text.startswith("Where your pull requests stand, Friday 2 October\n")
     assert all(a.email_via == "daily" for a in stored(hm, Alert))
 
 
