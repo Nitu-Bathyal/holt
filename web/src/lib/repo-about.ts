@@ -94,6 +94,22 @@ export function helpLinks(a: RepoAbout): HelpLink[] {
   return found;
 }
 
+/**
+ * Every useful link for starting work here, in one list: the README, the
+ * project's own guides, docs and chat (helpLinks), then GitHub's issues and
+ * pull requests. Only links Holt knows exist; nothing is guessed.
+ */
+export function docLinks(a: RepoAbout, repo: string): HelpLink[] {
+  const gh = `https://github.com/${repo}`;
+  const readme: HelpLink[] = a.readme ? [{ label: "README", note: "what the project is and how to run it", url: `${gh}#readme` }] : [];
+  return [
+    ...readme,
+    ...helpLinks(a),
+    { label: "Open issues", note: "the work people have asked for", url: `${gh}/issues` },
+    { label: "Pull requests", note: "changes others have sent, to see how it's done here", url: `${gh}/pulls` },
+  ];
+}
+
 export type Flag = { kind: "archived" | "fork"; text: string; repo?: string };
 
 export function flags(a: RepoAbout): Flag[] {

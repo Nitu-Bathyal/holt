@@ -4,7 +4,7 @@
 // a fact GitHub didn't give is left out, not guessed.
 import { Calendar, CircleDot, Clock, GitBranch, GitFork, GitPullRequest, Scale, Star, Tag, Users } from "lucide-react";
 import { shortDate, timeAgo } from "@/lib/format";
-import { compactCount, share, type RepoAbout } from "@/lib/repo-about";
+import { compactCount, docLinks, share, type RepoAbout } from "@/lib/repo-about";
 import { langColor } from "@/lib/repo-card";
 import { Tip } from "../ui/tip";
 
@@ -61,14 +61,16 @@ function rows(a: RepoAbout): Row[] {
  * The rules, where to ask, the last push and the latest release are under
  * "Contributing here" (project-section.tsx), so they aren't repeated here.
  * `afterStats` goes right under Statistics: the merge plan card, high enough
- * to be seen.
+ * to be seen. `noPeople` leaves out Top contributors (a report with nothing to start on).
+ * `links` adds "Docs and links" under the languages: everything to read before starting, in one place.
  */
-export function ProjectSidebar({ about, repo, afterStats }: { about: RepoAbout; repo: string; afterStats?: React.ReactNode }) {
+export function ProjectSidebar({ about, repo, afterStats, noPeople, links }: { about: RepoAbout; repo: string; afterStats?: React.ReactNode; noPeople?: boolean; links?: boolean }) {
   const stats = rows(about);
   const langs = about.languages;
   const topics = about.topics.slice(0, TOPICS_SHOWN);
-  const people = about.top_contributors ?? [];
-  if (!stats.length && !langs.length && !topics.length && !people.length && !afterStats) return null;
+  const people = noPeople ? [] : (about.top_contributors ?? []);
+  const docs = links ? docLinks(about, repo) : [];
+  if (!stats.length && !langs.length && !topics.length && !people.length && !docs.length && !afterStats) return null;
 
   return (
     <div className="space-y-4" data-project>
@@ -116,6 +118,22 @@ export function ProjectSidebar({ about, repo, afterStats }: { about: RepoAbout; 
                 <span aria-hidden="true" className="size-2 rounded-full" style={{ background: langColor(l.name) ?? "var(--color-faint, #8b8b8b)" }} />
                 <span className="font-medium text-ink">{l.name}</span>
                 <span className="tabular-nums text-faint">{share(l.share)}</span>
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+
+      {docs.length > 0 && (
+        <Card title="Docs and links" data-project-links>
+          <ul className="space-y-1.5 text-[0.82rem]">
+            {docs.map((l) => (
+              <li key={l.url}>
+                <a href={l.url} target="_blank" rel="noopener noreferrer nofollow" title={l.note} className="flex min-h-8 items-center justify-between gap-2 text-ink hover:text-blue">
+                  <span className="min-w-0 truncate">{l.label}</span>
+                  <span aria-hidden="true" className="text-faint">↗</span>
+                  <span className="sr-only"> ({l.note}; opens in a new tab)</span>
+                </a>
               </li>
             ))}
           </ul>

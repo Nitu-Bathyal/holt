@@ -1,13 +1,14 @@
 "use client";
 
-// The repository's README on its report, under the starter issues: the top of
-// it as a document card (a file header, then the text), shown as a preview that
+// The repository's README on its report, with the contributing guide in a
+// second tab when there is one: the top of each as a document card (tabs, then the text), shown as a preview that
 // fades out and opens in full with one click, so a newcomer can get the feel of
 // the project without leaving. The text is untrusted: lib/readme-md.ts turns it
 // into plain blocks (no raw HTML, only http(s) links, images only from GitHub's
 // hosts) and this draws them in the page's own style.
-import { BookOpen, Check, ChevronDown, Copy, ExternalLink } from "lucide-react";
-import { Fragment, useId, useMemo, useState } from "react";
+import { BookOpen, Check, ChevronDown, Copy, ExternalLink, Users } from "lucide-react";
+import { Fragment, useEffect, useId, useMemo, useState } from "react";
+import { contributingFileUrl } from "@/lib/contributing";
 import { badgeRow, parseReadme, type Block, type Inline } from "@/lib/readme-md";
 
 /** Shorter than this, the whole README fits the preview: nothing to open. */
@@ -131,27 +132,19 @@ function BlockView({ b }: { b: Block }) {
   }
 }
 
-export function ReadmeSection({ markdown, repo }: { markdown: string; repo: string }) {
+type Tab = "readme" | "contributing";
+
+/** The tab's text as blocks, a preview that opens in full. */
+function Doc({ markdown, repo, name }: { markdown: string; repo: string; name: Tab }) {
   // Rows of status badges are left out: nothing a newcomer can act on, and they washed out in the preview's fade.
   const blocks = useMemo(() => parseReadme(markdown, repo).filter((b) => !badgeRow(b)), [markdown, repo]);
   const [open, setOpen] = useState(false);
   const bodyId = useId();
-  if (!blocks.length) return null;
+  if (!blocks.length) return <p className="px-4 py-5 font-sans text-[0.92rem] text-muted sm:px-6">This file is empty.</p>;
   const long = markdown.length > SHORT;
 
   return (
-    <section aria-labelledby="readme" className="border border-line-strong bg-panel" data-readme>
-      {/* The file's header: its name, and the way to the real thing. */}
-      <div className="flex items-center gap-2 border-b border-line px-4 py-1.5">
-        <BookOpen aria-hidden="true" strokeWidth={1.5} className="size-4 shrink-0 text-faint" />
-        <h2 id="readme" className="font-mono text-[0.85rem] font-medium text-ink">README.md</h2>
-        <a href={`https://github.com/${repo}#readme`} target="_blank" rel="noopener noreferrer" className="ml-auto inline-flex min-h-9 items-center gap-1 font-sans text-[0.78rem] text-muted transition-colors hover:text-blue">
-          View on GitHub
-          <ExternalLink aria-hidden="true" strokeWidth={1.5} className="size-3.5" />
-          <span className="sr-only"> (opens in a new tab)</span>
-        </a>
-      </div>
-
+    <>
       <div id={bodyId} className={`relative px-4 pb-5 pt-4 font-sans text-[0.92rem] leading-7 text-ink sm:px-6 ${long && !open ? "max-h-[22rem] overflow-hidden" : ""}`}>
         {blocks.map((b, i) => (
           <BlockView key={i} b={b} />
@@ -167,13 +160,110 @@ export function ReadmeSection({ markdown, repo }: { markdown: string; repo: stri
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
           aria-controls={bodyId}
-          data-umami-event={open ? "readme-collapse" : "readme-expand"}
+          data-umami-event={open ? `${name}-collapse` : `${name}-expand`}
           className="group flex min-h-11 w-full items-center justify-center gap-1.5 border-t border-line font-sans text-[0.82rem] font-medium text-muted transition-colors hover:bg-panel-2/60 hover:text-ink"
         >
-          {open ? "Show less" : "Show full README"}
+          {open ? "Show less" : name === "readme" ? "Show full README" : "Show full guide"}
           <ChevronDown aria-hidden="true" strokeWidth={1.75} className={`size-4 transition-transform duration-200 ${open ? "rotate-180" : ""}`} />
         </button>
       )}
+    </>
+  );
+}
+
+/** The contributing guide, read when its tab is first opened (/api/contributing). */
+function Contributing({ repo, link }: { repo: string; link: string }) {
+  const [text, setText] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    let live = true;
+    fetch(`/api/contributing?repo=${encodeURIComponent(repo)}`)
+      .then((r) => (r.ok ? r.text() : null))
+      .catch(() => null)
+      .then((t) => {
+        if (live) setText(t);
+      });
+    return () => {
+      live = false;
+    };
+  }, [repo]);
+  if (text === undefined)
+    return (
+      <p role="status" className="px-4 py-5 font-sans text-[0.92rem] text-faint sm:px-6">
+        Loading the contributing guide…
+      </p>
+    );
+  if (text === null)
+    return (
+      <p className="px-4 py-5 font-sans text-[0.92rem] text-muted sm:px-6">
+        Holt couldn&apos;t load the guide here.{" "}
+        <a href={link} target="_blank" rel="noopener noreferrer" className="text-link">Read it on GitHub</a>.
+      </p>
+    );
+  return <Doc markdown={text} repo={repo} name="contributing" />;
+}
+
+/**
+ * The README and, beside it, the contributing guide when the project has one
+ * that GitHub serves as a file (`contributing`, its GitHub link): two tabs, as
+ * on GitHub. With no guide, only the README tab shows.
+ */
+export function ReadmeSection({ markdown, repo, contributing }: { markdown: string; repo: string; contributing?: string | null }) {
+  const guide = contributing && contributingFileUrl(contributing, repo) ? contributing : null;
+  const [tab, setTab] = useState<Tab>("readme");
+  const baseId = useId();
+  const tabs: { id: Tab; label: string; Icon: typeof BookOpen; href: string }[] = [
+    { id: "readme", label: "README", Icon: BookOpen, href: `https://github.com/${repo}#readme` },
+    ...(guide ? [{ id: "contributing" as const, label: "Contributing", Icon: Users, href: guide }] : []),
+  ];
+  const active = tabs.find((t) => t.id === tab) ?? tabs[0];
+
+  function onKey(e: React.KeyboardEvent) {
+    if (tabs.length < 2 || (e.key !== "ArrowRight" && e.key !== "ArrowLeft")) return;
+    e.preventDefault();
+    const next = tabs[(tabs.indexOf(active) + 1) % tabs.length];
+    setTab(next.id);
+    document.getElementById(`${baseId}-${next.id}-tab`)?.focus();
+  }
+
+  return (
+    <section aria-labelledby={`${baseId}-title`} className="border border-line-strong bg-panel" data-readme>
+      <h2 id={`${baseId}-title`} className="sr-only">{guide ? "README and contributing guide" : "README"}</h2>
+      {/* The tabs, as on GitHub, and the way to the real file. */}
+      <div className="flex items-stretch gap-2 border-b border-line px-2 sm:px-3">
+        <div role="tablist" aria-label="Project files" className="flex min-w-0 items-stretch" onKeyDown={onKey}>
+          {tabs.map((t) => {
+            const on = t.id === active.id;
+            return (
+              <button
+                key={t.id}
+                type="button"
+                role="tab"
+                id={`${baseId}-${t.id}-tab`}
+                aria-selected={on}
+                aria-controls={`${baseId}-panel`}
+                tabIndex={on ? 0 : -1}
+                onClick={() => setTab(t.id)}
+                data-umami-event={`readme-tab-${t.id}`}
+                className={`-mb-px inline-flex min-h-11 items-center gap-2 border-b-2 px-3 font-sans text-[0.88rem] transition-colors ${
+                  on ? "border-orange font-semibold text-ink" : "border-transparent text-muted hover:text-ink"
+                }`}
+              >
+                <t.Icon aria-hidden="true" strokeWidth={1.5} className="size-4 shrink-0 text-faint" />
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
+        <a href={active.href} target="_blank" rel="noopener noreferrer" className="ml-auto inline-flex min-h-11 shrink-0 items-center gap-1 font-sans text-[0.78rem] text-muted transition-colors hover:text-blue">
+          View on GitHub
+          <ExternalLink aria-hidden="true" strokeWidth={1.5} className="size-3.5" />
+          <span className="sr-only"> (opens in a new tab)</span>
+        </a>
+      </div>
+
+      <div role="tabpanel" id={`${baseId}-panel`} aria-labelledby={`${baseId}-${active.id}-tab`}>
+        {active.id === "contributing" && guide ? <Contributing key="contributing" repo={repo} link={guide} /> : <Doc key="readme" markdown={markdown} repo={repo} name="readme" />}
+      </div>
     </section>
   );
 }

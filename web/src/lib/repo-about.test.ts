@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { aboutNumbers, compactCount, flags, helpLinks, houseRules, projectFacts, readmeShown, share, siteLabel } from "./repo-about.ts";
+import { aboutNumbers, compactCount, docLinks, flags, helpLinks, houseRules, projectFacts, readmeShown, share, siteLabel } from "./repo-about.ts";
 import type { RepoAbout } from "./repo-about.ts";
 
 const base: RepoAbout = {
@@ -114,4 +114,11 @@ test("house rules: one plain instruction per ask, each once, with where it was r
     { text: "A bot closes pull requests that go quiet for 30 days.", url },
   ]);
   assert.deepEqual(houseRules([]), []);
+});
+
+test("doc links: README, the project's own links, then issues and pull requests", () => {
+  const links = docLinks({ ...base, readme: "# Flask", links: [{ kind: "contributing", url: "https://github.com/pallets/flask/blob/main/CONTRIBUTING.md" }] }, "pallets/flask");
+  assert.deepEqual(links.map((l) => l.label), ["README", "Contributing guide", "flask.palletsprojects.com", "Open issues", "Pull requests"]);
+  assert.equal(links[0].url, "https://github.com/pallets/flask#readme");
+  assert.deepEqual(docLinks({ ...base, readme: null, links: [], homepage: null }, "o/r").map((l) => l.label), ["Open issues", "Pull requests"]);
 });
