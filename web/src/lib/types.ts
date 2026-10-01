@@ -18,6 +18,7 @@ export type FindQuery = Required<S.FindIn>;
 export type JobStatus = S.JobStatus;
 export type FindJobStatus = S.FindJobStatus;
 export type Me = S.Me;
+export type History = S.History;
 export type HistoryItem = S.HistoryItem;
 export type GitHubConnection = S.GitHubConnection;
 export type Contributions = S.Contributions;

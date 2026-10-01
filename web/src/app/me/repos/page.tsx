@@ -1,5 +1,5 @@
 // Your repos (the dashboard plan): the repos you saved and the ones you
-// checked, as one list with today's verdict on each. /me/saved and
+// checked, as one list with today's numbers on each. /me/saved and
 // /me/history land here (lib/shell.ts, RETIRED).
 import type { Metadata } from "next";
 import Link from "next/link";
@@ -34,7 +34,7 @@ export default async function YourReposPage({ searchParams }: PageProps<"/me/rep
   if (!user) redirect("/signin?callbackUrl=/me/repos");
   const show = parseShow((await searchParams).show);
   const [s, h] = await Promise.all([savedRepos(user.id), history(user.id)]);
-  const all = yourRepos(s.ok ? s.data.saved : [], h.ok ? h.data.items : []);
+  const all = yourRepos(s.ok ? s.data.saved : [], h.ok ? h.data.items : [], h.ok ? h.data.cards : []);
   const rows = shown(all, show);
   const failed = !s.ok ? s.error : !h.ok ? h.error : null;
 
@@ -57,6 +57,7 @@ export default async function YourReposPage({ searchParams }: PageProps<"/me/rep
                 ))}
               </nav>
             )}
+            {rows.length >= 2 && <p className="mb-2 text-[0.8rem] text-faint">Tick two to four to compare them side by side.</p>}
             {rows.length ? (
               <RepoRows rows={rows} saved={s.ok ? s.data.saved.map((i) => i.repo) : []} />
             ) : (

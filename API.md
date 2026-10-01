@@ -630,8 +630,11 @@ one at a time, and wait behind every user request.
 - `POST /v1/me/credits/claim` → `Credits` with one more credit, or 409
   `claim_not_ready` (the message says the date).
 - `GET /v1/me/history?limit=50` → recent analyses by this user:
-  `{"items": [{"job_id", "repo", "mode", "days", "status", "verdict", "headline", "tone", "created_at"}]}`
-  (`verdict`/`headline`/`tone` are null until the job is done).
+  `{"items": [{"job_id", "repo", "mode", "days", "status", "verdict", "headline", "tone", "created_at"}], "cards": [...]}`
+  (`verdict`/`headline`/`tone` are null until the job is done). `cards` holds
+  Holt's current card (a Discover repo card, from the latest 7-day rules
+  report) for each repo in `items` that has one, in no order; Your repos
+  shows their numbers.
 
 `/v1/me*` without `X-Holt-User` → 401 `unauthorized`. Free AI credits: every
 signed-in user gets `HOLT_SIGNUP_AI_CREDITS` once, the first time the server
