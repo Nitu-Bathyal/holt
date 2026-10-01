@@ -100,8 +100,8 @@ export function PlaybookSection({ repo, signedIn }: { repo: string; signedIn: bo
   if (!showPlaybook(s)) return null;
 
   return (
-    <section aria-labelledby="playbook" className="border border-line-strong bg-panel p-5 shadow-card sm:p-8" data-playbook>
-      <p className="text-[0.8rem] uppercase tracking-[0.08em] text-blue">Playbook ✦</p>
+    <section aria-labelledby="playbook" className="border border-line-strong bg-panel p-5 sm:p-8" data-playbook>
+      <p className="text-[0.85rem] text-blue">Playbook</p>
       <h2 id="playbook" className="mt-1 text-[1.25rem] font-semibold tracking-tight sm:text-[1.5rem]">How to get merged here</h2>
       {playbook ? (
         <FullPlaybook p={playbook} />
@@ -130,12 +130,12 @@ function Teaser({ s, repo, signedIn, onUnlock, error }: { s: PlaybookState; repo
 
       {t?.first && (
         <div className="mt-5 border-l-2 border-blue pl-4" data-playbook-first>
-          <p className="text-[0.8rem] uppercase tracking-[0.08em] text-faint">{SECTION_TITLES.must_do} · free preview</p>
+          <p className="text-[0.85rem] text-faint">{SECTION_TITLES.must_do} · free preview</p>
           <ItemView item={t.first} />
         </div>
       )}
 
-      <p className="mt-6 text-[0.8rem] uppercase tracking-[0.08em] text-faint">
+      <p className="mt-6 text-[0.85rem] text-faint">
         {t ? "In this repo's playbook" : "What a playbook covers"}
       </p>
       <ul className="mt-2 space-y-1.5 font-sans text-[0.95rem]" data-playbook-sections>
@@ -210,13 +210,13 @@ function FullPlaybook({ p }: { p: Playbook }) {
   const shown = SECTION_ORDER.filter((k) => p.sections[k].length > 0);
   return (
     <div data-playbook-full>
-      {p.note && <p className="mt-3 max-w-2xl border border-dashed border-line-strong px-3 py-2 font-sans text-[0.9rem] text-muted">{p.note}</p>}
+      {p.note && <p className="mt-3 max-w-2xl border border-line-strong px-3 py-2 font-sans text-[0.9rem] text-muted">{p.note}</p>}
       {p.archived && <p className="mt-3 font-sans text-[0.9rem] text-orange">This repo is archived. It doesn&apos;t take PRs any more.</p>}
       {shown.length === 0 && <p className="mt-4 font-sans text-muted">These PRs didn&apos;t show anything solid enough to advise on yet.</p>}
       <div className="mt-2 space-y-7">
         {shown.map((k) => (
           <div key={k}>
-            <h3 className="mt-5 text-[0.8rem] uppercase tracking-[0.08em] text-faint">{SECTION_TITLES[k]}</h3>
+            <h3 className="mt-5 text-[0.85rem] text-faint">{SECTION_TITLES[k]}</h3>
             {k === "closing_reasons" ? (
               <ul className="mt-2 space-y-5">
                 {p.sections.closing_reasons.map((r) => (
@@ -237,7 +237,7 @@ function FullPlaybook({ p }: { p: Playbook }) {
           </div>
         ))}
       </div>
-      <p className="mt-8 border-t border-dashed border-line pt-4 text-[0.8rem] text-faint">
+      <p className="mt-8 border-t border-line pt-4 text-[0.8rem] text-faint">
         Written by AI from counts of {p.window_days ? `the last ${p.window_days === 365 ? "12 months" : `${p.window_days} days`}` : "recent"} of
         PRs. Every item was checked against those counts and quotes, and anything that didn&apos;t match was cut. It
         doesn&apos;t change the verdict. Updated <time dateTime={p.generated_at} suppressHydrationWarning>{timeAgo(p.generated_at)}</time>.

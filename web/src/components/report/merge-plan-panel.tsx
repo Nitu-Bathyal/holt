@@ -141,8 +141,8 @@ export function MergePlanPanel({ repo }: { repo: string }) {
   }
 
   return (
-    <section aria-labelledby="merge-plan" className="border border-line-strong bg-panel p-5 shadow-card sm:p-8" data-merge-plan-panel>
-      <p className="text-[0.8rem] uppercase tracking-[0.08em] text-blue">Merge plan ✦ · {s.repo}</p>
+    <section aria-labelledby="merge-plan" className="border border-line-strong bg-panel p-5 sm:p-8" data-merge-plan-panel>
+      <p className="text-[0.85rem] text-blue">Merge plan · {s.repo}</p>
       <h1 id="merge-plan" className="mt-2 text-[1.6rem] font-semibold tracking-tight sm:text-[2rem]">
         {failed ? "Your merge plan couldn't be made" : "Your merge plan"}
       </h1>
