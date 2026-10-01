@@ -78,11 +78,9 @@ export function PasteBox({
           e.preventDefault();
           void go(value);
         }}
-        className="group relative grid grid-cols-1 border border-line-strong bg-panel shadow-card transition-colors focus-within:border-blue sm:grid-cols-[auto_1fr_auto]"
+        className="group relative grid grid-cols-1 border border-line-strong bg-panel transition-colors focus-within:border-blue sm:grid-cols-[1fr_auto]"
       >
-        <span aria-hidden="true" className="absolute inset-y-0 left-0 w-0.5 origin-top scale-y-0 bg-amber transition-transform group-focus-within:scale-y-100" />
         <label htmlFor={id} className="sr-only">{label}</label>
-        <span aria-hidden="true" className="hidden items-center pl-5 text-amber sm:flex">$</span>
         <input
           id={id}
           name="repo"
@@ -108,14 +106,14 @@ export function PasteBox({
           placeholder="owner/name or a GitHub URL"
           aria-invalid={Boolean(error)}
           aria-describedby={error ? `${id}-error` : undefined}
-          className={`min-w-0 bg-transparent px-4 text-ink outline-none placeholder:text-faint sm:px-3 ${size === "lg" ? "h-16 text-[1rem] sm:text-[1.05rem]" : "h-13 text-[0.95rem]"}`}
+          className={`min-w-0 bg-transparent px-4 text-ink outline-none placeholder:text-faint ${size === "lg" ? "h-16 text-[1rem] sm:text-[1.05rem]" : "h-13 text-[0.95rem]"}`}
         />
         <button
           type="submit"
           disabled={busy}
           className={`btn-primary m-1.5 sm:m-2 ${size === "lg" ? "sm:min-h-12" : ""}`}
         >
-          {busy ? "opening…" : "check this repo"} <span aria-hidden="true">→</span>
+          {busy ? "opening…" : "Check this repo"}
         </button>
       </form>
       {error && (
