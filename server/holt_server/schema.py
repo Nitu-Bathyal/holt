@@ -795,6 +795,18 @@ class Release(Model):
     url: str
 
 
+class Contributor(Model):
+    """One of the repository's most active committers, as GitHub lists them."""
+
+    login: str
+    # The GitHub profile's name; null when the person hasn't set one.
+    name: str | None = None
+    url: str
+    avatar_url: str | None = None
+    # Commits to the default branch, GitHub's count.
+    contributions: int | None = None
+
+
 class RepoAbout(Model):
     """What the repository is and how big and alive it is: GitHub's own fields
     and the README's first sentence, read daily into `repo_meta` (never on the
@@ -804,6 +816,9 @@ class RepoAbout(Model):
     description: str | None = None
     # The README's first real sentence, plain text.
     readme_line: str | None = None
+    # The top of the README as Markdown (at most about 6,000 characters), for the
+    # report's README section; null when it has none or isn't Markdown.
+    readme: str | None = None
     homepage: str | None = None
     stars: int
     forks: int | None = None
@@ -829,6 +844,9 @@ class RepoAbout(Model):
     links: list[RepoLink] = Field(default_factory=list)
     # GitHub's latest release; null when there is none (or not read yet).
     latest_release: Release | None = None
+    # The most active committers, most commits first, bots left out (at most
+    # ten). Empty until read.
+    top_contributors: list[Contributor] = Field(default_factory=list)
     fetched_at: str
 
 
