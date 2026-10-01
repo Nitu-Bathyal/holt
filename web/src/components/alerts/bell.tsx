@@ -135,11 +135,13 @@ export function AlertBell({ initial }: { initial: AlertList }) {
         aria-expanded={open}
         aria-controls={panelId}
         aria-label={unread ? `Alerts, ${unread} unread` : "Alerts"}
-        className="relative grid size-11 place-items-center border border-transparent text-muted transition-colors hover:border-line-strong hover:text-ink"
+        className={`relative grid size-11 place-items-center border transition-colors ${
+          open ? "border-line-strong bg-panel text-ink" : "border-transparent text-muted hover:border-line hover:bg-panel hover:text-ink"
+        }`}
       >
         <BellIcon />
         {count && (
-          <span className="side-badge absolute right-0.5 top-1" data-tone="needs" aria-hidden="true">
+          <span className="side-badge absolute -right-1 -top-1" data-tone="needs" aria-hidden="true">
             {count}
           </span>
         )}
@@ -147,8 +149,11 @@ export function AlertBell({ initial }: { initial: AlertList }) {
 
       {open && (
         <div id={panelId} role="region" aria-label="Alerts" className="alerts-panel" data-lenis-prevent>
-          <div className="flex min-h-11 items-center justify-between gap-4 border-b border-line px-4">
-            <h2 className="text-[0.95rem] font-semibold tracking-tight">Alerts</h2>
+          <div className="flex min-h-11 items-center justify-between gap-4 border-b border-line bg-panel-2 px-4">
+            <h2 className="flex items-center gap-2 text-[0.76rem] uppercase tracking-[0.08em] text-faint">
+              Alerts
+              {unread > 0 && <span className="tabular-nums normal-case tracking-normal text-ink">{unread} new</span>}
+            </h2>
             {unread > 0 && (
               <button type="button" onClick={readAll} className="min-h-11 text-[0.8rem] text-blue hover:underline">
                 mark all read
@@ -158,9 +163,19 @@ export function AlertBell({ initial }: { initial: AlertList }) {
 
           {view === "off" && (
             <div className="px-4 py-5">
-              <p className="font-sans text-[0.95rem]">Know when it&rsquo;s your turn.</p>
-              <button type="button" onClick={turnOn} disabled={busy} className="btn-primary mt-4 min-h-11 px-4 text-[0.84rem]">
-                turn on alerts →
+              <div className="flex items-start gap-3">
+                <span className="grid size-9 shrink-0 place-items-center border border-line-strong text-blue">
+                  <BellIcon className="size-[18px]" />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[0.95rem] font-semibold tracking-tight text-ink">Know when it&rsquo;s your turn.</p>
+                  <p className="mt-1 font-sans text-[0.88rem] leading-snug text-muted">
+                    Holt watches your open pull requests and tells you when a maintainer replies, asks for changes, approves or merges.
+                  </p>
+                </div>
+              </div>
+              <button type="button" onClick={turnOn} disabled={busy} className="btn-primary mt-4 min-h-10 w-full bg-blue text-[0.86rem]">
+                {busy ? "turning on…" : "turn on alerts"}
               </button>
               {failed && <p role="status" className="mt-3 text-[0.82rem] text-orange">{TURN_ON_FAILED}</p>}
             </div>
@@ -174,9 +189,10 @@ export function AlertBell({ initial }: { initial: AlertList }) {
           )}
 
           {live && list.items.length === 0 && (
-            <div className="flex items-center gap-3 px-4 py-6">
-              <CatFace mood="ready" className="text-[0.95rem]" />
-              <p className="font-sans text-[0.95rem] text-muted">Nothing yet.</p>
+            <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
+              <CatFace mood="ready" className="text-[1.1rem] text-faint" />
+              <p className="font-sans text-[0.92rem] text-muted">You&rsquo;re all caught up.</p>
+              <p className="font-sans text-[0.8rem] text-faint">New replies on your pull requests show up here.</p>
             </div>
           )}
 
@@ -223,7 +239,7 @@ export function AlertBell({ initial }: { initial: AlertList }) {
           )}
 
           {live && (
-            <div className="flex min-h-11 items-center justify-between gap-4 border-t border-line px-4 text-[0.8rem]">
+            <div className="flex min-h-11 items-center justify-between gap-4 border-t border-line bg-panel-2 px-4 text-[0.8rem]">
               <span className="text-faint">{watchingLine(list.watching, list.access)}</span>
               <Link href={ALERT_SETTINGS} onClick={close} className="inline-flex min-h-11 items-center text-blue hover:underline">settings</Link>
             </div>

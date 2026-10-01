@@ -1,6 +1,7 @@
-// The way between a repo's report and its AI report: one small button in the
-// report header, beside Save. On the report it offers the AI report; on the AI
-// report it leads back. The report page and the example AI report both draw it.
+// The way between a repo's report and its merge plan (the AI tab): one small
+// button in the report header, beside Save, with a PRO sticker. On the report
+// it offers the merge plan; on the plan it leads back. The report page and the
+// example AI report both draw it, so this is the one place it's worded.
 import Link from "next/link";
 import { LinkHint } from "../motion/link-hint";
 
@@ -10,7 +11,9 @@ const BASE = "relative inline-flex min-h-11 shrink-0 items-center gap-1.5 border
 export function ReportModeLink({ mode, rulesHref, aiHref, hint = false }: { mode: "rules" | "ai"; rulesHref: string; aiHref: string; hint?: boolean }) {
   return mode === "rules" ? (
     <Link href={aiHref} prefetch={false} className={`${BASE} border-blue/60 text-blue hover:bg-blue hover:text-on-accent`} data-report-mode="ai">
-      AI report <span aria-hidden="true">✦</span>
+      Merge plan
+      {/* A filled sticker in the site's violet: it stands apart from the blue button, and stays the same when the button fills on hover. */}
+      <span className="rounded-[3px] bg-hf px-1.5 py-[3px] font-sans text-[0.6rem] font-bold uppercase leading-none tracking-[0.08em] text-bg">Pro</span>
       {hint && <LinkHint />}
     </Link>
   ) : (
