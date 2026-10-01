@@ -9,13 +9,18 @@ import { CatFace } from "../cat-face";
 import { Track } from "../track";
 import { badgeOffered } from "@/lib/badge";
 import { BadgeSnippet } from "./badge-snippet";
+import { CompareCard } from "./compare-card";
+import { CollapsibleSection } from "../ui/collapsible-section";
 import { EvidenceList } from "./evidence-list";
 import { HoltUsersLine } from "./holt-users-line";
 import { PreflightLink } from "../preflight/preflight-link";
 import { LandingMap } from "./landing-map";
 import { PlaybookSection } from "./playbook-section";
 import { ProjectSection } from "./project-section";
-import { ShareBar } from "./share-bar";
+import { ProjectSidebar } from "./project-sidebar";
+import { ReadmeSection } from "./readme-section";
+import { ShareMenu } from "./share-bar";
+import { StatsGrid } from "./stats-grid";
 import { TONE, TONE_MOOD } from "./tone";
 import { UpgradeCard } from "./upgrade-card";
 import { VerdictCat } from "./verdict-cat";
@@ -28,7 +33,9 @@ const step = (reveal: boolean | undefined, ms: number) =>
 export function Section({ n, title, id, children, note, reveal }: { n?: string; title: string; id: string; children: React.ReactNode; note?: React.ReactNode; reveal?: number }) {
   const r = step(reveal != null, reveal ?? 0);
   return (
-    <section aria-labelledby={id} className={`border-t border-line pt-5 ${r.className}`} style={r.style}>
+    // No rule above a section: blocks are set apart by space and their headings,
+    // so a section after a boxed block never shows the box's edge and a line.
+    <section aria-labelledby={id} className={r.className} style={r.style}>
       <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
         {n && <span className="text-[0.78rem] text-blue">{n}</span>}
         <h2 id={id} className="text-[1.05rem] font-semibold tracking-tight sm:text-[1.15rem]">{title}</h2>
@@ -40,86 +47,99 @@ export function Section({ n, title, id, children, note, reveal }: { n?: string; 
 }
 
 /**
- * `land`: the answer just arrived on this page (the expressive design plan,
- * pattern 4): the verdict's bar draws and the cat reacts. A report read again
- * is still. The card is short on purpose: the verdict, the reason, the
- * numbers and what to do fit in one screen, with the project and its issues
- * starting just below, so a visitor scrolls as little as possible.
+ * The verdict's name is a small tag in the page header (VerdictTag), so this
+ * card starts with the reason. `land`: the answer just arrived on this page
+ * (the expressive design plan, pattern 4): the cat reacts. A report read again
+ * is still. The card is short on purpose: the reason, the numbers and what to
+ * do fit in one screen, with the project and its issues starting just below.
+ * `tag`: this page has no header to hold the tag (the recorded example), so it
+ * shows here.
  */
-export function VerdictHero({ report, reveal, land }: { report: Report; reveal?: boolean; land?: boolean }) {
+export function VerdictHero({ report, reveal, land, tag }: { report: Report; reveal?: boolean; land?: boolean; tag?: boolean }) {
   // Every sentence here comes from the server, derived there from the verdict,
   // the counts and the rules, so the top of the page can't disagree with them
   // or with itself. The reason, the numbers, how long it takes (when known),
   // and what to do next.
-  const t = TONE[report.tone];
+  const advice = report.next_step.split(/(?<=[.!?])\s+/).filter(Boolean);
   return (
-    <div className="relative overflow-hidden border border-line-strong bg-panel shadow-card" data-verdict-hero>
-      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${t.bg} ${land ? "land-bar" : ""}`} />
-      <div className="p-4 pl-5 sm:p-5 sm:pl-7">
-        <div className="flex items-center justify-between gap-3">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
-            <h1 className={`inline-flex items-center gap-2 border px-2.5 py-1 text-[0.95rem] font-semibold sm:text-[1rem] ${t.text} ${t.border} ${t.soft}`}>
-              <span aria-hidden="true" className={`size-1.5 rounded-full ${t.bg}`} />
-              {report.headline}
-            </h1>
-            <span className="text-[0.78rem] uppercase tracking-[0.08em] text-faint">{report.mode === "ai" ? "AI report" : "rules report"} · {report.days}-day budget</span>
-          </div>
-          <span className={reveal ? "reveal" : ""}>
-            {land ? (
-              <VerdictCat mood={TONE_MOOD[report.tone]} className="text-[1rem] normal-case tracking-normal sm:text-[1.2rem]" />
-            ) : (
-              <CatFace mood={TONE_MOOD[report.tone]} blink className="text-[1rem] normal-case tracking-normal sm:text-[1.2rem]" />
-            )}
-          </span>
+    <div data-verdict-hero>
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+          {tag && <VerdictTag report={report} />}
+          {/* Where to begin reading: the line under it says what to do. */}
+          <span className="text-[0.78rem] uppercase tracking-[0.08em] text-faint">Start here</span>
         </div>
-        <p className={`mt-3 max-w-3xl font-sans text-[1rem] leading-snug text-ink sm:text-[1.05rem] ${reveal ? "reveal-lcp" : ""}`} data-line="reason">
-          {report.verdict_line}
-        </p>
-
-        <dl className="mt-3 grid gap-x-8 border-t border-dashed border-line-strong sm:grid-cols-2">
-          <TopLine label="the numbers" name="numbers">
-            <p>{report.numbers_line}</p>
-            {report.first_timer_line && (
-              <p className="mt-1.5 font-medium" data-line="first-timers">
-                {report.first_timer_line}
-              </p>
-            )}
-          </TopLine>
-          {report.how_long.length > 0 && (
-            <TopLine label="how long" name="how-long">
-              <ul className="space-y-1">
-                {report.how_long.map((l) => (
-                  <li key={l.topic}>
-                    <span className="text-faint">{l.topic}:</span> {l.text}
-                  </li>
-                ))}
-              </ul>
-            </TopLine>
+        <span className={reveal ? "reveal" : ""}>
+          {land ? (
+            <VerdictCat mood={TONE_MOOD[report.tone]} className="text-[1rem] normal-case tracking-normal sm:text-[1.2rem]" />
+          ) : (
+            <CatFace mood={TONE_MOOD[report.tone]} blink className="text-[1rem] normal-case tracking-normal sm:text-[1.2rem]" />
           )}
-          <TopLine label="what to do" name="next">
-            <p>{report.next_step}</p>
-          </TopLine>
-        </dl>
+        </span>
+      </div>
+      {/* What to do leads: it's the thing the visitor came for. The server's sentence can hold more than one
+          piece of advice; the first is the headline, the rest are listed under "Also". */}
+      <p className={`mt-3 max-w-3xl font-sans text-[1.25rem] font-semibold leading-snug tracking-tight text-ink sm:text-[1.5rem] ${reveal ? "reveal-lcp" : ""}`} data-line="next">
+        {advice[0]}
+      </p>
+      {advice.length > 1 && (
+        <ul className="mt-2 max-w-3xl list-disc space-y-0.5 pl-5 font-sans text-[0.95rem] leading-snug text-ink" aria-label="Also">
+          {advice.slice(1).map((a) => (
+            <li key={a}>{a}</li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-3 max-w-3xl font-sans text-[1rem] leading-snug text-muted sm:text-[1.05rem]" data-line="reason">
+        {report.verdict_line}
+      </p>
 
-        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
-          <p className="text-[0.78rem] text-faint">
-            {report.evidence_until && <>data until {shortDate(report.evidence_until)} · </>}checked{" "}
-            <time dateTime={report.generated_at} suppressHydrationWarning>{timeAgo(report.generated_at)}</time>
-          </p>
-          <HowCounted report={report} />
+      {/* The wait is only here: the counts are in the stats card below, and how they were made is under "How this was counted". */}
+      {report.how_long.length > 0 && (
+        <div className="mt-4 border-t border-line pt-3" data-line="how-long">
+          <h2 className="text-[0.85rem] text-faint">How long it usually takes</h2>
+          <dl className="mt-1 grid max-w-3xl grid-cols-[auto_1fr] gap-x-4 gap-y-1 font-sans text-[0.93rem] leading-snug text-ink">
+            {report.how_long.map((l) => (
+              <div key={l.topic} className="contents">
+                <dt className="text-muted">{l.topic}</dt>
+                <dd>{l.text}</dd>
+              </div>
+            ))}
+          </dl>
         </div>
+      )}
+
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1">
+        <p className="text-[0.78rem] text-faint">
+          {report.evidence_until && <>Data until {shortDate(report.evidence_until)} · </>}checked{" "}
+          <time dateTime={report.generated_at} suppressHydrationWarning>{timeAgo(report.generated_at)}</time>
+        </p>
+        <HowCounted report={report} />
       </div>
     </div>
   );
 }
 
-function TopLine({ label, name, children }: { label: string; name: string; children: React.ReactNode }) {
+/**
+ * The verdict's name as a quiet label: just the words, no box, no colour. It sits in the repo header's row of numbers (`inRow`, after a
+ * thin divider) or, with no such row, beside Save. The page's one h1.
+ */
+export function VerdictTag({ report, inRow }: { report: Pick<Report, "headline" | "tone">; inRow?: boolean }) {
+  // Coloured by the verdict (green, amber, orange), so the answer reads at a glance without growing.
   return (
-    <div className="grid gap-0.5 py-3" data-line={name}>
-      <dt className="text-[0.78rem] uppercase tracking-[0.08em] text-faint">{label}</dt>
-      <dd className="font-sans text-[0.93rem] leading-snug text-ink">{children}</dd>
-    </div>
+    <h1 className={`inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap font-[family-name:var(--font-archivo)] text-[0.8rem] font-medium leading-none ${TONE[report.tone].text} ${inRow ? "basis-full sm:basis-auto sm:border-l sm:border-line-strong sm:pl-4" : ""}`} data-verdict-tag>
+      {report.headline}
+    </h1>
   );
+}
+
+/** What was read, in a sentence a newcomer can follow. */
+function lookedAt(r: Report): string {
+  const smp = r.sample;
+  const out = r.stats.outsider_attempts;
+  const span = smp?.first_opened && smp.last_opened ? `, opened between ${shortDate(smp.first_opened)} and ${shortDate(smp.last_opened)}` : "";
+  const read = smp ? `Holt read the ${smp.pull_requests} most recent pull requests on this repo${span}.` : "Holt read this repo's recent pull requests.";
+  const outsiders = out > 0 ? ` ${out} came from people outside the team, like you, and had been open long enough to get an answer. Those are the ones that show how newcomers are treated.` : " None came from people outside the team that had been open long enough to count.";
+  return read + outsiders;
 }
 
 /** "How this was counted": closed by default, for anyone who wants to check the working. */
@@ -127,13 +147,23 @@ function HowCounted({ report }: { report: Report }) {
   return (
     <details className="group max-w-2xl" data-how-counted>
       <summary className="inline-flex min-h-[44px] cursor-pointer list-none items-center gap-[0.6ch] text-[0.88rem] text-muted hover:text-ink focus-visible:text-ink [&::-webkit-details-marker]:hidden">
-        <span aria-hidden="true" className="text-green">
-          [<span className="inline-block w-[1ch] text-center group-open:hidden">+</span>
-          <span className="hidden w-[1ch] text-center group-open:inline-block">−</span>]
+        <span aria-hidden="true" className="text-faint">
+          <span className="inline-block w-[1ch] text-center group-open:hidden">+</span>
+          <span className="hidden w-[1ch] text-center group-open:inline-block">−</span>
         </span>
-        how this was counted
+        How this was counted
       </summary>
       <dl className="mb-3 mt-1 space-y-4 border-l border-line-strong pl-4 sm:pl-5">
+        <div>
+          <dt className="text-[0.85rem] text-faint">what Holt read</dt>
+          <dd className="mt-1 font-sans text-[0.92rem] leading-relaxed text-muted">{lookedAt(report)}</dd>
+        </div>
+        <div>
+          <dt className="text-[0.85rem] text-faint">words used here</dt>
+          <dd className="mt-1 font-sans text-[0.92rem] leading-relaxed text-muted">
+            A pull request (PR) is a change you propose to a project. Merged means the maintainers accepted it. An outsider is anyone who isn&apos;t on the project&apos;s team, like you.
+          </dd>
+        </div>
         {report.counted.map((c) => (
           <div key={c.topic}>
             <dt className="text-[0.85rem] text-faint">{c.topic.toLowerCase()}</dt>
@@ -203,14 +233,14 @@ export function ReportView({
   const viable = report.verdict === "viable";
 
   return (
-    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_300px] lg:gap-8">
+    <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_340px] lg:gap-8">
       {!example && <Track event="report-view" data={{ verdict: report.verdict, mode: report.mode, repo }} />}
-      <div className="min-w-0 space-y-6">
-        <VerdictHero report={report} reveal={reveal} land={land} />
+      <div className="min-w-0 space-y-8">
+        <VerdictHero report={report} reveal={reveal} land={land} tag={example} />
 
         {(report.bottom_line || report.summary) && (
           <div className="border-l-2 border-blue pl-4" data-ai-explanation>
-            <p className="text-[0.75rem] uppercase tracking-[0.08em] text-blue">AI explanation</p>
+            <p className="text-[0.85rem] text-blue">AI explanation</p>
             {report.bottom_line && (
               <p className="mt-1.5 font-sans text-[1rem] font-medium leading-snug text-ink" data-bottom-line>
                 {report.bottom_line}
@@ -223,64 +253,99 @@ export function ReportView({
           </div>
         )}
 
-        {report.about && <ProjectSection about={report.about} />}
-
-        <div className="lg:hidden">
-          <ShareBar url={url} text={shareText} />
-        </div>
-
         {!viable && (
-          <div className="flex flex-wrap items-center justify-between gap-3 border border-dashed border-line-strong p-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 border border-line-strong p-4">
             <p className="font-sans text-[0.95rem] text-muted">Looking for somewhere friendlier to start?</p>
-            <Link href="/find" className="bracket-link">[ find a welcoming project → ]</Link>
+            <Link href="/find" className="text-link">Find a welcoming project</Link>
           </div>
         )}
 
+        {/* The order follows the decision: what to work on, what happens to
+            outside work, where it lands, how to contribute here, then the proof
+            and, last, the project's own README. */}
         <Section id="issues" title={viable ? "Your first contribution" : "Starter issues"} note="open and unclaimed, best first" reveal={reveal ? 180 : undefined}>
           {issues}
         </Section>
 
-        <PlaybookSection repo={repo} signedIn={signedIn} />
+        {/* What happened to outside pull requests, as a bar and its figures: the verdict's evidence at a glance. */}
+        <StatsGrid stats={report.stats} reveal={reveal} land={land} />
 
-        {!example && <PreflightLink repo={repo} />}
+        <Section id="landing" title="Where newcomer work lands" reveal={reveal ? 230 : undefined}>
+          <LandingMap landing={report.landing} neverLanded={report.never_landed} repo={repo} />
+        </Section>
 
         <HoltUsersLine stats={report.holt_users} />
 
-        <Section id="landing" title="Where newcomer work lands" reveal={reveal ? 230 : undefined}>
-          <LandingMap landing={report.landing} neverLanded={report.never_landed} />
-        </Section>
+        {report.about && <ProjectSection about={report.about} asks={report.asks} />}
 
-        {!example && <VerdictFeedback report={report} />}
-
-        {report.evidence.length > 0 && (
-          <Section id="evidence" title="The evidence" note="every claim links to GitHub" reveal={reveal ? 280 : undefined}>
-            <EvidenceList evidence={report.evidence} />
-          </Section>
-        )}
-
-        {/* The report's footer: for the maintainer who reads it to the end. */}
-        {!example && <BadgeSnippet repo={repo} offered={badgeOffered(report)} />}
-
+        {/* Wide screens have these in the sidebar. */}
+        {/* Phones: the merge plan where wide screens have it (under the
+            project's numbers), and the sidebar's cards closed by default, so
+            the page isn't twice as long as it is on a laptop. */}
         {report.mode === "rules" && (
           <div className="lg:hidden">
             <UpgradeCard repo={repo} signedIn={signedIn} />
           </div>
         )}
+        {report.about && (
+          <details className="group border-y border-line lg:hidden" data-more-about>
+            <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-3 text-[0.88rem] text-muted hover:text-ink [&::-webkit-details-marker]:hidden">
+              <span>More about this project <span className="text-faint">· numbers, languages, contributors</span></span>
+              <span aria-hidden="true" className="text-faint group-open:rotate-180">⌄</span>
+            </summary>
+            <div className="pb-4 pt-1">
+              <ProjectSidebar about={report.about} repo={repo} />
+            </div>
+          </details>
+        )}
+
+        <PlaybookSection repo={repo} signedIn={signedIn} />
+
+        {!example && <PreflightLink repo={repo} />}
+
+        {report.evidence.length > 0 && (
+          <CollapsibleSection id="evidence" title="The evidence" count={report.evidence.length} defaultOpen note="every claim links to GitHub">
+            <EvidenceList evidence={report.evidence} />
+          </CollapsibleSection>
+        )}
+
+        {/* Wide screens have this in the sidebar; here it follows the evidence it asks about. */}
+        {!example && (
+          <div className="lg:hidden">
+            <VerdictFeedback report={report} />
+          </div>
+        )}
+
+        {/* The project's own words, last: about the software, not about contributing to it. */}
+        {report.about?.readme && <ReadmeSection markdown={report.about.readme} repo={repo} />}
+
+        {/* A real report is shared from its header (next to save); the recorded example has no header. */}
+        {example && (
+          <div className="flex justify-end">
+            <ShareMenu url={url} text={shareText} />
+          </div>
+        )}
+
+        {!example && (
+          <div className="lg:hidden">
+            <CompareCard repo={repo} />
+          </div>
+        )}
+
+        {/* The report's footer: for the maintainer who reads it to the end. */}
+        {!example && <BadgeSnippet repo={repo} offered={badgeOffered(report)} />}
+
       </div>
 
-      <aside className="hidden lg:block" aria-label="Share and more">
-        <div className="sticky top-24 space-y-4">
-          <div className="panel p-4">
-            <p className="mb-3 text-[0.8rem] uppercase tracking-[0.08em] text-faint">Share this report</p>
-            <ShareBar url={url} text={shareText} />
-          </div>
-          {report.mode === "rules" && <UpgradeCard repo={repo} signedIn={signedIn} />}
-          {!example && (
-            <Link href={`/compare?repos=${repo}`} className="block text-[0.87rem] text-muted hover:text-ink">
-              [ compare with another repo → ]
-            </Link>
-          )}
-        </div>
+      <aside className="hidden space-y-4 lg:block" aria-label="About the project and more">
+        {/* The merge plan sits right under Statistics, where it's seen, not under six cards. */}
+        {report.about ? (
+          <ProjectSidebar about={report.about} repo={repo} afterStats={report.mode === "rules" ? <UpgradeCard repo={repo} signedIn={signedIn} /> : undefined} />
+        ) : (
+          report.mode === "rules" && <UpgradeCard repo={repo} signedIn={signedIn} />
+        )}
+        {!example && <VerdictFeedback report={report} />}
+        {!example && <CompareCard repo={repo} />}
       </aside>
     </div>
   );

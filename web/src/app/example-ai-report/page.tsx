@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MergePlanView } from "@/components/merge-plan/merge-plan-view";
 import { PageTransition } from "@/components/motion/page-transition";
 import { RepoAvatar } from "@/components/repo-card/repo-avatar";
+import { ReportModeLink } from "@/components/report/report-tabs";
 import { EXAMPLE_PATH } from "@/lib/example-report";
 import { EXAMPLE_PLAN as plan, planRecordedOn } from "@/lib/merge-plan";
 
@@ -49,14 +50,7 @@ export default async function ExampleAiReportPage({ searchParams }: PageProps<"/
                 github.com/{plan.repo} ↗
               </a>
             </div>
-            <nav aria-label="Report type" className="grid w-full grid-cols-2 border border-line-strong text-center text-[0.85rem] sm:w-auto">
-              <Link href={`/${plan.repo}`} className="inline-flex min-h-11 items-center justify-center px-3 text-muted transition-colors hover:text-ink">
-                free report
-              </Link>
-              <span aria-current="page" className="inline-flex min-h-11 items-center justify-center bg-blue px-3 text-on-accent">
-                AI report ✦
-              </span>
-            </nav>
+            <ReportModeLink mode="ai" rulesHref={`/${plan.repo}`} aiHref={EXAMPLE_PATH} />
           </div>
 
           <MergePlanView plan={plan} locked={locked} />
