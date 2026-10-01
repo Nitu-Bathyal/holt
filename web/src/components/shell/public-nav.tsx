@@ -8,7 +8,6 @@ import { focusCheck } from "./check-focus";
 
 export function PublicNav({ signedIn, className, item = "min-h-11 inline-flex items-center transition-colors hover:text-ink aria-[current]:font-semibold aria-[current]:text-ink" }: { signedIn: boolean; className?: string; item?: string }) {
   const path = usePathname();
-  const finding = path === "/find" || path === "/discover" || path.startsWith("/discover/") || path === "/hacktoberfest";
   const body = (
     <>
       <Link href={signedIn ? CHECK_HREF : "/#check"} className={item} onClick={(e) => {
@@ -23,7 +22,6 @@ export function PublicNav({ signedIn, className, item = "min-h-11 inline-flex it
           e.stopPropagation();
         }
       }}>Check a repo</Link>
-      {path !== "/" && <Link href="/find" className={item} aria-current={finding ? path === "/find" ? "page" : "location" : undefined}>Find a project</Link>}
       <Link href="/how-it-works" className={item} aria-current={path === "/how-it-works" ? "page" : undefined}>How it works</Link>
       <Link href="/pricing" className={item} aria-current={path === "/pricing" ? "page" : undefined}>Pricing</Link>
     </>
