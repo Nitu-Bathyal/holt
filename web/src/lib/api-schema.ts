@@ -299,6 +299,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/lab/emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Lab Emails
+         * @description Every Holt email on made-up data, for the owner to read on staging.
+         *     Not in production.
+         */
+        get: operations["lab_emails_v1_lab_emails_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me": {
         parameters: {
             query?: never;
@@ -537,6 +558,24 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/emails": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get Email Prefs */
+        get: operations["get_email_prefs_v1_me_emails_get"];
+        /** Put Email Prefs */
+        put: operations["put_email_prefs_v1_me_emails_put"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/entitlements": {
         parameters: {
             query?: never;
@@ -754,6 +793,29 @@ export interface paths {
         post?: never;
         /** Delete Saved Repo */
         delete: operations["delete_saved_repo_v1_me_saved__owner___name__delete"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/me/sign-in": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign In
+         * @description `web/` calls this at every sign-in. It keeps the account's address in
+         *     step and, for a first sign-in, makes the welcome email due. The address is
+         *     kept with the emails switched off too, so they have somewhere to go once
+         *     they are on.
+         */
+        post: operations["sign_in_v1_me_sign_in_post"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -1724,6 +1786,18 @@ export interface components {
              */
             verdict: "viable" | "long_shot" | "not_viable" | "insufficient_evidence" | "personal" | "catalogue";
         };
+        /** EmailPrefs */
+        EmailPrefs: {
+            /** Email */
+            email: string | null;
+            /** Product Emails */
+            product_emails: boolean;
+        };
+        /** EmailPrefsBody */
+        EmailPrefsBody: {
+            /** Product Emails */
+            product_emails: boolean;
+        };
         /**
          * Entitlements
          * @description GET /v1/me/entitlements.
@@ -2040,6 +2114,26 @@ export interface components {
              * @enum {string}
              */
             status: "queued" | "running" | "done" | "error";
+        };
+        /** LabEmail */
+        LabEmail: {
+            /** Html */
+            html: string;
+            /** Kind */
+            kind: string;
+            /** Name */
+            name: string;
+            /** Preheader */
+            preheader: string;
+            /** Subject */
+            subject: string;
+            /** Text */
+            text: string;
+        };
+        /** LabEmails */
+        LabEmails: {
+            /** Emails */
+            emails: components["schemas"]["LabEmail"][];
         };
         /** LandingPath */
         LandingPath: {
@@ -3344,6 +3438,19 @@ export interface components {
             /** Saved At */
             saved_at: string | null;
         };
+        /**
+         * SignInBody
+         * @description POST /v1/me/sign-in: what `web/` knows at a sign-in.
+         */
+        SignInBody: {
+            /** Email */
+            email?: string | null;
+            /**
+             * First
+             * @default false
+             */
+            first: boolean;
+        };
         /** StarterIssue */
         StarterIssue: {
             /** Areas */
@@ -3483,6 +3590,12 @@ export interface components {
         Unsubscribed: {
             /** Email On */
             email_on: boolean;
+            /**
+             * Emails
+             * @default alerts
+             * @enum {string}
+             */
+            emails: "alerts" | "product";
         };
         /** ValidationError */
         ValidationError: {
@@ -3539,6 +3652,8 @@ export type Counted = components['schemas']['Counted'];
 export type Credits = components['schemas']['Credits'];
 export type DiscoverOut = components['schemas']['DiscoverOut'];
 export type DiscoverRepo = components['schemas']['DiscoverRepo'];
+export type EmailPrefs = components['schemas']['EmailPrefs'];
+export type EmailPrefsBody = components['schemas']['EmailPrefsBody'];
 export type Entitlements = components['schemas']['Entitlements'];
 export type Error = components['schemas']['Error'];
 export type ErrorBody = components['schemas']['ErrorBody'];
@@ -3560,6 +3675,8 @@ export type History = components['schemas']['History'];
 export type HistoryItem = components['schemas']['HistoryItem'];
 export type HoltUsers = components['schemas']['HoltUsers'];
 export type JobStatus = components['schemas']['JobStatus'];
+export type LabEmail = components['schemas']['LabEmail'];
+export type LabEmails = components['schemas']['LabEmails'];
 export type LandingPath = components['schemas']['LandingPath'];
 export type Language = components['schemas']['Language'];
 export type LanguageCount = components['schemas']['LanguageCount'];
@@ -3645,6 +3762,7 @@ export type Sample = components['schemas']['Sample'];
 export type SavedItem = components['schemas']['SavedItem'];
 export type SavedList = components['schemas']['SavedList'];
 export type SavedState = components['schemas']['SavedState'];
+export type SignInBody = components['schemas']['SignInBody'];
 export type StarterIssue = components['schemas']['StarterIssue'];
 export type StarterIssues = components['schemas']['StarterIssues'];
 export type Stats = components['schemas']['Stats'];
@@ -4226,6 +4344,37 @@ export interface operations {
             };
         };
     };
+    lab_emails_v1_lab_emails_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LabEmails"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
     me_v1_me_get: {
         parameters: {
             query?: never;
@@ -4733,6 +4882,76 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["Credits"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    get_email_prefs_v1_me_emails_get: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailPrefs"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    put_email_prefs_v1_me_emails_put: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["EmailPrefsBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["EmailPrefs"];
                 };
             };
             /** @description Default Response */
@@ -5481,6 +5700,41 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["SavedState"];
                 };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    sign_in_v1_me_sign_in_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SignInBody"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Default Response */
             default: {

@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { createOrder, orders } from "@/lib/api";
+import { createOrder, orders, reportSignIn } from "@/lib/api";
 import { currentUser } from "@/lib/session";
 
 const SIGN_IN = { error: { code: "unauthorized", message: "Please sign in first." } };
@@ -14,7 +14,9 @@ export async function POST(req: NextRequest) {
   if (!pass) {
     return NextResponse.json({ error: { code: "invalid_request", message: "That pass isn't on sale." } }, { status: 400 });
   }
-  const r = await createOrder(user.id, pass);
+  // A session from before account emails has no address on file yet, and the
+  // pass's confirmation needs one. Alongside the order, so it adds no wait.
+  const [r] = await Promise.all([createOrder(user.id, pass), reportSignIn(user.id, user.email, false)]);
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
   return NextResponse.json(r.data);
 }

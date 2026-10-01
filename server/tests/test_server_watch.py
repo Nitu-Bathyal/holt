@@ -451,11 +451,12 @@ def test_one_click_unsubscribe_turns_email_off_and_keeps_the_bell(w):
     token = token_of(w)
     body = {"token": token}
     r = w.post("/v1/alerts/unsubscribe", body)  # no user: whoever holds the link
-    assert r.status_code == 200 and r.json() == {"email_on": False}
+    assert r.status_code == 200 and r.json() == {"email_on": False, "emails": "alerts"}
     got = w.get("/v1/me/alerts/settings", user="u1").json()
     assert got["email_on"] is False and got["enabled"] is True
     assert w.post("/v1/alerts/unsubscribe", body).status_code == 200  # twice is fine
-    assert w.post("/v1/alerts/resubscribe", body).json() == {"email_on": True}  # undo
+    assert w.post("/v1/alerts/resubscribe", body).json() == {
+        "email_on": True, "emails": "alerts"}  # undo
     assert w.post("/v1/alerts/unsubscribe", {"token": "0" * 64}).status_code == 404
     assert w.post("/v1/alerts/unsubscribe", {}).status_code == 400
     assert w.client.post("/v1/alerts/unsubscribe", json=body).status_code == 401  # no key

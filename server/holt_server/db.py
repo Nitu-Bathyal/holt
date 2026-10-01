@@ -24,6 +24,7 @@ from sqlalchemy import (
     Integer,
     String,
     Text,
+    UniqueConstraint,
     text,
 )
 from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
@@ -708,6 +709,54 @@ class AlertEmail(Base):
 
     __table_args__ = (Index("ix_alert_emails_sent", "sent_at"),
                       Index("ix_alert_emails_user", "user_id", "sent_at"))
+
+
+class AccountMail(Base):
+    """Where a user's account emails go and whether they want the optional
+    ones (account_mail.py). A row exists once `web/` has reported a sign-in,
+    or once an email was due."""
+
+    __tablename__ = "account_mail"
+
+    user_id: Mapped[str] = mapped_column(String(200), primary_key=True)
+    # The address the user signed in with, as `web/` reports it at sign-in.
+    # Null: not reported yet (the alert settings' address is used, if any).
+    email: Mapped[str | None] = mapped_column(String(320), nullable=True)
+    # The "product emails" switch: the welcome and the two "ending" emails.
+    # The one-click unsubscribe turns it off. A receipt goes out either way.
+    product_on: Mapped[bool] = mapped_column(Boolean, default=True)
+    # When the account's first sign-in was reported: the welcome email is due
+    # from then, for a day. Null: the account is older than these emails.
+    welcome_due_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True),
+                                                            nullable=True)
+    # As on `alert_settings`: the token is never stored, only its hash.
+    unsubscribe_nonce: Mapped[str] = mapped_column(String(32))
+    unsubscribe_hash: Mapped[str] = mapped_column(String(64), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+
+class AccountEmail(Base):
+    """The sent-log of account emails: one row per (user, `key`), so each
+    goes out once. `key` is the email's kind, with what it is about when
+    there can be several ("receipt:<order id>", "pass_ending:<date>"). The row
+    is written before the send (`pending`) and is what stops a second one.
+    The address isn't copied here. status: pending | sent | failed."""
+
+    __tablename__ = "account_emails"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    user_id: Mapped[str] = mapped_column(String(200))
+    # welcome | receipt | trial_ending | trial_ended | pass_ending
+    kind: Mapped[str] = mapped_column(String(20))
+    key: Mapped[str] = mapped_column(String(80))
+    # The provider's id for the message; its refusal's status when it failed.
+    provider_id: Mapped[str | None] = mapped_column(String(200), nullable=True)
+    status: Mapped[str] = mapped_column(String(10), default="pending")
+    sent_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=now)
+
+    __table_args__ = (UniqueConstraint("user_id", "key", name="uq_account_emails_user_key"),
+                      Index("ix_account_emails_sent", "sent_at"))
 
 
 class RepoMeta(Base):

@@ -148,6 +148,10 @@ class Settings(BaseSettings):
     # The provider's daily sending limit (Resend's free tier: 100). The
     # mailer stops 5 short of it over any 24 hours.
     alert_email_daily_limit: int = Field(100, ge=0, alias="HOLT_ALERT_EMAIL_DAILY_LIMIT")
+    # Account emails (account_mail.py): the welcome, a pass's receipt, and
+    # the "ending" ones. Off by default: with it off none is sent. They go
+    # through the same provider and count against the same daily limit.
+    account_emails: bool = Field(False, alias="HOLT_ACCOUNT_EMAILS")
     # How long a finished /v1/find result is served for the same search.
     find_cache_hours: float = Field(6, alias="HOLT_FIND_CACHE_HOURS")
     # Pull-request pages crawled per analysis (25 PRs a page).

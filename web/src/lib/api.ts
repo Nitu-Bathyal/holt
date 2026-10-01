@@ -80,6 +80,22 @@ function repoOk(repo: string) {
   return rest.length === 0 && Boolean(o && r) && isValidRepo(o, r);
 }
 
+/**
+ * Tell the server about a sign-in: the address the provider gave, and whether
+ * this sign-in created the account (the welcome email goes out once, then).
+ * Never throws, and gives up after 4 seconds: a slow server never holds up a sign-in.
+ */
+export async function reportSignIn(userId: string, email: string | null, first: boolean): Promise<void> {
+  if (MOCK) return;
+  await call<void>("/v1/me/sign-in", { method: "POST", body: JSON.stringify({ email, first }), caller: { userId }, signal: AbortSignal.timeout(4_000) });
+}
+
+/** Every Holt email on made-up data, for /lab/emails. 404 from a production server. */
+export function labEmails(): Promise<Result<import("./api-schema").LabEmails>> {
+  if (MOCK) return Promise.resolve({ ok: false, status: 404, error: { code: "not_found", message: "The mock API has no emails." } });
+  return call("/v1/lab/emails");
+}
+
 /** The model for AI reports is server configuration; the web never picks one. */
 export function startAnalysis(repo: string, mode: Mode, days: number, refresh: boolean, caller: Caller): Promise<Result<AnalysisStart>> {
   if (MOCK) return mock.startAnalysis(repo, mode, days, refresh, caller.userId ?? undefined);
