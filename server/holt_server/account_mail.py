@@ -465,9 +465,14 @@ _background: set[asyncio.Task] = set()
 
 async def _quietly(svc: Services) -> None:
     try:
-        await run(svc)
+        got = await run(svc)
     except Exception:  # noqa: BLE001 -- the scheduled run tries again
         log.exception("account emails failed")
+        return
+    if got.sent or got.failed or got.no_address:
+        # Said here and not by the scheduled run, which would repeat it.
+        log.info("account emails: %d sent, %d failed, %d waiting for a sign-in address "
+                 "(sent once the user signs in again)", got.sent, got.failed, got.no_address)
 
 
 def kick(svc: Services) -> None:

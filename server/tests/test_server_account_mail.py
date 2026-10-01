@@ -127,11 +127,14 @@ def test_the_welcome_leaves_alerts_out_while_pr_watch_is_off(make_harness):
     assert "Turn on PR alerts" not in msg.text + msg.html and "settings/alerts" not in msg.html
 
 
-def test_the_address_is_the_one_from_sign_in(hm):
+def test_the_address_is_the_one_from_sign_in(hm, caplog):
     assert sign_in(hm, email="not an address").status_code == 400
-    # No address reported and none on the alert settings: nothing to send to.
-    sign_in(hm, email=None, first=True)
+    # No address reported and none on the alert settings: nothing to send to,
+    # and the log says so.
+    with caplog.at_level("INFO", logger="holt_server.account_mail"):
+        sign_in(hm, email=None, first=True)
     assert hm.outbox.sent == [] and log(hm) == []
+    assert "1 waiting for a sign-in address" in caplog.text
     assert run(hm).no_address == 1
     # The next sign-in brings it, within the day.
     sign_in(hm)
