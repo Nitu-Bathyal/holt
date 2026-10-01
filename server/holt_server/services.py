@@ -34,7 +34,7 @@ class Services:
         self.pro: pro.ProClient | None = pro.build(settings)
         # Credit-pack checkout: None when the Razorpay keys are not set.
         self.razorpay: payments.Razorpay | None = payments.build(settings)
-        # PR watch's alert emails: None (no email sent) without RESEND_API_KEY.
+        # Alert and account emails: None (no email sent) without RESEND_API_KEY.
         self.mailer: mailer.Mailer | None = mailer.build(settings, self.http)
         # Work (new analyses, find) and reads (cache misses on starter issues)
         # draw on separate counters.

@@ -48,6 +48,9 @@ load_prod_env() {
     export AUTH_GOOGLE_ID="${AUTH_GOOGLE_ID:-${GOOGLE_OAUTH_ID:-}}"
     export AUTH_GOOGLE_SECRET="${AUTH_GOOGLE_SECRET:-${GOOGLE_OAUTH_SECRET:-}}"
     export OPENROUTER_API_KEY="${OPENROUTER_API_KEY:-}"
+    # PR watch's alert emails (Resend). Sent only once the owner also sets
+    # HOLT_PROD_PR_WATCH=1 (compose.yml); until then nothing is checked or emailed.
+    export RESEND_API_KEY="${RESEND_API_KEY:-}"
     export GITHUB_APP_ID="${GITHUB_APP_ID:-}" GITHUB_APP_INSTALLATION_ID="${GITHUB_APP_INSTALLATION_ID:-}"
     export GITHUB_APP_PRIVATE_KEY_FILE="${GITHUB_APP_PRIVATE_KEY_FILE:-}"
     export HOLT_GITHUB_APP_KEY_GID=""

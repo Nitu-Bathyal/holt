@@ -23,6 +23,14 @@ export type HistoryItem = S.HistoryItem;
 export type GitHubConnection = S.GitHubConnection;
 export type Contributions = S.Contributions;
 export type ContributionPR = S.ContributionPullRequest;
+export type AlertAccess = S.AlertAccess;
+export type AlertItem = S.AlertItem;
+export type AlertList = S.AlertList;
+export type AlertCount = S.AlertCount;
+export type AlertSettings = S.AlertSettings;
+// Only the fields sent change, so every one is optional (the generated type marks the body's default too).
+export type AlertSettingsBody = S.AlertSettingsBody;
+export type Unsubscribed = S.Unsubscribed;
 export type ApiError = S.Error;
 export type FeedbackOut = S.FeedbackOut;
 export type DiscoverOut = S.DiscoverOut;

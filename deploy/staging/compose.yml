@@ -116,6 +116,10 @@ services:
       RAZORPAY_KEY_SECRET: ${RAZORPAY_KEY_SECRET:-}
       RAZORPAY_WEBHOOK_SECRET: ${RAZORPAY_WEBHOOK_SECRET:-}
       RESEND_API_KEY: ${RESEND_API_KEY:-}
+      # Account emails (server/README.md, "Account emails"): the welcome, a
+      # pass's receipt and the "ending" ones. Off unless staging's .env says
+      # HOLT_ACCOUNT_EMAILS=1; they need RESEND_API_KEY too.
+      HOLT_ACCOUNT_EMAILS: ${HOLT_ACCOUNT_EMAILS:-0}
       HOLT_JOB_CONCURRENCY: ${HOLT_JOB_CONCURRENCY:-1}
       # Background workers (badges, warm passes) and the warm pass's reports
       # in flight: two, inside the 512m below.

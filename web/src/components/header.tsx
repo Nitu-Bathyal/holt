@@ -124,7 +124,7 @@ export function MarketingHeader({ user, credits }: { user: SessionUser | null; c
 }
 
 /** App pages, signed in: the sidebar holds the places and, on desktop, the logo, so this bar stays small. */
-export function AppTopBar({ user, credits, railCollapsed, drawer }: { user: SessionUser; credits: string | null; railCollapsed: boolean; drawer: React.ReactNode }) {
+export function AppTopBar({ user, credits, railCollapsed, drawer, bell }: { user: SessionUser; credits: string | null; railCollapsed: boolean; drawer: React.ReactNode; /** PR watch's bell (components/alerts). */ bell?: React.ReactNode }) {
   return (
     <header className="site-header sticky top-0 z-40 border-b border-line bg-header" style={{ viewTransitionName: "site-header" }}>
       {/* On desktop the rail carries the logo, the bar starts with the rail's toggle, and the check box lines up with the page (.app-bar). */}
@@ -138,6 +138,7 @@ export function AppTopBar({ user, credits, railCollapsed, drawer }: { user: Sess
           <QuickCheck />
         </div>
         <div className="app-bar-end flex items-center gap-1">
+          {bell}
           <ThemeToggle />
           <AccountMenu user={user} credits={credits} />
         </div>

@@ -4,6 +4,7 @@ import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { db } from "@/db";
+import { reportSignIn } from "@/lib/api";
 import { accounts, sessions, users, verificationTokens } from "@/db/schema";
 import { authSecret } from "@/lib/auth-secret";
 import { withoutTokens } from "@/lib/oauth-account";
@@ -36,6 +37,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     session({ session, user }) {
       session.user.id = user.id;
       return session;
+    },
+  },
+  events: {
+    // The server sends account emails (the welcome, once) to this address.
+    async signIn({ user, isNewUser }) {
+      if (user.id) await reportSignIn(user.id, user.email ?? null, Boolean(isNewUser));
     },
   },
 });

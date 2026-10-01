@@ -93,9 +93,10 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `HOLT_CONTRIBUTIONS_REFRESH_HOURS` | `24` | Re-read connected users' public pull requests (My Contributions) every N hours in the API process; stops when GitHub points drop below `HOLT_WARM_MIN_POINTS`. `0` = off. |
 | `HOLT_PR_WATCH` | `0` (off) | The switch for PR watch. `1` starts the checker and the mailer in the API process and lets people turn alerts on. Off, nothing checks pull requests, makes alerts or sends email. See [PR watch](#pr-watch). |
 | `HOLT_PR_WATCH_MINUTES` | `30` | Minutes between checks of watched pull requests. |
-| `RESEND_API_KEY` | *(empty)* | Resend's API key, for alert emails. Empty: no email is sent (logged once); alerts still reach the bell. Never logged. Emails also need `HOLT_SECRET_KEY`, which makes the unsubscribe links. |
+| `RESEND_API_KEY` | *(empty)* | Resend's API key, for alert emails and account emails. Empty: no email is sent (logged once); alerts still reach the bell. Never logged. Emails also need `HOLT_SECRET_KEY`, which makes the unsubscribe links. |
 | `HOLT_ALERT_EMAIL_FROM`, `HOLT_ALERT_EMAIL_REPLY_TO` | `Holt <alerts@githolt.com>`, `hello@githolt.com` | The sender and the reply address of alert emails. The sender's domain must be verified with Resend. |
-| `HOLT_ALERT_EMAIL_DAILY_LIMIT` | `100` | The provider's daily sending limit (Resend's free tier). The mailer stops 5 short of it in any 24 hours: "your turn" emails go first, daily emails that don't fit go out once there is room. |
+| `HOLT_ALERT_EMAIL_DAILY_LIMIT` | `100` | The provider's daily sending limit (Resend's free tier), for alert and account emails together. They stop 5 short of it in any 24 hours: "your turn" emails go first, daily emails that don't fit go out once there is room. Only a pass's receipt may use the last 5. |
+| `HOLT_ACCOUNT_EMAILS` | `0` (off) | The switch for account emails: the welcome, a pass's receipt, and the "ending" ones. Off, none is sent. They also need `RESEND_API_KEY`. See [Account emails](#account-emails). |
 | `HOLT_WARM_SEEDS` | the list shipped in the package (`holt_server/seeds/repos.txt`) | The warm pass's seed list. |
 | `HOLT_WARM_MAX_AGE_HOURS` | `20` | A warm pass skips repos whose report is younger than this. |
 | `HOLT_WARM_MIN_POINTS` | `1500` | A warm pass stops when any GitHub token has fewer GraphQL points left, counting 20 for each report still in flight. |
@@ -295,12 +296,50 @@ Alerts about a connected user's open pull requests, on the bell and by email
 - `mailer.py`: every 5 minutes, under its own advisory lock (7406114), it
   decides what to email (`plan`, pure) and sends through Resend. It reads no
   GitHub.
-- `alert_email.py`: the two emails, HTML and text.
+- `alert_email.py`: the two emails, HTML and text, built from `email_kit.py`,
+  the template every Holt email shares.
 
 **Turning it on.** It is off until the owner sets `HOLT_PR_WATCH=1` and
 restarts the server. For email, also set `RESEND_API_KEY`, and verify the
 sending domain with Resend first; without the key everything else works and no
 email goes out. `HOLT_PR_WATCH=0` again stops both loops; stored alerts stay.
+
+## Account emails
+
+Five emails about the account itself (`API.md`, "Account emails"), and no
+more: a welcome at an account's first sign-in, a receipt for each paid pass,
+one two days before the free days of PR alerts end and one when they have,
+and one three days before a paid pass ends.
+
+- `account_mail.py`: who gets which. Every 15 minutes in the API process, and
+  at once after a first sign-in or a paid order, it sends what is due. Each
+  send first claims a row in `account_emails`, unique per user and email, so
+  each goes out once however many runs and processes find it due; a claim the
+  provider couldn't take is given back and tried again.
+- `account_email.py`: the emails, HTML and text, built from `email_kit.py`.
+
+The address is the one the user signed in with: `web/` reports it at every
+sign-in (`POST /v1/me/sign-in`) and it is kept in `account_mail`. Until a
+user's next sign-in reports it, their alert settings' address stands in;
+with neither, nothing is sent to them. The receipt always goes out. The rest
+respect one switch, `account_mail.product_on`, which the email's "Stop these
+emails" link and one-click header turn off (the web page and route alert
+emails use take both kinds of link).
+
+**Turning it on.** `HOLT_ACCOUNT_EMAILS=1` and `RESEND_API_KEY`, then restart.
+A welcome or a receipt is only sent within a day of the sign-in or payment, so
+switching it on writes to nobody from before. Off, sign-ins still keep the
+address in step, so the emails have somewhere to go once they are on.
+
+**Reading them.** `/lab/emails` on staging (or a dev server) shows every Holt
+email on made-up data. To get a real copy of each in your own inbox, outside
+production:
+
+```sh
+python -m holt_server.account_mail samples <your user id>
+```
+
+It sends them to that user's sign-in address and to no other.
 
 ```sh
 python -m holt_server.watch     # one check now
