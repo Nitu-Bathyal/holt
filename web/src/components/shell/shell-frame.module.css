@@ -1,0 +1,8 @@
+/* Keep the persistent repo input out of the page-loading state. A fallback
+   with a real page beside it is already hidden and must not hide the input.
+   The empty-main case covers the gap before RouteFallback mounts. */
+.column:has(:global(#content [data-route-loading]:not([data-route-fallback] *))) :global(.app-bar-frame),
+.column:has(:global(#content:empty), :global(#content > [data-route-fallback]:only-child)) :global(.app-bar-frame) {
+  /* Reserve its space so the theme/account controls never move. */
+  visibility: hidden;
+}

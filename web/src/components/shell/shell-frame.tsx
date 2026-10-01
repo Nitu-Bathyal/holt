@@ -4,6 +4,7 @@
 // not from the request that first rendered the layout.
 import { usePathname } from "next/navigation";
 import { shellFor } from "@/lib/shell";
+import styles from "./shell-frame.module.css";
 
 export function ShellFrame({ marketingHeader, footer, topBar, rail, children }: {
   marketingHeader: React.ReactNode;
@@ -20,7 +21,7 @@ export function ShellFrame({ marketingHeader, footer, topBar, rail, children }: 
       // share the column beside it (which rail-toggle.tsx slides as one).
       <div className="flex flex-1 items-start overflow-x-clip">
         {rail}
-        <div id="app-column" className="flex min-w-0 flex-1 flex-col self-stretch">
+        <div id="app-column" className={`${styles.column} flex min-w-0 flex-1 flex-col self-stretch`}>
           {topBar}
           <main id="content" className="min-w-0 flex-1 pb-16">{children}</main>
         </div>
