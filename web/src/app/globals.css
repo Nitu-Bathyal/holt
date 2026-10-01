@@ -339,6 +339,11 @@
     letter-spacing: -0.05em;
     line-height: 1.08;
   }
+  /* Hacktoberfest's guide headings: section labels under the projects, not page heads. */
+  .h2.hf-h2 {
+    font-size: clamp(1.3rem, 2.4vw, 1.75rem);
+    letter-spacing: -0.03em;
+  }
   .prose-sans {
     font-family: var(--font-sans);
     color: var(--muted);
@@ -2814,15 +2819,23 @@
     text-wrap: balance;
     overflow-wrap: anywhere;
   }
-  /* The home's sentence is a line to act on, not a banner: smaller than the other pages' heads. */
-  .app-h1.home-h1 {
+  /* The home's sentence is a line to act on, not a banner. Your repos, Your
+     pull requests and Compare (AppPageHeader `sentence`) match it. */
+  .app-h1.home-h1,
+  .app-head.sentence-head .app-h1 {
+    /* Room for the longest sentence on one line ("2 PRs are waiting longer than
+       usual."). A wrapped line keeps the box at its max width, which pushed the
+       cat beside it away from the words. */
+    max-width: 40ch;
     font-size: clamp(1.4rem, 2.2vw, 1.85rem);
     line-height: 1.15;
   }
-  .app-head.home-head {
+  .app-head.home-head,
+  .app-head.sentence-head {
     padding: clamp(16px, 3.5svh, 36px) 0 16px;
   }
-  .app-head-cat.home-cat {
+  .app-head-cat.home-cat,
+  .sentence-head .app-head-cat {
     padding-top: 2px;
     font-size: clamp(1.15rem, 1.7vw, 1.55rem);
   }
@@ -3059,28 +3072,112 @@
     }
   }
 
-  /* The loop: find a repo, pick an issue, open a PR, get it merged. Four segments; the steps behind you are filled. */
+  /* The home's "Find a project": a card-like button, the icon in the accent, a line on what you'll find. */
+  .find-cta {
+    display: inline-flex;
+    max-width: 100%;
+    min-height: 64px;
+    align-items: center;
+    gap: 14px;
+    padding: 10px 18px 10px 10px;
+    border: 1px solid var(--line-strong);
+    background: var(--panel);
+    color: var(--ink);
+    transition:
+      border-color var(--dur-fast) var(--ease-out),
+      background-color var(--dur-fast) var(--ease-out),
+      scale var(--dur-press) var(--ease-out);
+  }
+  .find-cta-icon {
+    display: grid;
+    flex-shrink: 0;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    background: var(--green);
+    color: var(--on-accent);
+  }
+  .find-cta-title {
+    display: block;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+  }
+  .find-cta-sub {
+    display: block;
+    margin-top: 2px;
+    font-family: var(--font-sans);
+    font-size: 0.8rem;
+    color: var(--muted);
+  }
+  .find-cta-arrow {
+    margin-left: 6px;
+    color: var(--green);
+    font-size: 1.1rem;
+    transition: translate var(--dur-fast) var(--ease-out);
+  }
+  @media (hover: hover) {
+    .find-cta:hover {
+      border-color: var(--green);
+    }
+    .find-cta:hover .find-cta-arrow {
+      translate: 3px 0;
+    }
+  }
+  .find-cta:active {
+    scale: 0.98;
+  }
+  .find-cta:focus-visible {
+    outline: 2px solid var(--blue);
+    outline-offset: 2px;
+  }
+  /* The loop (find a repo, pick an issue, open a PR, get it merged) as one
+     slim bar of four segments: done in green, yours in blue, the rest grey,
+     each with its name under it. Under the text on phones; from 768px, at the
+     right of the line under the headline. */
+  .loop-bar {
+    width: 100%;
+    max-width: 30rem;
+  }
+  .loop-bar-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 8px;
+    font-size: 0.72rem;
+    color: var(--faint);
+  }
   .loop {
     display: grid;
-    max-width: 40rem;
     grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 8px;
-    margin-top: 20px;
+    gap: 4px;
   }
   .loop-step {
     display: flex;
+    min-width: 0;
     flex-direction: column;
-    gap: 8px;
-    font-size: clamp(0.72rem, 2.6vw, 0.8rem);
+    gap: 7px;
+    font-size: 0.76rem;
     color: var(--faint);
   }
   .loop-seg {
-    height: 3px;
+    height: 6px;
     background: var(--line-strong);
     transform-origin: left;
   }
+  .loop-step:first-child .loop-seg {
+    border-radius: 3px 0 0 3px;
+  }
+  .loop-step:last-child .loop-seg {
+    border-radius: 0 3px 3px 0;
+  }
+  .loop-label {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
   .loop-n {
-    margin-right: 2px;
+    margin-right: 5px;
     font-variant-numeric: tabular-nums;
   }
   .loop-step[data-s="done"] {
@@ -3089,6 +3186,9 @@
   .loop-step[data-s="done"] .loop-seg {
     background: var(--green);
   }
+  .loop-step[data-s="done"] .loop-n {
+    color: var(--green);
+  }
   .loop-step[data-s="now"] {
     color: var(--ink);
     font-weight: 600;
@@ -3096,10 +3196,24 @@
   .loop-step[data-s="now"] .loop-seg {
     background: var(--blue);
   }
+  .loop-step[data-s="now"] .loop-n {
+    color: var(--blue);
+  }
+  @media (min-width: 768px) {
+    /* Level with the line under the headline (.app-lead's margin-top). */
+    .loop-bar {
+      width: 26rem;
+      margin-top: 14px;
+    }
+  }
   @media (prefers-reduced-motion: no-preference) {
     .loop-seg {
-      animation: grow-x 600ms var(--ease-out) 250ms both;
+      animation: grow-x 500ms var(--ease-out) both;
     }
+    .loop-step:nth-child(1) .loop-seg { animation-delay: 200ms; }
+    .loop-step:nth-child(2) .loop-seg { animation-delay: 280ms; }
+    .loop-step:nth-child(3) .loop-seg { animation-delay: 360ms; }
+    .loop-step:nth-child(4) .loop-seg { animation-delay: 440ms; }
   }
 
   .wait-bar {
@@ -3267,7 +3381,8 @@
     --col: 0px;
     display: grid;
     grid-template-columns: repeat(var(--n), minmax(max(var(--col), 0px), 1fr));
-    border-top: 1px solid var(--line-strong);
+    border: 1px solid var(--line-strong);
+    background: var(--panel);
   }
   .cmp-scroll[data-many] .cmp {
     --col: 9.5rem;
@@ -3279,7 +3394,7 @@
     border-bottom: 1px solid var(--line);
     transition: background-color var(--dur-fast) var(--ease-out);
   }
-  .cmp-row:not(.cmp-head, .cmp-foot):hover {
+  .cmp-row:not(.cmp-head, .cmp-foot, .cmp-group):hover {
     background: color-mix(in srgb, var(--ink) 3%, transparent);
   }
   .cmp-head {
@@ -3290,14 +3405,14 @@
   }
   .cmp-cell {
     min-width: 0;
-    padding: 14px 12px;
+    padding: 14px 16px;
   }
   .cmp-foot .cmp-cell {
     padding-block: 4px;
   }
   .cmp-label {
     grid-column: 1 / -1;
-    padding: 12px 12px 0;
+    padding: 12px 16px 0;
     color: var(--muted);
     font-family: var(--font-sans);
     font-size: 0.8rem;
@@ -3328,10 +3443,20 @@
     color: var(--green);
     font-size: 0.62rem;
   }
-  /* About the project (stars first): context under the numbers Holt reads,
-     set off by a stronger rule. Stars get the room; nothing here is "best". */
-  .cmp-row[data-about="first"] {
+  /* A group's heading ("Outside pull requests", "The project"): a quiet
+     label across the whole row, on the page's slightly darker ground. */
+  .cmp-group {
+    background: var(--panel-2);
     border-top: 1px solid var(--line-strong);
+  }
+  .cmp-group .cmp-label {
+    grid-column: 1 / -1;
+    padding: 8px 16px;
+    color: var(--faint);
+    font-family: var(--font-mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
   }
   .cmp-stars {
     font-size: 1.12rem;
@@ -3344,6 +3469,9 @@
       padding-inline: 16px;
       scroll-padding-inline: 16px;
     }
+    .cmp {
+      border-inline: 0;
+    }
     .cmp-scroll[data-many] {
       scroll-snap-type: x mandatory;
     }
@@ -3352,7 +3480,7 @@
     }
     .cmp-label > span {
       position: sticky;
-      left: 12px; /* the cell's padding: sticky already stops at the scroller's */
+      left: 16px; /* the cell's padding: sticky already stops at the scroller's */
       display: inline-block;
     }
     .cmp-cell {
@@ -3371,7 +3499,7 @@
     }
     .cmp-label {
       grid-column: 1;
-      padding: 14px 12px;
+      padding: 14px 16px;
     }
     .cmp-label + .cmp-cell {
       grid-column-start: 2;
@@ -3472,10 +3600,6 @@
    scrolls. Unlayered, to win over the header's border utility. */
 :root:has(.find-band) .site-header {
   border-bottom-color: transparent;
-}
-/* The repo box lives in the tab row there, so the top bar's copy steps aside. */
-:root:has(.find-band [data-check-target="band"]) .app-bar-frame [data-check-target="bar"] {
-  display: none;
 }
 @supports (animation-timeline: scroll()) {
   :root:has(.find-band) .site-header {

@@ -52,7 +52,7 @@ export function MergePlanView({ plan, locked = false }: { plan: MergePlan; locke
             </Section>
 
             <Section n={n("merged")} id="merged" title="What gets merged" note={`${plan.sample.merged} merged pull requests`}>
-              <ul className="grid gap-px overflow-hidden border border-line bg-line shadow-soft sm:grid-cols-3">
+              <ul className="grid gap-px overflow-hidden border border-line-strong bg-line sm:grid-cols-3">
                 {plan.merged.map((f) => (
                   <li key={f.label} className="flex flex-col bg-panel p-5">
                     <p className="flex items-baseline gap-1.5">
@@ -119,8 +119,8 @@ export function MergePlanView({ plan, locked = false }: { plan: MergePlan; locke
 
       <aside className="hidden lg:block" aria-label="In this plan">
         <div className="sticky top-24 space-y-4">
-          <nav className="panel p-4" aria-label="Merge plan">
-            <p className="mb-3 text-[0.8rem] uppercase tracking-[0.08em] text-faint">In this plan</p>
+          <nav className="border border-line-strong bg-panel p-4" aria-label="Merge plan">
+            <p className="mb-3 text-[0.76rem] uppercase tracking-[0.08em] text-faint">In this plan</p>
             <ol className="space-y-1 text-[0.88rem]">
               {sections
                 .filter(([id]) => !locked || id === "first-pr")
@@ -144,27 +144,29 @@ export function MergePlanView({ plan, locked = false }: { plan: MergePlan; locke
   );
 }
 
-/** The verdict card, as on the free report, with the call as its one line. */
+/** The verdict block, as on the free report (VerdictHero): the verdict in its colour, a bar down the side, then the call. */
 function PlanHero({ plan }: { plan: MergePlan }) {
   const v = plan.verdict;
   const t = TONE[v.tone];
   return (
-    <div className="relative overflow-hidden border border-line-strong bg-panel shadow-card" data-verdict-hero>
-      <span aria-hidden="true" className={`absolute inset-y-0 left-0 w-1 ${t.bg}`} />
-      <div className="p-5 pl-6 sm:p-8 sm:pl-10">
-        <div className="flex items-center justify-between gap-4 text-[0.8rem] uppercase tracking-[0.08em] text-faint">
-          <span className="flex items-center gap-2">
-            <span className="bg-ink px-1.5 py-0.5 font-semibold tracking-[0.12em] text-bg">pro</span>
-            merge plan · {v.headline.toLowerCase()}
-          </span>
-          <CatFace mood={TONE_MOOD[v.tone]} blink className="text-[1.1rem] normal-case tracking-normal sm:text-[1.5rem]" />
-        </div>
-        <h1 className="mt-4 text-[1.5rem] font-semibold leading-[1.25] tracking-tight text-ink [text-wrap:balance] sm:text-[1.85rem]">
-          <PlanText text={plan.call.text} />
+    <div className={`border-l-4 ${t.border} pl-4 sm:pl-6`} data-verdict-hero>
+      <p className="flex items-center gap-2 text-[0.76rem] uppercase tracking-[0.08em] text-faint">
+        <span className="border border-line-strong px-1.5 py-0.5 tracking-[0.12em] text-ink">pro</span>
+        merge plan
+      </p>
+      <div className="mt-3 flex items-center justify-between gap-3">
+        <h1 className={`display text-[1.6rem] leading-none sm:text-[2.25rem] ${t.text}`}>
+          {v.headline}
+          <span className="text-ink">.</span>
         </h1>
-        <Sources sources={plan.call.sources} className="mt-3" />
+        <CatFace mood={TONE_MOOD[v.tone]} blink className="text-[1rem] sm:text-[1.2rem]" />
+      </div>
+      <p className="mt-3 max-w-3xl font-sans text-[1.25rem] font-semibold leading-snug tracking-tight text-ink [text-wrap:balance] sm:text-[1.5rem]">
+        <PlanText text={plan.call.text} />
+      </p>
+      <Sources sources={plan.call.sources} className="mt-3" />
 
-        <dl className="mt-6 grid max-w-2xl grid-cols-3 border-t border-dashed border-line-strong pt-4">
+      <dl className="mt-5 grid max-w-2xl grid-cols-3 border-t border-line pt-4">
           {v.numbers.map((x) => (
             <div key={x.label} className="flex min-w-0 flex-col-reverse justify-end">
               <dt className="mt-1 font-sans text-[0.82rem] leading-snug text-faint">{x.label}</dt>
@@ -172,10 +174,9 @@ function PlanHero({ plan }: { plan: MergePlan }) {
             </div>
           ))}
         </dl>
-        <p className="mt-5 text-[0.82rem] text-faint">
-          {plan.sample.merged + plan.sample.closed} pull requests since {dateLabel(plan.window.since)} · written {dateLabel(plan.generated_at)}
-        </p>
-      </div>
+      <p className="mt-4 text-[0.78rem] text-faint">
+        {plan.sample.merged + plan.sample.closed} pull requests since {dateLabel(plan.window.since)} · written {dateLabel(plan.generated_at)}
+      </p>
     </div>
   );
 }
@@ -236,7 +237,7 @@ function LockedRest({ plan }: { plan: MergePlan }) {
     ["Who reviews", `${plan.reviewers.people.length} reviewers and what they review`],
   ];
   return (
-    <section aria-label="The rest of the plan" className="border border-line-strong bg-panel p-6 shadow-card sm:p-8">
+    <section aria-label="The rest of the plan" className="border border-line-strong bg-panel p-6 sm:p-8">
       <p className="text-[1.25rem] font-semibold tracking-tight">The rest of the plan</p>
       <ul className="mt-5 grid gap-px border border-line bg-line sm:grid-cols-2">
         {rows.map(([title, body], i) => (

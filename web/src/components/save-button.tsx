@@ -26,7 +26,7 @@ function Bookmark({ filled, drop }: { filled: boolean; drop: boolean }) {
  * `compact` leaves out the "see your saved repos" link, for a card; `small`
  * is the bookmark alone, with no box, turning violet once saved, its right
  * edge lined up with what's under it; `icon` is the same bookmark a little
- * larger and centred, for a list of rows (the home page's Your repos).
+ * larger and centred, for a list of rows (Your repos, on its page and on the home).
  */
 export function SaveButton({ repo, saved: initial, onChange, compact = false, small = false, icon = false, className = "" }: { repo: string; saved: boolean | null; onChange?: (saved: boolean) => void; compact?: boolean; small?: boolean; icon?: boolean; className?: string }) {
   const [saved, setSaved] = useState(Boolean(initial));
