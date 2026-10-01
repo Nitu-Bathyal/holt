@@ -2,7 +2,9 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { extraCount, type Picks } from "@/lib/find-picks";
+import { langColor } from "@/lib/repo-card";
 import { CONTRIBUTIONS, LANGS, langName, LEVELS, MORE_LANGS, POPULAR_TOPICS, TIME, topics as topicsOf } from "@/lib/profile";
+import { LangDot } from "../repo-card/repo-avatar";
 import { SuggestInput } from "./suggest-input";
 
 // Every choice is one tap and applies at once; the rare ones sit behind "more filters".
@@ -85,13 +87,15 @@ export function FindFilters({ picks, onChange, hf, footer }: {
           const id = l.toLowerCase();
           const on = picks.langs.includes(id);
           return (
-            <button key={id} type="button" aria-pressed={on} onClick={() => set({ langs: toggle(picks.langs, id) })} className={`${chip} ${on ? chipOn : chipOff}`}>
+            <button key={id} type="button" aria-pressed={on} onClick={() => set({ langs: toggle(picks.langs, id) })} className={`${chip} ${on ? chipOn : chipOff} gap-2`}>
+              <LangDot color={langColor(l)} />
               {l}
             </button>
           );
         })}
         {custom.map((id) => (
-          <button key={id} type="button" aria-pressed="true" aria-label={`${langName(id)}, remove`} onClick={() => set({ langs: toggle(picks.langs, id) })} className={`${chip} ${chipOn} gap-1.5`}>
+          <button key={id} type="button" aria-pressed="true" aria-label={`${langName(id)}, remove`} onClick={() => set({ langs: toggle(picks.langs, id) })} className={`${chip} ${chipOn} gap-2`}>
+            <LangDot color={langColor(langName(id))} />
             {langName(id)}
             <span aria-hidden="true" className="opacity-70">×</span>
           </button>

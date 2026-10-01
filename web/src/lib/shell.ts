@@ -75,16 +75,18 @@ export const CHECK_HREF = "/me#check";
 /**
  * The five places a signed-in person goes (the dashboard plan). The
  * check box lives in the top bar, account things in the avatar menu.
- * Hacktoberfest is a tab of Find a project (lib/find-tabs.ts).
+ * In October (`season`, lib/site.ts hacktoberfest()), Hacktoberfest is a
+ * sixth, under Compare.
  */
-export function sidebarGroups(): NavGroup[] {
+export function sidebarGroups(season = false): NavGroup[] {
   const items: NavItem[] = [
     { id: "home", label: "Home", href: "/me", icon: "home" },
-    { id: "find", label: "Find a project", href: "/find", icon: "find", also: ["/discover", "/hacktoberfest"] },
+    { id: "find", label: "Find a project", href: "/find", icon: "find", also: ["/discover"] },
     { id: "prs", label: "Your pull requests", href: "/me/contributions", icon: "pr" },
     { id: "repos", label: "Your repos", href: "/me/repos", icon: "saved" },
     { id: "compare", label: "Compare", href: "/compare", icon: "compare" },
   ];
+  if (season) items.push({ id: "hacktoberfest", label: "Hacktoberfest", href: "/hacktoberfest", icon: "leaf" });
   return [{ label: null, items }];
 }
 

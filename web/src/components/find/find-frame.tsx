@@ -3,12 +3,11 @@
 // URLs stay and they read as one place. There's no visible page head: the tab
 // row and each tab's filter tray (.find-tray) continue the top bar as one band
 // (globals.css), so the results start near the top of a page used every day.
-// Signed in, the top bar's repo box moves into the tab row, on the right
-// before Hacktoberfest.
+// Signed in, Hacktoberfest is in the sidebar (lib/shell.ts), so the tab row
+// leaves it out; the repo box stays in the top bar.
 import Link from "next/link";
 import { findTabs, type FindTab } from "@/lib/find-tabs";
 import { hacktoberfest } from "@/lib/site";
-import { QuickCheck } from "../shell/quick-check";
 import { Skeleton } from "../skeleton";
 
 export function FindFrame({ tab, title, signedIn, children }: {
@@ -25,17 +24,15 @@ export function FindFrame({ tab, title, signedIn, children }: {
     </Link>
   );
   const main = tabs.filter((t) => t.id !== "hacktoberfest");
-  const hf = tabs.find((t) => t.id === "hacktoberfest");
+  // Signed out there's no sidebar, so the tab row keeps it.
+  const hf = signedIn ? undefined : tabs.find((t) => t.id === "hacktoberfest");
   return (
     <div className="app-page" data-frame="wide">
       <div className="find-band">
         <h1 className="sr-only">{title}</h1>
         <nav aria-label="Find a project" className="find-tabs">
           {main.map(link)}
-          <span className="find-tabs-end">
-            {signedIn && <QuickCheck variant="band" className="w-72 lg:w-96" />}
-            {hf && link(hf)}
-          </span>
+          {hf && <span className="find-tabs-end">{link(hf)}</span>}
         </nav>
       </div>
       {children}

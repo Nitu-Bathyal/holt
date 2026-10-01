@@ -5,10 +5,13 @@ import { FindFrame } from "@/components/find/find-frame";
 import { ErrorPanel } from "@/components/error-panel";
 import { FindResults } from "@/components/find/find-results";
 import { FindRunner } from "@/components/find/find-runner";
+import { HfLangAdd } from "@/components/find/hf-lang-add";
+import { LangDot } from "@/components/repo-card/repo-avatar";
 import { ShareBar } from "@/components/report/share-bar";
 import { getProfile, savedNames } from "@/lib/api";
 import { cachedFind } from "@/lib/find-cached";
-import { days as daysOf, personalise } from "@/lib/profile";
+import { days as daysOf, langName, personalise } from "@/lib/profile";
+import { langColor } from "@/lib/repo-card";
 import { caller, currentUser } from "@/lib/session";
 import { CHECK_HREF } from "@/lib/shell";
 import { hacktoberfest, hacktoberfestOver, SITE_URL } from "@/lib/site";
@@ -40,6 +43,15 @@ const LANGS = [
   { id: "php", label: "PHP", langs: ["php"] },
 ] as const;
 
+type Tab = { id: string; label: string; langs: readonly string[] };
+
+/** A language typed into "add a language" (?lang=kotlin): its own tab, if it's a plausible name. */
+function typedTab(v: string | string[] | undefined): Tab | null {
+  const lang = typeof v === "string" ? v.trim().toLowerCase() : "";
+  if (!lang || lang.length > 40 || !/^[a-z0-9][a-z0-9 +#.\-]*$/.test(lang) || LANGS.some((l) => l.id === lang || (l.langs as readonly string[]).includes(lang))) return null;
+  return { id: lang, label: langName(lang), langs: [lang] };
+}
+
 // The official rules, from the hacktoberfest.com FAQ as of 29 Sep 2026.
 // Re-read them each year; they changed completely in 2026.
 const RULES_URL = "https://hacktoberfest.com/questions/";
@@ -69,14 +81,17 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
   const [profileR, saved] = await Promise.all([user ? getProfile(user.id) : null, savedNames(user?.id)]);
   const profile = profileR?.ok ? profileR.data.profile : null;
   // With no tab picked, a profile picks the first tab that has one of its languages.
-  const tab = LANGS.find((l) => l.id === sp.lang)
+  const typed = typedTab(sp.lang);
+  const asked = typeof sp.lang === "string" ? sp.lang.trim().toLowerCase() : "";
+  const tab: Tab = LANGS.find((l) => l.id === asked || (l.langs as readonly string[]).includes(asked))
+    ?? typed
     ?? (profile && LANGS.find((l) => l.langs.some((x: string) => profile.languages.includes(x))))
     ?? LANGS[0];
   const days = profile ? daysOf(profile.days) : 7;
   const hf = hacktoberfest();
   const ended = hacktoberfestOver(YEAR);
   const result = await cachedFind({ languages: [...tab.langs], topics: [], days, hacktoberfest: true, limit: 12 }, await caller(user));
-  const here = `/hacktoberfest${tab.id === "all" ? "" : `?lang=${tab.id}`}`;
+  const here = `/hacktoberfest${tab.id === "all" ? "" : `?lang=${encodeURIComponent(tab.id)}`}`;
   const fit = profile ? { level: profile.level, contributions: profile.contributions } : null;
   // No results on a language tab: widen to every language; on that tab, the find page.
   const empty = tab.id === "all"
@@ -112,13 +127,32 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
                   href={l.id === "all" ? (profile ? "/hacktoberfest?lang=all" : "/hacktoberfest") : `/hacktoberfest?lang=${l.id}`}
                   scroll={false}
                   aria-current={l.id === tab.id ? "page" : undefined}
-                  className={`chip min-h-11 whitespace-nowrap px-4 text-[0.89rem] transition-colors ${l.id === tab.id ? "border-hf bg-hf text-bg" : "hover:border-hf hover:text-ink"}`}
+                  className={`chip min-h-11 gap-2 whitespace-nowrap px-4 text-[0.89rem] transition-colors ${l.id === tab.id ? "border-hf bg-hf text-bg" : "hover:border-hf hover:text-ink"}`}
                 >
+                  {l.langs.length > 0 && <LangDot color={langColor(l.langs[0] ?? null)} />}
                   {l.label}
                   {l.id !== "all" && <span className="sr-only"> projects</span>}
                 </Link>
               </li>
             ))}
+            {typed && (
+              <li>
+                <Link
+                  href={profile ? "/hacktoberfest?lang=all" : "/hacktoberfest"}
+                  scroll={false}
+                  aria-current="page"
+                  aria-label={`${typed.label}, remove`}
+                  className="chip min-h-11 gap-2 whitespace-nowrap border-hf bg-hf px-4 text-[0.89rem] text-bg"
+                >
+                  <LangDot color={langColor(typed.id)} />
+                  {typed.label}
+                  <span aria-hidden="true" className="opacity-70">×</span>
+                </Link>
+              </li>
+            )}
+            <li>
+              <HfLangAdd />
+            </li>
           </ul>
         </nav>
 
@@ -134,7 +168,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
 
         <div className="mt-14 grid grid-cols-1 gap-12 border-t border-line pt-10 lg:grid-cols-2">
           <section aria-labelledby="counts">
-            <h2 id="counts" className="h2">What counts in {YEAR}</h2>
+            <h2 id="counts" className="h2 hf-h2">What counts in {YEAR}</h2>
             <ul className="mt-6 space-y-3 font-sans text-muted">
               {COUNTS.map((line) => (
                 <li key={line} className="flex gap-2">
@@ -147,7 +181,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
               From the{" "}
               <a className="text-link" href={RULES_URL} target="_blank" rel="noopener noreferrer">hacktoberfest.com FAQ ↗</a>
             </p>
-            <h2 id="how" className="h2 mt-12">How to make October count</h2>
+            <h2 id="how" className="h2 hf-h2 mt-12">How to make October count</h2>
             <ol className="mt-6 space-y-6">
               {STEPS.map(([title, body], i) => (
                 <li key={title} className="grid grid-cols-[2.5rem_1fr] gap-3">
@@ -161,7 +195,7 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
             </ol>
           </section>
           <section id="tips" aria-labelledby="tips-h" className="scroll-mt-24">
-            <h2 id="tips-h" className="h2">How not to get your PR ignored</h2>
+            <h2 id="tips-h" className="h2 hf-h2">How not to get your PR ignored</h2>
             <ol className="mt-6 space-y-5">
               {TIPS.map(([title, body]) => (
                 <li key={title} className="flex gap-3">
