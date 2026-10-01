@@ -74,6 +74,10 @@ STALE_AFTER = timedelta(seconds=90)
 # Queue positions are counted over at most this many queued jobs.
 QUEUE_SCAN = 2000
 
+# How long a finished report waits for its repo's details (README, links,
+# stars...) before it's announced without them. One GitHub query, usually ~1 s.
+META_WAIT_S = 8.0
+
 USER_LANE = "user"
 BACKGROUND_LANE = "background"
 
@@ -142,6 +146,7 @@ class JobRunner:
         self._models: dict[str, budget.Capped] = {}  # running AI reports' model clients
         # Reads a reported repo's details (Discover) after its report is stored.
         self.meta = MetaRefresher(services)
+        self.meta_wait = META_WAIT_S
         self._stopping = False
 
     # --- lifecycle ----------------------------------------------------------
@@ -443,6 +448,28 @@ class JobRunner:
         return update(Job).where(Job.id == job_id, Job.status == "running",
                                  Job.worker_id == self.worker_id)
 
+    async def _dressed(self, repo: str, result: dict[str, Any]) -> dict[str, Any]:
+        """`result` as the report page is served it (api.dressed), its repo's
+        details read first if there are none yet. Never raises: without them,
+        the report is still announced."""
+        from holt_server import api, schema
+
+        try:
+            await asyncio.wait_for(self.meta.read_now(repo), self.meta_wait)
+        except TimeoutError:
+            # GitHub is slow: announce the report now and read them after it.
+            self.meta.note(repo)
+        except Exception as exc:  # noqa: BLE001 -- the report goes out regardless
+            log.warning("reading %s's details before its report failed: %s",
+                        repo, getattr(exc, "code", None) or type(exc).__name__)
+        try:
+            report = await api.dressed(self.services, schema.Report.model_validate(result), repo)
+        except Exception:  # noqa: BLE001
+            log.exception("adding details to %s's report failed", repo)
+            return result
+        extra = report.model_dump(mode="json", include={"about", "holt_users"})
+        return {**result, **extra}
+
     async def _write_progress(self, job_id: str,
                               steps: asyncio.Queue[tuple[str, float] | None]) -> None:
         """Record a job's progress steps one at a time until `None`."""
@@ -477,6 +504,10 @@ class JobRunner:
                                                              "days": job.days})
             limit = int((job.params or {}).get("limit") or 20)
             shown = {**result, "results": find.merge(index, result["results"])[:limit]}
+        elif job.kind == "analysis" and job.repo:
+            # The page shows the report as announced: give it what a stored
+            # report is served with, so nothing appears only after a reload.
+            shown = await self._dressed(job.repo, result)
         async with self.services.db.session() as s:
             done = await s.execute(self._mine(job.id).values(
                 status="done", stage="Done", progress=1.0, result=shown,
@@ -500,7 +531,6 @@ class JobRunner:
             await s.commit()
         self.hub.publish(job.id, "done", done_payload(job.kind, shown))
         if job.kind == "analysis" and job.repo:
-            self.meta.note(job.repo)
             if evidence is not None and evidence.records:
                 await self.keep_evidence(job.repo, evidence)
         if job.kind == "find":

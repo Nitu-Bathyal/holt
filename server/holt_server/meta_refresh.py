@@ -2,8 +2,10 @@
 report is stored, so a repo checked for the first time shows up on Discover,
 the Hacktoberfest row and its card complete, without waiting for the warm pass.
 
-Best effort, after the report: the job is already done and its subscribers
-told before anything here runs, and a failure is only logged. Reports that
+A report job reads its own repo's details first (`read_now`, waiting at most
+jobs.META_WAIT_S) so the report reaches the page with them. When that read
+fails or runs out of time, `note` tries again after the report: best effort,
+and a failure is only logged. Reports that
 finish within `DELAY_S` of each other share one query (up to a hundred repos,
 about a point). A repo whose details are younger than
 discover.META_MAX_AGE_HOURS is not read again; the daily meta-only warm pass
@@ -52,6 +54,11 @@ class MetaRefresher:
                     self._flush(), name="holt-meta-refresh")
         except Exception:  # noqa: BLE001 -- details are a nicety; the report is done
             log.exception("could not schedule a details read for %s", repo)
+
+    async def read_now(self, repo: str) -> None:
+        """Read `repo`'s details now, when it has none or they're stale, so a
+        report about to be announced carries them. Raises on a failed read."""
+        await self._read({repos.key(repo): repo})
 
     async def _flush(self) -> None:
         await asyncio.sleep(self.delay)

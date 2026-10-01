@@ -306,10 +306,18 @@ async def get_report(owner: str, repo: str, request: Request,
     latest = await latest_report(svc, name, mode, days)
     if latest is None:
         raise ApiError("not_found", f"There's no report for {name} yet.")
-    report = schema.Report.model_validate(latest.report)
+    report = await dressed(svc, schema.Report.model_validate(latest.report), name)
+    report.outdated = latest.outdated
+    return report
+
+
+async def dressed(svc: Services, report: schema.Report, name: str) -> schema.Report:
+    """`report` with what the page shows beside it but the stored report doesn't
+    hold: the repo's details (`about`) and Holt users' numbers. Every way a
+    report reaches the page goes through here, so a report just checked shows
+    the same as the same report read back later."""
     report.holt_users = await repo_stats.for_repo(svc, name)
     report.about = await discover.about(svc, name)
-    report.outdated = latest.outdated
     return report
 
 
@@ -334,8 +342,8 @@ async def create_analysis(body: AnalysisIn, request: Request,
     if not body.refresh:
         cached = await latest_report(svc, repo, body.mode, body.days)
         if cached is not None and is_fresh(svc, cached):
-            return JSONResponse(schema.AnalysisDone(
-                report=schema.Report.model_validate(cached.report)).model_dump(mode="json"))
+            report = await dressed(svc, schema.Report.model_validate(cached.report), repo)
+            return JSONResponse(schema.AnalysisDone(report=report).model_dump(mode="json"))
 
     if body.mode == "ai" and not svc.server_model_available():
         # Before the rate limit and the credit: nothing is spent or queued.

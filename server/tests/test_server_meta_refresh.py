@@ -1,6 +1,8 @@
-"""Repository details are read right after a repo's report is stored, so a
-repo checked for the first time shows its language, stars and topics without
-waiting for the warm pass. Best effort: it never fails or slows the report."""
+"""A repo's details are read before its report is announced, so a repo
+checked for the first time shows its README, links, language, stars and topics
+on the report as it lands, without a reload or waiting for the warm pass. Best
+effort: a failed read never fails the report, and a slow one doesn't hold it
+past jobs.META_WAIT_S."""
 
 from __future__ import annotations
 
@@ -46,9 +48,11 @@ def add(h, *items):
     h.client.portal.call(go)
 
 
-def test_a_new_repo_gets_its_details_after_its_report(h):
+def test_a_new_repo_gets_its_details_with_its_report(h):
     h.svc.lookup.details.known = {"octo/one": details("octo/one", stars=321)}
-    check(h, "octo/one")
+    done = check(h, "octo/one")
+    # The report as announced already carries them: nothing waits for a reload.
+    assert done["report"]["about"]["stars"] == 321
     drain(h)
     assert h.svc.lookup.details.calls == [["octo/one"]]
     row = meta_row(h, "octo/one")
@@ -78,7 +82,10 @@ def test_a_slow_details_read_does_not_hold_the_report(h):
         await asyncio.sleep(3600)
 
     h.svc.lookup.details = never
-    check(h, "octo/one")  # h.wait would time out if the report waited on it
+    h.svc.runner.meta_wait = 0.05
+    done = check(h, "octo/one")  # h.wait would time out if the report waited on it
+    assert done["report"]["about"] is None
+    h.client.portal.call(h.svc.runner.meta.stop)
 
 
 def test_details_are_not_read_again_within_a_day(h):
