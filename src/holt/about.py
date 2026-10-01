@@ -149,19 +149,26 @@ HELP_PATTERNS = (
 MAX_URL = 300
 
 
-def help_links(text: str | None) -> list[dict[str, str]]:
+def help_links(text: str | None, repo: str | None = None) -> list[dict[str, str]]:
     """The README's links to its docs and chat rooms, as [{"kind", "url"}],
-    in HELP_PATTERNS order, one per kind."""
+    in HELP_PATTERNS order, one per kind. With `repo` ("owner/name"), a docs
+    link counts only when it names the project: a README often links to the
+    docs of something it builds on (Flask's to WSGI's), and a wrong docs link
+    is worse than none."""
     if not text:
         return []
     text = _COMMENT.sub("", text)
+    name = re.sub(r"[^a-z0-9]", "", (repo or "").rpartition("/")[2].lower())
     out = []
     for kind, pattern in HELP_PATTERNS:
         for m in pattern.finditer(text):
             url = m.group(0).rstrip(".,;:!?")
-            if len(url) <= MAX_URL:
-                out.append({"kind": kind, "url": url})
-                break
+            if len(url) > MAX_URL:
+                continue
+            if kind == "docs" and name and name not in re.sub(r"[^a-z0-9]", "", url.lower()):
+                continue
+            out.append({"kind": kind, "url": url})
+            break
     return out
 
 
