@@ -51,7 +51,7 @@ signed in:
 - **work** — new analyses (`POST /v1/analyses` that queues a job) and
   `POST /v1/find` searches that are not cached or already running. Small
   (anonymous: 10/h). Cached answers, and joining a running job, are free.
-- **read** — cache misses on reads (`/starter-issues`). Generous (anonymous:
+- **read** — cache misses on reads (`/starter-issues`, `/repos/search`). Generous (anonymous:
   120/h). Viewing, reloading and sharing report pages can never use up work.
 
 `GET /v1/reports/…` reads only the cache and is not rate limited.
@@ -466,6 +466,19 @@ first (issues nobody is on before the rest):
 `{"repo": "…", "issues": [StarterIssue]}`. Cached per repository for 1 hour;
 a cache hit costs no GitHub call and no rate limit. A miss counts against the
 **read** limit, never the work limit (see Rate limits).
+
+### `GET /v1/repos/search?q=excalidraw`
+Which repository does a bare name mean? Public repositories whose *name*
+matches `q`, most starred first, at most five, forks left out:
+`{"query": "excalidraw", "results": [{"repo": "excalidraw/excalidraw", "description": "…"|null, "stars": 90000}]}`.
+`q` is a name, 1–60 characters of letters, digits, `.`, `_`, `-` and single
+spaces (it is lower-cased; anything else, such as `owner/name`, is
+`invalid_request`). No match is an empty `results`, not an error. It reads
+GitHub's REST search (a budget of its own, apart from the GraphQL points
+reports use) and nothing is stored; an answer is kept in memory for 10
+minutes, and only a miss counts against the **read** limit. GitHub
+rate-limiting it answers `rate_limited`. The compare page uses it to turn a typed name
+into a repo; pick the result whose name equals `q` first, else the top one.
 
 ### `POST /v1/find`
 Body: `{"languages": ["python"], "topics": [], "days": 7, "hacktoberfest": true, "limit": 20}`
