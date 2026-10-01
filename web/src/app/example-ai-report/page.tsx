@@ -26,17 +26,19 @@ export default async function ExampleAiReportPage({ searchParams }: PageProps<"/
   return (
     <PageTransition>
       <div className="relative">
-        <div aria-hidden="true" className="hero-backdrop bottom-auto h-[560px] [mask-image:linear-gradient(#000_55%,transparent)]" />
+        {/* The same page as a report: no backdrop, the example said in one quiet note above it. */}
         <div className="report-wide relative py-8 sm:py-12">
-          <aside className="mb-6 border border-blue/50 bg-blue/[0.06] p-4 sm:p-5" data-example-banner>
-            <p className="text-[0.8rem] uppercase tracking-[0.08em] text-blue">Example AI report (recorded {recorded})</p>
-            <p className="mt-2 max-w-3xl font-sans text-[0.95rem] text-ink">Real counts, quotes and links. The plan&apos;s wording stands in for the AI&apos;s.</p>
-            <div className="mt-3 flex flex-wrap items-center gap-x-5 gap-y-1">
-              <Link href="/" className="bracket-link">[ get one for your repo → ]</Link>
-              <Link href={locked ? EXAMPLE_PATH : `${EXAMPLE_PATH}?view=locked`} className="text-link font-sans text-[0.89rem]">
+          <aside className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 border border-line-strong bg-panel-2 px-4 py-3 font-sans text-[0.9rem] text-muted" data-example-banner>
+            <span className="border border-blue px-2 py-0.5 font-mono text-[0.85rem] text-blue">Example AI report</span>
+            <span className="min-w-0 flex-1">
+              Recorded {recorded}. Real counts, quotes and links; the plan&apos;s wording stands in for the AI&apos;s.
+            </span>
+            <span className="flex flex-wrap gap-x-4 gap-y-2">
+              <Link href={locked ? EXAMPLE_PATH : `${EXAMPLE_PATH}?view=locked`} className="text-link tap">
                 {locked ? "see the whole plan" : "what you see before unlocking"}
               </Link>
-            </div>
+              <Link href="/" className="text-link tap">get one for your repo</Link>
+            </span>
           </aside>
 
           <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3">

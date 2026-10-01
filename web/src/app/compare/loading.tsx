@@ -9,7 +9,7 @@ export default function Loading() {
       <SkeletonRegion>
         <div className="app-page">
           <div className="app-head">
-            <span className="flex h-[clamp(2.09rem,3.96vw,3.3rem)] items-center">
+            <span className="flex h-[clamp(1.61rem,2.53vw,2.13rem)] items-center">
               <Skeleton className="h-[62%] w-[min(34rem,90%)]" />
             </span>
             <Skeleton className="mt-6 h-[3.1rem] max-w-xl" />

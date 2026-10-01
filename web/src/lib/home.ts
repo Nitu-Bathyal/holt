@@ -4,7 +4,7 @@
 import { humanHours, timeAgo } from "./format.ts";
 import { safeCallback } from "./safe-url.ts";
 import type { ContributionPR } from "./types";
-import type { YourRepo } from "./your-repos.ts";
+import { repoNumbers, type YourRepo } from "./your-repos.ts";
 
 export const HOME = "/me";
 
@@ -191,16 +191,42 @@ export function moveTitle(m: NextMove): string {
 const ORDINAL = ["", "1st", "2nd", "3rd"];
 const ordinal = (n: number) => ORDINAL[n] ?? `${n}th`;
 
-/** One fact under the headline, or null. */
-export function moveLead(m: NextMove): string | null {
+/** One fact under the headline, or null. `repos` lets it say why the next repo
+ * is a good one, or why none of yours is yet. */
+export function moveLead(m: NextMove, repos: YourRepo[] = []): string | null {
   switch (m.kind) {
     case "merged":
       return `${m.pr.title}. That's your ${ordinal(m.merged)} merged PR this year.`;
     case "waiting":
       return m.wait.line;
-    default:
-      return null;
+    case "issue": {
+      const r = repos.find((x) => x.repo.toLowerCase() === m.repo.toLowerCase());
+      const n = r?.stats ? repoNumbers(r.stats) : null;
+      const why = n && r!.stats!.outsider_attempts ? `: ${n.merged}${n.reply ? `, ${n.reply}` : ""}` : "";
+      return `Holt says it's worth your time${why}. Start small with one of its good first issues.`;
+    }
+    case "first":
+      if (repos.length) {
+        return `None of the ${repos.length === 1 ? "repo" : `${repos.length} repos`} you saved or checked is worth your time yet. Find one where outside PRs get merged.`;
+      }
+      if (m.again) return "Your last pull requests are wrapped up. Find a repo where outside PRs get merged and go again.";
+      return "Holt reads a repo's recent pull requests and tells you whether outsiders get replies and merges. Start with one where they do.";
   }
+}
+
+/** The small numbers under the head: what you've saved, checked and sent. Empty while you're starting. */
+export function homeFacts(s: { repos: YourRepo[]; pulls: ContributionPR[] }): string[] {
+  const count = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+  const saved = s.repos.filter((r) => r.savedAt).length;
+  const checked = s.repos.filter((r) => r.checkedAt).length;
+  const open = s.pulls.filter((p) => p.state === "open").length;
+  const merged = s.pulls.filter((p) => p.state === "merged").length;
+  return [
+    saved ? `${saved} saved` : null,
+    checked ? `${checked} checked` : null,
+    open ? `${count(open, "PR")} open` : null,
+    merged ? `${merged} merged this year` : null,
+  ].filter((x): x is string => x !== null);
 }
 
 /** Also for you: your checks running or just finished, PRs that need you (your

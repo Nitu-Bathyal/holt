@@ -603,11 +603,14 @@ never reads GitHub for them.
 `description`, `language`, `stars`, the four counts, `topics` (all of them,
 up to GitHub's 20) and `pushed_at` come from `repo_meta`, read from GitHub right after a
 repository's report is stored (when it has none, or they are more than a day
-old) and again once a day for every reported repository. The read after a
-report is best effort and happens a few seconds after the report is done, so
-they can be null or empty for a moment (a repo checked for the first time
-joins the Hacktoberfest filter a few seconds after its report), or until the
-next report or daily read if GitHub didn't answer.
+old) and again once a day for every reported repository. A report job reads
+its repo's details before it is announced (waiting at most 8 seconds), so a
+report's `about` is the same in the job's `done` event, in `GET
+/v1/analyses/{job_id}`, in a cached `200` from `POST /v1/analyses` and in `GET
+/v1/reports/{owner}/{repo}`. The read is best effort: if GitHub is slow it
+happens a few seconds after the report instead (so `about` can be null on the
+report as announced), and if GitHub didn't answer, `about` stays null until
+the next report or daily read.
 
 ### `GET /badge/{owner}/{repo}.svg` (no internal key; public; `Cache-Control: public, max-age=3600, stale-while-revalidate=86400`)
 Shields-style SVG badge. Maintainers embed it in READMEs; it links back to the

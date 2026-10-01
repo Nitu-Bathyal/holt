@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Bookmark } from "lucide-react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Suspense } from "react";
@@ -75,30 +76,10 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
     ) : null,
   );
 
-  const full = all.length >= MAX;
   return (
     <PageTransition>
       <div className="app-page">
-        <AppPageHeader title={title} mood={shown.length ? "ready" : "thinking"}>
-          <form action="/compare" method="get" className="mt-6 flex max-w-xl items-center border border-line-strong bg-panel transition-colors focus-within:border-blue">
-            <input type="hidden" name="repos" value={all.join(",")} />
-            <label htmlFor="add" className="sr-only">{all.length ? "Add a repo" : "Repos to compare"}</label>
-            <span aria-hidden="true" className="pl-3 text-amber">+</span>
-            <input
-              id="add"
-              name="add"
-              placeholder={full ? "remove one to add another" : all.length ? "add a repo: name or owner/name" : "excalidraw, pallets/flask"}
-              disabled={full}
-              autoFocus={!all.length}
-              autoComplete="off"
-              autoCapitalize="none"
-              spellCheck={false}
-              className="min-w-0 flex-1 bg-transparent px-2 py-3 text-[0.92rem] outline-none placeholder:text-faint disabled:cursor-not-allowed"
-            />
-            <button type="submit" disabled={full} className="self-stretch border-l border-line-strong px-4 text-[0.85rem] text-muted transition-colors hover:text-ink disabled:opacity-50">
-              {all.length ? "add" : "compare"}
-            </button>
-          </form>
+        <AppPageHeader sentence title={title} mood={shown.length ? "ready" : "thinking"}>
           {problems.length > 0 && (
             <p role="status" className="mt-3 max-w-xl font-sans text-[0.86rem] leading-snug text-orange">
               {problems.map((l) => (
@@ -109,19 +90,33 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
             </p>
           )}
           {fromSaved.length > 0 && (
-            <p className="mt-3 flex flex-wrap items-center gap-2 text-[0.82rem] text-faint">
-              <span>from your saved repos</span>
-              {!all.length && saved.length >= 2 && (
-                <Link href={href(saved.slice(0, MAX))} className="border border-blue px-2 py-1 text-ink transition-colors hover:bg-panel">
-                  {saved.length > MAX ? `newest ${MAX}` : `all ${saved.length}`} side by side →
-                </Link>
-              )}
-              {fromSaved.map((s) => (
-                <Link key={s} href={href([...all, s])} className={CHIP}>
-                  <span aria-hidden="true" className="text-amber">+ </span>{s}<span className="sr-only"> (add to the comparison)</span>
-                </Link>
-              ))}
-            </p>
+            <section aria-labelledby="from-saved" className="mt-6 max-w-2xl">
+              <h2 id="from-saved" className="flex items-center gap-2 text-[0.78rem] uppercase tracking-[0.08em] text-faint">
+                <Bookmark aria-hidden="true" strokeWidth={1.8} className="size-3.5 fill-current text-hf" />
+                {all.length ? "Add one you saved" : "Start from your saved repos"}
+              </h2>
+              <div className="mt-2.5 flex flex-wrap items-center gap-2">
+                {!all.length && saved.length >= 2 && (
+                  <Link href={href(saved.slice(0, MAX))} className="inline-flex min-h-9 items-center gap-1.5 bg-blue px-3 text-[0.84rem] font-medium text-bg transition-opacity hover:opacity-90">
+                    Compare {saved.length > MAX ? `newest ${MAX}` : `all ${saved.length}`}
+                    <span aria-hidden="true">→</span>
+                  </Link>
+                )}
+                {fromSaved.map((s) => {
+                  const [owner, name] = s.split("/");
+                  return (
+                    <Link key={s} href={href([...all, s])} className="group inline-flex min-h-9 items-center gap-2 border border-line-strong bg-panel px-3 text-[0.84rem] transition-colors hover:border-blue">
+                      <span>
+                        <span className="text-faint">{owner}/</span>
+                        <span className="text-ink">{name}</span>
+                      </span>
+                      <span aria-hidden="true" className="text-faint transition-colors group-hover:text-blue">+</span>
+                      <span className="sr-only"> (add to the comparison)</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </section>
           )}
           {!all.length && (
             <p className="mt-3 flex flex-wrap items-center gap-2 text-[0.82rem] text-faint">
@@ -152,15 +147,19 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
               </p>
             )}
             <CompareTable columns={columns} issues={issues} now={clock()} label={all.length ? `Comparing ${short(list)}` : `Example: ${short(list)}`} />
-            <div className="mt-5 max-w-2xl space-y-1.5 font-sans text-[0.8rem] leading-snug text-faint">
+            {/* The table's key: each mark in its own column, its meaning beside it. */}
+            <dl className="mt-5 grid max-w-2xl grid-cols-[1.5rem_minmax(0,1fr)] gap-x-2 gap-y-2 border-t border-line pt-4 font-sans text-[0.8rem] leading-snug text-faint">
               {shown.length > 1 && (
-                <p>
-                  <span className="text-green">▲</span> marks the best number in a row, among the repos rated Worth your time or Long shot. One good number
-                  doesn&apos;t make up for a poor verdict.
-                </p>
+                <>
+                  <dt className="text-center font-mono text-green"><span className="sr-only">Triangle</span><span aria-hidden="true">▲</span></dt>
+                  <dd>
+                    Best number in the row, among the repos rated Worth your time or Long shot. One good number doesn&apos;t make up for a poor verdict.
+                  </dd>
+                </>
               )}
-              <p>– means there&apos;s no number: the repo hasn&apos;t been checked yet, nobody from outside its team opened a pull request to count, or GitHub didn&apos;t say.</p>
-            </div>
+              <dt className="text-center font-mono text-muted"><span className="sr-only">Dash</span><span aria-hidden="true">–</span></dt>
+              <dd>No number: the repo hasn&apos;t been checked yet, no one outside its team has opened a pull request to count, or GitHub didn&apos;t say.</dd>
+            </dl>
           </>
         )}
       </div>

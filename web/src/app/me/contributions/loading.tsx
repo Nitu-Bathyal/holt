@@ -9,9 +9,9 @@ export default function Loading() {
     <LoadingTransition>
       <SkeletonRegion>
         <div className="app-page">
-          <div className="app-head">
-            <Skeleton className="h-10 w-[26rem] max-w-full" />
-            <Skeleton className="mt-3 h-10 w-60 max-w-full" />
+          <div className="app-head sentence-head">
+            <Skeleton className="h-8 w-[26rem] max-w-full" />
+            <Skeleton className="mt-3 h-8 w-60 max-w-full" />
             <div className="mt-5 flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
               <Skeleton className="h-3 w-80 max-w-full" />
               <Skeleton className="h-9 w-28" />

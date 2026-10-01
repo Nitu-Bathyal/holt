@@ -6,6 +6,7 @@ import { prGroups } from "@/lib/contributions";
 import { clock, statusLine } from "@/lib/home";
 import type { SessionUser } from "@/lib/session";
 import { sidebarGroups } from "@/lib/shell";
+import { hacktoberfest } from "@/lib/site";
 import { BellSlot } from "../alerts/bell-slot";
 import { AppTopBar } from "../header";
 import { Drawer, Sidebar } from "./sidebar";
@@ -43,7 +44,7 @@ export async function appShell(user: SessionUser, credits: string | null, railCo
       </Suspense>
     ),
   };
-  const nav = { groups: sidebarGroups(), badges, user: { name: user.name || user.email || "You", image: user.image ?? null }, credits };
+  const nav = { groups: sidebarGroups(hacktoberfest() !== null), badges, user: { name: user.name || user.email || "You", image: user.image ?? null }, credits };
   return {
     topBar: (
       <AppTopBar

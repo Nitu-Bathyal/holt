@@ -11,7 +11,7 @@ import { ABOUT_ROWS, aboutCells, cells, contenders, leaders, ROWS, type Cell, ty
 import { fullStats, langColor } from "@/lib/repo-card";
 import { friendlyStage } from "@/lib/stages";
 import type { Report, StarterIssue } from "@/lib/types";
-import { VerdictPill } from "../report/verdict-pill";
+import { TONE } from "../report/tone";
 import { OddsBar } from "../repo-card/odds-bar";
 import { LangDot, RepoAvatar } from "../repo-card/repo-avatar";
 import { useAnalysis } from "../use-analysis";
@@ -41,7 +41,7 @@ export function CompareTable({ columns, issues, label, now }: { columns: Column[
             <span className="text-faint"><span className="text-green">▲</span> best of these</span>
           </div>
           {columns.map((c, i) => (
-            <ColumnHead key={c.repo} repo={reports[i]?.repo ?? c.repo} removeHref={c.removeHref} />
+            <ColumnHead key={c.repo} repo={reports[i]?.repo ?? c.repo} removeHref={c.removeHref} tone={reports[i]?.tone} />
           ))}
         </div>
 
@@ -53,7 +53,10 @@ export function CompareTable({ columns, issues, label, now }: { columns: Column[
               <div role="cell" key={c.repo} className="cmp-cell">
                 {r ? (
                   <>
-                    <VerdictPill headline={r.headline} tone={r.tone} className="px-1.5 py-0.5 text-[0.76rem]" />
+                    <p className={`inline-flex items-center gap-2 text-[0.95rem] font-semibold tracking-tight ${TONE[r.tone].text}`}>
+                      <span aria-hidden="true" className={`size-1.5 rounded-full ${TONE[r.tone].bg}`} />
+                      {r.headline}
+                    </p>
                     <OddsBar stats={fullStats(r.stats)} className="mt-3 h-1.5" />
                     <p className="mt-3 font-sans text-[0.84rem] leading-snug text-muted">{r.verdict_line}</p>
                   </>
@@ -67,6 +70,7 @@ export function CompareTable({ columns, issues, label, now }: { columns: Column[
           })}
         </div>
 
+        <Group label="Outside pull requests" />
         {ROWS.map((row, n) => (
           <div role="row" key={row.id} className="cmp-row">
             <div role="rowheader" className="cmp-label"><span>{row.label}</span></div>
@@ -90,8 +94,9 @@ export function CompareTable({ columns, issues, label, now }: { columns: Column[
           </div>
         ))}
 
-        {ABOUT_ROWS.map((row, n) => (
-          <div role="row" key={row.id} className="cmp-row" data-about={n === 0 ? "first" : undefined}>
+        <Group label="The project" />
+        {ABOUT_ROWS.map((row) => (
+          <div role="row" key={row.id} className="cmp-row">
             <div role="rowheader" className="cmp-label"><span>{row.label}</span></div>
             {columns.map((c, i) => {
               const cell = about[i]?.[row.id];
@@ -114,8 +119,9 @@ export function CompareTable({ columns, issues, label, now }: { columns: Column[
           </div>
         ))}
 
+        <Group label="Where to start" />
         <div role="row" className="cmp-row">
-          <div role="rowheader" className="cmp-label"><span>Start with</span></div>
+          <div role="rowheader" className="cmp-label"><span>Starter issues</span></div>
           {columns.map((c, i) => (
             <div role="cell" key={c.repo} className="cmp-cell">
               {c.kind === "report" ? issues[i] : landed[c.repo] ? <LiveIssues repo={c.repo} /> : <span className="text-faint">–</span>}
@@ -128,8 +134,9 @@ export function CompareTable({ columns, issues, label, now }: { columns: Column[
           {columns.map((c, i) => (
             <div role="cell" key={c.repo} className="cmp-cell">
               {reports[i] && (
-                <Link href={`/${reports[i].repo}`} className="inline-flex min-h-11 items-center text-[0.85rem] text-muted transition-colors hover:text-ink">
-                  report →<span className="sr-only"> for {reports[i].repo}</span>
+                <Link href={`/${reports[i].repo}`} className="inline-flex min-h-11 items-center gap-1.5 text-[0.85rem] text-blue transition-colors hover:text-ink">
+                  Full report <span aria-hidden="true">→</span>
+                  <span className="sr-only"> for {reports[i].repo}</span>
                 </Link>
               )}
             </div>
@@ -140,10 +147,11 @@ export function CompareTable({ columns, issues, label, now }: { columns: Column[
   );
 }
 
-function ColumnHead({ repo, removeHref }: { repo: string; removeHref: string }) {
+/** A repo's name, with a bar in its verdict's colour across the top of the column (none until it's checked). */
+function ColumnHead({ repo, removeHref, tone }: { repo: string; removeHref: string; tone?: Report["tone"] }) {
   const [owner, name] = repo.split("/");
   return (
-    <div role="columnheader" className="cmp-cell cmp-col-head">
+    <div role="columnheader" className={`cmp-cell cmp-col-head border-t-2 ${tone ? TONE[tone].border : "border-transparent"}`}>
       <div className="flex items-start gap-2.5">
         <span className="hidden sm:block"><RepoAvatar repo={repo} size={28} /></span>
         <Link href={`/${repo}`} className="-my-1.5 min-w-0 flex-1 py-1.5 leading-tight hover:text-blue" title={repo}>
@@ -155,6 +163,17 @@ function ColumnHead({ repo, removeHref }: { repo: string; removeHref: string }) 
             <path d="M4 4l8 8M12 4l-8 8" />
           </svg>
         </Link>
+      </div>
+    </div>
+  );
+}
+
+/** A small heading between groups of rows. */
+function Group({ label }: { label: string }) {
+  return (
+    <div role="row" className="cmp-row cmp-group">
+      <div role="rowheader" className="cmp-label">
+        <span>{label}</span>
       </div>
     </div>
   );

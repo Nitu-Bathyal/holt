@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { compareHref, parseShow, repoNumbers, reposTitle, shown, yourRepos } from "./your-repos.ts";
+import { compareHref, parseShow, repoNumbers, reposTitle, shown, yourRepos, verdictFirst } from "./your-repos.ts";
 import type { DiscoverRepo, HistoryItem, SavedItem, Stats } from "./types";
 
 const check = (repo: string, at: string, over: Partial<HistoryItem> = {}): HistoryItem => ({
@@ -91,4 +91,13 @@ test("the numbers in place of a verdict, in plain words", () => {
   assert.deepEqual(repoNumbers(stats({})), { merged: "4 of 12 outside PRs merged", reply: "first reply in 2 days" });
   assert.deepEqual(repoNumbers(stats({ median_first_response_hours: null })), { merged: "4 of 12 outside PRs merged", reply: "no replies yet" });
   assert.deepEqual(repoNumbers(stats({ outsider_attempts: 0, outsider_merged: 0 })), { merged: "no outside PRs yet", reply: null });
+});
+
+test("rows carry the verdict, and the ones with no way in say it instead of numbers", () => {
+  const card = { repo: "a/b", headline: "Personal project", tone: "neutral", verdict: "personal", stats: { outsider_attempts: 0 } } as DiscoverRepo;
+  const rows = yourRepos([save("a/b", "2026-09-01", card)], [check("c/d", "2026-09-02", { verdict: "not_viable", headline: "Not worth your time", tone: "bad" })]);
+  assert.deepEqual(rows.map((r) => [r.repo, r.verdict, verdictFirst(r)]), [["c/d", "not_viable", true], ["a/b", "personal", true]]);
+  for (const v of ["viable", "long_shot", "catalogue"] as const) assert.equal(verdictFirst({ verdict: v, headline: "x" }), false, v);
+  assert.equal(verdictFirst({ verdict: "insufficient_evidence", headline: "Not enough evidence" }), true);
+  assert.equal(verdictFirst({ verdict: null, headline: null }), false);
 });

@@ -45,7 +45,7 @@ test("one sidebar item lights up per page, the most specific one", () => {
   assert.equal(activeItem(g, "/me/repos"), "repos");
   assert.equal(activeItem(g, "/me/contributions?refresh=done"), "prs");
   assert.equal(activeItem(g, "/discover/python"), "find");
-  assert.equal(activeItem(g, "/hacktoberfest"), "find");
+  assert.equal(activeItem(sidebarGroups(true), "/hacktoberfest"), "hacktoberfest");
   assert.equal(activeItem(g, "/compare"), "compare");
   // Settings has its own tabs; a report page isn't any of them.
   assert.equal(activeItem(g, "/settings/privacy"), null);

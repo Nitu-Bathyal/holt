@@ -2,7 +2,7 @@
 // the repos you checked, as one list with today's numbers on each. Pure, so
 // it runs under `node --test`.
 import { humanHours } from "./format.ts";
-import type { DiscoverRepo, HistoryItem, SavedItem, Stats, Tone } from "./types";
+import type { DiscoverRepo, HistoryItem, SavedItem, Stats, Tone, Verdict } from "./types";
 
 export type Show = "all" | "saved" | "checked";
 
@@ -22,6 +22,7 @@ export interface YourRepo {
   /** Holt's current verdict: the latest free report when there is one, else your last check's. */
   headline: string | null;
   tone: Tone | null;
+  verdict: Verdict | null;
   /** From Holt's current card for the repo, when it has one. */
   stats: Stats | null;
   stars: number | null;
@@ -33,7 +34,7 @@ export interface YourRepo {
 const RUNNING_FOR_AT_MOST_MS = 30 * 60 * 1000;
 
 const withCard = (r: YourRepo, c: DiscoverRepo) =>
-  Object.assign(r, { repo: c.repo, headline: c.headline, tone: c.tone, stats: c.stats, stars: c.stars });
+  Object.assign(r, { repo: c.repo, headline: c.headline, tone: c.tone, verdict: c.verdict, stats: c.stats, stars: c.stars });
 
 /** One row per repo (case doesn't matter), newest activity first. `cards` are
  * the current cards for checked repos (`/me/history`); saved ones carry their own. */
@@ -42,7 +43,7 @@ export function yourRepos(saved: SavedItem[], history: HistoryItem[], cards: Dis
   const row = (repo: string) => {
     const k = repo.toLowerCase();
     let r = rows.get(k);
-    if (!r) rows.set(k, (r = { repo, savedAt: null, checkedAt: null, ai: false, checking: false, headline: null, tone: null, stats: null, stars: null, at: "" }));
+    if (!r) rows.set(k, (r = { repo, savedAt: null, checkedAt: null, ai: false, checking: false, headline: null, tone: null, verdict: null, stats: null, stars: null, at: "" }));
     return r;
   };
   // Checks still running: the row shows it, and sorts by when it started.
@@ -58,7 +59,7 @@ export function yourRepos(saved: SavedItem[], history: HistoryItem[], cards: Dis
     const r = row(h.repo);
     if (r.checkedAt && r.checkedAt >= h.created_at) continue;
     Object.assign(r, { checkedAt: h.created_at, ai: h.mode === "ai" });
-    if (!r.stats) Object.assign(r, { headline: h.headline, tone: h.tone });
+    if (!r.stats) Object.assign(r, { headline: h.headline, tone: h.tone, verdict: h.verdict });
   }
   for (const c of cards) {
     const r = rows.get(c.repo.toLowerCase());
@@ -75,6 +76,13 @@ export function yourRepos(saved: SavedItem[], history: HistoryItem[], cards: Dis
   }
   for (const [k, r] of rows) r.at = [r.savedAt, r.checkedAt, r.checking ? running.get(k)! : null].filter(Boolean).sort().at(-1) ?? "";
   return [...rows.values()].sort((a, b) => b.at.localeCompare(a.at));
+}
+
+/** Verdicts with no way in to weigh: the row says the verdict rather than numbers that don't matter. */
+const VERDICT_FIRST: ReadonlySet<Verdict> = new Set(["personal", "not_viable", "insufficient_evidence"]);
+
+export function verdictFirst(r: Pick<YourRepo, "verdict" | "headline">): boolean {
+  return r.verdict !== null && r.headline !== null && VERDICT_FIRST.has(r.verdict);
 }
 
 /** A row's two facts in place of a verdict: do outside PRs get merged, and how soon does someone answer. */
