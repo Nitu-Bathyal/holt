@@ -1,7 +1,7 @@
 // The signed-in home (/me, the signed-in home plan): where sign-in lands,
 // and what the home suggests next. Fixed rules, no
 // model. Pure, so it runs under `node --test`.
-import { humanHours } from "./format.ts";
+import { humanHours, timeAgo } from "./format.ts";
 import { safeCallback } from "./safe-url.ts";
 import type { ContributionPR } from "./types";
 import type { YourRepo } from "./your-repos.ts";
@@ -59,22 +59,77 @@ export function clock(): number {
 
 /** A merge this recent gets the home's headline. */
 export const FRESH_MERGE_HOURS = 72;
-/** Waiting this many times the repo's typical first reply counts as longer than usual. */
-export const LATE_FACTOR = 1.5;
+/** The stale-bot line shows from this many quiet days before the bot closes (and past half its days). */
+export const STALE_WARN_DAYS = 7;
+
+const DAY = 24;
+
+/** A wait in plain words, rounded up so "within" stays true: "6 hours", "a day", "3 days",
+ * "2 weeks", "2 months". The same words as the report's "how long it takes here" (schema.wait_phrase). */
+export function waitPhrase(hours: number): string {
+  const days = hours / DAY;
+  if (hours <= 1) return "an hour";
+  if (hours < 22) return `${Math.ceil(hours)} hours`;
+  if (days <= 1) return "a day";
+  if (days <= 13) return `${Math.ceil(days)} days`;
+  if (days <= 7 * 8) return `${Math.ceil(days / 7)} weeks`;
+  return `${Math.ceil(days / 30)} months`;
+}
 
 export interface Waiting {
   pr: ContributionPR;
+  /** Since it was opened. */
   hours: number;
-  /** The repo's typical wait for a first reply, when its report knows. */
-  typical: number | null;
+  turn: ContributionPR["turn"];
+  /** The repo's mark this wait is measured against, in hours, when there is one. */
+  mark: number | null;
+  /** "Day 9, no reply yet. Most get one within 3 days here." Null when there's nothing to say. */
+  line: string | null;
+  /** Past the repo's slow mark, or close to its stale bot's. Never when it's your turn. */
   late: boolean;
 }
 
+/**
+ * Where an open PR stands, against the repo's timing (the report's `stats.timing`):
+ * - your turn (the team spoke after you): says so, never late;
+ * - quiet close to the repo's stale bot: late;
+ * - no reply yet: against the slow first reply (8 in 10 get one by then), late past it;
+ * - replied, waiting on the merge: against the half-merged mark, then the slow one, late past it.
+ * Nothing when Holt couldn't read the PR, it's a draft, or the repo has no timing.
+ */
 export function waiting(pr: ContributionPR, now: number): Waiting {
   const hours = Math.max(0, (now - Date.parse(pr.created_at)) / HOUR);
-  const typical = pr.verdict?.first_reply_hours ?? null;
-  return { pr, hours, typical, late: typical != null && hours > typical * LATE_FACTOR };
+  const turn = pr.turn ?? "unknown";
+  const base: Waiting = { pr, hours, turn, mark: null, line: null, late: false };
+  if (turn === "yours") {
+    const what = pr.review_decision === "changes_requested" ? "a reviewer asked for changes" : "a reviewer replied";
+    return { ...base, line: `Your turn: ${what}${pr.turn_at ? ` ${timeAgo(pr.turn_at, now)}` : ""}.` };
+  }
+  const t = pr.verdict?.timing;
+  if (turn === "unknown" || pr.draft || !t) return base;
+  const day = `Day ${Math.floor(hours / DAY) + 1}`;
+  const close = t.stale_close_days;
+  const quiet = pr.last_activity_at ? Math.max(0, (now - Date.parse(pr.last_activity_at)) / HOUR / DAY) : null;
+  if (close && quiet != null && quiet >= Math.max(close - STALE_WARN_DAYS, close / 2)) {
+    const n = Math.floor(quiet);
+    return { ...base, late: true, line: `Quiet for ${n} day${n === 1 ? "" : "s"}. The bot here closes at ${close}.` };
+  }
+  if (!pr.first_reply_at) {
+    const slow = t.first_reply_slow_hours;
+    if (slow != null) return { ...base, mark: slow, late: hours > slow, line: `${day}, no reply yet. Most get one within ${waitPhrase(slow)} here.` };
+    const half = t.first_reply_half_hours;
+    if (half != null) return { ...base, mark: half, line: `${day}, no reply yet. About half get one within ${waitPhrase(half)} here.` };
+    return base;
+  }
+  const half = t.merge_half_days != null ? t.merge_half_days * DAY : null;
+  const slow = t.merge_slow_days != null ? t.merge_slow_days * DAY : null;
+  if (half != null && (slow == null || hours <= half)) return { ...base, mark: half, line: `${day}. About half are merged within ${waitPhrase(half)} here.` };
+  if (slow != null) return { ...base, mark: slow, late: hours > slow, line: `${day}. Most merged ones land within ${waitPhrase(slow)} here.` };
+  return base;
 }
+
+/** An open PR that needs you: your turn, or waiting longer than the repo usually takes. */
+export const needsYou = (w: Waiting) => w.turn === "yours" || w.late;
 
 /**
  * Where you are in the loop (find a repo → pick an issue → open a PR → get it
@@ -105,13 +160,14 @@ export function nextMove(s: { pulls: ContributionPR[]; repos: YourRepo[]; now: n
   return { kind: "first", step: 0, again: s.pulls.length > 0 };
 }
 
-/** Open PRs, most overdue first (waited against the repo's typical reply), then the oldest. */
+/** Open PRs: your turn first, then the late ones, then the most overdue (against the repo's mark), then the oldest. */
 export function inFlight(pulls: ContributionPR[], now: number): Waiting[] {
-  const ratio = (w: Waiting) => (w.typical ? w.hours / w.typical : 0);
+  const rank = (w: Waiting) => (w.turn === "yours" ? 2 : w.late ? 1 : 0);
+  const ratio = (w: Waiting) => (w.mark ? w.hours / w.mark : 0);
   return pulls
     .filter((p) => p.state === "open")
     .map((p) => waiting(p, now))
-    .sort((a, b) => ratio(b) - ratio(a) || b.hours - a.hours);
+    .sort((a, b) => rank(b) - rank(a) || ratio(b) - ratio(a) || b.hours - a.hours);
 }
 
 /** The headline, with the words that get the marker in *stars*. */
@@ -125,8 +181,9 @@ export function moveTitle(m: NextMove): string {
       return `${m.pr.repo} *merged your PR.*`;
     case "waiting": {
       const w = m.wait;
-      if (w.typical != null && !w.late) return `Your PR to ${w.pr.repo} is *waiting.*`;
-      return `Your PR to ${w.pr.repo} has *waited ${humanHours(w.hours)}.*`;
+      if (w.turn === "yours") return `It's *your turn* on ${w.pr.repo}.`;
+      if (w.late) return `Your PR to ${w.pr.repo} has *waited ${humanHours(w.hours)}.*`;
+      return `Your PR to ${w.pr.repo} is *waiting.*`;
     }
   }
 }
@@ -139,20 +196,16 @@ export function moveLead(m: NextMove): string | null {
   switch (m.kind) {
     case "merged":
       return `${m.pr.title}. That's your ${ordinal(m.merged)} merged PR this year.`;
-    case "waiting": {
-      const w = m.wait;
-      if (w.typical == null) return null;
-      const usual = `Replies there usually come within ${humanHours(w.typical)}.`;
-      return w.late ? usual : `It's been ${humanHours(w.hours)}. ${usual}`;
-    }
+    case "waiting":
+      return m.wait.line;
     default:
       return null;
   }
 }
 
-/** Also for you: your checks running or just finished, PRs waiting longer than
- * usual (not the headline one), and saved repos that turned. */
-export type AlsoItem = { kind: "checking" | "ready"; repo: YourRepo } | { kind: "late"; wait: Waiting } | { kind: "turned"; repo: YourRepo };
+/** Also for you: your checks running or just finished, PRs that need you (your
+ * turn, or waiting longer than usual; not the headline one), and saved repos that turned. */
+export type AlsoItem = { kind: "checking" | "ready"; repo: YourRepo } | { kind: "pr"; wait: Waiting } | { kind: "turned"; repo: YourRepo };
 
 /** A finished check stays in Also for you this long. */
 const READY_HOURS = 1;
@@ -162,13 +215,13 @@ export function alsoForYou(m: NextMove, s: { pulls: ContributionPR[]; repos: You
   const checks: AlsoItem[] = s.repos
     .filter((r) => r.checking || (r.checkedAt && r.headline && s.now - Date.parse(r.checkedAt) < READY_HOURS * HOUR))
     .map((repo) => ({ kind: repo.checking ? "checking" : "ready", repo }));
-  const late: AlsoItem[] = inFlight(s.pulls, s.now).filter((w) => w.late && w.pr.url !== lead).map((wait) => ({ kind: "late", wait }));
+  const prs: AlsoItem[] = inFlight(s.pulls, s.now).filter((w) => needsYou(w) && w.pr.url !== lead).map((wait) => ({ kind: "pr", wait }));
   const turned: AlsoItem[] = s.repos.filter((r) => r.savedAt && r.tone === "bad" && !r.checking).map((repo) => ({ kind: "turned", repo }));
-  return [...checks.slice(0, 2), ...late, ...turned].slice(0, 3);
+  return [...checks.slice(0, 2), ...prs, ...turned].slice(0, 3);
 }
 
 /** In flight: open PRs that aren't the headline and aren't already in Also for you. */
 export function othersInFlight(m: NextMove, pulls: ContributionPR[], now: number): Waiting[] {
   const lead = m.kind === "waiting" ? m.wait.pr.url : null;
-  return inFlight(pulls, now).filter((w) => w.pr.url !== lead && !w.late);
+  return inFlight(pulls, now).filter((w) => w.pr.url !== lead && !needsYou(w));
 }

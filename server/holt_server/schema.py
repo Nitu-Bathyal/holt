@@ -1485,6 +1485,12 @@ class ProfileOut(Model):
 # --- My Contributions ----------------------------------------------------------------
 
 PullState = Literal["open", "merged", "closed"]
+# Whose move it is on an open pull request: "yours" when someone on the
+# project's team commented or reviewed after your last push or comment (an
+# approval leaves it with them); "theirs" when you acted last; "unknown" when
+# Holt couldn't read it, and on merged and closed ones.
+Turn = Literal["yours", "theirs", "unknown"]
+ReviewDecision = Literal["approved", "changes_requested", "review_required"]
 
 
 class RepoVerdict(Model):
@@ -1496,6 +1502,9 @@ class RepoVerdict(Model):
     # reply, in hours (the report's median_first_response_hours). Null when
     # the report couldn't tell.
     first_reply_hours: float | None = None
+    # How long it takes there (the report's `stats.timing`); null on reports
+    # from before engine 7. My PRs' line is worked out from it.
+    timing: Timing | None = None
 
     @computed_field
     @property
@@ -1528,6 +1537,16 @@ class ContributionPullRequest(Model):
     # Why it doesn't count: "you" chose so, or Holt found the repository is
     # the person's own or their team's project ("own_project"). Null when counted.
     not_counted_because: Literal["you", "own_project"] | None = None
+    # Open ones only (pr_state.py); refreshed with the list.
+    turn: Turn = "unknown"
+    # When the turn last changed hands: the team's last word when it's yours,
+    # your last push or comment when it's theirs.
+    turn_at: str | None = None
+    # The first comment or review from the project's team (not bots, not you).
+    first_reply_at: str | None = None
+    # The newest push, comment or review from a person (bots don't count).
+    last_activity_at: str | None = None
+    review_decision: ReviewDecision | None = None
 
 
 class ContributionSummary(Model):

@@ -1,6 +1,6 @@
 // Your pull requests: the wording for the summary and the refresh cooldown,
 // and the page's groups. Pure, so it can be tested without React.
-import { inFlight, type Waiting } from "./home.ts";
+import { inFlight, needsYou, type Waiting } from "./home.ts";
 import type { ContributionPR, Contributions } from "./types";
 
 export type PullState = ContributionPR["state"];
@@ -53,7 +53,9 @@ export interface NotCounted {
 }
 
 export interface PrGroups {
-  /** Open and waiting longer than the repo usually takes to reply. */
+  /** Open, and the project's team spoke after your last push or comment. */
+  yours: Waiting[];
+  /** Open and waiting longer than the repo usually takes (home.ts `waiting`). */
   needs: Waiting[];
   /** Open, within the usual time (or the repo's usual time isn't known). */
   waiting: Waiting[];
@@ -77,8 +79,9 @@ export function prGroups(pulls: ContributionPR[], now: number): PrGroups {
     out.set(k, row);
   }
   return {
-    needs: open.filter((w) => w.late),
-    waiting: open.filter((w) => !w.late),
+    yours: open.filter((w) => w.turn === "yours"),
+    needs: open.filter((w) => w.late), // never your turn: waiting() says so
+    waiting: open.filter((w) => !needsYou(w)),
     merged: counted.filter((p) => p.state === "merged").sort(newestDecided),
     closed: counted.filter((p) => p.state === "closed").sort(newestDecided),
     notCounted: [...out.values()].sort((a, b) => a.repo.localeCompare(b.repo)),
@@ -87,6 +90,8 @@ export function prGroups(pulls: ContributionPR[], now: number): PrGroups {
 
 /** The page's sentence, from what needs you down to nothing yet. */
 export function prsTitle(g: PrGroups): string {
+  const y = g.yours.length;
+  if (y) return `It's *your turn* on ${y} PR${y === 1 ? "" : "s"}.`;
   const n = g.needs.length;
   if (n) return n === 1 ? "1 PR is *waiting longer than usual.*" : `${n} PRs are *waiting longer than usual.*`;
   const w = g.waiting.length;
