@@ -6,8 +6,8 @@ import { CompareTable, Issues, IssuesSkeleton, type Column } from "@/components/
 import { PageTransition } from "@/components/motion/page-transition";
 import { AppPageHeader, EmptyState } from "@/components/shell/app-page";
 import { SignInToCheck } from "@/components/sign-in-to-check";
-import { getReport, starterIssues } from "@/lib/api";
-import { compareHref as href, compareTitle, EXAMPLE_POOL, leaders, MAX, parseList, SUGGESTIONS } from "@/lib/compare";
+import { getReport, searchRepos, starterIssues } from "@/lib/api";
+import { bareNames, compareHref as href, compareTitle, EXAMPLE_POOL, leaders, MAX, parseList, pickRepo, SUGGESTIONS } from "@/lib/compare";
 import { clock } from "@/lib/home";
 import { caller, currentUser, type SessionUser } from "@/lib/session";
 import type { Report } from "@/lib/types";
@@ -26,12 +26,24 @@ async function IssuesSlot({ repo, user }: { repo: string; user: SessionUser | nu
 
 export default async function ComparePage({ searchParams }: PageProps<"/compare">) {
   const sp = await searchParams;
-  const repos = parseList(sp.repos);
-  const extra = parseList(sp.add);
+  const user = await currentUser();
+  // A word with no owner ("excalidraw") is looked up on GitHub: the most starred repo with that name. At most three lookups a visit.
+  const who = await caller(user);
+  const names = [...new Set([...bareNames(sp.repos), ...bareNames(sp.add)])].slice(0, 3);
+  const looked = await Promise.all(
+    names.map(async (name) => {
+      const r = await searchRepos(name, who);
+      return { name, repo: r.ok ? pickRepo(name, r.data.results) : null, failed: !r.ok };
+    }),
+  );
+  const named = (v: string | string[] | undefined) => bareNames(v).flatMap((n) => looked.find((l) => l.name === n)?.repo ?? []);
+  const problems = looked.filter((l) => !l.repo);
+  const repos = parseList([...parseList(sp.repos), ...named(sp.repos)]);
+  const extra = parseList([...parseList(sp.add), ...named(sp.add)]);
   const all = [...repos, ...extra.filter((e) => !repos.some((r) => r.toLowerCase() === e.toLowerCase()))].slice(0, MAX);
-  // Keep the URL shareable: fold ?add= into ?repos=.
-  if (sp.add !== undefined) redirect(href(all));
-  const [reports, user] = await Promise.all([Promise.all(all.map((r) => getReport(r))), currentUser()]);
+  // Keep the URL shareable: fold ?add= into ?repos=. Not when something couldn't be found: the redirect would drop the note saying so.
+  if (sp.add !== undefined && !problems.length) redirect(href(all));
+  const reports = await Promise.all(all.map((r) => getReport(r)));
 
   // Nothing picked yet: an example from reports already cached (reading the
   // cache costs nothing and starts no checks), so the page shows an answer.
@@ -72,7 +84,7 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
             <input
               id="add"
               name="add"
-              placeholder={full ? "remove one to add another" : all.length ? "add a repo: owner/name" : "owner/name, owner/name"}
+              placeholder={full ? "remove one to add another" : all.length ? "add a repo: name or owner/name" : "excalidraw, pallets/flask"}
               disabled={full}
               autoFocus={!all.length}
               autoComplete="off"
@@ -84,6 +96,15 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
               {all.length ? "add" : "compare"}
             </button>
           </form>
+          {problems.length > 0 && (
+            <p role="status" className="mt-3 max-w-xl font-sans text-[0.86rem] leading-snug text-orange">
+              {problems.map((l) => (
+                <span key={l.name} className="block">
+                  {l.failed ? `Couldn't look up “${l.name}” just now.` : `No repository named “${l.name}”.`} Try owner/name, like psf/requests.
+                </span>
+              ))}
+            </p>
+          )}
           {!all.length && (
             <p className="mt-3 flex flex-wrap items-center gap-2 text-[0.82rem] text-faint">
               <span>or try</span>
