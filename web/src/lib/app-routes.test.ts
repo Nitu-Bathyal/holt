@@ -4,7 +4,7 @@ import { test } from "node:test";
 import { isAppRoute } from "./app-routes.ts";
 
 test("app routes are not owners", () => {
-  for (const s of ["me", "discover", "pricing", "settings", "Settings", "lab"]) assert.ok(isAppRoute(s), s);
+  for (const s of ["me", "discover", "pricing", "settings", "Settings", "alerts", "lab"]) assert.ok(isAppRoute(s), s);
   for (const s of ["pallets", "NixOS", "home-assistant"]) assert.ok(!isAppRoute(s), s);
 });
 

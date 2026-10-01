@@ -2,17 +2,19 @@
 // reports return at once, anything else becomes a job with stages over SSE.
 import "server-only";
 import type {
-  AnalysisStart, ApiError, Credits, DiscoverOut, DiscoverRepo, DiscoverSort, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, History, HistoryItem,
+  AlertSettings, AlertSettingsBody, AnalysisStart, ApiError, Credits, DiscoverOut, DiscoverRepo, DiscoverSort, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, History, HistoryItem,
   ContributionType, JobStatus, Me, Mode, Passes, ProfileOut, ProfilePrefs, Recommendation, Recommendations, RepoSearch, Report, Result, SavedList, SavedState, Stats, StarterIssue,
 } from "../types";
 import type { FeedbackInput } from "../feedback";
 import type { Timing } from "../api-schema";
+import * as watch from "./alerts";
 import { verdictView, withDerived } from "./derived";
 import { canonicalName, isMockNotFound, mockAbout, mockFindPool, mockIssues, mockReport, PRECACHED } from "./fixtures";
 import { mergePlanEvents } from "./merge-plan";
 import { playbookEvents } from "./playbook";
 import { preflightEvents } from "./preflight";
 
+export { alertCount, alertList, alertSettings, readAlerts, setAlertEmailByToken, setAlertMute } from "./alerts";
 export { mergePlanState, startMergePlan } from "./merge-plan";
 export { playbookState, unlockPlaybook } from "./playbook";
 export { preflightState, startPreflight } from "./preflight";
@@ -491,13 +493,13 @@ function mockContributions(userId: string, login: string): Contributions {
     first_reply_at: null as string | null, last_activity_at: state === "open" ? at(daysAgo) : null,
     review_decision: null as "approved" | "changes_requested" | "review_required" | null,
     reply_by: null as string | null, reply_kind: null as "changes" | "approved" | "reply" | null,
-    // PR watch isn't mocked: nobody has alerts here.
     watch: null as "on" | "muted" | null, unread_alert: false,
   });
   const prs = [
     pr("home-assistant/core", 153340, "Add a battery sensor to the Roborock integration", "open", 2, verdict("viable"), true),
     { ...pr("pallets/click", 2811, "Fix shell completion for nested groups", "open", 6, verdict("viable")),
-      turn: "yours" as const, turn_at: at(1), first_reply_at: at(4), last_activity_at: at(1), review_decision: "changes_requested" as const },
+      turn: "yours" as const, turn_at: at(1), first_reply_at: at(4), last_activity_at: at(1), review_decision: "changes_requested" as const,
+      reply_by: "davidism", reply_kind: "changes" as const },
     pr("NixOS/nixpkgs", 339210, "python3Packages.rich: 13.7.1 -> 13.9.4", "merged", 12, verdict("viable"), true),
     pr("octo/one", 88, "Fix a typo in the contributing guide", "merged", 40, null),
     pr("octo/two", 14, "Add a --quiet flag", "closed", 95, verdict("not_viable")),
@@ -508,6 +510,8 @@ function mockContributions(userId: string, login: string): Contributions {
     const c = chosen.get(p.repo.toLowerCase());
     if (c === false) Object.assign(p, { counted: false, not_counted_because: "you" });
   }
+  // PR watch (mock/alerts.ts): the open ones that count are watched once alerts are on.
+  for (const p of prs) Object.assign(p, watch.watchFields(userId, p));
   const counted = prs.filter((p) => p.counted);
   const n = (s: string) => counted.filter((p) => p.state === s).length;
   const decided = n("merged") + n("closed");
@@ -536,6 +540,11 @@ export async function setContributionCounted(userId: string, repo: string, count
   else mine.set(key, counted);
   choices().set(userId, mine);
   return contributions(userId);
+}
+
+/** Turning alerts on needs GitHub connected, as on the real server. */
+export async function saveAlertSettings(userId: string, body: AlertSettingsBody): Promise<Result<AlertSettings>> {
+  return watch.saveAlertSettings(userId, body, Boolean(connections().get(userId)?.account));
 }
 
 export async function contributions(userId: string): Promise<Result<Contributions>> {

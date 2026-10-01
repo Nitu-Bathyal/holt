@@ -6,6 +6,7 @@ import { prGroups } from "@/lib/contributions";
 import { clock, statusLine } from "@/lib/home";
 import type { SessionUser } from "@/lib/session";
 import { sidebarGroups } from "@/lib/shell";
+import { BellSlot } from "../alerts/bell-slot";
 import { AppTopBar } from "../header";
 import { Drawer, Sidebar } from "./sidebar";
 
@@ -44,7 +45,20 @@ export async function appShell(user: SessionUser, credits: string | null, railCo
   };
   const nav = { groups: sidebarGroups(), badges, user: { name: user.name || user.email || "You", image: user.image ?? null }, credits };
   return {
-    topBar: <AppTopBar user={user} credits={credits} railCollapsed={railCollapsed} drawer={<Drawer {...nav} />} />,
+    topBar: (
+      <AppTopBar
+        user={user}
+        credits={credits}
+        railCollapsed={railCollapsed}
+        drawer={<Drawer {...nav} />}
+        // Streams in like the badge; nothing while PR watch is switched off.
+        bell={
+          <Suspense fallback={null}>
+            <BellSlot userId={user.id} />
+          </Suspense>
+        }
+      />
+    ),
     rail: <Sidebar {...nav} />,
   };
 }

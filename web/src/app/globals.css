@@ -2710,6 +2710,85 @@
       /* Room for theme and account, which sit over the frame's end. */
       padding: 0 max(var(--frame-pad), 9rem) 0 var(--frame-pad-start);
     }
+    /* And for the bell, when PR watch shows one. */
+    .app-bar:has(.alerts-bell) .app-bar-frame {
+      padding-right: max(var(--frame-pad), 12rem);
+    }
+  }
+
+  /* PR watch's bell (components/alerts/bell.tsx): the list under it. On a
+     phone it spans the screen under the top bar; from sm it hangs off the bell. */
+  .alerts-panel {
+    position: fixed;
+    top: 64px;
+    right: 16px;
+    left: 16px;
+    z-index: 30;
+    border: 1px solid var(--line-strong);
+    background: var(--panel);
+    box-shadow: var(--shadow);
+    color: var(--ink);
+    transform-origin: top right;
+    animation: alerts-in var(--dur-base) var(--ease-out);
+  }
+  @media (min-width: 640px) {
+    .alerts-panel {
+      position: absolute;
+      top: calc(100% + 8px);
+      right: 0;
+      left: auto;
+      width: 24rem;
+    }
+  }
+  @keyframes alerts-in {
+    from {
+      opacity: 0;
+      transform: translateY(calc(var(--shift) * -2 / 3)) scale(var(--pop-scale));
+    }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .alerts-panel {
+      animation: none;
+    }
+  }
+  .alerts-list {
+    max-height: min(26rem, 60dvh);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  .alert-row {
+    position: relative;
+    display: grid;
+    grid-template-columns: 8px minmax(0, 1fr);
+    align-items: start;
+    gap: 10px;
+    border-bottom: 1px solid var(--line);
+    padding: 12px 16px 6px 14px;
+    transition: background-color var(--dur-fast) var(--ease-out);
+  }
+  .alert-row:last-child {
+    border-bottom: 0;
+  }
+  .alert-row:hover {
+    background: color-mix(in srgb, var(--ink) 3%, transparent);
+  }
+  /* The same rule as the pull request's group on My PRs. */
+  .alert-row::before {
+    position: absolute;
+    inset: 10px auto 10px 0;
+    width: 3px;
+    border-radius: 0 2px 2px 0;
+    background: var(--rule, var(--line-strong));
+    content: "";
+  }
+  .alert-dot {
+    width: 8px;
+    height: 8px;
+    margin-top: 0.45em;
+    border-radius: 50%;
+  }
+  .alert-dot[data-on] {
+    background: var(--rule, var(--orange));
   }
 
   /* Cards for discovery: one column on a phone, then as many as fit at

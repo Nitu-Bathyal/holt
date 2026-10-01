@@ -1,9 +1,11 @@
 "use server";
 // The refresh button. The server decides whether GitHub is read again (at most
 // every 15 minutes per user); the button's countdown is only a hint.
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { refreshContributions, setContributionCounted } from "@/lib/api";
+import { dismissedNudges, NUDGE_COOKIE } from "@/lib/home";
 import { currentUser } from "@/lib/session";
 
 const PATH = "/me/contributions";
@@ -34,4 +36,18 @@ export async function setCounted(form: FormData) {
   revalidatePath(PATH);
   revalidatePath("/me");
   if (!r.ok) redirect(`${PATH}?count=error`);
+}
+
+/** Close the "turn on alerts" card for a year (the home nudges' cookie). */
+export async function dismissAlertsCard() {
+  const jar = await cookies();
+  const next = [...new Set([...dismissedNudges(jar.get(NUDGE_COOKIE)?.value), "alerts"])];
+  jar.set(NUDGE_COOKIE, next.join(","), {
+    httpOnly: true,
+    sameSite: "lax",
+    secure: process.env.NODE_ENV === "production",
+    path: "/",
+    maxAge: 365 * 86_400,
+  });
+  revalidatePath(PATH);
 }

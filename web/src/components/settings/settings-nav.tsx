@@ -3,13 +3,14 @@
 // five places). Each is its own route, so the lit tab is the page you're on.
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { SECTIONS } from "@/lib/settings";
+import { sectionsFor } from "@/lib/settings";
 
-export function SettingsNav() {
+/** `alerts`: PR watch is switched on, so its tab is listed. */
+export function SettingsNav({ alerts }: { alerts: boolean }) {
   const path = usePathname();
   return (
     <nav aria-label="Settings" className="app-tabs">
-      {SECTIONS.map((s) => {
+      {sectionsFor(alerts).map((s) => {
         const on = path === s.href || path.startsWith(`${s.href}/`);
         return (
           <Link key={s.id} href={s.href} aria-current={on ? "page" : undefined} className="app-tab">

@@ -3,9 +3,9 @@
 import "server-only";
 import { cache } from "react";
 import type {
-  AnalysisStart, ApiError, Checkout, Contributions, Credits, DiscoverOut, DiscoverSort, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection,
+  AlertCount, AlertList, AlertSettings, AlertSettingsBody, AnalysisStart, ApiError, Checkout, Contributions, Credits, DiscoverOut, DiscoverSort, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection,
   History, JobStatus, Me, MergePlanStart, MergePlanState, Mode, Order, OrderConfirmed, Passes, PlaybookStart, PlaybookState, PreflightStart, PreflightState,
-  ProfileOut, ProfilePrefs, RazorpaySuccess, Recommendations, RepoSearch, Report, Result, SavedList, SavedState, StarterIssue,
+  ProfileOut, ProfilePrefs, RazorpaySuccess, Recommendations, RepoSearch, Report, Result, SavedList, SavedState, StarterIssue, Unsubscribed,
 } from "./types";
 import type { FeedbackInput } from "./feedback";
 import { isJobId } from "./ids";
@@ -327,6 +327,54 @@ export function setContributionCounted(userId: string, repo: string, counted: bo
   return counted === null
     ? call(path, { method: "DELETE", caller: { userId } })
     : call(path, { method: "PUT", body: JSON.stringify({ counted }), caller: { userId } });
+}
+
+// PR watch (API.md, "PR watch (alerts)"): the bell, the alert settings, muting
+// one pull request, and the email's unsubscribe link.
+
+/** The bell's list, with who gets alerts (`access`) and the unread count. Once per request: the shell and the page both ask. */
+export const alertList = cache((userId: string): Promise<Result<AlertList>> => {
+  if (MOCK) return mock.alertList(userId);
+  return call("/v1/me/alerts?limit=20", { caller: { userId } });
+});
+
+export function alertCount(userId: string): Promise<Result<AlertCount>> {
+  if (MOCK) return mock.alertCount(userId);
+  return call("/v1/me/alerts/count", { caller: { userId } });
+}
+
+/** Mark some alerts read, or all of them. */
+export function readAlerts(userId: string, which: { ids: number[] } | { all: true }): Promise<Result<void>> {
+  if (MOCK) return mock.readAlerts(userId, which);
+  return call("/v1/me/alerts/read", { method: "POST", body: JSON.stringify(which), caller: { userId } });
+}
+
+export function alertSettings(userId: string): Promise<Result<AlertSettings>> {
+  if (MOCK) return mock.alertSettings(userId);
+  return call("/v1/me/alerts/settings", { caller: { userId } });
+}
+
+/** Only the fields sent change. `email` is the account's own address, never one a person typed (lib/alerts.ts, settingsBody). */
+export function saveAlertSettings(userId: string, body: AlertSettingsBody): Promise<Result<AlertSettings>> {
+  if (MOCK) return mock.saveAlertSettings(userId, body);
+  return call("/v1/me/alerts/settings", { method: "PUT", body: JSON.stringify(body), caller: { userId } });
+}
+
+/** No alerts for one pull request (true), or watch it again (false). */
+export async function setAlertMute(userId: string, repo: string, number: number, muted: boolean): Promise<Result<void>> {
+  if (!repoOk(repo) || !Number.isInteger(number) || number < 1 || number > 2 ** 31 - 1) return BAD_REPO;
+  if (MOCK) return mock.setAlertMute(userId, repo, number, muted);
+  return call(`/v1/me/contributions/${repoPath(repo)}/${number}/mute`, { method: muted ? "PUT" : "DELETE", caller: { userId } });
+}
+
+/**
+ * The email's unsubscribe link (off), and its undo (on). No user: the token is
+ * the key. Call it only from a POST the browser or a mail client made
+ * (app/api/alerts), never while rendering a page: scanners fetch every link.
+ */
+export function setAlertEmailByToken(token: string, on: boolean): Promise<Result<Unsubscribed>> {
+  if (MOCK) return mock.setAlertEmailByToken(token, on);
+  return call(`/v1/alerts/${on ? "resubscribe" : "unsubscribe"}`, { method: "POST", body: JSON.stringify({ token }) });
 }
 
 /** Recommendations for you (API.md). Ranked by rules from cached data; the server shows 2 picks without a plan. */
