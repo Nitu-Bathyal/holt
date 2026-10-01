@@ -4,6 +4,8 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
+import time
 import uuid
 from datetime import timedelta
 from typing import Any, Literal
@@ -14,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 
+from holt.evidence.errors import RateLimited
 from holt_server import report as report_mod
 from holt_server import (
     __version__,
@@ -45,7 +48,7 @@ from holt_server.db import (
 )
 from holt_server.credits import get_user
 from holt_server.deps import Caller, caller, internal, services, signed_in
-from holt_server.errors import ApiError
+from holt_server.errors import ApiError, github_rate_limited
 from holt_server.jobs import done_payload
 from holt_server.services import Services
 
@@ -552,6 +555,40 @@ async def starter_issues(owner: str, repo: str, request: Request,
     rate_limit(svc, who, "read")
     canonical, issues = await fetch_starter_issues(svc, name)
     return schema.StarterIssues(repo=canonical, issues=issues[:limit])
+
+
+# Repository-name searches already answered: the same name is asked for again
+# and again (a card's one-tap matchups, a shared link), and GitHub's search
+# allows far fewer requests than its other APIs.
+REPO_SEARCH_TTL_S = 600
+REPO_SEARCH_MAX = 500
+REPO_SEARCH_NAME = re.compile(r"[a-z0-9._-]+(?: [a-z0-9._-]+)*")
+_repo_searches: dict[str, tuple[float, list[dict]]] = {}
+
+
+@router.get("/repos/search")
+async def search_repos(request: Request, q: str = Query(..., min_length=1, max_length=60),
+                       who: Caller = Depends(caller)) -> schema.RepoSearch:
+    """Which repository does a bare name mean? ("excalidraw" is
+    excalidraw/excalidraw.) Public repositories whose name matches, most
+    starred first, at most five. It only reads GitHub's search; nothing is
+    stored."""
+    svc = services(request)
+    name = " ".join(q.lower().split())
+    if not REPO_SEARCH_NAME.fullmatch(name):
+        raise ApiError("invalid_request", "That doesn't look like a repository name.")
+    hit = _repo_searches.get(name)
+    if hit is not None and hit[0] > time.monotonic():
+        return schema.RepoSearch(query=name, results=hit[1])
+    rate_limit(svc, who, "read")
+    try:
+        found = await svc.lookup.search(name)
+    except RateLimited as exc:
+        raise github_rate_limited() from exc
+    _repo_searches[name] = (time.monotonic() + REPO_SEARCH_TTL_S, found)
+    while len(_repo_searches) > REPO_SEARCH_MAX:  # oldest first: dicts keep insertion order
+        _repo_searches.pop(next(iter(_repo_searches)))
+    return schema.RepoSearch(query=name, results=found)
 
 
 # A search is computed for at least this many results, so the default page

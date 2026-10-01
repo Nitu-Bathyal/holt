@@ -981,6 +981,19 @@ class StarterIssues(Model):
     issues: list[StarterIssue]
 
 
+class RepoHit(Model):
+    repo: str
+    description: str | None = None
+    stars: int = 0
+
+
+class RepoSearch(Model):
+    """Public repositories whose name matches `query`, most starred first."""
+
+    query: str
+    results: list[RepoHit]
+
+
 class FindResult(VerdictView):
     repo: str
     description: str | None = None
