@@ -6,6 +6,7 @@
 // the same on arrival.
 import { useEffect } from "react";
 import { prefersReducedMotion } from "@/lib/motion";
+import { scrollToTop } from "@/components/motion/smooth-scroll";
 import { CHECK_HREF } from "@/lib/shell";
 
 function visibleTarget(): HTMLElement | null {
@@ -15,16 +16,42 @@ function visibleTarget(): HTMLElement | null {
   return all.find((el) => el.getClientRects().length > 0) ?? null;
 }
 
+let pendingFlash: number | undefined;
+
+function flash(box: HTMLElement) {
+  box.classList.remove("check-flash");
+  void box.offsetWidth; // restart the animation on a second click
+  box.classList.add("check-flash");
+}
+
 /** Focus the repo box on this page and flash it. False when there's none in sight. */
 export function focusCheck(): boolean {
   const box = visibleTarget();
   const input = box?.querySelector<HTMLInputElement>("input");
   if (!box || !input) return false;
-  box.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
-  input.focus({ preventScroll: true });
-  box.classList.remove("check-flash");
-  void box.offsetWidth; // restart the animation on a second click
-  box.classList.add("check-flash");
+  if (pendingFlash !== undefined) cancelAnimationFrame(pendingFlash);
+  pendingFlash = undefined;
+  if (window.location.pathname === "/") {
+    // Keep the whole hero below the sticky header; centering the box hides its title.
+    scrollToTop();
+    input.focus({ preventScroll: true });
+    const form = box.querySelector<HTMLElement>("form") ?? box;
+    form.classList.remove("check-flash");
+    const started = performance.now();
+    const highlightAtTop = () => {
+      pendingFlash = undefined;
+      if (!input.isConnected || document.activeElement !== input) return;
+      if (window.scrollY <= 1) flash(form);
+      // Bound the wait if a user interrupts the glide. Lenis and native scrolling
+      // finish at different times; the highlight should still be visible on arrival.
+      else if (performance.now() - started < 4000) pendingFlash = requestAnimationFrame(highlightAtTop);
+    };
+    pendingFlash = requestAnimationFrame(highlightAtTop);
+  } else {
+    box.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" });
+    input.focus({ preventScroll: true });
+    flash(box);
+  }
   return true;
 }
 

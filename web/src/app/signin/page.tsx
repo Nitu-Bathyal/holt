@@ -129,29 +129,31 @@ function ExampleReport() {
   const p = EXAMPLE_PLAN;
   return (
     <figure className="relative m-0 hidden lg:block">
-      {/* A second sheet behind the report, so it reads as one of a pile you'll keep. */}
-      <div aria-hidden="true" className="absolute inset-0 translate-x-3 translate-y-3 border border-line bg-panel-2" />
-      <div className="relative border border-line-strong bg-panel shadow-card">
-        <div className="flex min-h-10 items-center justify-between border-b border-line px-5 text-[0.8rem] text-faint">
-          <span>{p.repo}</span>
-          <span>example AI report · {planRecordedOn()}</span>
-        </div>
-        <div className="p-7">
-          <div className="flex items-center justify-between">
-            <VerdictPill headline={p.verdict.headline} tone={p.verdict.tone} />
-            <CatFace mood={TONE_MOOD[p.verdict.tone]} className="text-[1.2rem]" />
+      <div className="relative">
+        {/* Keep the decorative sheet behind the card, clear of the caption below. */}
+        <div aria-hidden="true" className="absolute inset-0 translate-x-3 translate-y-3 border border-line bg-panel-2" />
+        <div className="relative border border-line-strong bg-panel shadow-card">
+          <div className="flex min-h-10 items-center justify-between border-b border-line px-5 text-[0.8rem] text-faint">
+            <span>{p.repo}</span>
+            <span>example AI report · {planRecordedOn()}</span>
           </div>
-          <blockquote className="mt-5 border-l-2 border-blue pl-4 font-sans text-[1.05rem] leading-relaxed text-ink">
-            {p.call.text}
-          </blockquote>
-          <ul className="mt-6 grid grid-cols-3 gap-px border border-line bg-line">
-            {p.verdict.numbers.map(({ value, label }) => (
-              <li key={label} className="bg-panel p-3">
-                <p className="text-[1.1rem] font-semibold tracking-tight">{value}</p>
-                <p className="font-sans text-[0.82rem] leading-snug text-muted">{label}</p>
-              </li>
-            ))}
-          </ul>
+          <div className="p-7">
+            <div className="flex items-center justify-between">
+              <VerdictPill headline={p.verdict.headline} tone={p.verdict.tone} />
+              <CatFace mood={TONE_MOOD[p.verdict.tone]} className="text-[1.2rem]" />
+            </div>
+            <blockquote className="mt-5 border-l-2 border-blue pl-4 font-sans text-[1.05rem] leading-relaxed text-ink">
+              {p.call.text}
+            </blockquote>
+            <ul className="mt-6 grid grid-cols-3 gap-px border border-line bg-line">
+              {p.verdict.numbers.map(({ value, label }) => (
+                <li key={label} className="bg-panel p-3">
+                  <p className="text-[1.1rem] font-semibold tracking-tight">{value}</p>
+                  <p className="font-sans text-[0.82rem] leading-snug text-muted">{label}</p>
+                </li>
+              ))}
+            </ul>
+          </div>
         </div>
       </div>
       <figcaption className="mt-7 font-sans text-[0.88rem] text-muted">
