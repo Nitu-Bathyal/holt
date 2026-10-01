@@ -21,5 +21,5 @@ test("public navigation returns to the repo input and keeps discovery reachable"
   await page.getByRole("navigation", { name: "Find a project", exact: true }).getByRole("link", { name: "Browse projects", exact: true }).click();
   await expect(page).toHaveURL(/\/discover$/);
   nav = await navigation(page, phone);
-  await expect(nav.getByRole("link", { name: "Find a project", exact: true })).toHaveAttribute("aria-current", "location");
+  await expect(nav.getByRole("link", { name: "Find a project", exact: true })).toHaveCount(0);
 });
