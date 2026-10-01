@@ -6,6 +6,7 @@ import type {
   ContributionType, JobStatus, Me, Mode, Passes, ProfileOut, ProfilePrefs, Recommendation, Recommendations, Report, Result, SavedList, SavedState, Stats, StarterIssue,
 } from "../types";
 import type { FeedbackInput } from "../feedback";
+import type { Timing } from "../api-schema";
 import { verdictView, withDerived } from "./derived";
 import { canonicalName, isMockNotFound, mockAbout, mockFindPool, mockIssues, mockReport, PRECACHED } from "./fixtures";
 import { mergePlanEvents } from "./merge-plan";
@@ -465,15 +466,21 @@ function mockContributions(userId: string, login: string): Contributions {
     tone: ({ viable: "good", not_viable: "bad", insufficient_evidence: "neutral" } as const)[v],
     checked_at: at(1),
     first_reply_hours: { viable: 15, not_viable: 60, insufficient_evidence: null }[v],
+    timing: v === "viable" ? { first_reply_half_hours: 10, first_reply_slow_hours: 30, merge_half_days: 6, merge_slow_days: 30, stale_bot: false } as Timing : null,
   });
   const pr = (repo: string, number: number, title: string, state: "open" | "merged" | "closed", daysAgo: number,
     v: ReturnType<typeof verdict> | null, found = false) => ({
     repo, number, title, url: `https://github.com/${repo}/pull/${number}`, state, draft: false,
     created_at: at(daysAgo), closed_at: state === "open" ? null : at(daysAgo - 2), merged_at: state === "merged" ? at(daysAgo - 2) : null,
     verdict: v, found_via_holt: found, counted: true, not_counted_because: null as "you" | "own_project" | null,
+    turn: (state === "open" ? "theirs" : "unknown") as "yours" | "theirs" | "unknown", turn_at: null as string | null,
+    first_reply_at: null as string | null, last_activity_at: state === "open" ? at(daysAgo) : null,
+    review_decision: null as "approved" | "changes_requested" | "review_required" | null,
   });
   const prs = [
     pr("home-assistant/core", 153340, "Add a battery sensor to the Roborock integration", "open", 2, verdict("viable"), true),
+    { ...pr("pallets/click", 2811, "Fix shell completion for nested groups", "open", 6, verdict("viable")),
+      turn: "yours" as const, turn_at: at(1), first_reply_at: at(4), last_activity_at: at(1), review_decision: "changes_requested" as const },
     pr("NixOS/nixpkgs", 339210, "python3Packages.rich: 13.7.1 -> 13.9.4", "merged", 12, verdict("viable"), true),
     pr("octo/one", 88, "Fix a typo in the contributing guide", "merged", 40, null),
     pr("octo/two", 14, "Add a --quiet flag", "closed", 95, verdict("not_viable")),
