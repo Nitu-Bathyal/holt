@@ -11,6 +11,7 @@ from fastapi import FastAPI
 
 from holt_server import (
     __version__,
+    account_mail,
     admin,
     alerts_api,
     budget,
@@ -65,12 +66,18 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
         if run_jobs and svc.settings.pr_watch:
             watching = asyncio.create_task(watch.schedule(svc), name="holt-pr-watch")
             mailing = asyncio.create_task(mailer.schedule(svc), name="holt-alert-mail")
+        # Account emails (the welcome, receipts, the "ending" ones), when on.
+        account_mailing = None
+        if run_jobs and svc.settings.account_emails:
+            account_mailing = asyncio.create_task(account_mail.schedule(svc),
+                                                  name="holt-account-mail")
         try:
             yield
         finally:
             pro_check.cancel()
             await asyncio.gather(pro_check, return_exceptions=True)
-            for task in (warming, refreshing, watching, mailing):
+            for task in (warming, refreshing, watching, mailing, account_mailing,
+                         *account_mail._background):
                 if task is not None:
                     task.cancel()
                     await asyncio.gather(task, return_exceptions=True)
@@ -97,6 +104,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(connections.router)
     app.include_router(contributions.router)
     app.include_router(alerts_api.router)
+    app.include_router(account_mail.router)
     app.include_router(discover.router)
     app.include_router(profiles.router)
     app.include_router(payments.router)

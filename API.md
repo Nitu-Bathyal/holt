@@ -1026,10 +1026,13 @@ still reach the bell.
   `DELETE` on the same path → 204, watched again. Not one of the caller's pull
   requests → 404 `not_found`.
 - `POST /v1/alerts/unsubscribe` body `{"token": "…"}` (internal key, no user) →
-  `{"email_on": false}`. The email's "Stop these emails" link and its one-click
-  header: turns email off for the token's owner with no sign-in; the bell and
-  `enabled` stay. `POST /v1/alerts/resubscribe` with the same body →
-  `{"email_on": true}` (the page's "undo"). A token that isn't current → 404
+  `{"email_on": false, "emails": "alerts"}`. The email's "Stop these emails"
+  link and its one-click header: turns email off for the token's owner with no
+  sign-in; the bell and `enabled` stay. `POST /v1/alerts/resubscribe` with the
+  same body → `{"email_on": true, "emails": "alerts"}` (the page's "undo").
+  The same two routes take the token from an account email (see "Account
+  emails"): they switch that user's product emails instead and answer
+  `"emails": "product"`, so the page can say which emails stopped. A token that isn't current → 404
   `not_found`. The token is derived from the server's secret and a per-user
   value, never stored, and changes when the address changes. It travels in the
   body so it stays out of the server's access log.
@@ -1045,6 +1048,39 @@ The emails link to the web app, so `web/` serves:
   clients' one-click unsubscribe (RFC 8058). It passes the token on the same
   way and answers 200.
 - `{HOLT_WEB_URL}/settings/alerts` and `{HOLT_WEB_URL}/me/contributions`.
+
+### Account emails
+
+Five emails about the account itself, and no more: a welcome at an account's
+first sign-in; a receipt for each paid pass; one 2 days before the 14 free
+days of PR alerts end and one when they have (for someone whose alerts were
+on and whom no pass covers); and one 3 days before a paid pass ends. Each is
+sent once (`account_emails` is the log). Stored in `account_mail` and
+`account_emails`.
+
+**Switched off by default.** With `HOLT_ACCOUNT_EMAILS` unset none is sent;
+with it on they also need `RESEND_API_KEY`. The receipt always goes out. The
+rest respect one switch, `product_emails`, on by default.
+
+- `POST /v1/me/sign-in` body `{"email": "…" | null, "first": false}` → 204.
+  `web/` calls it at every sign-in (the Auth.js `signIn` event). `email` is
+  the address the sign-in provider gave for the account, never free text from
+  the user: account emails go there and nowhere else. `first: true` when this
+  sign-in created the account: the welcome email is sent then, once per
+  account, ever. Not an address → 400. The address is kept with the emails
+  switched off too.
+- `GET /v1/me/emails` → `{"email": "…" | null, "product_emails": true}`.
+  `PUT /v1/me/emails` body `{"product_emails": false}` → the same shape.
+- `GET /v1/lab/emails` (internal key, no user) → `{"emails": [LabEmail]}`,
+  `LabEmail` = `{"kind", "name", "subject", "preheader", "html", "text"}`:
+  every email Holt sends (these, and PR watch's two) on made-up data, for the
+  web's `/lab/emails` page. 404 `not_found` when `HOLT_ENV=production`.
+
+The product emails carry the same two unsubscribe links as alert emails
+(`{HOLT_WEB_URL}/alerts/unsubscribe?t=<token>` and the one-click
+`{HOLT_WEB_URL}/api/alerts/unsubscribe?t=<token>`); `POST /v1/alerts/unsubscribe`
+tells the two kinds of token apart. They also link to `/find`,
+`/settings/alerts`, `/me`, `/me/contributions`, `/pricing` and `/refunds`.
 
 ### Profile
 

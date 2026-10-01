@@ -58,7 +58,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy import select, update
 from sqlalchemy.exc import IntegrityError
 
-from holt_server import credits, entitlements, pricing, schema
+from holt_server import account_mail, credits, entitlements, pricing, schema
 from holt_server.db import Order, User, iso, now, utc
 from holt_server.deps import Caller, caller, internal, services, signed_in
 from holt_server.errors import ApiError, upstream
@@ -278,6 +278,7 @@ async def credit(svc: Services, order_id: str, payment_id: str) -> bool:
             return False
     log.info("order %s (%s) paid by %s for %s", order_id, order.pack_id, payment_id,
              order.user_id)
+    account_mail.kick(svc)  # the receipt
     return True
 
 

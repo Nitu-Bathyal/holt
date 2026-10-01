@@ -7,7 +7,6 @@ from __future__ import annotations
 import json
 import logging
 from datetime import UTC, date, datetime, timedelta
-from pathlib import Path
 
 import httpx
 import pytest
@@ -18,7 +17,6 @@ from sqlalchemy import select
 
 from test_server_contributions import call
 
-GOLDEN = Path(__file__).parent / "golden_emails" / "prototype.json"
 CLICK = ("pallets/click", 2811)
 P5 = ("processing/p5.js", 7120)
 
@@ -222,16 +220,26 @@ DAILY = [
 ]
 
 
-def test_the_emails_match_the_prototypes_template():
-    """`golden_emails/prototype.json` is what the web prototype's
-    `alerts/email/templates.ts` renders for these alerts: the port keeps its
-    markup, subject, preheader and text exactly."""
-    golden = json.loads(GOLDEN.read_text(encoding="utf-8"))
-    got = {"turn_two": alert_email.your_turn_email(TURN, FRAME),
-           "daily_four": alert_email.daily_email(DAILY, FRAME, "Wednesday 1 October")}
-    for name, want in golden.items():
-        for part in ("subject", "preheader", "html", "text"):
-            assert getattr(got[name], part) == want[part], f"{name}.{part}"
+def test_the_emails_are_built_from_the_shared_template():
+    """Both come from email_kit.py: the band with the wordmark, the tone's
+    rule, a card per alert, and the footer."""
+    one = alert_email.your_turn_email(TURN[:1], FRAME).html
+    two = alert_email.your_turn_email(TURN, FRAME).html
+    daily = alert_email.daily_email(DAILY, FRAME, "Wednesday 1 October").html
+    for html in (one, two, daily):
+        assert html.startswith("<!doctype html>") and "(=^•ω•^=)" in html
+        assert "<img" not in html and "<script" not in html
+        assert 'href="https://githolt.com/settings/alerts"' in html
+        assert "Sent to you@example.com by Holt, githolt.com" in html
+    # One solid button an email: the pull request's when there is one alert,
+    # "see all" when there are several (theirs are outlined).
+    assert one.count('class="h-btn"') == 1 and "see all your pull requests" not in one
+    assert two.count('class="h-btn"') == 1 and two.count('class="h-ghost"') == 2
+    assert daily.count('class="h-ghost"') == 4 and "Wednesday 1 October" in daily
+    # The rule under the band takes the email's tone, each card its alert's.
+    assert "h-tone-turn" in one and "h-tone-late" in daily
+    for tone in ("late", "stale", "good", "done"):
+        assert f"h-rule-{tone}" in daily.split("</head>")[1]
 
 
 def test_pull_request_titles_are_escaped():
@@ -519,7 +527,7 @@ def test_a_rotated_secret_still_gives_a_working_unsubscribe_link(hm):
     assert run(hm, at).sent == 1
     token = hm.outbox.sent[0].headers["List-Unsubscribe"].split("?t=")[1].rstrip(">")
     r = hm.post("/v1/alerts/unsubscribe", {"token": token})
-    assert r.status_code == 200 and r.json() == {"email_on": False}
+    assert r.status_code == 200 and r.json() == {"email_on": False, "emails": "alerts"}
 
 
 def test_turning_email_back_on_waits_for_the_next_8_oclock(hm, monkeypatch):
@@ -534,7 +542,8 @@ def test_turning_email_back_on_waits_for_the_next_8_oclock(hm, monkeypatch):
         return alerts.unsubscribe_token(hm.svc.settings.secret_key, "u1",
                                         row.unsubscribe_nonce)
     token = call(hm, off)
-    assert hm.post("/v1/alerts/resubscribe", {"token": token}).json() == {"email_on": True}
+    assert hm.post("/v1/alerts/resubscribe", {"token": token}).json() == {
+        "email_on": True, "emails": "alerts"}
     [settings] = call(hm, _settings)
     assert settings.last_daily_on == date(2026, 10, 3)
     assert run(hm, at).sent == 0  # not a "daily" email in the middle of the afternoon

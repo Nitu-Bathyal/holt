@@ -40,7 +40,16 @@ import httpx
 from sqlalchemy import func, select, text, update
 
 from holt_server import alert_email, alerts
-from holt_server.db import Alert, AlertEmail, AlertSettings, User, WatchMute, now, utc
+from holt_server.db import (
+    AccountEmail,
+    Alert,
+    AlertEmail,
+    AlertSettings,
+    User,
+    WatchMute,
+    now,
+    utc,
+)
 
 if TYPE_CHECKING:
     from holt_server.services import Services
@@ -332,6 +341,15 @@ class Run:
 _said_off = False
 
 
+async def sent_today(s, at: datetime) -> int:
+    """Emails the provider took in the last 24 hours: alert emails and
+    account emails (account_mail.py) share its daily limit."""
+    since = at - timedelta(days=1)
+    return sum([(await s.execute(select(func.count()).select_from(table).where(
+        table.status == "sent", table.sent_at >= since))).scalar_one()
+        for table in (AlertEmail, AccountEmail)])
+
+
 async def _queues(s, svc: Services, at: datetime,
                   ) -> tuple[list[Queue], dict[str, tuple[AlertSettings, alerts.Access]]]:
     """Everyone who could get an email now, with what is waiting for them."""
@@ -385,10 +403,8 @@ async def run(svc: Services, at: datetime | None = None) -> Run:
     out = Run()
     async with svc.db.session() as s:
         queues, who = await _queues(s, svc, at)
-        sent_today = (await s.execute(select(func.count()).select_from(AlertEmail).where(
-            AlertEmail.status == "sent", AlertEmail.sent_at >= at - timedelta(days=1)))
-        ).scalar_one()
-        budget = svc.settings.alert_email_daily_limit - LIMIT_MARGIN - sent_today
+        budget = (svc.settings.alert_email_daily_limit - LIMIT_MARGIN
+                  - await sent_today(s, at))
         todo = plan(queues, at, budget)
         for user_id, day in todo.daily_empty:
             await s.execute(update(AlertSettings).where(AlertSettings.user_id == user_id)

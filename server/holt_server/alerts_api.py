@@ -25,7 +25,7 @@ from pydantic import Field
 from sqlalchemy import delete, select, update
 from sqlalchemy.exc import IntegrityError
 
-from holt_server import alerts, credits, mailer, repos, schema, watch
+from holt_server import account_mail, alerts, credits, mailer, repos, schema, watch
 from holt_server.db import AlertSettings as SettingsRow
 from holt_server.db import (
     Alert,
@@ -141,6 +141,9 @@ class UnsubscribeBody(Model):
 
 class Unsubscribed(Model):
     email_on: bool
+    # Which emails the token switched: PR watch's alert emails, or the
+    # account's product emails (account_mail.py).
+    emails: Literal["alerts", "product"] = "alerts"
 
 
 def access_body(access: alerts.Access) -> AlertAccess:
@@ -360,6 +363,10 @@ async def _set_email(svc: Services, token: str, on: bool) -> Unsubscribed:
         row = (await s.execute(select(SettingsRow).where(
             SettingsRow.unsubscribe_hash == alerts.token_hash(token)))).scalar_one_or_none()
         if row is None:
+            # An account email's link: the same page and route take both.
+            if await account_mail.set_by_token(s, token, on):
+                await s.commit()
+                return Unsubscribed(email_on=on, emails="product")
             raise ApiError("not_found", "That link doesn't work any more. You can change "
                            "your alert emails in your settings.")
         at = now()
