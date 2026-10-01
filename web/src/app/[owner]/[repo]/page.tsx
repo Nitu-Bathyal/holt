@@ -9,7 +9,7 @@ import { AnalysisRunner } from "@/components/report/analysis-runner";
 import { MergePlanPanel } from "@/components/report/merge-plan-panel";
 import { PartialReport } from "@/components/report/partial-report";
 import { ReportTeaser } from "@/components/report/report-teaser";
-import { ReportView, VerdictTag } from "@/components/report/report-view";
+import { ReportView } from "@/components/report/report-view";
 import { RepoAbout } from "@/components/report/repo-about";
 import { StarterIssues, StarterIssuesSkeleton } from "@/components/report/starter-issues";
 import { SkeletonReveal } from "@/components/motion/reveal";
@@ -25,6 +25,7 @@ import { humanHours } from "@/lib/format";
 import { SITE_URL } from "@/lib/site";
 import type { Mode, Report } from "@/lib/types";
 import { PageTransition } from "@/components/motion/page-transition";
+import { BackLink } from "@/components/your-repos/back-link";
 import { SaveButton } from "@/components/save-button";
 import { ReportStickyBar, StickySentinel } from "@/components/report/report-sticky-bar";
 import { ShareMenu } from "@/components/report/share-bar";
@@ -122,15 +123,12 @@ export default async function RepoPage({ params, searchParams }: Props) {
   const shows = reportShows({ repo: display, signedIn, found, anonymousCheck: ticket !== null });
   const teaser = shows === "teaser" || shows === "sign-in";
 
-  // The verdict's name, in the header: only on the free report's full view.
-  const aboutShown = report.ok && Boolean(report.data.about);
-  const tag = report.ok && mode === "rules" && !teaser && !(report.data.outdated && signedIn) ? <VerdictTag report={report.data} inRow={aboutShown} /> : null;
-
   return (
     <PageTransition>
       <div className="relative">
       <div className="report-wide relative py-8 sm:py-12">
         {mode === "rules" && <JsonLd report={report.ok ? report.data : null} name={display} />}
+        <BackLink repo={display} />
         <div className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-3">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
@@ -146,7 +144,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
           />
           {report.ok && report.data.about ? (
             <div className="min-w-0 flex-1">
-              <RepoAbout about={report.data.about} repo={display} verdict={tag} />
+              <RepoAbout about={report.data.about} repo={display} />
             </div>
           ) : (
           <div className="min-w-0 flex-1">
@@ -164,15 +162,13 @@ export default async function RepoPage({ params, searchParams }: Props) {
           {/* Save, and under it share: two quiet icons, the bookmark's right edge shared. */}
           <div className="flex w-full shrink-0 flex-wrap items-center justify-between gap-x-3 gap-y-1 sm:w-auto sm:flex-col sm:items-end sm:justify-start">
             <div className="flex items-center gap-3">
-              {/* No details row to hold it: kept for screen readers (the page's h1), not shown beside Save. */}
-              {!aboutShown && tag && <div className="sr-only">{tag}</div>}
               <ReportModeLink
                 mode={mode}
                 rulesHref={reportHref(display, days)}
                 aiHref={signedIn ? `/${display}?mode=ai` : `/signin?callbackUrl=${encodeURIComponent(`/${display}?mode=ai`)}`}
                 hint
               />
-              <SaveButton small key={display} repo={display} saved={user ? Boolean(saved?.ok && saved.data.saved) : null} />
+              <SaveButton small compact key={display} repo={display} saved={user ? Boolean(saved?.ok && saved.data.saved) : null} />
             </div>
             <ShareMenu url={`${SITE_URL}/${display}`} text={report.ok ? `${display} on Holt: ${report.data.headline}.` : `${display} on Holt.`} />
           </div>
@@ -180,7 +176,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
         <StickySentinel />
         {report.ok && mode === "rules" && !teaser && (
           <ReportStickyBar repo={display}>
-            <SaveButton small key={`bar-${display}`} repo={display} saved={user ? Boolean(saved?.ok && saved.data.saved) : null} />
+            <SaveButton small compact key={`bar-${display}`} repo={display} saved={user ? Boolean(saved?.ok && saved.data.saved) : null} />
           </ReportStickyBar>
         )}
 

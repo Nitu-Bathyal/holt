@@ -6,8 +6,8 @@ export default function Loading() {
     <LoadingTransition>
       <SkeletonRegion>
         <div className="app-page">
-          <div className="app-head">
-            <Skeleton className="h-10 w-80 max-w-full" />
+          <div className="app-head sentence-head">
+            <Skeleton className="h-8 w-80 max-w-full" />
           </div>
           <Skeleton className="h-11 w-60" />
           <ul>

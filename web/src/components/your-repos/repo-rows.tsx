@@ -1,14 +1,18 @@
 "use client";
 // Your repos as rows: tick two to four to compare them; save or unsave in place.
 // Each row shows the numbers behind the verdict, not the verdict: the report has that.
+// Except where the numbers don't matter (Personal project, Not worth your time,
+// Not enough evidence): there the verdict says it plainest.
 // `compact` (the home) leaves out the ticks.
 import Link from "next/link";
 import { useState } from "react";
 import { RepoAvatar } from "@/components/repo-card/repo-avatar";
 import { SaveButton } from "@/components/save-button";
+import { rememberBack } from "@/components/your-repos/back-link";
 import { timeAgo } from "@/lib/format";
 import { compactCount } from "@/lib/repo-about";
-import { compareHref, repoNumbers, type YourRepo } from "@/lib/your-repos";
+import { TONE } from "@/components/report/tone";
+import { compareHref, repoNumbers, verdictFirst, type YourRepo } from "@/lib/your-repos";
 
 function Meta({ r }: { r: YourRepo }) {
   const parts: React.ReactNode[] = [];
@@ -23,6 +27,9 @@ function Meta({ r }: { r: YourRepo }) {
 }
 
 function Numbers({ r }: { r: YourRepo }) {
+  if (verdictFirst(r)) {
+    return <p className={`text-[0.78rem] font-semibold leading-snug sm:text-right ${TONE[r.tone ?? "neutral"].text}`}>{r.headline}</p>;
+  }
   if (!r.stats) return null;
   const n = repoNumbers(r.stats);
   return (
@@ -33,8 +40,7 @@ function Numbers({ r }: { r: YourRepo }) {
   );
 }
 
-/** `iconSave`: the save control as the bookmark alone (the home page). */
-export function RepoRows({ rows, saved, compact = false, iconSave = false }: { rows: YourRepo[]; saved: string[]; compact?: boolean; iconSave?: boolean }) {
+export function RepoRows({ rows, saved, compact = false }: { rows: YourRepo[]; saved: string[]; compact?: boolean }) {
   const [picked, setPicked] = useState<string[]>([]);
   const href = compareHref(picked);
   const savedSet = new Set(saved.map((s) => s.toLowerCase()));
@@ -60,26 +66,26 @@ export function RepoRows({ rows, saved, compact = false, iconSave = false }: { r
               <div className="flex min-w-0 items-center gap-3">
                 <RepoAvatar repo={r.repo} size={compact ? 28 : 32} />
                 <div className="min-w-0">
-                  <Link href={`/${r.repo}${r.ai ? "?mode=ai" : ""}`} className={`block truncate font-semibold tracking-tight after:absolute after:inset-0 hover:text-blue ${compact ? "text-[0.88rem]" : ""}`}>
+                  <Link href={`/${r.repo}${r.ai ? "?mode=ai" : ""}`} onClick={() => rememberBack(r.repo)} className={`block truncate font-semibold tracking-tight after:absolute after:inset-0 hover:text-blue ${compact ? "text-[0.88rem]" : ""}`}>
                     <span className="font-normal text-muted">{owner}/</span>{name}
                   </Link>
                   <Meta r={r} />
                 </div>
               </div>
               <div className="relative z-10 flex flex-wrap items-center justify-end gap-2 max-sm:justify-start">
-                {r.stats ? (
+                {r.stats || verdictFirst(r) ? (
                   <Numbers r={r} />
                 ) : r.checking ? (
-                  <Link href={`/${r.repo}`} className="text-[0.8rem] text-blue hover:underline">Watch</Link>
+                  <Link href={`/${r.repo}`} onClick={() => rememberBack(r.repo)} className="text-[0.8rem] text-blue hover:underline">Watch</Link>
                 ) : (
-                  <Link href={`/${r.repo}`} className="inline-flex min-h-11 items-center text-[0.8rem] text-blue hover:underline sm:min-h-0">Check it</Link>
+                  <Link href={`/${r.repo}`} onClick={() => rememberBack(r.repo)} className="inline-flex min-h-11 items-center text-[0.8rem] text-blue hover:underline sm:min-h-0">{r.headline ? "See the verdict" : "Get the verdict"}</Link>
                 )}
                 {r.stars != null && (
                   <span className="whitespace-nowrap text-[0.78rem] tabular-nums text-muted">
                     <span aria-hidden="true" className="text-[#e0a526]">★</span> {compactCount(r.stars)}<span className="sr-only"> stars</span>
                   </span>
                 )}
-                <SaveButton repo={r.repo} saved={savedSet.has(r.repo.toLowerCase())} compact icon={iconSave} />
+                <SaveButton repo={r.repo} saved={savedSet.has(r.repo.toLowerCase())} compact icon />
               </div>
             </li>
           );

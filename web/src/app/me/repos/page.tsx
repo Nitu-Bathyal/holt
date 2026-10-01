@@ -18,7 +18,7 @@ export const metadata: Metadata = { title: "Your repos", robots: { index: false 
 const TABS: { show: Show; label: string }[] = [
   { show: "all", label: "all" },
   { show: "saved", label: "saved" },
-  { show: "checked", label: "checked" },
+  { show: "checked", label: "viewed" },
 ];
 
 const FIND = <Link href="/find" className="btn-primary">find a project →</Link>;
@@ -26,7 +26,7 @@ const FIND = <Link href="/find" className="btn-primary">find a project →</Link
 // One tab empty while the other has repos. With none at all, the head says so.
 const EMPTY: Record<Exclude<Show, "all">, { line: string; action: React.ReactNode }> = {
   saved: { line: "Nothing saved yet.", action: FIND },
-  checked: { line: "Nothing checked yet.", action: <Link href={CHECK_HREF} className="btn-primary">check a repo →</Link> },
+  checked: { line: "Nothing viewed yet.", action: <Link href={CHECK_HREF} className="btn-primary">check a repo →</Link> },
 };
 
 export default async function YourReposPage({ searchParams }: PageProps<"/me/repos">) {
@@ -41,7 +41,7 @@ export default async function YourReposPage({ searchParams }: PageProps<"/me/rep
   return (
     <PageTransition>
       <div className="app-page">
-        <AppPageHeader title={failed ? "Your repos" : reposTitle(all)} mood={failed ? undefined : all.length ? "ready" : "thinking"}>
+        <AppPageHeader sentence title={failed ? "Your repos" : reposTitle(all)} mood={failed ? undefined : all.length ? "ready" : "thinking"}>
           {!all.length && !failed && <div className="mt-7">{FIND}</div>}
         </AppPageHeader>
         {failed ? (
