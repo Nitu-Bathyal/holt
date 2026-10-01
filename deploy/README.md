@@ -296,6 +296,10 @@ To take it away: remove `STAGING_HOLT_PRO_KEY`, run `preview.sh` with
   production uses. Besides those two, only the `STAGING_*` keys above are
   taken from it. Without the contact details the build fails on purpose
   rather than showing the placeholders.
+- PR watch's alert emails use `RESEND_API_KEY` from the same file (Resend,
+  the key production reads), and only while `staging/.env` says
+  `HOLT_PR_WATCH=1`. Without the key no email is sent; alerts still reach
+  the bell.
 - Passes are on sale in Razorpay **test mode**: with `RAZORPAY_KEY_ID`
   (an `rzp_test_` key) and `RAZORPAY_KEY_SECRET` in the same file,
   `preview.sh` gives the server those keys, `HOLT_PAYMENTS_ENABLED=1` and
