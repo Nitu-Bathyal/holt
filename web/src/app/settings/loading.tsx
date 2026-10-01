@@ -8,7 +8,7 @@ export default function Loading() {
     <LoadingTransition>
       <SkeletonRegion>
         {[3, 2].map((rows, b) => (
-          <div key={b} className={b ? "mt-10" : undefined}>
+          <div key={b} className={b ? "mt-8" : undefined}>
             <div className="section-head">
               <Skeleton className="h-4 w-28" />
             </div>

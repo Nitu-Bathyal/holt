@@ -53,7 +53,7 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
         <div className="grid gap-px border border-line bg-line sm:grid-cols-2">
           <div className="bg-panel p-5">
             <p className="text-[0.87rem] text-faint">{c.purchased > 0 ? "Credits left" : "Free AI reports left"}</p>
-            <p className="mt-1 text-[1.6rem] font-semibold leading-tight"><NewCount id={`credits:${user.id}`} value={c.balance} /></p>
+            <p className="mt-1 text-[1.3rem] font-semibold leading-tight"><NewCount id={`credits:${user.id}`} value={c.balance} /></p>
             {c.purchased > 0 && <p className="mt-1 text-[0.87rem] text-muted">{c.free} free, {c.purchased} bought</p>}
           </div>
           <div className="bg-panel p-5">
@@ -64,7 +64,7 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
               </form>
             ) : (
               <>
-                <p className="mt-1 text-[1.6rem] font-semibold leading-tight">{nextClaim || "soon"}</p>
+                <p className="mt-1 text-[1.3rem] font-semibold leading-tight">{nextClaim || "soon"}</p>
                 <p className="mt-1 text-[0.87rem] text-muted">when you can claim the next one</p>
               </>
             )}
@@ -87,21 +87,21 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
         </ul>
       </details>
 
-      <Block id="plan" title="Your plan" className="mt-10">
+      <Block id="plan" title="Your plan" className="mt-8">
         <p className="prose-sans text-[0.95rem]">
           {m?.plan === "pro" ? (
             <>Pro{m.plan_expires_at && <>, until {shortDate(m.plan_expires_at)}</>}.</>
           ) : (
-            <>Free. <Link href="/pricing" className="text-link">See pricing</Link>.</>
+            <>Free. <Link href="/pricing" className="text-green transition-opacity hover:opacity-75">See pricing</Link>.</>
           )}
         </p>
       </Block>
 
       {(purchases.length > 0 || onSale) && (
-        <Block id="purchases" title="Purchases" className="mt-10">
+        <Block id="purchases" title="Purchases" className="mt-8">
           {purchases.length === 0 ? (
             <p className="prose-sans text-[0.95rem]">
-              Nothing bought yet. <Link href="/pricing#passes" className="text-link">See Pro passes</Link>.
+              Nothing bought yet. <Link href="/pricing#passes" className="text-green transition-opacity hover:opacity-75">See Pro passes</Link>.
             </p>
           ) : (
             <ul className="divide-y divide-line border-b border-line">
@@ -119,7 +119,7 @@ export default async function AiReportSettings({ searchParams }: PageProps<"/set
             </ul>
           )}
           {onSale && purchases.length > 0 && (
-            <p className="mt-4 text-[0.89rem]"><Link href="/pricing#passes" className="text-link">add another pass →</Link></p>
+            <p className="mt-4 text-[0.89rem]"><Link href="/pricing#passes" className="text-green transition-opacity hover:opacity-75">add another pass →</Link></p>
           )}
         </Block>
       )}
