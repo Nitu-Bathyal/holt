@@ -23,11 +23,11 @@ export function homeNudge(s: { askingProfile: boolean; hasProfile: boolean | nul
   return null;
 }
 
-/** The dismissed nudges, from their cookie ("profile,github"). */
+/** The dismissed nudges, from their cookie ("profile,github"). "alerts" is My PRs' "turn on alerts" card (lib/alerts.ts). */
 export const NUDGE_COOKIE = "holt_nudges";
 
 export function dismissedNudges(cookie: string | undefined): string[] {
-  return (cookie ?? "").split(",").filter((n) => n === "profile" || n === "github");
+  return (cookie ?? "").split(",").filter((n) => n === "profile" || n === "github" || n === "alerts");
 }
 
 /** The line under the heading: "1 PR waiting · 3 AI reports left". Empty when there's nothing to say. */

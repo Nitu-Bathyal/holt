@@ -53,7 +53,7 @@ n=$(cat "$STUB_DIR/containers" 2>/dev/null || echo 0)
 case " $* " in
     *" up "*)
         case " $* " in *" --scale "*) echo $((n + 1)) > "$STUB_DIR/containers" ;; esac
-        cp "$HOLT_STAGE_HOME/now.json" "$STUB_DIR/now-while-starting"; env | grep -E '^(STAGING_HOST|HOLT_WEB_URL|AUTH_|NEXT_PUBLIC_|GITHUB_TOKENS=|GITHUB_APP_|HOLT_GITHUB_APP_KEY_GID=|OPENROUTER_|HOLT_AI_|HOLT_PRO_MODEL_|HOLT_PRO_PLAYBOOK_)' | sort > "$STUB_DIR/compose.env" ;;
+        cp "$HOLT_STAGE_HOME/now.json" "$STUB_DIR/now-while-starting"; env | grep -E '^(STAGING_HOST|HOLT_WEB_URL|AUTH_|NEXT_PUBLIC_|GITHUB_TOKENS=|GITHUB_APP_|HOLT_GITHUB_APP_KEY_GID=|OPENROUTER_|HOLT_AI_|HOLT_PRO_MODEL_|HOLT_PRO_PLAYBOOK_|RESEND_API_KEY=)' | sort > "$STUB_DIR/compose.env" ;;
     *" ps "*) i=1; while [ "$i" -le "$n" ]; do echo "c$i"; i=$((i + 1)); done ;;
     *" config --hash "*) echo "$last stub-hash" ;;
     *" config "*)
@@ -350,6 +350,28 @@ def test_without_an_openai_key_ai_is_off(sandbox: Sandbox) -> None:
     env = dict(line.split("=", 1) for line in
                (sandbox.stub_dir / "compose.env").read_text(encoding="utf-8").splitlines())
     assert env["HOLT_AI_BUDGET_USD"] == "0" and env["OPENROUTER_API_KEY"] == ""
+
+
+def test_alert_emails_get_resends_key_and_nothing_logs_it(sandbox: Sandbox) -> None:
+    sandbox.write_secrets(RESEND_API_KEY="re_secret-value")
+    done = sandbox.run()
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "alert emails: on (Resend)" in done.stdout
+    env = dict(line.split("=", 1) for line in
+               (sandbox.stub_dir / "compose.env").read_text(encoding="utf-8").splitlines())
+    assert env["RESEND_API_KEY"] == "re_secret-value"
+    logs = "".join(p.read_text(encoding="utf-8") for p in (sandbox.state / "logs").glob("*.log"))
+    assert "re_secret-value" not in done.stdout + done.stderr + logs
+
+
+def test_without_resends_key_no_alert_email_is_sent(sandbox: Sandbox) -> None:
+    # Not from the caller's environment or staging's .env either: only the secrets file.
+    done = sandbox.run(RESEND_API_KEY="re_from-the-shell")
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert "alert emails: off (no RESEND_API_KEY" in done.stdout
+    env = dict(line.split("=", 1) for line in
+               (sandbox.stub_dir / "compose.env").read_text(encoding="utf-8").splitlines())
+    assert env["RESEND_API_KEY"] == ""
 
 
 def test_the_smoke_run_gets_the_access_token_and_nothing_logs_it(sandbox: Sandbox) -> None:

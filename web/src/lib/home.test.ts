@@ -42,6 +42,7 @@ test("at most one nudge: the profile first, then GitHub, never the question the 
 test("dismissed nudges come from their cookie, and only known ones", () => {
   assert.deepEqual(dismissedNudges(undefined), []);
   assert.deepEqual(dismissedNudges("github,profile,evil"), ["github", "profile"]);
+  assert.deepEqual(dismissedNudges("alerts,github"), ["alerts", "github"]);
 });
 
 test("the status line: waiting PRs and AI reports left, in plain words", () => {

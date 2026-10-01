@@ -124,7 +124,7 @@ find "$STATE" -maxdepth 1 -type d -name 'run.*' -mmin +1440 -exec rm -rf {} + 2>
 main_sha="" preview_sha="" fingerprint=""
 
 # The policy pages' contact details, the staging sign-in keys, the paid
-# features key and the smoke run's Cloudflare Access token come from
+# features key, Resend's key and the smoke run's Cloudflare Access token come from
 # ~/.config/holt/secrets.env, the file production reads; only the keys named
 # in this script are taken from it.
 SECRETS="${HOLT_SECRETS_FILE:-$HOME/.config/holt/secrets.env}"
@@ -569,6 +569,18 @@ ai_settings() {
         HOLT_PRO_MODEL_KEY HOLT_PRO_MODEL_PROVIDER HOLT_PRO_PLAYBOOK_MODEL
 }
 ai_settings
+
+# PR watch's alert emails (server/README.md, "PR watch"): Resend's key from
+# $SECRETS, the one production reads (one verified sending domain, one key).
+# It only matters while staging's .env says HOLT_PR_WATCH=1. Always exported,
+# empty when unset, so nothing in .env can turn email on instead. Never logged.
+RESEND_API_KEY="$(secret RESEND_API_KEY)"
+if [[ -n "$RESEND_API_KEY" ]]; then
+    log "alert emails: on (Resend)"
+else
+    log "alert emails: off (no RESEND_API_KEY in $SECRETS)"
+fi
+export RESEND_API_KEY
 
 export BUILDX_BUILDER="$BUILDER" COMPOSE_PROJECT_NAME="$PROJECT"
 compose() { docker compose -p "$PROJECT" -f "$DEPLOY/compose.yml" --env-file "$DEPLOY/.env" "$@"; }

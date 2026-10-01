@@ -2,11 +2,12 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { getProfile, githubConnection, me } from "@/lib/api";
+import { alertList, getProfile, githubConnection, me } from "@/lib/api";
+import { alertView } from "@/lib/alerts";
 import { MOTION_OPTIONS, motionFromCookies } from "@/lib/motion";
 import { describe } from "@/lib/profile";
 import { currentUser } from "@/lib/session";
-import { legacySettingsHref, SECTIONS, type SectionId } from "@/lib/settings";
+import { legacySettingsHref, sectionsFor, type SectionId } from "@/lib/settings";
 import { SettingsHashRedirect } from "@/components/settings/hash-redirect";
 
 export const metadata: Metadata = { title: "Settings", robots: { index: false } };
@@ -22,7 +23,8 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
   const moved = legacySettingsHref("", q.toString());
   if (moved) redirect(moved);
 
-  const [account, profile, gh, jar] = await Promise.all([me(user.id), getProfile(user.id), githubConnection(user.id), cookies()]);
+  const [account, profile, gh, alerts, jar] = await Promise.all([me(user.id), getProfile(user.id), githubConnection(user.id), alertList(user.id), cookies()]);
+  const watch = alerts.ok ? alertView(alerts.data.access, alerts.data.enabled) : "hidden";
   const motion = motionFromCookies(jar);
   const c = account.ok ? account.data.credits : null;
   const p = profile.ok ? profile.data.profile : null;
@@ -33,6 +35,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
     "ai-reports": c ? `${c.balance} ${c.purchased > 0 ? "credits" : "free AI reports"} left${c.can_claim ? ". This week's free one is ready to claim." : "."}` : null,
     accounts: gh.ok ? (acct ? `GitHub connected as @${acct.login}.` : "GitHub not connected.") : null,
     display: `${MOTION_OPTIONS.find((o) => o.value === motion)!.label}.`,
+    alerts: alerts.ok && watch === "on" ? `Watching ${alerts.data.watching} pull request${alerts.data.watching === 1 ? "" : "s"}.` : watch === "ended" ? "Ended." : watch === "off" ? "Off." : null,
     privacy: acct ? (acct.stats_opt_out ? "You're left out of statistics." : "Your contributions count, without your name, in repo statistics.") : null,
   };
 
@@ -41,7 +44,7 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
       <SettingsHashRedirect />
       <h2 className="sr-only">All settings</h2>
       <ul className="border-t border-line">
-        {SECTIONS.map((s) => (
+        {sectionsFor(watch !== "hidden").map((s) => (
           <li key={s.id}>
             <Link href={s.href} className="app-row group grid-cols-[minmax(0,1fr)_auto]">
               <span className="min-w-0">

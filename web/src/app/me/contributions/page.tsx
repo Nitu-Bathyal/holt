@@ -3,10 +3,15 @@
 // longer than the repo usually takes), waiting, merged, closed. Each open row
 // carries its one line (home.ts `waiting`). Any repo can be left out of your numbers
 // (a friend's project, your team's repo, a hackathon); those collect, undoable,
-// in a folded "Not counted" group.
+// in a folded "Not counted" group. With PR watch (API.md), a watched row has a
+// bell to mute it and a "new" tag for an alert not opened yet, and the first
+// visit offers to turn alerts on.
 import type { Metadata } from "next";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { FirstTime } from "@/components/alerts/first-time";
+import { WatchToggle } from "@/components/alerts/watch-toggle";
 import { ContributionHistorySlot } from "@/components/contributions/history-slot";
 import { RefreshButton } from "@/components/contributions/refresh-button";
 import { ErrorPanel } from "@/components/error-panel";
@@ -15,15 +20,16 @@ import { WaitBar } from "@/components/home/wait-bar";
 import { NewCount } from "@/components/motion/count-up";
 import { PageTransition } from "@/components/motion/page-transition";
 import { AppPageHeader, SectionHead } from "@/components/shell/app-page";
-import { contributions, preflightState } from "@/lib/api";
+import { sampleAlerts, showFirstTime } from "@/lib/alerts";
+import { alertList, contributions, preflightState } from "@/lib/api";
 import { landedLine, prGroups, prsTitle, STATE_LABEL, type PrGroups } from "@/lib/contributions";
 import { timeAgo } from "@/lib/format";
-import { clock, outsidePulls, type Waiting } from "@/lib/home";
+import { clock, dismissedNudges, NUDGE_COOKIE, outsidePulls, type Waiting } from "@/lib/home";
 import { showPreflight } from "@/lib/preflight";
 import { caller, currentUser } from "@/lib/session";
 import { CONNECT_GITHUB } from "@/lib/settings";
 import type { ContributionPR } from "@/lib/types";
-import { refresh, setCounted } from "./actions";
+import { dismissAlertsCard, refresh, setCounted } from "./actions";
 
 export const metadata: Metadata = { title: "Your pull requests", robots: { index: false } };
 
@@ -55,6 +61,7 @@ function PrRow({ p, w, rule, action }: { p: ContributionPR; w?: Waiting; rule: s
           <Link href={`/${p.repo}`} className="tap z-10 font-semibold tracking-tight hover:text-blue"><span className="font-normal text-muted">{owner}/</span>{name}</Link>
           <span className="text-[0.8rem] text-faint">#{p.number}</span>
           {p.found_via_holt && <span className="border border-blue/40 px-1.5 text-[0.72rem] text-blue">found via Holt</span>}
+          {p.unread_alert && <span className="border border-orange/50 px-1.5 text-[0.72rem] text-orange">new</span>}
         </p>
         <a href={p.url} className="mt-0.5 block truncate font-sans text-[0.95rem] after:absolute after:inset-0 hover:underline">{p.title}</a>
         {w ? (
@@ -67,6 +74,7 @@ function PrRow({ p, w, rule, action }: { p: ContributionPR; w?: Waiting; rule: s
         )}
       </div>
       <div className="relative z-10 flex flex-wrap items-center gap-x-5 gap-y-2 sm:flex-nowrap sm:gap-4">
+        {p.watch && <WatchToggle repo={p.repo} number={p.number} initial={p.watch} />}
         {action}
         <CountForm repo={p.repo} counted="no" label="don't count" className="min-h-11 text-[0.8rem] text-faint transition-colors hover:text-ink sm:min-h-9" />
       </div>
@@ -128,14 +136,17 @@ function Groups({ g, preflight }: { g: PrGroups; preflight: boolean }) {
 export default async function ContributionsPage({ searchParams }: PageProps<"/me/contributions">) {
   const user = await currentUser();
   if (!user) redirect("/signin?callbackUrl=/me/contributions");
-  const [sp, who] = await Promise.all([searchParams, caller(user)]);
-  const [r, pre] = await Promise.all([contributions(user.id), preflightState({}, who)]);
+  const [sp, who, jar] = await Promise.all([searchParams, caller(user), cookies()]);
+  const [r, pre, alerts] = await Promise.all([contributions(user.id), preflightState({}, who), alertList(user.id)]);
   const notConnected = !r.ok && r.error.code === "not_found";
   const notice = sp.count === "error"
     ? { tone: NOTICES.error.tone, text: "We couldn't save that just now. Try again in a minute." }
     : typeof sp.refresh === "string" ? NOTICES[sp.refresh] : undefined;
   const d = r.ok ? r.data : null;
-  const g = d ? prGroups(outsidePulls(d.pull_requests, d.login), clock()) : null;
+  const now = clock();
+  const pulls = d ? outsidePulls(d.pull_requests, d.login) : [];
+  const g = d ? prGroups(pulls, now) : null;
+  const offerAlerts = alerts.ok && showFirstTime({ access: alerts.data.access, pulls, dismissed: dismissedNudges(jar.get(NUDGE_COOKIE)?.value) });
   const s = d?.summary;
   // Nothing to group yet: the head says so, and its one action is finding a repo.
   const none = !!g && !g.yours.length && !g.needs.length && !g.waiting.length && !g.merged.length && !g.closed.length;
@@ -177,6 +188,7 @@ export default async function ContributionsPage({ searchParams }: PageProps<"/me
               )}
             </AppPageHeader>
             {notice && <p role="status" className={`mb-6 border px-4 py-3 font-sans text-[0.9rem] ${notice.tone}`}>{notice.text}</p>}
+            {offerAlerts && <FirstTime samples={sampleAlerts(pulls, now)} dismiss={dismissAlertsCard} />}
             <ContributionHistorySlot data={d} />
             <div className="mt-6 space-y-12">
               <Groups g={g} preflight={pre.ok && showPreflight(pre.data)} />
