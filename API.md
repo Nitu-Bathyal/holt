@@ -128,6 +128,7 @@ responses. The server also accepts and normalises full URLs
                   "waiting": 3, "window_days": 365, "computed_at": "…" } | null,
   "about": {                          // what the repo is; null until its details are read
     "description": "string | null", "readme_line": "string | null",
+    "readme": "# Title\n\nMarkdown… | null",
     "homepage": "https://… | null", "stars": 91234, "forks": 1200 | null,
     "open_issues": 57 | null, "pull_requests": 4100 | null,
     "open_pull_requests": 12 | null, "contributors": 812 | null,
@@ -139,6 +140,10 @@ responses. The server also accepts and normalises full URLs
     "links": [ { "kind": "contributing" | "discussions" | "docs" | "discord" | "slack"
                  | "gitter" | "matrix" | "zulip", "url": "https://…" } ],
     "latest_release": { "tag": "v3.1.0", "published_at": "…Z | null", "url": "https://…" } | null,
+    "top_contributors": [ { "login": "davidism", "name": "David Lord" | null,
+                            "url": "https://github.com/davidism",
+                            "avatar_url": "https://avatars.githubusercontent.com/…" | null,
+                            "contributions": 2500 | null } ],
     "fetched_at": "…Z"
   } | null
 }
@@ -185,8 +190,20 @@ finds the rules and help, one per kind, in the order listed above: GitHub's
 contributing guide, Discussions when the repository has them, then the docs and
 chat rooms the README links to (never a badge's image); it is empty until the
 details are read again, and every URL is `http(s)`. `latest_release` is GitHub's
-latest release, null when there is none. Nothing in it feeds the verdict.
-The public extension proxy passes it on.
+latest release, null when there is none. `readme` is the top of the
+repository's Markdown README (`README.md` or `readme.md`; a `.rst` one is
+left out), at most about 6,000 characters, cut at a blank line and never inside
+a code block, for the report's README section. It is untrusted text: render it
+as Markdown without raw HTML, and open its links only when they are `http(s)`.
+Nothing in it feeds the verdict. The public extension proxy passes it on.
+`top_contributors` is the repository's most active committers in GitHub's own
+order (most commits to the default branch first), at most ten, bots left out:
+one REST request per repository after the details query, then one GraphQL
+query per hundred people for their profile `name` (null when they haven't set
+one, or when that query fails). `url` is always a `https://github.com/` profile
+and `avatar_url` an `https` image. It is empty until the details are read
+again, and keeps its last value when GitHub doesn't answer. It is GitHub's
+public list, shown as GitHub orders it: Holt never ranks people.
 
 ### Engine version and `outdated`
 
