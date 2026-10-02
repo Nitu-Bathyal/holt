@@ -46,19 +46,29 @@ test("URL trick: /github.com/owner/repo redirects to the report", async ({ page,
   await expect(page).toHaveURL(/\/pallets\/flask$/);
 });
 
-test("find, signed out: the default search lists a repo with an issue link", async ({ page }) => {
-  // Signed out, /find shows the shared default search; other filters ask for sign-in.
-  await page.goto("/find");
-  const results = page.getByRole("region", { name: "Results" });
-  const issue = results.locator('a[href^="https://github.com/"][href*="/issues/"]').first();
-  const failure = results.getByRole("alert");
-  await expect(issue.or(failure)).toBeVisible({ timeout: 180_000 });
-  if (await failure.isVisible()) {
-    const text = (await failure.innerText()).trim();
-    test.skip(/too many|rate/i.test(text), `rate limited on staging: ${text}`);
-    throw new Error(`find failed: ${text}`);
+// Find, Browse, Compare and pre-flight are for signed-in people (web/src/lib/gate.ts).
+for (const path of ["/discover", "/discover/python", "/discover?sort=stars", "/find", "/find?go=1&lang=python", "/compare?repos=pallets/flask,psf/requests", "/preflight"]) {
+  test(`signed out, ${path} goes to sign-in and sends no data`, async ({ page, request }) => {
+    const res = await request.get(path, { maxRedirects: 0 });
+    expect(res.status()).toBe(307);
+    const to = new URL(res.headers()["location"], "https://holt.test");
+    expect(to.pathname).toBe("/signin");
+    expect(decodeURIComponent(to.searchParams.get("callbackUrl") ?? "")).toBe(path);
+    expect(await res.text()).not.toContain("github.com");
+    // What a client-side navigation or prefetch asks for.
+    const rsc = await request.get(path, { maxRedirects: 0, headers: { RSC: "1" } });
+    expect(rsc.status()).toBe(307);
+
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/signin\?callbackUrl=/);
+  });
+}
+
+test("signed out, the data routes behind those pages answer 401", async ({ request }) => {
+  for (const path of ["/api/preflight", "/api/preflight-jobs/x/events", "/api/merge-plan-jobs/x/events", "/api/playbook-jobs/x/events"]) {
+    expect((await request.get(path)).status(), path).toBe(401);
   }
-  await expect(results.locator('a[href^="/"]').first()).toBeVisible();
+  expect((await request.post("/api/find", { data: { q: "lang=python" } })).status()).toBe(401);
 });
 
 test("Hacktoberfest pill: × hides it, and it stays hidden after a reload", async ({ page }, testInfo) => {
@@ -133,7 +143,7 @@ test("/__build is valid JSON describing what's live", async ({ request }) => {
   expect(body.live?.built_at).toBeTruthy();
 });
 
-for (const path of ["/", "/pallets/flask", "/find", "/pricing", "/how-it-works"]) {
+for (const path of ["/", "/pallets/flask", "/examples", "/pricing", "/how-it-works"]) {
   test(`no console errors on ${path}`, async ({ page }) => {
     const errors = watchErrors(page);
     await page.goto(path, { waitUntil: "networkidle" });

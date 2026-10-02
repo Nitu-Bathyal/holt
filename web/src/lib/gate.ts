@@ -3,9 +3,11 @@
 // report: the verdict, the odds and one number, with the rest behind sign-in.
 // Opening a report with no result yet runs the free check (anon-check.ts: the
 // report page only, rate-limited per IP, never for bots); anything else that
-// starts a check or a search needs an account. The browser extension's public
-// API (/api/public/*) reads the cache and stays open. No runtime imports, so it
-// runs under `node --test` and in the browser.
+// starts a check or a search needs an account, and so do Find, Browse,
+// Compare, pre-flight, the dashboard and settings (ACCOUNT_PAGES): arriving
+// signed out goes to sign-in and back. The Hacktoberfest page keeps its list.
+// The browser extension's public API (/api/public/*) reads the cache and
+// stays open. No runtime imports, so it runs under `node --test` and in the browser.
 import { isExample } from "./examples.ts";
 import type { ApiError } from "./types.ts";
 
@@ -39,6 +41,33 @@ export function signInHref(path: string): string {
   return `/signin?callbackUrl=${encodeURIComponent(path)}`;
 }
 
+// Pages that need an account. One-segment pages match exactly (/find/x is a
+// repo whose owner is "find"); sections match with everything under them
+// (they are in lib/app-routes.ts, so never a repo).
+const ACCOUNT_PAGES = new Set(["/find", "/compare", "/preflight"]);
+const ACCOUNT_SECTIONS = new Set(["discover", "me", "settings"]);
+
+/** Whether a page is only for signed-in people. */
+export function needsAccount(pathname: string): boolean {
+  const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  return ACCOUNT_PAGES.has(path) || ACCOUNT_SECTIONS.has(path.split("/")[1] ?? "");
+}
+
+// Auth.js's session cookie: plain on http, __Secure- on https, in numbered chunks when long.
+const SESSION_COOKIE = /^(__Secure-)?authjs\.session-token(\.\d+)?$/;
+
+/**
+ * The proxy's half of the gate: an account page asked for with no session
+ * cookie is answered with a redirect to sign-in (and back), before anything
+ * renders. `search` comes with its "?", or "". A cookie only lets the request
+ * through to the page, which asks the server who it is (requireUser,
+ * lib/session.ts): the cookie itself is never trusted.
+ */
+export function arrivalGate(pathname: string, search: string, cookies: string[]): string | null {
+  if (!needsAccount(pathname) || cookies.some((name) => SESSION_COOKIE.test(name))) return null;
+  return signInHref(`${pathname}${search}`);
+}
+
 /** Where the paste box sends a repo: its report, through sign-in when signed out (examples need none). */
 export function pasteHref(repo: string, signedIn: boolean): string {
   const report = `/${repo}`;
@@ -67,6 +96,11 @@ const refuse = (message: string): Refusal => ({ status: 401, error: { code: "una
 /** POST /api/analyses: null when this caller may start a check. `anonymous`: the report page allowed a signed-out one. */
 export function startGate(userId: string | null | undefined, anonymous = false): Refusal | null {
   return userId || anonymous ? null : refuse("Sign in to check this repo.");
+}
+
+/** A route that reads for an account page (pre-flight, a paid job's progress): null when signed in. */
+export function signedInGate(userId: string | null | undefined): Refusal | null {
+  return userId ? null : refuse("Sign in first.");
 }
 
 /** POST /api/find: null when this caller may run a search. */
