@@ -633,9 +633,9 @@ def samples(svc: Services, to: str = "you@example.com",
 
     def pr(kind: str, repo: str, number: int, title: str, facts: dict) -> alert_email.EmailAlert:
         return alert_email.EmailAlert(
-            line=alerts.line(kind, repo, number, facts), pr=f"{repo} #{number}", title=title,
+            kind=kind, repo=repo, number=number, title=title,
             pr_url=f"https://github.com/{repo}/pull/{number}", report_url=f"{u.home}/{repo}",
-            tone=alert_email.TONES[kind])
+            facts=facts)
 
     click = pr("changes", "pallets/click", 2811, "Fix shell completion for nested groups",
                {"who": "davidism"})

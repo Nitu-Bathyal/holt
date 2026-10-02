@@ -50,9 +50,9 @@ const prKey = (repo: string, number: number) => `${repo.toLowerCase()}#${number}
 
 // About the pull requests in the mock's My Contributions (mock/server.ts).
 const ALERTS: Pick<AlertItem, "id" | "kind" | "text" | "repo" | "number" | "title">[] = [
-  { id: 3, kind: "changes", text: "Your turn: @davidism asked for changes on click #2811.", repo: "pallets/click", number: 2811, title: "Fix shell completion for nested groups" },
-  { id: 2, kind: "late_reply", text: "Day 3, no reply on core #153340. Most get one within 2 days here.", repo: "home-assistant/core", number: 153340, title: "Add a battery sensor to the Roborock integration" },
-  { id: 1, kind: "merged", text: "Merged: nixpkgs #339210.", repo: "NixOS/nixpkgs", number: 339210, title: "python3Packages.rich: 13.7.1 -> 13.9.4" },
+  { id: 3, kind: "changes", text: "Your turn. @davidism asked for changes on click #2811.", repo: "pallets/click", number: 2811, title: "Fix shell completion for nested groups" },
+  { id: 2, kind: "late_reply", text: "Day 3 and still no reply on core #153340. Most get one within 2 days here.", repo: "home-assistant/core", number: 153340, title: "Add a battery sensor to the Roborock integration" },
+  { id: 1, kind: "merged", text: "nixpkgs #339210 was merged.", repo: "NixOS/nixpkgs", number: 339210, title: "python3Packages.rich: 13.7.1 -> 13.9.4" },
 ];
 const HOURS_AGO: Record<number, number> = { 3: 2, 2: 5, 1: 60 };
 

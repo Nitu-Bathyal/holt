@@ -203,7 +203,7 @@ def test_a_maintainer_reply_becomes_an_alert_on_the_bell(w):
     listed = bell(w)
     assert listed["unread"] == 1 and listed["watching"] == 1 and listed["enabled"] is True
     [item] = listed["items"]
-    assert item["text"] == "Your turn: @lead replied on one #1."
+    assert item["text"] == "Your turn. @lead replied on one #1."
     assert (item["kind"], item["repo"], item["number"]) == ("reply", "octo/one", 1)
     assert item["pr_url"] == "https://github.com/octo/one/pull/1"
     assert item["report_path"] == "/octo/one" and item["title"] == "Fix the parser"
@@ -258,7 +258,7 @@ def test_a_merge_seen_by_the_checker(w):
     w.fake.states[ONE] = {**state("octo/one", 1, pushed=opened), "state": "MERGED",
                           "mergedAt": now().isoformat(), "closedAt": now().isoformat()}
     assert check(w).alerts == 1
-    assert texts(w) == ["Merged: one #1."]
+    assert texts(w) == ["one #1 was merged."]
     [row] = stored(w, Contribution)
     assert row.state == "merged" and row.merged_at is not None
     assert bell(w)["watching"] == 0  # watching ends with the pull request
@@ -274,7 +274,7 @@ def test_a_close_seen_by_a_refresh_alerts_once(w):
             fetched_at=now() - timedelta(minutes=20)))
     call(w, old)
     assert refresh(w).status_code == 200  # the person pressed refresh on My PRs
-    assert texts(w) == ["Closed without merging: one #1."]
+    assert texts(w) == ["one #1 was closed without merging."]
     assert check(w).alerts == 0 and len(texts(w)) == 1  # the checker adds no second one
 
 
@@ -289,14 +289,14 @@ def test_changes_requested_and_then_approved(w):
                                                                "CHANGES_REQUESTED")]}
     w.fake.states[ONE] = node
     check(w)
-    assert texts(w) == ["Your turn: @lead asked for changes on one #1."]
+    assert texts(w) == ["Your turn. @lead asked for changes on one #1."]
     approved = now() - timedelta(hours=1)
     node = state("octo/one", 1, pushed=asked + timedelta(hours=1), decision="APPROVED")
     node["reviews"] = node["firstReviews"] = {"nodes": [
         review("lead", asked, "CHANGES_REQUESTED"), review("lead", approved, "APPROVED")]}
     w.fake.states[ONE] = node
     check(w)
-    assert texts(w)[0] == "Approved: @lead approved one #1."
+    assert texts(w)[0] == "Nice. @lead approved one #1."
 
 
 def test_past_the_slow_mark_alerts_once_and_the_typical_mark_never(w):
@@ -305,7 +305,7 @@ def test_past_the_slow_mark_alerts_once_and_the_typical_mark_never(w):
     assert check(w).alerts == 0
     add_timing(w, "octo/one", first_reply_half_hours=5.0, first_reply_slow_hours=70.0)
     assert check(w).alerts == 1
-    assert texts(w) == ["Day 6, no reply on one #1. Most get one within 3 days here."]
+    assert texts(w) == ["Day 6 and still no reply on one #1. Most get one within 3 days here."]
     assert check(w).alerts == 0 and len(texts(w)) == 1
 
 
@@ -319,7 +319,7 @@ def test_a_stale_bot_warning(w):
     watching_one(w, opened=opened)
     add_timing(w, "octo/one", stale_bot=True, stale_close_days=30)
     assert check(w).alerts == 1
-    assert texts(w) == ["Quiet for 27 days on one #1. The bot here closes at 30."]
+    assert texts(w) == ["It's been quiet for 27 days on one #1. The bot closes it at 30."]
 
 
 def test_a_muted_pull_request_gets_no_alerts(w):
@@ -368,7 +368,7 @@ def test_low_github_points_stop_the_reads_but_not_the_waits(w):
     got = check(w)
     assert got.stopped == "low_points" and got.read == 0
     assert len(w.fake.state_reads) == reads  # GitHub wasn't asked
-    assert texts(w) == ["Day 6, no reply on one #1. Most get one within 3 days here."]
+    assert texts(w) == ["Day 6 and still no reply on one #1. Most get one within 3 days here."]
     w.points = 5000
     assert check(w).alerts == 1  # the reply, next time
 
@@ -398,7 +398,7 @@ def test_a_stale_list_is_searched_again_to_find_new_pull_requests(w):
     got = check(w)
     assert (got.searched, got.read) == (1, 0) and len(w.fake.searches) == 2
     assert {c.number for c in stored(w, Contribution)} == {1, 2}
-    assert texts(w) == ["Your turn: @lead replied on one #1."]  # found by that search
+    assert texts(w) == ["Your turn. @lead replied on one #1."]  # found by that search
     assert bell(w)["watching"] == 2
 
 

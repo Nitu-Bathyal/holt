@@ -68,6 +68,16 @@ the real values needs `HOLT_ALLOW_PLACEHOLDER_CONTACT=1`. Run `npm run db:migrat
   interface, or visitors could forge their rate-limit IP.
 - The server refuses to start with `MOCK_API=1` in production unless
   `ALLOW_MOCK_IN_PROD=1` (demo deployments only).
+- Signed-out views of the public pages (landing, Discover, Examples, pricing,
+  How it works, the policy pages, and a report page whose report exists) are
+  sent with `Cache-Control: public, max-age=0, must-revalidate, s-maxage=60`
+  and `CDN-Cache-Control: public, s-maxage=60, stale-while-revalidate=300`,
+  so a CDN in front may keep them for a minute. Any request with a cookie the
+  app could read (a session, a half-done sign-in, a display setting) gets
+  Next's own `private, no-store`, and so does every other page. The rules are
+  in `src/lib/edge-cache.ts`; the proxy applies them. A CDN that caches these
+  pages must skip its cache for requests whose cookies contain `authjs` or
+  `holt`: a cached copy is served without asking the app.
 
 ## Checks
 

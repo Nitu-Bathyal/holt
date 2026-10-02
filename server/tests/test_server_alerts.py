@@ -41,7 +41,7 @@ def test_a_maintainer_reply_is_your_turn():
     [found] = alerts.events(pr(), new)
     assert (found.kind, found.facts, found.at) == ("reply", {"who": "davidism"}, at)
     assert alerts.line("reply", new.repo, new.number, found.facts) == (
-        "Your turn: @davidism replied on click #2811.")
+        "Your turn. @davidism replied on click #2811.")
 
 
 def test_a_request_for_changes_is_your_turn_with_its_own_line():
@@ -51,7 +51,7 @@ def test_a_request_for_changes_is_your_turn_with_its_own_line():
     [found] = alerts.events(pr(), new)
     assert found.kind == "changes"
     assert alerts.line(found.kind, new.repo, new.number, found.facts) == (
-        "Your turn: @mkoval asked for changes on click #2811.")
+        "Your turn. @mkoval asked for changes on click #2811.")
 
 
 def test_your_turn_fires_again_only_when_the_team_speaks_again():
@@ -72,7 +72,7 @@ def test_a_comment_after_a_standing_request_for_changes_is_a_reply():
     [found] = alerts.events(asked, later)
     assert (found.kind, found.facts) == ("reply", {})
     assert alerts.line(found.kind, later.repo, later.number, found.facts) == (
-        "Your turn: a reviewer replied on click #2811.")
+        "Your turn. A reviewer replied on click #2811.")
     # A plain reply turning into a request for changes is news.
     replied = pr(turn="yours", turn_at=NOW - timedelta(hours=3), reply_by="lead",
                  reply_kind="reply")
@@ -92,7 +92,7 @@ def test_an_approval_alerts_once():
     [found] = alerts.events(pr(), new)
     assert found.kind == "approved"
     assert alerts.line("approved", "dotnet/efcore", 3310, found.facts) == (
-        "Approved: @jrios approved efcore #3310.")
+        "Nice. @jrios approved efcore #3310.")
     assert alerts.events(new, new) == []
     # A row stored before Holt kept who spoke last: an approval from weeks
     # ago is not news the first time it is read again.
@@ -100,18 +100,19 @@ def test_an_approval_alerts_once():
     assert alerts.events(before, new) == []
     # The decision turning to approved with nobody's word since your last move.
     [bare] = alerts.events(pr(), pr(review_decision="approved"))
-    assert alerts.line("approved", "dotnet/efcore", 3310, bare.facts) == "Approved: efcore #3310."
+    assert alerts.line("approved", "dotnet/efcore", 3310, bare.facts) == (
+        "efcore #3310 was approved.")
 
 
 def test_merged_and_closed():
     [m] = alerts.events(pr(), pr(state="merged", merged_at=NOW, closed_at=NOW))
     assert (m.kind, m.at) == ("merged", NOW)
     assert alerts.line("merged", "kubernetes/kubernetes", 128811, {}) == (
-        "Merged: kubernetes #128811.")
+        "kubernetes #128811 was merged.")
     [c] = alerts.events(pr(), pr(state="closed", closed_at=NOW))
     assert c.kind == "closed"
     assert alerts.line("closed", "moment/moment", 6120, {}) == (
-        "Closed without merging: moment #6120.")
+        "moment #6120 was closed without merging.")
 
 
 def test_nothing_for_a_pull_request_holt_wasnt_watching():
@@ -135,7 +136,7 @@ def test_no_reply_alerts_only_past_the_slow_mark_never_the_typical_one():
     [found] = alerts.overdue(late, t, NOW)
     assert (found.kind, found.at) == ("late_reply", None)
     assert alerts.line(found.kind, "processing/p5.js", 7120, found.facts) == (
-        "Day 6, no reply on p5.js #7120. Most get one within 4 days here.")
+        "Day 6 and still no reply on p5.js #7120. Most get one within 4 days here.")
 
 
 def test_the_typical_mark_alone_never_alerts():
@@ -163,7 +164,7 @@ def test_waiting_to_merge_past_the_slow_merge_time():
                              t, NOW)
     assert found.kind == "late_merge"
     assert alerts.line(found.kind, "dotnet/efcore", 3310, found.facts) == (
-        "Day 20 on efcore #3310. Most merged ones land within 2 weeks here.")
+        "Day 20 on efcore #3310. Most merged PRs land within 2 weeks here.")
     # Your turn: the wait is on you, not on them.
     mine = pr(created_at=NOW - timedelta(days=19), first_reply_at=NOW - timedelta(days=18),
               turn="yours")
@@ -182,7 +183,8 @@ def test_the_stale_bot_warning_comes_five_days_before_the_close(quiet_days, fire
         assert found[0].at == quiet.last_activity_at  # new activity, a new warning
         assert alerts.line("stale_soon", "EbookFoundation/free-programming-books", 11020,
                            {"quiet": 25, "close": 30}) == (
-            "Quiet for 25 days on free-programming-books #11020. The bot here closes at 30.")
+            "It's been quiet for 25 days on free-programming-books #11020. "
+            "The bot closes it at 30.")
 
 
 def test_a_short_stale_rule_never_warns_before_half_its_days():
@@ -220,11 +222,11 @@ def test_each_event_has_one_key():
 
 
 def test_lines_without_a_name_and_a_single_day():
-    assert alerts.line("reply", "a/b", 1, {}) == "Your turn: a reviewer replied on b #1."
+    assert alerts.line("reply", "a/b", 1, {}) == "Your turn. A reviewer replied on b #1."
     assert alerts.line("changes", "a/b", 1, None) == (
-        "Your turn: a reviewer asked for changes on b #1.")
+        "Your turn. A reviewer asked for changes on b #1.")
     assert alerts.line("stale_soon", "a/b", 1, {"quiet": 1, "close": 6}) == (
-        "Quiet for 1 day on b #1. The bot here closes at 6.")
+        "It's been quiet for 1 day on b #1. The bot closes it at 6.")
 
 
 # --- access -------------------------------------------------------------------------------

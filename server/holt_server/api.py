@@ -22,6 +22,7 @@ from holt_server import (
     __version__,
     badge,
     budget,
+    cache,
     credits,
     discover,
     entitlements,
@@ -37,7 +38,9 @@ from holt_server.db import (
     BADGE_PRIORITY,
     FindCache,
     Job,
+    RepoMeta,
     Report,
+    RepoUserStats,
     StarterCache,
     User,
     current_engine,
@@ -297,18 +300,58 @@ async def list_reports(request: Request,
     ]})
 
 
-@router.get("/reports/{owner}/{repo}", dependencies=[Depends(internal)])
-async def get_report(owner: str, repo: str, request: Request,
-                     mode: Literal["rules", "ai"] = "rules",
-                     days: int = Query(7, ge=1, le=90)) -> schema.Report:
-    svc = services(request)
-    name = repos.normalize(f"{owner}/{repo}")
+# A free report as it is sent is served for this long at most, and only until
+# this process writes one of the rows it was made from (`report_stamp`). At
+# most this many, and this many bytes of them.
+REPORT_KEPT_S = 60.0
+REPORTS_KEPT = 512
+REPORTS_KEPT_BYTES = 32 * 1024 * 1024
+
+
+def kept_reports(svc: Services) -> cache.Kept[cache.Body]:
+    """This process's free reports, as sent (cache.py)."""
+    return cache.store(svc, "reports", lambda: cache.Kept(
+        REPORT_KEPT_S, REPORTS_KEPT, REPORTS_KEPT_BYTES))
+
+
+def report_stamp(svc: Services, key: str) -> tuple:
+    """Changes whenever this process writes what `GET /v1/reports` sends for
+    this repo: a report (for any budget: one answers for another), its
+    details, or Holt users' numbers (rebuilt, or taken away when someone opts
+    out). No database read (cache.py)."""
+    return cache.writes(svc).repo(
+        key, Report.__tablename__, RepoMeta.__tablename__, RepoUserStats.__tablename__)
+
+
+async def report_body(svc: Services, name: str, mode: str, days: int) -> schema.Report:
     latest = await latest_report(svc, name, mode, days)
     if latest is None:
         raise ApiError("not_found", f"There's no report for {name} yet.")
     report = await dressed(svc, schema.Report.model_validate(latest.report), name)
     report.outdated = latest.outdated
     return report
+
+
+@router.get("/reports/{owner}/{repo}", dependencies=[Depends(internal)],
+            response_model=schema.Report)
+async def get_report(owner: str, repo: str, request: Request,
+                     mode: Literal["rules", "ai"] = "rules",
+                     days: int = Query(7, ge=1, le=90)) -> Response:
+    """The free report is the same for every reader, so it is kept as sent
+    (cache.py): a read costs no session, and no parsing, validating and
+    serialising of the report again. AI reports are read from the database
+    every time."""
+    svc = services(request)
+    name = repos.normalize(f"{owner}/{repo}")
+    if mode != "rules":
+        return cache.respond(request, cache.body_of(await report_body(svc, name, mode, days)))
+    key = repos.key(name)
+
+    async def build() -> cache.Body:
+        return cache.body_of(await report_body(svc, name, mode, days))
+
+    body = await kept_reports(svc).load((key, days), report_stamp(svc, key), build, len)
+    return cache.respond(request, body)
 
 
 async def dressed(svc: Services, report: schema.Report, name: str) -> schema.Report:

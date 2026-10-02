@@ -30,6 +30,11 @@ there. While a search runs, `/v1/find` answers 202 with the index part in
 `results`; its `done` event, and a cached search, carry both. When the caller
 is over their work limit the index part is the answer, marked `complete:
 false`.
+
+The index part is the same for everyone who picks the same filters, so it is
+built once and kept (cache.py) until this process writes a report, a repo's
+details or its starter issues, `INDEX_KEPT_S` at most. Who is asking, their
+limits and the search itself are never kept here.
 """
 
 from __future__ import annotations
@@ -38,9 +43,9 @@ import asyncio
 import logging
 from typing import Any
 
-from holt_server import repos, schema, starter
+from holt_server import cache, repos, schema, starter
 from holt_server.discover import (
-    BREAKDOWN, COUNTS, _latest, card_issues, kept_card, starter_issues, welcoming_key,
+    BREAKDOWN, COUNTS, _latest, card_issues, kept_card, stamp, starter_issues, welcoming_key,
 )
 from holt_server.services import Services
 
@@ -52,6 +57,11 @@ FILL_ISSUES = 12
 FILL_AT_ONCE = 4
 # How long a search waits for those reads after its own part is done.
 FILL_WAIT_SECONDS = 20.0
+# The index part of one set of filters is served for this long at most (see
+# the module docstring): at most this many sets, and this many results in all.
+INDEX_KEPT_S = 60.0
+INDEXES_KEPT = 128
+INDEX_RESULTS_KEPT = 20_000
 
 
 def _matches(meta, params: dict[str, Any]) -> bool:
@@ -99,11 +109,24 @@ def _result(card, issues: list[dict]) -> dict[str, Any]:
     }).model_dump(mode="json")
 
 
+def indexes(svc: Services) -> cache.Kept[list[dict[str, Any]]]:
+    """This process's index parts, one per set of filters."""
+    return cache.store(svc, "find-index", lambda: cache.Kept(
+        INDEX_KEPT_S, INDEXES_KEPT, INDEX_RESULTS_KEPT))
+
+
 async def index_results(svc: Services, params: dict[str, Any]) -> list[dict[str, Any]]:
-    """The index part of a find: matches with starter issues, best first."""
-    cards = await matches(svc, params)
-    known = await starter_issues(svc, [repos.key(c.repo) for c in cards])
-    return [_result(c, issues) for c in cards if (issues := known.get(repos.key(c.repo)))]
+    """The index part of a find: matches with starter issues, best first.
+    Shared between requests: read it, never change it."""
+    key = (tuple(sorted(params.get("languages") or [])), tuple(sorted(params.get("topics") or [])),
+           bool(params.get("hacktoberfest")), int(params.get("days") or 7))
+
+    async def build() -> list[dict[str, Any]]:
+        cards = await matches(svc, params)
+        known = await starter_issues(svc, [repos.key(c.repo) for c in cards])
+        return [_result(c, issues) for c in cards if (issues := known.get(repos.key(c.repo)))]
+
+    return await indexes(svc).load(key, stamp(svc), build, lambda r: max(len(r), 1))
 
 
 async def unlisted(svc: Services, params: dict[str, Any], limit: int = FILL_ISSUES) -> list[str]:

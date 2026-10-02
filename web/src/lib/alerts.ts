@@ -225,21 +225,21 @@ export interface SampleAlert {
 function sample(w: Waiting, now: number): SampleAlert | null {
   const p = w.pr;
   const pr = `${p.repo.split("/")[1]} #${p.number}`;
-  const who = p.reply_by ? `@${p.reply_by}` : "a reviewer";
-  if (p.reply_kind === "changes") return { kind: "changes", text: `Your turn: ${who} asked for changes on ${pr}.` };
-  if (p.reply_kind === "reply") return { kind: "reply", text: `Your turn: ${who} replied on ${pr}.` };
-  if (p.reply_kind === "approved") return { kind: "approved", text: `Approved: ${who} approved ${pr}.` };
+  const who = p.reply_by ? `@${p.reply_by}` : "A reviewer";
+  if (p.reply_kind === "changes") return { kind: "changes", text: `Your turn. ${who} asked for changes on ${pr}.` };
+  if (p.reply_kind === "reply") return { kind: "reply", text: `Your turn. ${who} replied on ${pr}.` };
+  if (p.reply_kind === "approved") return { kind: "approved", text: p.reply_by ? `Nice. ${who} approved ${pr}.` : `${pr} was approved.` };
   if (!w.late || p.draft) return null;
   const close = p.verdict?.timing?.stale_close_days;
   if (w.mark == null) {
     if (!close || !p.last_activity_at) return null;
     const quiet = Math.floor(Math.max(0, now - Date.parse(p.last_activity_at)) / 86_400_000);
-    return { kind: "stale_soon", text: `Quiet for ${quiet} day${quiet === 1 ? "" : "s"} on ${pr}. The bot here closes at ${close}.` };
+    return { kind: "stale_soon", text: `It's been quiet for ${quiet} day${quiet === 1 ? "" : "s"} on ${pr}. The bot closes it at ${close}.` };
   }
   const day = `Day ${Math.floor(w.hours / 24) + 1}`;
   return p.first_reply_at
-    ? { kind: "late_merge", text: `${day} on ${pr}. Most merged ones land within ${waitPhrase(w.mark)} here.` }
-    : { kind: "late_reply", text: `${day}, no reply on ${pr}. Most get one within ${waitPhrase(w.mark)} here.` };
+    ? { kind: "late_merge", text: `${day} on ${pr}. Most merged PRs land within ${waitPhrase(w.mark)} here.` }
+    : { kind: "late_reply", text: `${day} and still no reply on ${pr}. Most get one within ${waitPhrase(w.mark)} here.` };
 }
 
 /** Up to two alerts this person's own open pull requests would get today, for the "turn on alerts" card. */

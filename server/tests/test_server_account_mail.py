@@ -6,7 +6,9 @@ network."""
 from __future__ import annotations
 
 import asyncio
+import re
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 from holt_server import account_email, account_mail, alerts, mailer, payments
@@ -123,7 +125,8 @@ def test_the_welcome_leaves_alerts_out_while_pr_watch_is_off(make_harness):
     h.svc.mailer = h.outbox = FakeMailer()
     sign_in(h, first=True)
     [msg] = h.outbox.sent
-    assert "Find a project" in msg.text and "Go get merged." in msg.text
+    assert "Find projects that welcome first-time contributors" in msg.text
+    assert "Go get merged." in msg.text
     assert "Turn on PR alerts" not in msg.text + msg.html and "settings/alerts" not in msg.html
 
 
@@ -251,8 +254,9 @@ def test_a_paid_pass_gets_a_receipt_once(hm):
     assert paid(hm) is True
     [msg] = hm.outbox.sent
     assert msg.to == YOU and msg.subject == receipt_subject(hm, "u1")
-    for line in ("Thanks, you're on Pro.", f"Here's what's yours until {pro_until(hm, 'u1')}.",
-                 "30 merge plans a month: ", "PR alerts: ",
+    for line in ("You're on Pro.", f"Your pass is live through {pro_until(hm, 'u1')}.",
+                 "Here's what you've got:", "30 merge plans a month. Get your first PR ",
+                 "PR alerts. We'll let you know ",
                  "Make a merge plan: https://githolt.com",
                  "Turn on PR alerts: https://githolt.com/settings/alerts",
                  "₹99 · 1 month pass · paid ", " · one-time, no auto-renewal",
@@ -328,8 +332,8 @@ def test_two_days_before_and_once_when_they_end(hm):
     assert run(hm, NOON).sent == 1
     [msg] = hm.outbox.sent
     assert msg.subject == "Your free PR alerts end on 12 October"
-    assert "That's the end of your 14 free days." in msg.text
-    assert "Reports, Find and your pull requests page stay free." in msg.text
+    assert "You've had 14 days of alerts." in msg.text
+    assert "No worries. Reports, Find, and your pull requests page are still free." in msg.text
     assert "https://githolt.com/me/contributions" in msg.text
     # No pass is on sale here: no link to pricing.
     assert "pricing" not in msg.text + msg.html
@@ -339,7 +343,7 @@ def test_two_days_before_and_once_when_they_end(hm):
     ended = hm.outbox.sent[1]
     assert ended.subject == "Your free PR alerts have ended"
     assert "Your 14 days of PR alerts are up." in ended.text
-    assert "maintainer replies on 12 October." in ended.text
+    assert "As of 12 October, Holt has stopped watching your open PRs" in ended.text
     assert run(hm, ends + timedelta(days=1)).sent == 0
     assert [k for _, k, _ in log(hm)] == ["trial_ending", "trial_ended"]
 
@@ -364,11 +368,19 @@ def test_the_pricing_link_is_there_only_while_a_pass_is_on_sale():
     kw = dict(day="12 October", days=14, prs_url="https://githolt.com/me/contributions")
     on = account_email.trial_ended_email(f, pricing_url="https://githolt.com/pricing", **kw)
     off = account_email.trial_ended_email(f, pricing_url=None, **kw)
-    assert "Get the alerts back with Holt Pro: https://githolt.com/pricing" in on.text
-    assert 'href="https://githolt.com/pricing"' in on.html
-    assert "pricing" not in off.text + off.html
+    assert "Want the alerts back? Get them with Holt Pro:\nhttps://githolt.com/pricing" in on.text
+    assert ('Want the alerts back? <a class="h-link" href="https://githolt.com/pricing"'
+            in on.html and ">Get them with Holt Pro</a>." in on.html)
+    assert "The rest of Holt is still free: Reports, Find, and your pull requests page." in on.text
+    assert "pricing" not in off.text + off.html and "Holt Pro" not in off.text
+    assert "The rest is still free. Reports, Find, and your pull requests page." in off.text
     ending = account_email.trial_ending_email(f, pricing_url="https://githolt.com/pricing", **kw)
-    assert "Keep the alerts with Holt Pro: https://githolt.com/pricing" in ending.text
+    assert ("If you want to keep the alerts running, Holt Pro has you covered:\n"
+            "https://githolt.com/pricing") in ending.text
+    assert "Everything else is still yours." in ending.text
+    plain = account_email.trial_ending_email(f, pricing_url=None, **kw)
+    assert "No worries. Reports, Find, and your pull requests page are still free." in plain.text
+    assert "pricing" not in plain.text + plain.html
 
 
 # --- a pass ending ----------------------------------------------------------------------------
@@ -394,8 +406,8 @@ def test_three_days_before_a_pass_ends_and_again_for_the_next_pass(hm):
     assert run(hm, NOON).sent == 1
     [msg] = hm.outbox.sent
     assert msg.subject == "Your Holt Pro pass ends on 13 October"
-    assert "It was a one-time pass, so it won't renew or charge you again." in msg.text
-    assert "Reports, Find and your pull requests page stay free." in msg.text
+    assert "No renewal, no surprise charge. It was a one-time pass." in msg.text
+    assert "Reports, Find, and your pull requests page will keep working." in msg.text
     assert "Open Holt: https://githolt.com/me" in msg.text and unsubscribe_token(msg)
     assert run(hm, NOON + timedelta(days=1)).sent == 0
     # Another pass moves the end: that end gets its own email, three days before.
@@ -410,8 +422,9 @@ def test_a_pass_on_sale_is_the_ending_emails_button():
     f = account_email.Frame(YOU, "https://githolt.com", "https://githolt.com/alerts/unsubscribe?t=x")
     on = account_email.pass_ending_email(f, day="13 October", open_url="https://githolt.com/me",
                                          pricing_url="https://githolt.com/pricing")
-    assert "Get another pass: https://githolt.com/pricing" in on.text
-    assert on.html.count('class="h-btn"') == 1
+    assert "If you want another pass:\nhttps://githolt.com/pricing" in on.text
+    assert "Nothing will renew and you won't be charged again. It was a one-time pass." in on.text
+    assert on.html.count('class="h-btn"') == 1 and "get another pass →" in on.html
 
 
 # --- once each --------------------------------------------------------------------------------
@@ -502,6 +515,73 @@ def test_the_lab_serves_every_email_outside_production(make_harness):
         assert "(=^•ω•^=)" in e["html"] and "<img" not in e["html"]
     assert make_harness(HOLT_ENV="production").get("/v1/lab/emails").status_code == 404
     assert h.client.get("/v1/lab/emails").status_code == 401  # the internal key
+
+
+def _said(html: str) -> str:
+    """An HTML part's words: tags and the hidden preview line's padding out."""
+    body = html.split("</head>")[1]
+    for entity, char in (("&#847;&zwnj;&nbsp;", ""), ("&nbsp;", " "), ("&amp;", "&"),
+                         ("&quot;", '"'), ("&lt;", "<"), ("&gt;", ">")):
+        body = body.replace(entity, char)
+    return " ".join(re.sub(r"<[^>]+>", " ", body).split())
+
+
+def test_the_samples_are_the_owners_text(make_harness):
+    """The owner reviews the samples: email_samples.md is their text, with
+    each sample's subject, preview line and text part."""
+    written = (Path(__file__).parent / "email_samples.md").read_text(encoding="utf-8")
+    blocks = re.findall(
+        r"^## \d+\. ([^\n]+?)  \(`\w+`\)\n\n\*\*Subject:\*\* ([^\n]+)\n\n"
+        r"\*\*Preview line:\*\* ([^\n]+)\n\n\*\*Body:\*\*\n\n```text\n(.+?)\n```$",
+        written, re.M | re.S)
+    got = [(e.name, e.subject, e.preheader, e.text)
+           for e in account_mail.samples(make_harness().svc)]
+    assert len(blocks) == 11 and [name for name, *_ in blocks] == [name for name, *_ in got]
+    for want, have in zip(blocks, got, strict=True):
+        assert have == want, want[0]
+
+
+def test_the_html_and_the_text_say_the_same(make_harness):
+    for e in account_mail.samples(make_harness().svc):
+        said = _said(e.html)
+        assert e.preheader in said, e.name
+        for line in e.text.replace("`", "").splitlines():
+            # A link is its address in the text and its words in the HTML.
+            line = re.sub(r" ?https://\S+", "", line)
+            # The one line that is a button's words there: "get another pass →".
+            if line == "If you want another pass:":
+                assert "get another pass →" in said
+                continue
+            for part in re.split(r"(?<=[.?:,]) | · ", line):
+                assert part.rstrip(".:?,-").lower() in said.lower(), (e.name, line)
+
+
+def test_the_welcome_has_alerts_while_pr_watch_is_on():
+    f = account_email.Frame(YOU, "https://githolt.com", "https://githolt.com/alerts/unsubscribe?t=x")
+    out = account_email.welcome_email(f, "https://githolt.com", "https://githolt.com/find",
+                                      "https://githolt.com/settings/alerts")
+    assert ("Turn on PR alerts: we'll let you know when a maintainer replies to one of your "
+            "PRs.\nhttps://githolt.com/settings/alerts") in out.text
+    # Addresses are in backticks in the text only.
+    assert "replace `github.com` with `githolt.com` in its address." in out.text
+    assert "replace github.com with githolt.com in its address." in out.html
+    assert "`" not in out.html
+
+
+def test_a_receipt_says_only_what_the_pass_gives():
+    f = account_email.Frame(YOU, "https://githolt.com")
+    kw = dict(pass_name="1 month", amount="₹99", paid_on="1 Oct", payment="pay_1",
+              plan_url="https://githolt.com", alerts_url=None,
+              refunds_url="https://githolt.com/refunds")
+    forever = account_email.receipt_email(f, until=None, merge_plans=30, alerts=False, **kw)
+    assert forever.preheader == "Your Pro pass is live. Here's what you get."
+    assert "Your pass is live.\n\nHere's what you've got:" in forever.text
+    assert "PR alerts" not in forever.text + forever.html
+    bare = account_email.receipt_email(f, until="31 October", merge_plans=None, alerts=False,
+                                       **kw)
+    assert bare.preheader == "Your Pro pass is live through 31 October."
+    assert "Here's what you've got" not in bare.text + bare.html
+    assert "Open Holt: https://githolt.com" in bare.text
 
 
 def test_text_from_outside_is_escaped():
