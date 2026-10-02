@@ -14,14 +14,14 @@ import type { Tone } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Example reports",
-  description: "Full Holt reports on real repos, some worth your time, some not, some without enough evidence, plus an AI report.",
+  description: "Full Holt reports on real repos, some worth your time, some not, some without enough evidence, plus a merge plan.",
   alternates: { canonical: EXAMPLES_PATH },
 };
 
 interface Row {
   href: string;
   repo: string;
-  ai?: boolean;
+  plan?: boolean;
   /** Today's verdict as the server words it; none when the report isn't cached. */
   verdict?: { headline: string; tone: Tone };
   language?: string;
@@ -34,7 +34,7 @@ interface Row {
 // starts no checks.
 export default async function ExamplesPage() {
   const [reports, user] = await Promise.all([Promise.all(EXAMPLES.map((e) => getReport(e.repo))), currentUser()]);
-  const aiRepo = EXAMPLES.find((e) => e.repo === EXAMPLE_PLAN.repo);
+  const planRepo = EXAMPLES.find((e) => e.repo === EXAMPLE_PLAN.repo);
   const rows: Row[] = [
     ...EXAMPLES.map((e, i) => {
       const r = reports[i];
@@ -43,10 +43,10 @@ export default async function ExamplesPage() {
     {
       href: EXAMPLE_PATH,
       repo: EXAMPLE_PLAN.repo,
-      ai: true,
+      plan: true,
       verdict: EXAMPLE_PLAN.verdict,
-      language: aiRepo?.language,
-      stars: aiRepo?.stars,
+      language: planRepo?.language,
+      stars: planRepo?.stars,
       why: "A plan for your first pull request, citing the PRs behind each step.",
     },
   ];
@@ -71,7 +71,7 @@ export default async function ExamplesPage() {
                     <span className="truncate font-semibold tracking-tight text-ink" title={r.repo}>
                       {r.repo}
                     </span>
-                    {r.ai && <span className="shrink-0 border border-blue/60 px-1.5 text-[0.72rem] leading-5 text-blue">AI</span>}
+                    {r.plan && <span className="shrink-0 border border-blue/60 px-1.5 text-[0.72rem] leading-5 text-blue">merge plan</span>}
                   </span>
                   <span className="justify-self-end lg:justify-self-start">
                     {r.verdict && <VerdictPill headline={r.verdict.headline} tone={r.verdict.tone} className="whitespace-nowrap" />}

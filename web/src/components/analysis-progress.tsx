@@ -38,7 +38,7 @@ export function AnalysisProgress({ repo, stage, progress, mode, kicker, note, ah
       {/* Phones: the cat sits above the text so the headline gets the full width. */}
       <div className="flex flex-col-reverse items-start gap-3 sm:flex-row sm:justify-between sm:gap-4">
         <div className="min-w-0">
-          <p className="break-words text-[0.76rem] uppercase tracking-[0.08em] text-faint">{kicker ?? `${mode === "ai" ? "writing your AI report" : "checking"} · ${repo}`}</p>
+          <p className="break-words text-[0.76rem] uppercase tracking-[0.08em] text-faint">{kicker ?? `checking · ${repo}`}</p>
           {/* Room for the longest stage and detail from the start (two lines of
               each on phones), so a new stage never pushes the log down. A
               section-sized heading, not a page title: people watch this often. */}

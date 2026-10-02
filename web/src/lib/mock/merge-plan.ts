@@ -42,7 +42,8 @@ function err<T>(status: number, code: ApiError["code"], message: string): Result
   return { ok: false, status, error: { code, message } };
 }
 
-function access(user: string): Access {
+/** The `merge_plan` feature's Access for `user`: also what /v1/me/entitlements lists. */
+export function access(user: string): Access {
   const n = left(user);
   const base = { feature: "merge_plan", name: "Merge plan", cost: 0, left_this_month: null, left: n };
   if (n > 0) return { ...base, allowed: true, via: "plan", code: null, message: null };

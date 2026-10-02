@@ -16,12 +16,12 @@ const recorded = planRecordedOn(plan);
 const [owner, repo] = plan.repo.split("/");
 
 export const metadata: Metadata = {
-  title: "Example AI report",
-  description: `A full AI report on ${plan.repo}, free to read: what the AI found, a step-by-step plan for your first pull request, what gets merged, what gets closed and who reviews. Recorded ${recorded}.`,
+  title: "Example merge plan",
+  description: `A full merge plan for ${plan.repo}, free to read: a step-by-step plan for your first pull request, what gets merged, what gets closed and who reviews. Recorded ${recorded}.`,
   alternates: { canonical: EXAMPLE_PATH },
 };
 
-export default async function ExampleAiReportPage({ searchParams }: PageProps<"/example-ai-report">) {
+export default async function ExampleMergePlanPage({ searchParams }: PageProps<"/example-merge-plan">) {
   const locked = (await searchParams).view === "locked";
   return (
     <PageTransition>
@@ -29,7 +29,7 @@ export default async function ExampleAiReportPage({ searchParams }: PageProps<"/
         {/* The same page as a report: no backdrop, the example said in one quiet note above it. */}
         <div className="report-wide relative py-8 sm:py-12">
           <aside className="mb-6 flex flex-wrap items-center gap-x-4 gap-y-2 border border-line-strong bg-panel-2 px-4 py-3 font-sans text-[0.9rem] text-muted" data-example-banner>
-            <span className="border border-blue px-2 py-0.5 font-mono text-[0.85rem] text-blue">Example AI report</span>
+            <span className="border border-blue px-2 py-0.5 font-mono text-[0.85rem] text-blue">Example merge plan</span>
             <span className="min-w-0 flex-1">
               Recorded {recorded}. Real counts, quotes and links; the plan&apos;s wording stands in for the AI&apos;s.
             </span>

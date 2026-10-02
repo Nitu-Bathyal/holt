@@ -63,8 +63,6 @@ export type UnlockOffer =
   | { kind: "coming-soon"; note: string }
   | { kind: "blocked"; note: string };
 
-const creditsWord = (n: number) => `${n} credit${n === 1 ? "" : "s"}`;
-
 /**
  * What the unlock button can promise, from the server's entitlement answer.
  * Nothing is on sale yet, so a user who can't pay is told it's coming, not
@@ -77,11 +75,8 @@ export function unlockOffer(access: Access | null, onSale: boolean): UnlockOffer
       const left = access.left_this_month == null ? "" : ` (${access.left_this_month} left this month)`;
       return { kind: "can-unlock", note: `Included in your plan${left}. A playbook that fails costs nothing.` };
     }
-    return { kind: "can-unlock", note: `Uses ${creditsWord(access.cost)}. A playbook that fails costs nothing.` };
+    return { kind: "can-unlock", note: "A playbook that fails costs nothing." };
   }
-  if (!onSale) {
-    const price = access.cost > 0 ? ` It will cost ${creditsWord(access.cost)} per repository.` : "";
-    return { kind: "coming-soon", note: `Coming soon: playbooks aren't on sale yet.${price}` };
-  }
+  if (!onSale) return { kind: "coming-soon", note: "Coming soon: playbooks aren't on sale yet." };
   return { kind: "blocked", note: access.message ?? "You can't unlock this playbook right now." };
 }

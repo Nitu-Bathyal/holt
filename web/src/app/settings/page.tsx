@@ -2,8 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { alertList, getProfile, githubConnection, me } from "@/lib/api";
+import { alertList, entitlements, getProfile, githubConnection } from "@/lib/api";
 import { alertView } from "@/lib/alerts";
+import { shortDate } from "@/lib/format";
 import { MOTION_OPTIONS, motionFromCookies } from "@/lib/motion";
 import { describe } from "@/lib/profile";
 import { currentUser } from "@/lib/session";
@@ -17,22 +18,23 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
   const user = await currentUser();
   if (!user) redirect("/signin?callbackUrl=/settings");
   const sp = await searchParams;
-  // Old form results (?claimed=1, ?github=saved) belong to a section now.
+  // Old form results (?subscribed=1, ?github=saved) belong to a section now.
   const q = new URLSearchParams();
   for (const [k, v] of Object.entries(sp)) for (const one of [v ?? []].flat()) q.append(k, one);
   const moved = legacySettingsHref("", q.toString());
   if (moved) redirect(moved);
 
-  const [account, profile, gh, alerts, jar] = await Promise.all([me(user.id), getProfile(user.id), githubConnection(user.id), alertList(user.id), cookies()]);
+  const [covered, profile, gh, alerts, jar] = await Promise.all([entitlements(user.id), getProfile(user.id), githubConnection(user.id), alertList(user.id), cookies()]);
   const watch = alerts.ok ? alertView(alerts.data.access, alerts.data.enabled) : "hidden";
   const motion = motionFromCookies(jar);
-  const c = account.ok ? account.data.credits : null;
+  const e = covered.ok ? covered.data : null;
+  const plansLeft = e?.features.find((f) => f.feature === "merge_plan")?.left ?? null;
   const p = profile.ok ? profile.data.profile : null;
   const acct = gh.ok ? gh.data.account : null;
 
   const status: Record<SectionId, string | null> = {
     profile: profile.ok ? (p ? describe(p) : "Not set yet. Your picks need it.") : null,
-    "ai-reports": c ? `${c.balance} ${c.purchased > 0 ? "credits" : "free AI reports"} left${c.can_claim ? ". This week's free one is ready to claim." : "."}` : null,
+    plan: e ? `${e.plan === "pro" ? `Pro${e.plan_expires_at ? ` until ${shortDate(e.plan_expires_at)}` : ""}` : "Free"}.${plansLeft == null ? "" : ` ${plansLeft} merge plan${plansLeft === 1 ? "" : "s"} left.`}` : null,
     accounts: gh.ok ? (acct ? `GitHub connected as @${acct.login}.` : "GitHub not connected.") : null,
     display: `${MOTION_OPTIONS.find((o) => o.value === motion)!.label}.`,
     alerts: alerts.ok && watch === "on" ? `Watching ${alerts.data.watching} pull request${alerts.data.watching === 1 ? "" : "s"}.` : watch === "ended" ? "Ended." : watch === "off" ? "Off." : null,

@@ -1605,7 +1605,7 @@
   --gut: clamp(16px, 4vw, 80px);
   width: min(calc(100% - 2 * var(--gut)), 1680px);
 }
-/* Report pages (the free report, the AI report and their skeletons): as wide
+/* Report pages (the report, the merge plan and their skeletons): as wide
    as the landing, without its lane for the walking cat. */
 .report-wide {
   width: min(calc(100% - 2 * clamp(16px, 4vw, 80px)), 1680px);
@@ -2630,7 +2630,7 @@
     color: var(--ink);
   }
 
-  /* The foot: you, your AI reports, then the small print. */
+  /* The foot: you, then the small print. */
   .side-foot {
     margin-top: auto;
     border-top: 1px solid var(--line);

@@ -89,7 +89,6 @@ export type CheckOffer =
   | { kind: "coming-soon"; note: string }
   | { kind: "blocked"; note: string; buy: boolean };
 
-const creditsWord = (n: number) => `${n} credit${n === 1 ? "" : "s"}`;
 const SAFE = "A check that fails costs nothing, and checking the same commit again is free.";
 
 /**
@@ -104,12 +103,9 @@ export function checkOffer(access: Access | null, onSale: boolean): CheckOffer {
       const left = access.left_this_month == null ? "" : ` (${access.left_this_month} left this month)`;
       return { kind: "can-check", note: `Included in your plan${left}. ${SAFE}` };
     }
-    return { kind: "can-check", note: `Uses ${creditsWord(access.cost)}. ${SAFE}` };
+    return { kind: "can-check", note: SAFE };
   }
-  if (!onSale) {
-    const price = access.cost > 0 ? ` It will cost ${creditsWord(access.cost)} per check.` : "";
-    return { kind: "coming-soon", note: `Coming soon: pre-flight checks aren't on sale yet.${price}` };
-  }
+  if (!onSale) return { kind: "coming-soon", note: "Coming soon: pre-flight checks aren't on sale yet." };
   return { kind: "blocked", note: access.message ?? "You can't run a check right now.", buy: true };
 }
 
