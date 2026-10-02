@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
 import { DiscoverView } from "@/components/discover/discover-view";
 import { parseSort } from "@/lib/discover";
-import { requireUser } from "@/lib/session";
 
-// For signed-in people (lib/gate.ts), so never in a search index.
-export const metadata: Metadata = {
+const base: Metadata = {
   title: "Discover repos",
-  robots: { index: false },
+  description: "Open-source repos ranked by how they treat outside contributors: replies, merges and how fast. Built from Holt's rules, never AI.",
+  alternates: { canonical: "/discover" },
 };
+
+export async function generateMetadata({ searchParams }: PageProps<"/discover">): Promise<Metadata> {
+  return Object.keys(await searchParams).length ? { ...base, robots: { index: false } } : base;
+}
 
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)?.trim().slice(0, 80) || null;
 
 export default async function DiscoverPage({ searchParams }: PageProps<"/discover">) {
   const sp = await searchParams;
-  const user = await requireUser("/discover", sp);
-  return <DiscoverView user={user} sort={parseSort(sp.sort)} language={null} topic={one(sp.topic)?.toLowerCase() ?? null} />;
+  return <DiscoverView sort={parseSort(sp.sort)} language={null} topic={one(sp.topic)?.toLowerCase() ?? null} />;
 }

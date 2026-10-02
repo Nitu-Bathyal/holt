@@ -2,7 +2,7 @@ import Link from "next/link";
 import { discover, savedNames } from "@/lib/api";
 import { boardHref, boardTitle, emptyText, SORTS, widenBoard } from "@/lib/discover";
 import { langColor } from "@/lib/repo-card";
-import type { SessionUser } from "@/lib/session";
+import { currentUser } from "@/lib/session";
 import type { DiscoverSort } from "@/lib/types";
 import { ErrorPanel } from "../error-panel";
 import { EmptyState } from "../shell/app-page";
@@ -12,14 +12,9 @@ import { LangDot } from "../repo-card/repo-avatar";
 import { BoardList } from "./board-list";
 
 /** /discover and /discover/<language>: Find a project's browse tab, one board as a grid of cards with its order and language chips on top. */
-export async function DiscoverView({ user, sort, language, topic }: {
-  /** Boards are for signed-in people: the page gets it from requireUser. */
-  user: SessionUser;
-  sort: DiscoverSort;
-  language: string | null;
-  topic: string | null;
-}) {
-  const [result, saved] = await Promise.all([discover(sort, language, topic), savedNames(user.id)]);
+export async function DiscoverView({ sort, language, topic }: { sort: DiscoverSort; language: string | null; topic: string | null }) {
+  const user = await currentUser();
+  const [result, saved] = await Promise.all([discover(sort, language, topic), savedNames(user?.id)]);
   const here = boardHref({ sort, language, topic });
   const data = result.ok ? result.data : null;
   // The order and language chips: one row in the bar once it's wide enough, two before that.
@@ -72,7 +67,7 @@ export async function DiscoverView({ user, sort, language, topic }: {
 
   return (
     <PageTransition>
-      <FindFrame tab="browse" title={boardTitle(sort, language)} signedIn>
+      <FindFrame tab="browse" title={boardTitle(sort, language)} signedIn={Boolean(user)}>
         <div className="find-tray">{filters}</div>
         {topic && (
           <p className="mt-4 text-[0.8rem] text-faint">

@@ -15,7 +15,7 @@ export async function POST(req: NextRequest) {
   if (!picks) {
     return NextResponse.json({ error: { code: "invalid_request", message: "That search didn't make sense. Reload the page and try again." } }, { status: 400 });
   }
-  // /find is for signed-in people (lib/gate.ts), and so is refining it.
+  // Signed out, /find shows the shared default search; other filters need an account.
   const who = await caller();
   const refused = findGate(who.userId);
   if (refused) return NextResponse.json({ error: refused.error }, { status: refused.status });

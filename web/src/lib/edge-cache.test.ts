@@ -19,13 +19,13 @@ function ask(path: string, o: { cookies?: string[]; headers?: Record<string, str
   return edgeCacheKind(q);
 }
 
-const PUBLIC = ["/", "/examples", "/example-ai-report", "/pricing", "/how-it-works", "/terms", "/privacy", "/refunds", "/contact"];
+const PUBLIC = ["/", "/discover", "/discover?sort=stars&topic=cli", "/discover/python", "/examples", "/example-ai-report", "/pricing", "/how-it-works", "/terms", "/privacy", "/refunds", "/contact"];
 const REPORTS = ["/pallets/flask", "/NixOS/nixpkgs", "/vercel/next.js"];
 
 test("signed out, the public pages are cacheable and reports are if they exist", () => {
   for (const p of PUBLIC) assert.equal(ask(p), "page", p);
   for (const p of REPORTS) assert.equal(ask(p), "report", p);
-  assert.equal(ask("/examples/"), "page");
+  assert.equal(ask("/discover/"), "page");
   assert.equal(ask("/pallets/flask", { method: "HEAD" }), "report");
 });
 
@@ -34,7 +34,7 @@ test("signed-in responses are never cacheable", () => {
   for (const session of ["authjs.session-token", "__Secure-authjs.session-token", "__Secure-authjs.session-token.0", "next-auth.session-token"]) {
     for (const p of [...PUBLIC, ...REPORTS]) assert.equal(ask(p, { cookies: [session] }), null, `${p} with ${session}`);
     // Beside a cookie that alone would be fine.
-    assert.equal(ask("/examples", { cookies: ["__cf_bm", session] }), null);
+    assert.equal(ask("/discover", { cookies: ["__cf_bm", session] }), null);
   }
 });
 
@@ -50,16 +50,16 @@ test("any cookie the app reads, or doesn't know, makes the page this visitor's a
 });
 
 test("Cloudflare's own cookies don't count", () => {
-  assert.equal(ask("/examples", { cookies: ["__cf_bm", "cf_clearance", "_cfuvid", "__cflb"] }), "page");
+  assert.equal(ask("/discover", { cookies: ["__cf_bm", "cf_clearance", "_cfuvid", "__cflb"] }), "page");
 });
 
 test("only reads, and none with credentials", () => {
-  assert.equal(ask("/examples", { method: "POST" }), null);
-  assert.equal(ask("/examples", { headers: { authorization: "Bearer x" } }), null);
+  assert.equal(ask("/discover", { method: "POST" }), null);
+  assert.equal(ask("/discover", { headers: { authorization: "Bearer x" } }), null);
 });
 
 test("pages about one person, for signed-in people, or that can carry a running job, are never cacheable", () => {
-  for (const p of ["/me", "/me/repos", "/settings", "/settings/profile", "/signin", "/profile", "/alerts", "/alerts/unsubscribe", "/pricing/thanks", "/find", "/find?go=1", "/discover", "/discover?sort=stars&topic=cli", "/discover/python", "/discover/", "/hacktoberfest", "/compare", "/preflight", "/lab/emails", "/api/find", "/API/find", "/badge/flask.svg", "/api/public/report/pallets/flask"]) {
+  for (const p of ["/me", "/me/repos", "/settings", "/settings/profile", "/signin", "/profile", "/alerts", "/alerts/unsubscribe", "/pricing/thanks", "/find", "/find?go=1", "/hacktoberfest", "/compare", "/preflight", "/lab/emails", "/api/find", "/API/find", "/badge/flask.svg", "/api/public/report/pallets/flask"]) {
     assert.equal(ask(p), null, p);
   }
 });

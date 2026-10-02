@@ -7,6 +7,8 @@ const PAGES = [
   "/pallets/flask?mode=ai",
   "/psf/requests", // signed out: the teaser (not one of the examples)
   "/examples",
+  "/find?go=1&lang=python",
+  "/discover",
   "/hacktoberfest",
   "/pricing",
   "/how-it-works",

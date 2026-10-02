@@ -3,7 +3,7 @@
 // A repo that doesn't exist on GitHub gets the 404 page with a 404 status.
 // Signed-out views of the public pages are marked as cacheable by a shared
 // cache in front of the site (lib/edge-cache.ts); nothing else is.
-// Signed out, an account page (Find, Browse, Compare, the dashboard) is
+// Signed out, an account page (Compare, pre-flight, the dashboard) is
 // answered with a redirect to sign-in before it renders (lib/gate.ts).
 import { NextResponse, type NextRequest } from "next/server";
 import { isAppRoute } from "@/lib/app-routes";

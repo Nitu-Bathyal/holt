@@ -119,12 +119,9 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
           </section>
         )}
 
-        <section className="mt-10 flex flex-wrap items-center justify-between gap-x-8 gap-y-4 border-t border-line pt-8">
-          <p className="max-w-xl font-sans text-[0.95rem] text-muted">
-            <span className="text-ink">Money never changes a verdict.</span> Free or Pro, every repo is judged by the same written rules.
-          </p>
+        <p className="mt-10 border-t border-line pt-8">
           <Link href={EXAMPLE_PATH} className="bracket-link">[ see a merge plan → ]</Link>
-        </section>
+        </p>
       </div>
       </>
     </PageTransition>
