@@ -171,6 +171,10 @@ def test_committed_writes_are_counted_per_table_and_repo(h):
             await s.commit()
     h.client.portal.call(delete_all)
     assert writes.repo("octo/two", "reports") == (0, 1), "a DELETE may have hit any repo"
+    # Only the tables someone asked about are counted per repository.
+    add(h, Usage(day="2026-10-01", kind="analysis", who="p1", repo_key="octo/one"))
+    assert writes.table("usage_events") == (1,)
+    assert all(table == "reports" for table, _ in writes.rows)
 
 
 def test_discover_builds_an_answer_once_and_reads_nothing_for_the_next_reader(h):

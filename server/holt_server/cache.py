@@ -189,6 +189,10 @@ class Writes:
     def __init__(self) -> None:
         # table -> commits that wrote it at all.
         self.tables: Counter[str] = Counter()
+        # Tables someone has asked about per repository (`repo`). Only these
+        # are counted per repository, so the counts below stay as small as
+        # the repositories those few tables hold.
+        self.watched: set[str] = set()
         # (table, repo_key) -> commits that wrote that repository's rows.
         self.rows: Counter[tuple[str, str]] = Counter()
         # table -> commits that wrote rows this can't name (UPDATE ... WHERE,
@@ -200,7 +204,9 @@ class Writes:
         return tuple(self.tables[t] for t in tables)
 
     def repo(self, repo_key: str, *tables: str) -> tuple[int, ...]:
-        """Changes when `repo_key`'s rows in any of `tables` are written."""
+        """Changes when `repo_key`'s rows in any of `tables` are written
+        (from the first time it is asked: an answer is built after that)."""
+        self.watched.update(tables)
         return tuple(n for t in tables for n in (self.rows[t, repo_key], self.unnamed[t]))
 
 
@@ -245,6 +251,8 @@ def _committed(session: Session) -> None:
     for table in {t for t, _ in written}:
         counts.tables[table] += 1
     for table, key in written:
+        if table not in counts.watched:
+            continue
         if key is None:
             counts.unnamed[table] += 1
         else:
