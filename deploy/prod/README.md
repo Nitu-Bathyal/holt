@@ -136,10 +136,11 @@ restart). It is a priority, not a cap: when the box is busy each gets about
 five times the CPU time of a container with the default 1024 (staging, a
 build), and when it isn't nothing changes. It is not in `compose.yml`
 because that would make compose recreate the db and the edge. It decides
-between Docker containers only. Programs run from a login (the dev workers)
-are in systemd's `user.slice`, which shares the CPU half and half with
-everything else however many of them run; that split is a host setting
-(`CPUWeight` on `user.slice`), not this stack's.
+between Docker containers (and the system's own services) only. Programs
+run from a login (the dev workers) are in systemd's `user.slice`, which
+shares the CPU half and half with everything else however many of them
+run; that split is a host setting (`CPUWeight` on `user.slice`), not this
+stack's.
 
 ```sh
 docker ps --filter label=com.docker.compose.project=holt-prod --filter label=com.docker.compose.service=web
