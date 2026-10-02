@@ -60,7 +60,7 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 from pathlib import Path
 
-from sqlalchemy import func, select, text
+from sqlalchemy import func, select
 
 from holt_server import evidence_store, repos, starter
 from holt_server.db import (
@@ -653,18 +653,11 @@ async def warm_once(svc, *, seeds: list[str] | None = None, dry_run: bool = Fals
     def warmer() -> Warmer:
         return Warmer(svc, say, dry_run, parallel=parallel, wait_for_budget=wait_for_budget)
 
-    if svc.db.engine.dialect.name != "postgresql":
-        return await warmer().run(seeds, **passes)
-    async with svc.db.engine.connect() as conn:
-        got = (await conn.execute(text("SELECT pg_try_advisory_lock(:id)"),
-                                  {"id": LOCK_ID})).scalar()
+    async with svc.db.advisory_lock(LOCK_ID) as got:
         if not got:
             say("another process is warming; skipped")
             return None
-        try:
-            return await warmer().run(seeds, **passes)
-        finally:
-            await conn.execute(text("SELECT pg_advisory_unlock(:id)"), {"id": LOCK_ID})
+        return await warmer().run(seeds, **passes)
 
 
 async def schedule(svc, first_delay_s: float = 60.0) -> None:

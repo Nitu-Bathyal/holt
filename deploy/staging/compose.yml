@@ -31,7 +31,11 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./initdb:/docker-entrypoint-initdb.d:ro
-    command: ["postgres", "-c", "shared_buffers=32MB", "-c", "max_connections=40"]
+    # max_connections, the most each client can hold open: two servers during
+    # a swap (HOLT_DB_POOL_SIZE 6, a health check's 1 and up to 3 locks each),
+    # a warm pass (7), two webs (5 each), the paid-features service (15) and
+    # the migrations: 56 of 80. The reasoning is in deploy/prod/compose.yml.
+    command: ["postgres", "-c", "shared_buffers=32MB", "-c", "max_connections=80"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U holt -d holt"]
       interval: 3s
@@ -125,6 +129,11 @@ services:
       # in flight: two, inside the 512m below.
       HOLT_BADGE_CONCURRENCY: ${HOLT_BADGE_CONCURRENCY:-2}
       HOLT_WARM_PARALLEL: ${HOLT_WARM_PARALLEL:-2}
+      # Database connections this server keeps, for three job workers and
+      # the page requests (see deploy/prod/compose.yml).
+      HOLT_DB_POOL_SIZE: ${HOLT_DB_POOL_SIZE:-6}
+      HOLT_DB_MAX_OVERFLOW: ${HOLT_DB_MAX_OVERFLOW:-0}
+      HOLT_DB_POOL_TIMEOUT: ${HOLT_DB_POOL_TIMEOUT:-10}
       # Warm pass (python -m holt_server.warm) fills this cache for a day.
       HOLT_STARTER_CACHE_HOURS: ${HOLT_STARTER_CACHE_HOURS:-24}
       # Every report's evidence (holt_server/evidence_store.py), in staging's

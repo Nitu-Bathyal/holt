@@ -49,6 +49,9 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 |---|---|---|
 | `HOLT_ENV` | `production` | `dev` serves the interactive docs at `/docs` and `/openapi.json`; otherwise they are off. |
 | `DATABASE_URL` | `postgresql+asyncpg://holt:holt@127.0.0.1:20131/holt` | SQLAlchemy async URL. `sqlite+aiosqlite:///path.db` works for quick experiments. |
+| `HOLT_DB_POOL_SIZE` | `10` | Database connections this process opens as it needs them and keeps. A session holds one only between its first statement and its commit or close, a few milliseconds, so ten serve the job workers and the page requests together. Every process's pool has to fit in Postgres's `max_connections`: the budget is in `deploy/prod/compose.yml`. |
+| `HOLT_DB_MAX_OVERFLOW` | `0` | Extra connections opened when the pool is all in use, and closed when given back. Off: opening a connection takes about 0.15 s of the server's CPU (the password check runs in Python), so opening them under load slows every request. Raise `HOLT_DB_POOL_SIZE` instead. |
+| `HOLT_DB_POOL_TIMEOUT` | `10` | Seconds a request waits for a free connection before it fails. Under the web app's 20 s, so a request never waits after its caller gave up. |
 | `HOLT_INTERNAL_KEY` | *(empty)* | Shared secret with `web/`. Every `/v1` request must send it as `X-Holt-Internal-Key`. Empty means every `/v1` request is refused. |
 | `HOLT_SECRET_KEY` | *(empty)* | Server secret for keyed hashes (usage counting). Use 32 random bytes, base64: `python -c "import os,base64;print(base64.b64encode(os.urandom(32)).decode())"`. |
 | `HOLT_WEB_URL` | `https://githolt.com` | The badge links to `{HOLT_WEB_URL}/{owner}/{repo}`. |
@@ -128,7 +131,7 @@ curl -sN localhost:20130/v1/analyses/<job_id>/events -H "$K"   # stage ... done
 | `holt_server/playbook.py` | The paid playbook: the teaser and unlock routes, charging (`entitlements.charge`) with a per-user unlock, the `playbook` job that calls the service, the per-repo cache, and refunds for everyone waiting on a job that fails. |
 | `holt_server/preflight.py` | PR pre-flight: the state and start routes, charging (`entitlements.charge`, feature `preflight`) in the transaction that queues the `preflight` job, the job that calls the service, and results kept per user, target and head commit (a re-check of the same commit is refunded). A failed job is refunded by `refund_job`. |
 | `holt_server/badge.py` | The README badge SVG. |
-| `holt_server/discover.py` | `GET /v1/discover` and the "most welcoming <language> repos" boards, from the latest rules report per repo (never the model), plus `repo_meta`: language, stars, topics and description, which the warm pass reads a hundred repos per GraphQL query. |
+| `holt_server/discover.py` | `GET /v1/discover` and the "most welcoming <language> repos" boards, from the latest rules report per repo (never the model), plus `repo_meta`: language, stars, topics and description, which the warm pass reads a hundred repos per GraphQL query. The process keeps what it read from each report (reports never change) and each repo's details, so a request reads only what is new. |
 | `holt_server/meta_refresh.py` | Reads a repo's `repo_meta` right after its report is stored (missing or a day old), best effort and batched, so a repo checked for the first time isn't bare on Discover. |
 
 Identical requests share one job. That is enforced by a partial unique index
@@ -514,3 +517,15 @@ uv run pytest server/tests -q
 SQLite instead of Postgres, the GitHub lookup faked, no network. Most tests
 fake the engine; `test_server_engine.py` runs the real one over the committed
 `NixOS/nixpkgs` replay fixtures, in both rules and AI mode.
+
+`scripts/pool_load.py` is the load check for the connection pool: a
+prod-sized database, jobs on a slow fake GitHub and a crowd of page requests,
+in one process with no network. It prints failed requests, how long
+connections were held and whether `/health` kept answering, and exits 1 if
+either went wrong. Run it against the dev Postgres after changing how a
+request or a job uses the database:
+
+```sh
+uv run python server/scripts/pool_load.py --seed \
+    --database-url postgresql+asyncpg://holt:holt@127.0.0.1:20131/holt
+```

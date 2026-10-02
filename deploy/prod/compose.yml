@@ -30,7 +30,22 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./initdb:/docker-entrypoint-initdb.d:ro
-    command: ["postgres", "-c", "shared_buffers=32MB", "-c", "max_connections=40"]
+    # max_connections, the budget (the most each client can hold open):
+    #   server            14  HOLT_DB_POOL_SIZE 10, its health check's own 1, and 1
+    #                         per background pass under a lock (the contributions
+    #                         refresh; PR watch and its mailer when on)
+    #   a second server   14  while a deploy swaps containers (deploy/swap.sh)
+    #   warm pass         13  warm.sh's one-off server container: pool 10, its
+    #                         lock, and a second timer starting while it runs
+    #   web               10  5 each (web/src/db/index.ts), two during a swap
+    #   umami             10
+    #   one-offs           4  migrate-web, migrate-server, backup.sh, psql
+    #   total             65  of 80
+    # A connection costs about 2 MB here once it has run the usual queries
+    # (measured), so all 65 at once is ~130 MB next to shared_buffers, inside
+    # mem_limit; on a normal day about 30 are open. Raise HOLT_DB_POOL_SIZE
+    # and this together, and mem_limit with them.
+    command: ["postgres", "-c", "shared_buffers=32MB", "-c", "max_connections=80"]
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U holt -d holt"]
       interval: 3s
@@ -127,6 +142,14 @@ services:
       HOLT_JOB_CONCURRENCY: ${HOLT_JOB_CONCURRENCY:-6}
       HOLT_BADGE_CONCURRENCY: ${HOLT_BADGE_CONCURRENCY:-3}
       HOLT_WARM_PARALLEL: ${HOLT_WARM_PARALLEL:-3}
+      # Database connections this server keeps (holt_server/db.py): one for
+      # each of the nine job workers' short writes and their heartbeat, which
+      # page requests share, each for a few milliseconds. No overflow: opening
+      # a connection under load is what slows it. A request waits this many
+      # seconds for one, then fails. Counted in db's max_connections above.
+      HOLT_DB_POOL_SIZE: ${HOLT_DB_POOL_SIZE:-10}
+      HOLT_DB_MAX_OVERFLOW: ${HOLT_DB_MAX_OVERFLOW:-0}
+      HOLT_DB_POOL_TIMEOUT: ${HOLT_DB_POOL_TIMEOUT:-10}
       # Per-job time limits, in seconds (rules, AI, find).
       HOLT_JOB_TIMEOUT_RULES: ${HOLT_JOB_TIMEOUT_RULES:-180}
       HOLT_JOB_TIMEOUT_AI: ${HOLT_JOB_TIMEOUT_AI:-480}

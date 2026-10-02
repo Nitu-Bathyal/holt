@@ -42,6 +42,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import select
+from sqlalchemy.orm import load_only
 
 from holt_server import entitlements, repos, schema
 from holt_server.db import (
@@ -55,7 +56,7 @@ from holt_server.db import (
     utc,
 )
 from holt_server.deps import Caller, caller, services, signed_in
-from holt_server.discover import _latest, counts, merged_share, starter_issues
+from holt_server.discover import CARD_META, _latest, counts, merged_share, starter_issues
 from holt_server.schema import Stats, StarterIssue, odds_for, verdict_line
 from holt_server.services import Services
 
@@ -197,7 +198,9 @@ async def candidates(svc: Services) -> dict[str, Candidate]:
         finds = [(row.results, row.created_at) for row in (await s.execute(
             select(FindCache).where(FindCache.created_at >= since)
             .order_by(FindCache.created_at.desc()))).scalars() if not row.outdated]
-        metas = {m.repo_key: m for m in (await s.execute(select(RepoMeta))).scalars()}
+        # Not the READMEs: a card's columns only, for every repo there is.
+        metas = {m.repo_key: m for m in (await s.execute(
+            select(RepoMeta).options(load_only(*CARD_META, raiseload=True)))).scalars()}
     for results, created in finds:
         for r in results or []:
             c = _from_find(r, created, metas)

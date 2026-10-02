@@ -415,6 +415,9 @@ newest first-timer pull requests behind the counts instead, as
 ## Endpoints
 
 ### `GET /health` → `{"ok": true, "version": "…"}` (no internal key needed)
+503 with `{"ok": false, "database": false, …}` when the database doesn't
+answer within 1.5 s. It asks on a connection of its own, so it answers while
+the server is busy.
 
 ### `POST /v1/analyses`
 Body: `{"repo": "owner/repo", "mode": "rules"|"ai", "days": 7, "refresh": false}`
@@ -569,7 +572,8 @@ people. Reads only the database: no GitHub call and no rate limit.
 - `sort=stars`: GitHub stars, every verdict but `personal`.
 - `sort=trending`: people who asked for the repo's report on Holt in the last
   7 days (each person counted once per UTC day), only repos with at least
-  `trending_min` (5).
+  `trending_min` (5). The counts (`checked_this_week` too) are up to a minute
+  old.
 - `language` and `topic` filter case-insensitively (`c++`, `Python`). `limit`
   1–100, default 24.
 - `hacktoberfest=true` keeps only repos tagged with the `hacktoberfest` GitHub

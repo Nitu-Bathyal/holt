@@ -24,7 +24,9 @@ CANONICAL_CACHE = 2048
 class Services:
     def __init__(self, settings: Settings, db: Database | None = None) -> None:
         self.settings = settings
-        self.db = db or Database(settings.database_url)
+        self.db = db or Database(
+            settings.database_url, pool_size=settings.db_pool_size,
+            max_overflow=settings.db_max_overflow, pool_timeout=settings.db_pool_timeout)
         # One connection pool for every GitHub call this process makes.
         self.http = httpx.Client(timeout=30.0)
         # The GitHub App if it is set up, else GITHUB_TOKENS.

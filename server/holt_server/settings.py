@@ -21,6 +21,14 @@ class Settings(BaseSettings):
     database_url: str = Field(
         "postgresql+asyncpg://holt:holt@127.0.0.1:20131/holt", alias="DATABASE_URL"
     )
+    # The database connection pool of this process (db.py): connections it
+    # opens as needed and keeps, extra ones opened under load and closed
+    # after (0: opening one is slow, see db.py), and how long a request waits
+    # for one before it fails (seconds; under the web app's 20 s). Size it
+    # with Postgres's max_connections: the budget is in deploy/prod/compose.yml.
+    db_pool_size: int = Field(10, ge=1, alias="HOLT_DB_POOL_SIZE")
+    db_max_overflow: int = Field(0, ge=0, alias="HOLT_DB_MAX_OVERFLOW")
+    db_pool_timeout: float = Field(10, gt=0, alias="HOLT_DB_POOL_TIMEOUT")
     internal_key: str = Field("", alias="HOLT_INTERNAL_KEY")
     # Server secret for keyed hashes (usage counting).
     secret_key: str = Field("", alias="HOLT_SECRET_KEY")

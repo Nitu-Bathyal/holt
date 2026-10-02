@@ -30,16 +30,20 @@ description, language and stars from it too (`with_meta`).
 
 from __future__ import annotations
 
+import asyncio
 import logging
+import time
 from collections import Counter
 from datetime import datetime, timedelta
 from typing import Any, Literal
 from urllib.parse import urlsplit
+from weakref import WeakKeyDictionary
 
 from fastapi import APIRouter, Depends, Query, Request
 from holt.about import MAX_README
 from pydantic import Field
 from sqlalchemy import func, select
+from sqlalchemy.orm import load_only
 
 from holt_server import repos, schema, starter
 from holt_server.db import (
@@ -60,6 +64,8 @@ DAYS = 7
 # trending, and before the count is shown at all.
 TRENDING_MIN = 5
 TRENDING_DAYS = 7
+# How long those counts are served before they are counted again (seconds).
+VIEWS_KEPT_S = 60.0
 # Languages offered as filters: the most common ones among checked repos.
 LANGUAGES_SHOWN = 16
 # Repository details older than this are read again by the warm pass.
@@ -135,26 +141,139 @@ def _norm(value: str | None) -> str | None:
     return value or None
 
 
+# What a card reads from `repo_meta`. The README and the report page's other
+# long columns stay in the database.
+CARD_META = (RepoMeta.repo_key, RepoMeta.repo, RepoMeta.description, RepoMeta.language,
+             RepoMeta.languages, RepoMeta.stars, RepoMeta.topics, RepoMeta.pushed_at,
+             RepoMeta.archived, RepoMeta.fork, RepoMeta.open_issues, RepoMeta.pull_requests,
+             RepoMeta.open_pull_requests, RepoMeta.contributors, RepoMeta.fetched_at)
+# Rows read per query when the copies below are filled, so no one read holds
+# a database connection for long.
+FILL_BATCH = 200
+# The whole board is read again this often even when nothing looks changed
+# (seconds): `_mark` can't see details written with an older `fetched_at`
+# than another writer's, which two overlapping writers can do.
+BOARD_KEPT_S = 60.0
+
+
+class _Kept:
+    """This process's copies of what `_latest` hands out, so a request reads
+    only what changed since the last one.
+
+    A stored report never changes, so the fields a card takes from its JSON
+    are read once and kept by report id. Asking Postgres for them on every
+    request made it parse every latest report five times per request: seconds
+    with a pool connection held, for each visitor and each crawler. A repo's
+    details are kept until `repo_meta.fetched_at` moves, and the whole board
+    until a report is stored or details are read (`_mark`), BOARD_KEPT_S at
+    most."""
+
+    def __init__(self) -> None:
+        self.fields: dict[int, tuple] = {}
+        self.meta: dict[str, RepoMeta] = {}
+        # (mark, good until, rows): `_latest`'s answer for every repo, what
+        # the tables looked like when it was read, and when to read it again
+        # anyway (the monotonic clock).
+        self.board: tuple[tuple, float, list[tuple]] | None = None
+        # repo_key -> (the stats and meta its card was built from, the card).
+        self.cards: dict[str, tuple[Any, Any, DiscoverRepo | None]] = {}
+        # (good until, on the monotonic clock; `checked_this_week`'s answer).
+        self.views: tuple[float, dict[str, int]] | None = None
+        # One read of what changed at a time: the requests behind it wait
+        # here, holding no connection, and each sees the copies whole.
+        self.reading = asyncio.Lock()
+
+
+_kept: WeakKeyDictionary[Services, _Kept] = WeakKeyDictionary()
+
+
+def _kept_for(svc: Services) -> _Kept:
+    if (kept := _kept.get(svc)) is None:
+        kept = _kept[svc] = _Kept()
+    return kept
+
+
+async def _fill(svc: Services, kept: _Kept, ids: list[int], stamps: dict[str, datetime]) -> None:
+    """Read the report fields of `ids` and the details of the `stamps` repos
+    that aren't kept yet, or whose details were read again since. The caller
+    holds `kept.reading`."""
+    for batch in batches([i for i in ids if i not in kept.fields], FILL_BATCH):
+        async with svc.db.session() as s:
+            rows = (await s.execute(
+                select(Report.id, Report.report["verdict"].as_string(),
+                       Report.report["generated_at"].as_string(),
+                       Report.report["stats"], Report.report["decided_by"],
+                       Report.report["rule_codes"])
+                .where(Report.id.in_(batch)))).all()
+        kept.fields.update((row[0], tuple(row[1:])) for row in rows)
+    stale = [key for key, at in stamps.items()
+             if (have := kept.meta.get(key)) is None or have.fetched_at != at]
+    for batch in batches(stale, FILL_BATCH):
+        async with svc.db.session() as s:
+            metas = (await s.execute(
+                select(RepoMeta).options(load_only(*CARD_META, raiseload=True))
+                .where(RepoMeta.repo_key.in_(batch)))).scalars().all()
+        kept.meta.update((m.repo_key, m) for m in metas)
+
+
+async def _mark(svc: Services) -> tuple:
+    """Changes whenever a report is stored or a repo's details are read."""
+    async with svc.db.session() as s:
+        return (*(await s.execute(select(func.max(Report.id), func.count(Report.id)))).one(),
+                *(await s.execute(select(func.max(RepoMeta.fetched_at),
+                                         func.count(RepoMeta.repo_key)))).one())
+
+
+def _board(kept: _Kept, mark: tuple) -> list[tuple] | None:
+    """The kept board, if the tables still look as they did and it is young."""
+    if kept.board is not None and kept.board[0] == mark and time.monotonic() < kept.board[1]:
+        return kept.board[2]
+    return None
+
+
 async def _latest(svc: Services, keys: list[str] | None = None) -> list[tuple]:
     """(repo, report fields..., meta) for the latest 7-day rules report of each
     repo (only those in `keys`, when given). Only the fields a card needs come
-    out of the report JSON, not whole bodies. Reports from an older engine are
-    left out until the warm pass redoes them."""
+    out of the report JSON, not whole bodies, and only the first time a report
+    is seen (`_Kept`). `meta` has the `CARD_META` columns only. Reports from an
+    older engine are left out until the warm pass redoes them. The rows are
+    shared between requests: read them, never change them."""
+    kept = _kept_for(svc)
+    mark = None
+    if keys is None:
+        mark = await _mark(svc)
+        if (rows := _board(kept, mark)) is not None:
+            return rows
     latest = (select(func.max(Report.id).label("id"))
               .where(Report.mode == "rules", Report.days == DAYS, current_engine()))
+    stamps = select(RepoMeta.repo_key, RepoMeta.fetched_at)
     if keys is not None:
         latest = latest.where(Report.repo_key.in_(keys))
+        stamps = stamps.where(RepoMeta.repo_key.in_(keys))
     latest = latest.group_by(Report.repo_key).subquery()
-    async with svc.db.session() as s:
-        return (await s.execute(
-            select(Report.repo, Report.repo_key, Report.created_at,
-                   Report.report["verdict"].as_string(),
-                   Report.report["generated_at"].as_string(),
-                   Report.report["stats"], Report.report["decided_by"],
-                   Report.report["rule_codes"], RepoMeta)
-            .join(latest, Report.id == latest.c.id)
-            .outerjoin(RepoMeta, RepoMeta.repo_key == Report.repo_key)
-        )).all()
+    # From reading what is current to keeping it, one request at a time: a
+    # slower one must not let go of what a newer read just kept.
+    async with kept.reading:
+        if mark is not None and (rows := _board(kept, mark)) is not None:
+            return rows  # the request ahead read it while this one waited
+        async with svc.db.session() as s:
+            heads = (await s.execute(
+                select(Report.id, Report.repo, Report.repo_key, Report.created_at)
+                .join(latest, Report.id == latest.c.id))).all()
+            fetched = dict((await s.execute(stamps)).all())
+        await _fill(svc, kept, [h[0] for h in heads], fetched)
+        rows = [(repo, key, created, *kept.fields[id_],
+                 kept.meta.get(key) if key in fetched else None)
+                for id_, repo, key, created in heads if id_ in kept.fields]
+        if keys is None:
+            # Everything current was just read: let go of replaced reports
+            # and of repos whose details are gone.
+            current = {h[0] for h in heads}
+            kept.fields = {i: f for i, f in kept.fields.items() if i in current}
+            kept.meta = {k: m for k, m in kept.meta.items() if k in fetched}
+            kept.cards = {k: c for k, c in kept.cards.items() if k in fetched}
+            kept.board = (mark, time.monotonic() + BOARD_KEPT_S, rows)
+    return rows
 
 
 async def starter_issues(svc: Services, keys: list[str]) -> dict[str, list[dict]]:
@@ -185,7 +304,12 @@ def card_issues(raw: list[dict]) -> list[StarterIssue]:
 
 async def checked_this_week(svc: Services) -> dict[str, int]:
     """repo_key -> people who asked for its report in the last 7 days. `who`
-    changes every UTC day, so this counts each person once per day."""
+    changes every UTC day, so this counts each person once per day. Counted
+    at most every VIEWS_KEPT_S: it reads a week of `usage_events`, which
+    grows with every visitor."""
+    kept = _kept_for(svc)
+    if kept.views is not None and time.monotonic() < kept.views[0]:
+        return kept.views[1]
     since = (now() - timedelta(days=TRENDING_DAYS - 1)).strftime("%Y-%m-%d")
     people = func.count(func.distinct(Usage.day + ":" + Usage.who))
     async with svc.db.session() as s:
@@ -194,7 +318,8 @@ async def checked_this_week(svc: Services) -> dict[str, int]:
             .where(Usage.kind == "analysis", Usage.day >= since, Usage.repo_key.is_not(None))
             .group_by(Usage.repo_key)
             .having(people >= TRENDING_MIN))).all()
-    return {key: n for key, n in rows}
+    kept.views = (time.monotonic() + VIEWS_KEPT_S, {key: n for key, n in rows})
+    return kept.views[1]
 
 
 def _card(row: tuple, views: dict[str, int]) -> DiscoverRepo | None:
@@ -219,11 +344,24 @@ def _card(row: tuple, views: dict[str, int]) -> DiscoverRepo | None:
         checked_this_week=views.get(key), generated_at=generated or iso(created))
 
 
+def kept_card(svc: Services, row: tuple) -> DiscoverRepo | None:
+    """`_card(row, {})`, built once per report and details instead of once
+    per request: a board is a thousand of them. Shared between requests, so
+    copy it (`model_copy`) to change it."""
+    kept = _kept_for(svc)
+    key, stats, meta = row[1], row[5], row[-1]
+    have = kept.cards.get(key)
+    if have is None or have[0] is not stats or have[1] is not meta:
+        have = kept.cards[key] = (stats, meta, _card(row, {}))
+    return have[2]
+
+
 async def cards(svc: Services, keys: list[str]) -> dict[str, DiscoverRepo]:
     """repo_key -> the card for each of `keys` that has a current report."""
     if not keys:
         return {}
-    return {row[1]: c for row in await _latest(svc, keys) if (c := _card(row, {})) is not None}
+    return {row[1]: c for row in await _latest(svc, keys)
+            if (c := kept_card(svc, row)) is not None}
 
 
 def is_hacktoberfest(meta: RepoMeta | None) -> bool:
@@ -265,8 +403,10 @@ async def discover_body(svc: Services, sort: Sort, language: str | None,
                         hacktoberfest: bool = False) -> DiscoverOut:
     language, topic = _norm(language), _norm(topic)
     views = await checked_this_week(svc)
-    cards = [c for row in await _latest(svc)  # row[-1] is the repo's RepoMeta
-             if (not hacktoberfest or is_hacktoberfest(row[-1])) and (c := _card(row, views))]
+    cards = [c if (n := views.get(row[1])) is None
+             else c.model_copy(update={"checked_this_week": n})
+             for row in await _latest(svc)  # row[-1] is the repo's RepoMeta
+             if (not hacktoberfest or is_hacktoberfest(row[-1])) and (c := kept_card(svc, row))]
     counts = Counter(c.language for c in cards if c.language)
     chosen = [c for c in cards
               if (language is None or (c.language or "").lower() == language)
@@ -527,5 +667,5 @@ async def about(svc: Services, repo: str) -> schema.RepoAbout | None:
     return about_view(meta) if meta is not None else None
 
 
-def batches(items: list[str], size: int = DETAILS_BATCH) -> list[list[str]]:
+def batches(items: list, size: int = DETAILS_BATCH) -> list[list]:
     return [items[i:i + size] for i in range(0, len(items), size)]
