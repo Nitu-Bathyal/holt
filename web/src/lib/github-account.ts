@@ -11,6 +11,9 @@ import { accounts } from "@/db/schema";
  *  to /api/github/connect. Only ever set by the connect action, after the 18+
  *  box was ticked. */
 export const PENDING_COOKIE = "holt_connect";
+/** Wide enough for the Auth.js callback (/api/auth) too: it reads the cookie to
+ *  know a failed link belongs to the connect form, not to sign-in. */
+export const PENDING_COOKIE_PATH = "/api";
 
 export async function linkedGitHubId(userId: string): Promise<string | null> {
   const [row] = await db

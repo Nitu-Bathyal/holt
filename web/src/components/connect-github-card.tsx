@@ -3,6 +3,7 @@
 // Privacy shows the statistics switch.
 import Link from "next/link";
 import { connect, disconnect, setStats } from "@/app/settings/accounts/actions";
+import { ConnectSubmit } from "@/components/connect-github-submit";
 import { shortDate } from "@/lib/format";
 import type { ConnectError } from "@/lib/settings";
 import type { GitHubConnection } from "@/lib/types";
@@ -24,10 +25,12 @@ type Account = GitHubConnection["account"];
 /**
  * Not connected: the consent and the two choices. `viaGitHub` when this
  * person signs in some other way, so GitHub has to confirm the account
- * first; `canLink` when this server can ask it to.
+ * first; `canLink` when this server can ask it to. When it can't, the form
+ * says so in place of the choices and the button.
  */
 export function ConnectGitHubForm({ viaGitHub, canLink, error }: { viaGitHub: boolean; canLink: boolean; error?: string }) {
-  const message = error && Object.hasOwn(CONNECT_ERRORS, error) ? CONNECT_ERRORS[error as ConnectError] : null;
+  const unavailable = viaGitHub && !canLink;
+  const message = unavailable ? CONNECT_ERRORS.unavailable : error && Object.hasOwn(CONNECT_ERRORS, error) ? CONNECT_ERRORS[error as ConnectError] : null;
   return (
     <form action={connect} className="py-4 sm:px-3">
       {message && <p role="alert" className="mb-5 border border-orange/50 bg-orange/10 px-4 py-3 font-sans text-[0.9rem] text-orange">{message}</p>}
@@ -40,7 +43,7 @@ export function ConnectGitHubForm({ viaGitHub, canLink, error }: { viaGitHub: bo
 
       <p className="mt-5 border-l-2 border-blue pl-4 text-[0.95rem] font-semibold">{STATS_NOTICE}</p>
 
-      <fieldset className="mt-5 space-y-3">
+      {!unavailable && <fieldset className="mt-5 space-y-3">
         <legend className="sr-only">Your choices</legend>
         <label className="flex min-h-11 cursor-pointer items-start gap-3 text-[0.95rem]">
           <input type="checkbox" name="stats_opt_out" className="mt-1 size-4 accent-blue" />
@@ -53,15 +56,12 @@ export function ConnectGitHubForm({ viaGitHub, canLink, error }: { viaGitHub: bo
           <input type="checkbox" name="adult" required className="mt-1 size-4 accent-blue" />
           <span><strong>I&apos;m 18 or older</strong></span>
         </label>
-      </fieldset>
+      </fieldset>}
 
       <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2">
-        <button type="submit" className="btn-primary" disabled={viaGitHub && !canLink}>
-          {viaGitHub ? "continue to GitHub" : "connect GitHub"}
-        </button>
+        {!unavailable && <ConnectSubmit viaGitHub={viaGitHub} />}
         <Link href="/privacy#connect-github" className="inline-flex min-h-11 items-center text-[0.87rem] text-muted hover:text-ink">what Holt keeps</Link>
       </div>
-      {viaGitHub && !canLink && <p className="mt-3 font-sans text-[0.89rem] text-faint">{CONNECT_ERRORS.unavailable}</p>}
     </form>
   );
 }
