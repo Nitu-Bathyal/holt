@@ -1988,5 +1988,9 @@ class Recommendations(Model):
     """GET /v1/me/recommendations."""
 
     picks: list[Recommendation]
+    # Every pick there is for this user, not only this part (at most 60).
+    total: int
+    # The `offset` of the part after this one; null when this is the last.
+    next: int | None
     basis: RecommendationBasis
     computed_at: str

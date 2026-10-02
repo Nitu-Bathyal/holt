@@ -31,7 +31,11 @@ pass, repository details daily (discover.py), a connected user's pull
 requests daily (contributions.py). So the list is computed per request, from
 the database only, and moves as those do.
 
-Recommendations are free: every signed-in user gets every pick.
+Recommendations are free: every signed-in user gets every pick, up to
+`MAX_PICKS`, a part at a time (`limit` and `offset`; `next` is the offset of the
+part after, or null at the end). The order is the same on every request while
+the data behind it is, so parts don't repeat or skip a repository; when the
+data moves between two requests they can, and a reader drops the repeats.
 """
 
 from __future__ import annotations
@@ -63,7 +67,11 @@ from holt_server.services import Services
 
 router = APIRouter(prefix="/v1", responses={"default": {"model": schema.ErrorBody}})
 
-MAX_PICKS = 10
+# The most picks ranked for one person: what "all picks" means.
+MAX_PICKS = 60
+# One request's part of them.
+PART = 10
+PART_MAX = 30
 # What a new account's picks are drawn from, until a profile or merged pull
 # requests say more (lower-case, as languages are matched).
 POPULAR_LANGUAGES = ("python", "javascript", "typescript", "java", "go", "rust", "c++")
@@ -366,8 +374,10 @@ def pick(x: Scored) -> schema.Recommendation:
         why=x.why, stats=c.stats, issues=x.issues, checked_at=c.checked_at)
 
 
-async def recommend(svc: Services, user_id: str, limit: int = MAX_PICKS,
-                    ) -> tuple[list[schema.Recommendation], Basis]:
+async def recommend(svc: Services, user_id: str, limit: int = PART, offset: int = 0,
+                    ) -> tuple[list[schema.Recommendation], Basis, int]:
+    """One part of the user's picks, what they were matched on, and how many
+    picks there are in all (at most `MAX_PICKS`)."""
     b = await basis(svc, user_id)
     b.languages = [x.lower() for x in b.languages]
     b.topics = [x.lower() for x in b.topics]
@@ -379,21 +389,23 @@ async def recommend(svc: Services, user_id: str, limit: int = MAX_PICKS,
     ranked = rank(scored)
     if b.unknown:
         ranked = spread(ranked)
-    return [pick(x) for x in ranked[:limit]], b
+    ranked = ranked[:MAX_PICKS]
+    return [pick(x) for x in ranked[offset:offset + limit]], b, len(ranked)
 
 
 # --- the route ------------------------------------------------------------------------
 
 
 @router.get("/me/recommendations")
-async def get_recommendations(request: Request, limit: int = Query(MAX_PICKS, ge=1, le=MAX_PICKS),
+async def get_recommendations(request: Request, limit: int = Query(PART, ge=1, le=PART_MAX),
+                              offset: int = Query(0, ge=0),
                               who: Caller = Depends(caller)) -> schema.Recommendations:
     """Reads only the database: no GitHub call, no model, no rate limit."""
     svc = services(request)
     user_id = signed_in(who)
-    picks, b = await recommend(svc, user_id, limit)
+    picks, b, total = await recommend(svc, user_id, limit, offset)
     return schema.Recommendations(
-        picks=picks,
+        picks=picks, total=total, next=offset + limit if offset + limit < total else None,
         basis=schema.RecommendationBasis(
             languages=b.languages, topics=b.topics, level=b.level,
             contributions=b.contributions, history_languages=b.history_names,

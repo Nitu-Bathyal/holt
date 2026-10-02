@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { basisLine, emptyReason, excludedLine, languageName, listWords, starterRows } from "./recommendations.ts";
+import { allPicksLabel, basisLine, cardReasons, emptyReason, excludedLine, languageName, listWords, noPicks, parseOffset, pickCursor, starterRows } from "./recommendations.ts";
 
 const basis = (over: Partial<Parameters<typeof basisLine>[0]> = {}) => ({
   languages: [], topics: [], level: "newcomer" as const, contributions: [], history_languages: [],
@@ -48,4 +48,37 @@ test("starter issues are taken across the picks in turn", () => {
   ];
   assert.deepEqual(starterRows(picks, 3).map((r) => `${r.repo}#${r.issue.number}`), ["a/a#1", "c/c#4", "a/a#2"]);
   assert.deepEqual(starterRows([], 3), []);
+});
+
+test("the home links to every pick only when it doesn't show them all", () => {
+  assert.equal(allPicksLabel(0), null);
+  assert.equal(allPicksLabel(3), null);
+  assert.equal(allPicksLabel(4), "all 4 picks");
+  assert.equal(allPicksLabel(60), "all 60 picks");
+});
+
+test("a card says why only when the picks were matched on something", () => {
+  assert.equal(cardReasons(basis()), false);
+  assert.equal(cardReasons(basis({ languages: ["python"] })), true);
+  assert.equal(cardReasons(basis({ history_languages: ["Rust"] })), true);
+});
+
+test("the server's next offset is the list's cursor, and back", () => {
+  assert.equal(pickCursor(null), null);
+  assert.equal(pickCursor(undefined), null);
+  assert.equal(pickCursor(12), "12");
+  assert.equal(parseOffset(pickCursor(12)), 12);
+});
+
+test("the offset of a part is a whole number from 0", () => {
+  assert.equal(parseOffset(null), 0);
+  assert.equal(parseOffset("0"), 0);
+  assert.equal(parseOffset("24"), 24);
+  for (const bad of ["", "-1", "1.5", "abc", "12345", " 3"]) assert.equal(parseOffset(bad), null, bad);
+});
+
+test("no picks: one line and the way to get some", () => {
+  assert.deepEqual(noPicks(basis()), { line: "No picks yet.", actions: ["profile", "github"] });
+  assert.deepEqual(noPicks(basis({ connected: true })), { line: "No picks yet.", actions: ["profile"] });
+  assert.deepEqual(noPicks(basis({ languages: ["haskell"] })), { line: "Nothing fits your profile right now.", actions: ["profile", "github"] });
 });
