@@ -23,6 +23,7 @@ from holt_server import (
     entitlements,
     errors,
     feedback,
+    find,
     mailer,
     merge_plan,
     metrics,
@@ -112,6 +113,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(alerts_api.router)
     app.include_router(account_mail.router)
     app.include_router(discover.router)
+    app.include_router(find.router)
     app.include_router(profiles.router)
     app.include_router(payments.router)
     app.include_router(playbook.router)

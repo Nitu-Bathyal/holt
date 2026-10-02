@@ -214,6 +214,84 @@ def test_limit_and_bad_sort(h):
     assert h.get("/v1/discover", params={"sort": "people"}).status_code == 400
 
 
+# --- a board in parts -------------------------------------------------------------
+
+
+def parts(h, limit, **params):
+    """Every part of a board, following `next` to the end."""
+    out, cursor = [], None
+    while True:
+        body = get(h, limit=limit, **params, **({"cursor": cursor} if cursor else {}))
+        out.append(body)
+        cursor = body["next"]
+        if cursor is None:
+            return out
+
+
+def test_a_board_comes_in_parts_in_order_with_no_repeats_until_the_end(h):
+    add(h, *(report(f"octo/r{i}") for i in range(7)),
+        *(meta(f"octo/r{i}", "Python", stars=i) for i in range(7)))
+    whole = names(get(h, sort="stars", limit=100))
+    assert whole == [f"octo/r{i}" for i in range(6, -1, -1)]
+    got = parts(h, 3, sort="stars")
+    assert [len(b["repos"]) for b in got] == [3, 3, 1]
+    assert [n for b in got for n in names(b)] == whole
+    assert {b["total"] for b in got} == {7}
+    assert got[-1]["next"] is None and all(b["next"] for b in got[:-1])
+    # Each part carries what the first does: the filters and the language chips.
+    assert {b["languages"][0]["repos"] for b in got} == {7}
+
+
+def test_parts_keep_their_filter_and_a_board_that_fits_has_no_next(h):
+    add(h, *(report(f"octo/py{i}") for i in range(3)), report("octo/go"),
+        *(meta(f"octo/py{i}", "Python", stars=i) for i in range(3)), meta("octo/go", "Go", stars=9))
+    got = parts(h, 2, sort="stars", language="python")
+    assert [names(b) for b in got] == [["octo/py2", "octo/py1"], ["octo/py0"]]
+    assert got[0]["total"] == 3
+    exact = get(h, sort="stars", language="python", limit=3)
+    assert exact["next"] is None and exact["total"] == 3
+    empty = get(h, sort="stars", language="rust")
+    assert (empty["repos"], empty["total"], empty["next"]) == ([], 0, None)
+
+
+def test_the_next_part_follows_the_last_repo_when_the_board_changed(h):
+    add(h, *(report(f"octo/r{i}") for i in range(4)),
+        *(meta(f"octo/r{i}", stars=10 * (i + 1)) for i in range(4)))
+    first = get(h, sort="stars", limit=2)
+    assert names(first) == ["octo/r3", "octo/r2"]
+    # A repo joins above what was read: the rest still starts after octo/r2.
+    add(h, report("octo/new"), meta("octo/new", stars=99))
+    second = get(h, sort="stars", limit=2, cursor=first["next"])
+    assert names(second) == ["octo/r1", "octo/r0"]
+    assert second["total"] == 5 and second["next"] is None
+
+
+def test_a_cursor_whose_repo_left_the_board_carries_on_from_its_place(h):
+    add(h, *(report(f"octo/r{i}") for i in range(4)),
+        *(meta(f"octo/r{i}", stars=10 * (i + 1)) for i in range(4)))
+    cursor = discover.cursor_for(2, "octo/gone")
+    assert names(get(h, sort="stars", limit=2, cursor=cursor)) == ["octo/r1", "octo/r0"]
+    past = discover.cursor_for(40, "octo/gone")
+    assert get(h, sort="stars", cursor=past)["repos"] == []
+
+
+@pytest.mark.parametrize("cursor", ["nope", "!!", "Og", "eDp5"])  # the last two: ":", "x:y"
+def test_a_cursor_discover_did_not_give_out_is_refused(h, cursor):
+    r = h.get("/v1/discover", params={"cursor": cursor})
+    assert r.status_code == 400 and r.json()["error"]["code"] == "invalid_request"
+
+
+def test_a_part_slices_the_kept_board_instead_of_ranking_again(h, monkeypatch):
+    add(h, *(report(f"octo/r{i}") for i in range(5)))
+    ranked = []
+    rank = discover.rank
+    monkeypatch.setattr(discover, "rank", lambda cards, sort: ranked.append(sort) or rank(cards, sort))
+    assert len(parts(h, 2)) == 3
+    assert ranked == ["welcoming"]
+    kept = discover.boards(h.svc)
+    assert (kept.misses, kept.hits, len(kept)) == (1, 2, 1)
+
+
 # --- the Hacktoberfest filter -----------------------------------------------------
 
 

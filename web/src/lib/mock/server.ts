@@ -2,7 +2,7 @@
 // reports return at once, anything else becomes a job with stages over SSE.
 import "server-only";
 import type {
-  AlertSettings, AlertSettingsBody, AnalysisStart, ApiError, DiscoverOut, DiscoverRepo, DiscoverSort, Entitlements, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, History, HistoryItem,
+  AlertSettings, AlertSettingsBody, AnalysisStart, ApiError, DiscoverOut, DiscoverRepo, DiscoverSort, Entitlements, FeedbackOut, FindIndexPart, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, History, HistoryItem,
   ContributionType, JobStatus, Me, Mode, Passes, ProfileOut, ProfilePrefs, Recommendation, Recommendations, RepoSearch, Report, Result, SavedList, SavedState, Stats, StarterIssue,
 } from "../types";
 import type { FeedbackInput } from "../feedback";
@@ -228,7 +228,7 @@ const counts = (a: ReturnType<typeof mockAbout>) => ({
 });
 
 /** Discover over the cached reports. The mock has no GitHub details, so language and stars are empty; the counts are the made-up "About". */
-export async function discover(sort: DiscoverSort, language: string | null, topic: string | null, limit: number, hacktoberfest = false): Promise<Result<DiscoverOut>> {
+export async function discover(sort: DiscoverSort, language: string | null, topic: string | null, limit: number, hacktoberfest = false, cursor: string | null = null): Promise<Result<DiscoverOut>> {
   const tagged = new Set(mockFindPool().filter(({ seed }) => seed.hacktoberfest).map(({ seed }) => seed.repo));
   const cards: DiscoverRepo[] = [...state().cache.values()]
     .filter((r) => r.mode === "rules" && r.days === 7)
@@ -240,7 +240,10 @@ export async function discover(sort: DiscoverSort, language: string | null, topi
       issues: mockIssues(r.repo).slice(0, 5),
     }));
   const chosen = language || topic || sort === "trending" ? [] : sort === "welcoming" ? cards.filter((c) => c.verdict === "viable") : cards;
-  return { ok: true, data: { sort, language, topic, hacktoberfest, repos: chosen.slice(0, limit), languages: [], trending_min: 5 } };
+  // The mock's cursor is the offset; the server's also names the last repo sent (API.md).
+  const start = Number(cursor) || 0;
+  const end = start + limit;
+  return { ok: true, data: { sort, language, topic, hacktoberfest, repos: chosen.slice(start, end), languages: [], trending_min: 5, total: chosen.length, next: end < chosen.length ? String(end) : null } };
 }
 
 export async function getReport(repoIn: string, mode: Mode, days: number): Promise<Result<Report>> {
@@ -285,6 +288,14 @@ export async function find(q: FindQuery): Promise<Result<FindStart>> {
   const id = `find_${crypto.randomUUID().slice(0, 12)}`;
   state().findJobs.set(id, { id, q, started: Date.now() });
   return { ok: true, data: { status: "queued", job_id: id, results: findResults(q).slice(0, 2) } };
+}
+
+/** API.md, POST /v1/find/index: the mock's whole pool stands in for the index. */
+export async function findIndex(q: Omit<FindQuery, "limit">, cursor: string | null, limit: number): Promise<Result<FindIndexPart>> {
+  const all = findResults({ ...q, limit: Number.MAX_SAFE_INTEGER });
+  const start = Number(cursor) || 0;
+  const end = start + limit;
+  return { ok: true, data: { results: all.slice(start, end), total: all.length, next: end < all.length ? String(end) : null } };
 }
 
 export async function findStatus(id: string): Promise<Result<FindJobStatus>> {

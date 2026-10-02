@@ -2,6 +2,7 @@
 welcoming <language> repos" boards.
 
     GET /v1/discover?language=python&topic=cli&sort=welcoming|stars|trending&hacktoberfest=true
+        &limit=24&cursor=<next>
 
 Everything here comes from the latest 7-day **rules** report of each
 repository, never from a model, and ranks repositories, never people:
@@ -21,6 +22,10 @@ repository, never from a model, and ranks repositories, never people:
 for) that aren't archived, under any sort. The language chips then count those
 repos only.
 
+A board is sent in parts: `limit` repos, the board's `total`, and `next`, the
+`cursor` that asks for the part after it (null at the end). The ranked board
+of one sort and filter is kept whole (`boards`), so a part is a slice of it.
+
 Language, stars, topics and descriptions live in `repo_meta`: read right
 after a repo's report is stored (meta_refresh.py), and daily by the warm pass
 (`warm_meta`), one GraphQL query per hundred repositories, for every reported
@@ -31,11 +36,14 @@ description, language and stars from it too (`with_meta`).
 from __future__ import annotations
 
 import asyncio
+import base64
+import binascii
 import logging
 import time
 from collections import Counter
+from collections.abc import Callable
 from datetime import datetime, timedelta
-from typing import Any, Literal
+from typing import Any, Literal, NamedTuple
 from urllib.parse import urlsplit
 from weakref import WeakKeyDictionary
 
@@ -50,6 +58,7 @@ from holt_server.db import (
     FindCache, RepoMeta, Report, StarterCache, Usage, current_engine, iso, now, utc,
 )
 from holt_server.deps import internal, services
+from holt_server.errors import ApiError
 from holt_server.github import DETAILS_BATCH
 from holt_server.schema import Model, StarterIssue, Stats, VerdictView, odds_for, verdict_line
 from holt_server.services import Services
@@ -134,6 +143,10 @@ class DiscoverOut(Model):
     # with `hacktoberfest` they count Hacktoberfest repos only).
     languages: list[LanguageCount]
     trending_min: int
+    # How many repos the whole board has, under this sort and these filters.
+    total: int = 0
+    # The `cursor` that asks for the part after this one; null at the end.
+    next: str | None = None
 
 
 def _norm(value: str | None) -> str | None:
@@ -160,6 +173,9 @@ BOARD_KEPT_S = 60.0
 ANSWER_KEPT_S = 60.0
 ANSWERS_KEPT = 256
 ANSWERS_KEPT_BYTES = 16 * 1024 * 1024
+# A ranked board (one sort, language and topic: every repo on it, in order) is
+# kept as long, so each part of it is a slice. At most this many boards.
+BOARDS_KEPT = 64
 
 
 class _Kept:
@@ -412,10 +428,52 @@ def rank(cards: list[DiscoverRepo], sort: Sort) -> list[DiscoverRepo]:
     return sorted(cards, key=lambda c: (-(c.stars or 0), c.repo.lower()))
 
 
-async def discover_body(svc: Services, sort: Sort, language: str | None,
-                        topic: str | None, limit: int,
-                        hacktoberfest: bool = False) -> DiscoverOut:
-    language, topic = _norm(language), _norm(topic)
+class Board(NamedTuple):
+    """One sort and filter's whole board, in order. Shared between requests:
+    read it, never change it."""
+
+    repos: list[DiscoverRepo]  # without their starter issues
+    language: str | None  # as GitHub spells it, when a repo has it
+    languages: list[LanguageCount]
+
+
+def cursor_for(offset: int, last: str) -> str:
+    """The cursor for the part after the first `offset` repos, the last of
+    which is `last`."""
+    return base64.urlsafe_b64encode(f"{offset}:{last}".encode()).decode().rstrip("=")
+
+
+def read_cursor(cursor: str | None) -> tuple[int, str | None]:
+    """(offset, the repo before it) from `cursor_for`'s cursor; the start of
+    the board for none. Raises ValueError for anything else."""
+    if not cursor:
+        return 0, None
+    try:
+        text = base64.b64decode(cursor + "=" * (-len(cursor) % 4), b"-_", validate=True).decode()
+        offset, _, last = text.partition(":")
+        if not last or not offset.isascii() or not offset.isdigit():
+            raise ValueError(cursor)
+        return int(offset), last
+    except (binascii.Error, UnicodeDecodeError) as exc:
+        raise ValueError(cursor) from exc
+
+
+def start_of(ranked: list, offset: int, last: str | None,
+             name: Callable[[Any], str] = lambda card: card.repo) -> int:
+    """Where the part after `last` starts in `ranked` (`name` gives an item's
+    repo). Normally `offset`; when the list changed between two parts, right
+    after `last` wherever it is now, so the reader sees no repo twice and
+    misses none below it. A `last` that left the list falls back to `offset`."""
+    if last is None:
+        return 0
+    if 0 < offset <= len(ranked) and name(ranked[offset - 1]).lower() == last:
+        return offset
+    at = next((i for i, item in enumerate(ranked) if name(item).lower() == last), None)
+    return at + 1 if at is not None else min(offset, len(ranked))
+
+
+async def _rank_board(svc: Services, sort: Sort, language: str | None, topic: str | None,
+                      hacktoberfest: bool) -> Board:
     views = await checked_this_week(svc)
     cards = [c if (n := views.get(row[1])) is None
              else c.model_copy(update={"checked_this_week": n})
@@ -425,20 +483,50 @@ async def discover_body(svc: Services, sort: Sort, language: str | None,
     chosen = [c for c in cards
               if (language is None or (c.language or "").lower() == language)
               and (topic is None or topic in {t.lower() for t in c.topics})]
-    # The language as GitHub spells it, when a repo has it.
-    shown = next((name for name in counts if name.lower() == language), language)
-    ranked = rank(chosen, sort)[:limit]
-    # Only for the cards shown, so a board is one more small read.
-    cached = await starter_issues(svc, [repos.key(c.repo) for c in ranked])
-    ranked = [c.model_copy(update={"issues": card_issues(cached.get(repos.key(c.repo), []))})
-              for c in ranked]
-    return DiscoverOut(
-        sort=sort, language=shown, topic=topic, hacktoberfest=hacktoberfest,
-        repos=ranked,
+    return Board(
+        repos=rank(chosen, sort),
+        # The language as GitHub spells it, when a repo has it.
+        language=next((name for name in counts if name.lower() == language), language),
         languages=[LanguageCount(name=name, repos=n)
                    for name, n in sorted(counts.items(), key=lambda x: (-x[1], x[0].lower()))
-                   [:LANGUAGES_SHOWN]],
-        trending_min=TRENDING_MIN)
+                   [:LANGUAGES_SHOWN]])
+
+
+def boards(svc: Services) -> cache.Kept[Board]:
+    """This process's ranked boards, one per sort and filter."""
+    return cache.store(svc, "discover-boards", lambda: cache.Kept(ANSWER_KEPT_S, BOARDS_KEPT))
+
+
+def _board_stamp(svc: Services) -> tuple:
+    """Changes when a board's order or cards may have: a write to what cards
+    are built from (`stamp`), or a recount of the trending numbers. Call
+    after `checked_this_week`."""
+    return stamp(svc), _kept_for(svc).views[0]
+
+
+async def discover_body(svc: Services, sort: Sort, language: str | None,
+                        topic: str | None, limit: int,
+                        hacktoberfest: bool = False, cursor: str | None = None) -> DiscoverOut:
+    """One part of a board: `limit` repos from `cursor` on (the start, for
+    none). Raises ValueError for a cursor this didn't hand out."""
+    language, topic = _norm(language), _norm(topic)
+    offset, last = read_cursor(cursor)
+    await checked_this_week(svc)
+    board = await boards(svc).load(
+        (sort, language, topic, hacktoberfest), _board_stamp(svc),
+        lambda: _rank_board(svc, sort, language, topic, hacktoberfest))
+    start = start_of(board.repos, offset, last)
+    part = board.repos[start:start + limit]
+    end = start + len(part)
+    # Only for the cards shown, so a part is one more small read.
+    cached = await starter_issues(svc, [repos.key(c.repo) for c in part])
+    part = [c.model_copy(update={"issues": card_issues(cached.get(repos.key(c.repo), []))})
+            for c in part]
+    return DiscoverOut(
+        sort=sort, language=board.language, topic=topic, hacktoberfest=hacktoberfest,
+        repos=part, languages=board.languages, trending_min=TRENDING_MIN,
+        total=len(board.repos),
+        next=cursor_for(end, part[-1].repo.lower()) if part and end < len(board.repos) else None)
 
 
 def answers(svc: Services) -> cache.Kept[cache.Body]:
@@ -453,25 +541,28 @@ async def discover(request: Request,
                    language: str | None = Query(None, max_length=80),
                    topic: str | None = Query(None, max_length=80),
                    limit: int = Query(24, ge=1, le=100),
+                   cursor: str | None = Query(None, max_length=400),
                    hacktoberfest: bool = False) -> Response:
-    """Checked repositories, filtered and sorted (see the module docstring).
-    Reads only the database: no GitHub call and no rate limit. The answer is
-    the same for everyone, so it is built once and kept (cache.py) until a
-    report, a repo's details, its starter issues or the trending counts
-    change, ANSWER_KEPT_S at most (that long, when another process wrote
-    them)."""
+    """Checked repositories, filtered and sorted, one part at a time (see the
+    module docstring). Reads only the database: no GitHub call and no rate
+    limit. The answer is the same for everyone, so it is built once and kept
+    (cache.py) until a report, a repo's details, its starter issues or the
+    trending counts change, ANSWER_KEPT_S at most (that long, when another
+    process wrote them)."""
     svc = services(request)
     language, topic = _norm(language), _norm(topic)
+    try:
+        read_cursor(cursor)
+    except ValueError:
+        raise ApiError("invalid_request", "That isn't a cursor Discover gave out.") from None
     await checked_this_week(svc)
-    # When the trending counts were last counted: a recount starts new answers.
-    counted = _kept_for(svc).views[0]
 
     async def build() -> cache.Body:
         return cache.body_of(
-            await discover_body(svc, sort, language, topic, limit, hacktoberfest))
+            await discover_body(svc, sort, language, topic, limit, hacktoberfest, cursor))
 
-    body = await answers(svc).load((sort, language, topic, limit, hacktoberfest),
-                                   (stamp(svc), counted), build, len)
+    body = await answers(svc).load((sort, language, topic, limit, hacktoberfest, cursor or None),
+                                   _board_stamp(svc), build, len)
     return cache.respond(request, body)
 
 

@@ -3,10 +3,11 @@
 import "server-only";
 import { cache } from "react";
 import type {
-  AlertCount, AlertList, AlertSettings, AlertSettingsBody, AnalysisStart, ApiError, Checkout, Contributions, DiscoverOut, DiscoverSort, Entitlements, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection,
+  AlertCount, AlertList, AlertSettings, AlertSettingsBody, AnalysisStart, ApiError, Checkout, Contributions, DiscoverOut, DiscoverSort, Entitlements, FeedbackOut, FindIndexPart, FindQuery, FindResult, FindStart, GitHubConnection,
   History, JobStatus, Me, MergePlanStart, MergePlanState, Mode, Order, OrderConfirmed, Passes, PlaybookStart, PlaybookState, PreflightStart, PreflightState,
   ProfileOut, ProfilePrefs, RazorpaySuccess, Recommendations, RepoSearch, Report, Result, SavedList, SavedState, StarterIssue, Unsubscribed,
 } from "./types";
+import { BOARD_PART } from "./discover";
 import type { FeedbackInput } from "./feedback";
 import { isJobId } from "./ids";
 import * as mock from "./mock/server";
@@ -179,15 +180,22 @@ export async function find(q: FindQuery, caller: Caller): Promise<Result<FindSta
   return { ok: true, data: { status: "done", results: r.data.results ?? [], complete: r.data.complete ?? true } };
 }
 
-/** Checked repos, filtered and ranked from rules verdicts (API.md, GET /v1/discover). Reads only the database. */
-export const discover = cache(async (sort: DiscoverSort, language: string | null, topic: string | null, limit = 30, hacktoberfest = false): Promise<Result<DiscoverOut>> => {
-  if (MOCK) return mock.discover(sort, language, topic, limit, hacktoberfest);
+/** Checked repos, filtered and ranked from rules verdicts (API.md, GET /v1/discover), one part at a time: `cursor` is the last part's `next`. Reads only the database. */
+export const discover = cache(async (sort: DiscoverSort, language: string | null, topic: string | null, limit = BOARD_PART, hacktoberfest = false, cursor: string | null = null): Promise<Result<DiscoverOut>> => {
+  if (MOCK) return mock.discover(sort, language, topic, limit, hacktoberfest, cursor);
   const q = new URLSearchParams({ sort, limit: String(limit) });
   if (language) q.set("language", language);
   if (topic) q.set("topic", topic);
   if (hacktoberfest) q.set("hacktoberfest", "true");
+  if (cursor) q.set("cursor", cursor);
   return call(`/v1/discover?${q}`);
 });
+
+/** The rest of a find's index matches, one part at a time (API.md, POST /v1/find/index). Never searches GitHub and counts against no limit. */
+export async function findIndex(q: Omit<FindQuery, "limit">, cursor: string | null, limit = BOARD_PART): Promise<Result<FindIndexPart>> {
+  if (MOCK) return mock.findIndex(q, cursor, limit);
+  return call("/v1/find/index", { method: "POST", body: JSON.stringify({ ...q, limit, cursor }) });
+}
 
 /** "How to get merged here" (API.md, Playbook): the teaser for anyone, the whole playbook once unlocked. */
 export async function playbookState(repo: string, caller: Caller): Promise<Result<PlaybookState>> {

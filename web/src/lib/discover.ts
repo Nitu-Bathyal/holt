@@ -2,6 +2,9 @@
 // GET /v1/discover): URL slugs for languages and the words for each board.
 import type { DiscoverSort } from "./types";
 
+/** How many cards a part of a board (or of Find's index) has: whole rows at 1, 2, 3 and 4 across. */
+export const BOARD_PART = 24;
+
 export const SORTS: { id: DiscoverSort; label: string }[] = [
   { id: "welcoming", label: "Most welcoming" },
   { id: "stars", label: "Most stars" },

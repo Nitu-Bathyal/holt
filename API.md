@@ -544,6 +544,16 @@ Results come from two places, in this order, with no repo twice:
   for this caller). Don't keep it for other callers. With no index results the
   usual `429`.
 
+### `POST /v1/find/index`
+Body: `{"languages": ["python"], "topics": [], "days": 7, "hacktoberfest": true, "limit": 24, "cursor": "…" | null}`
+The index part of a find (1. above) and nothing else, in parts, for a list
+that loads more as it is scrolled: `{"results": [FindResult], "total": 87,
+"next": "…" | null}`. The same repos in the same order as the index part of
+`POST /v1/find` with these filters; `limit` 1–100, default 24; `next` goes
+back as `cursor` (as on Discover, below) and is `null` at the end. It never
+starts or waits for a search, calls GitHub, or counts against a limit, and
+the search's own repos are not in it.
+
 StarterIssue:
 ```jsonc
 { "number": 123, "title": "…", "url": "https://github.com/o/r/issues/123",
@@ -568,7 +578,7 @@ existed are fetched again rather than served.
 issue is sent, so cached issues have them too. The web uses them with a
 profile (see Profile); they never change a verdict or which repos are listed.
 
-### `GET /v1/discover?sort=welcoming|stars|trending&language=python&topic=cli&hacktoberfest=true&limit=24`
+### `GET /v1/discover?sort=welcoming|stars|trending&language=python&topic=cli&hacktoberfest=true&limit=24&cursor=…`
 Browse the repositories Holt has checked, built only from each repo's latest
 7-day **rules** report (never the model) and ranking repositories, never
 people. Reads only the database: no GitHub call and no rate limit.
@@ -585,6 +595,15 @@ people. Reads only the database: no GitHub call and no rate limit.
   old.
 - `language` and `topic` filter case-insensitively (`c++`, `Python`). `limit`
   1–100, default 24.
+- A board comes in parts. Each answer has `total` (every repo on the board
+  under this sort and these filters) and `next`: send it back as `cursor`,
+  with the same sort and filters, for the part after this one; `null` at the
+  end. Without `cursor` the answer is the first `limit` repos, as before. A
+  cursor names the last repo already sent, so when the board changes between
+  two parts the next one still starts right after it: no repo twice, none
+  skipped below it. A cursor Discover didn't give out is `400
+  invalid_request`. The server keeps each ranked board for up to 60 seconds
+  and cuts every part from it; a part already built costs no database read.
 - `hacktoberfest=true` keeps only repos tagged with the `hacktoberfest` GitHub
   topic (how a project takes part; a Hacktoberfest find searches the same
   topic) that aren't archived, under any sort and alongside the other filters.
@@ -595,7 +614,7 @@ people. Reads only the database: no GitHub call and no rate limit.
 
 ```jsonc
 { "sort": "welcoming", "language": "Python", "topic": null, "hacktoberfest": false,
-  "trending_min": 5,
+  "trending_min": 5, "total": 312, "next": "MjQ6b3duZXIvcmVwbw" | null,
   "repos": [ { "repo": "owner/repo", "verdict": "viable", "headline": "Worth your time",
     "tone": "good", "reason": "…the report's verdict_line…", "stats": Stats,
     "description": "…"|null, "language": "Python"|null, "stars": 123|null,

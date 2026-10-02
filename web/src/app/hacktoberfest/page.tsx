@@ -3,14 +3,15 @@ import Link from "next/link";
 import { CatFace } from "@/components/cat-face";
 import { FindFrame } from "@/components/find/find-frame";
 import { ErrorPanel } from "@/components/error-panel";
-import { FindResults } from "@/components/find/find-results";
+import { FindList } from "@/components/find/find-list";
 import { FindRunner } from "@/components/find/find-runner";
 import { HfLangAdd } from "@/components/find/hf-lang-add";
 import { LangDot } from "@/components/repo-card/repo-avatar";
 import { ShareBar } from "@/components/report/share-bar";
 import { getProfile, savedNames } from "@/lib/api";
 import { cachedFind } from "@/lib/find-cached";
-import { days as daysOf, langName, personalise } from "@/lib/profile";
+import { FIND_FIRST, picksQuery } from "@/lib/find-picks";
+import { days as daysOf, langName } from "@/lib/profile";
 import { langColor } from "@/lib/repo-card";
 import { caller, currentUser } from "@/lib/session";
 import { CHECK_HREF } from "@/lib/shell";
@@ -90,7 +91,9 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
   const days = profile ? daysOf(profile.days) : 7;
   const hf = hacktoberfest();
   const ended = hacktoberfestOver(YEAR);
-  const result = await cachedFind({ languages: [...tab.langs], topics: [], days, hacktoberfest: true, limit: 12 }, await caller(user));
+  const result = await cachedFind({ languages: [...tab.langs], topics: [], days, hacktoberfest: true, limit: FIND_FIRST }, await caller(user));
+  // Signed in, the list can carry on into the rest of Holt's index, on its button (the page goes on below it). Its route is for accounts (lib/gate.ts).
+  const more = user ? picksQuery({ langs: [...tab.langs], topics: [], days, hf: true, level: "experienced", types: [] }) : null;
   const here = `/hacktoberfest${tab.id === "all" ? "" : `?lang=${encodeURIComponent(tab.id)}`}`;
   const fit = profile ? { level: profile.level, contributions: profile.contributions } : null;
   // No results on a language tab: widen to every language; on that tab, the find page.
@@ -160,9 +163,9 @@ export default async function HacktoberfestPage({ searchParams }: PageProps<"/ha
           {!result.ok ? (
             <ErrorPanel error={result.error} retryHref={here} />
           ) : result.data.status === "queued" ? (
-            <FindRunner key={tab.id} jobId={result.data.job_id} index={result.data.results} days={days} retryHref={here} fit={fit} saved={saved} empty={empty} />
+            <FindRunner key={tab.id} jobId={result.data.job_id} index={result.data.results} days={days} retryHref={here} fit={fit} saved={saved} empty={empty} more={more} />
           ) : (
-            <FindResults results={personalise(result.data.results, fit)} days={days} saved={saved} empty={empty} />
+            <FindList key={tab.id} results={result.data.results} fit={fit} more={more} auto={false} days={days} saved={saved} empty={empty} />
           )}
         </section>
 
