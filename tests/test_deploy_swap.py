@@ -95,7 +95,9 @@ def test_server_and_web_can_run_twice_during_a_swap(compose: Path) -> None:
 
 STUB = r"""#!/bin/bash
 # Containers are lines "<id> <state>" in $STUB_DIR/containers. A new one's
-# state is $STUB_NEW_STATE (default healthy).
+# state is $STUB_NEW_STATE (default healthy); the last one started is
+# $STUB_LAST_STATE when that is set. The compose config asks for
+# $STUB_REPLICAS containers (default 1).
 echo "docker $*" >> "$STUB_DIR/calls"
 db="$STUB_DIR/containers"; touch "$db"
 case "$1" in
@@ -103,11 +105,14 @@ case "$1" in
         case " $* " in
             *" ps "*) cut -d' ' -f1 "$db" ;;
             *" config --hash "*) echo "web hash1" ;;
+            *" config --format json"*) echo "{\"services\": {\"web\": {\"deploy\": {\"replicas\": ${STUB_REPLICAS:-1}}}}}" ;;
             *" up "*)
                 all="$*"; want="${all##*--scale }"; want="${want%% *}"; want="${want#*=}"
                 have=$(grep -vc " oneoff$" "$db")   # compose scales its own, not `compose run` ones
                 while (( have < want )); do
-                    have=$((have + 1)); echo "new$have ${STUB_NEW_STATE:-healthy}" >> "$db"
+                    have=$((have + 1)); state="${STUB_NEW_STATE:-healthy}"
+                    (( have == want )) && state="${STUB_LAST_STATE:-$state}"
+                    echo "new$have $state" >> "$db"
                 done ;;
         esac ;;
     image) echo "sha256:img" ;;   # image inspect: the tag's current image
@@ -217,3 +222,73 @@ def test_a_one_off_container_of_the_service_is_not_counted(stub: Path) -> None:
     assert done.returncode == 0, done.stdout + done.stderr
     assert "--no-recreate --scale web=2 web" in (stub / "calls").read_text(encoding="utf-8")
     assert sorted(left.splitlines()) == ["new2 healthy", "warm oneoff"]
+
+
+# --- several replicas (prod and staging run HOLT_WEB_REPLICAS web containers) ---
+
+
+def test_every_replica_is_started_and_healthy_before_the_old_ones_go(stub: Path) -> None:
+    done, left = swap(stub, "old1 healthy\nold2 healthy\n", STUB_REPLICAS="2")
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert sorted(left.splitlines()) == ["new3 healthy", "new4 healthy"]
+    calls = (stub / "calls").read_text(encoding="utf-8")
+    assert "--no-recreate --scale web=4 web" in calls
+    stop = calls.index("stop -t 30 old1 old2")
+    assert calls.index("RestartCount") < stop
+    assert calls[:stop].count("RestartCount") == 2   # both new ones were checked first
+    assert "2 new containers healthy" in done.stdout and "old ones retired" in done.stdout
+
+
+def test_one_unhealthy_replica_removes_all_the_new_ones(stub: Path) -> None:
+    done, left = swap(stub, "old1 healthy\nold2 healthy\n", STUB_REPLICAS="2", STUB_LAST_STATE="unhealthy")
+    assert done.returncode == 1
+    assert left == "old1 healthy\nold2 healthy\n"
+    assert "all 2 new ones were removed and the old ones keep serving" in done.stdout
+    calls = (stub / "calls").read_text(encoding="utf-8")
+    assert "rm -f new3 new4" in calls and "stop" not in calls
+
+
+def test_a_replica_that_never_gets_healthy_fails_the_swap(stub: Path) -> None:
+    done, left = swap(stub, "old1 healthy\nold2 healthy\n", STUB_REPLICAS="2", STUB_LAST_STATE="starting")
+    assert done.returncode == 1
+    assert left == "old1 healthy\nold2 healthy\n"
+    assert "not healthy after 5s" in done.stdout
+
+
+def test_going_from_one_container_to_two(stub: Path) -> None:
+    # The first deploy with replicas: one old container, two asked for.
+    done, left = swap(stub, "old1 healthy\n", STUB_REPLICAS="2")
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert sorted(left.splitlines()) == ["new2 healthy", "new3 healthy"]
+    assert "--no-recreate --scale web=3 web" in (stub / "calls").read_text(encoding="utf-8")
+    assert "old one retired" in done.stdout
+
+
+def test_going_back_to_one_container(stub: Path) -> None:
+    # A rollback to a release whose compose file has no replicas.
+    done, left = swap(stub, "old1 healthy\nold2 healthy\n")
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert left == "new3 healthy\n"
+
+
+def test_unchanged_replicas_are_left_running(stub: Path) -> None:
+    done, left = swap(stub, "old1 running\nold2 running\n", STUB_REPLICAS="2", STUB_CURRENT="1")
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert left == "old1 running\nold2 running\n"
+    assert "unchanged, left running" in done.stdout
+    assert "--scale" not in (stub / "calls").read_text(encoding="utf-8")
+
+
+def test_a_changed_replica_count_swaps_even_when_nothing_else_changed(stub: Path) -> None:
+    done, left = swap(stub, "old1 running\nold2 running\n", STUB_REPLICAS="3", STUB_CURRENT="1")
+    assert done.returncode == 0, done.stdout + done.stderr
+    assert sorted(left.splitlines()) == ["new3 healthy", "new4 healthy", "new5 healthy"]
+
+
+@pytest.mark.parametrize("compose", COMPOSES, ids=lambda p: p.parent.name)
+def test_web_runs_two_containers_by_default_and_the_server_one(compose: Path) -> None:
+    services = yaml.safe_load(compose.read_text(encoding="utf-8"))["services"]
+    assert services["web"]["deploy"]["replicas"] == "${HOLT_WEB_REPLICAS:-2}"
+    assert services["web"]["mem_limit"] == "768m"
+    # The API server stays one process: its job queue and locks assume it.
+    assert "deploy" not in services["server"] and "scale" not in services["server"]

@@ -10,9 +10,11 @@
 # One run: fetch origin, check the commit is on main, wait until the box is
 # quiet, build the server and web images one at a time (tagged with the
 # commit SHA), run the one-shot web and server migrations, swap server then
-# web with no gap (each new container starts beside the old one and takes
-# over once healthy; ../swap.sh), health-check on 127.0.0.1, and swap back
-# to the previous tag if that fails. Then, when the commit's edge.conf differs
+# web with no gap (the new containers start beside the old ones and take
+# over once every one of them is healthy; ../swap.sh), health-check on
+# 127.0.0.1 and in each web container, and swap back to the previous tag if
+# that fails. web runs HOLT_WEB_REPLICAS containers (.env; default 2, at
+# most 3). Then, when the commit's edge.conf differs
 # from the edge's, check it with nginx -t in the running edge and reload it
 # (never a restart); a rejected config is put back and the run fails. Then
 # prune only this stack's images.
@@ -62,6 +64,23 @@ flock -n 9 || busy "another deploy is in progress"
 # --- env and secrets ---------------------------------------------------------
 [[ -f "$STATE/.env" ]] || "$here/make-env.sh"
 port="$(sed -n 's/^HOLT_PROD_PORT=//p' "$STATE/.env")"; port="${port:-8310}"
+env_value() {   # KEY DEFAULT: the environment, else .env, else the default
+    local v="${!1:-}"
+    [[ -n "$v" ]] || v="$(sed -n "s/^$1=//p" "$STATE/.env" | tail -1 | tr -d "\"'")"
+    echo "${v:-$2}"
+}
+# How many web containers (compose.yml, `deploy.replicas`). Three at most:
+# the db's max_connections is sized for that many.
+replicas="$(env_value HOLT_WEB_REPLICAS 2)"
+[[ "$replicas" =~ ^[1-3]$ ]] \
+    || die "HOLT_WEB_REPLICAS must be 1, 2 or 3, not '$replicas' (the db's max_connections in compose.yml is sized for three)"
+export HOLT_WEB_REPLICAS="$replicas"
+# CPU shares for db, server, web and edge (prioritise, below); a container's
+# default is 1024. A rehearsal under another project name gets no priority.
+default_shares=4096; [[ "$PROJECT" == holt-prod ]] || default_shares=1024
+CPU_SHARES="$(env_value HOLT_PROD_CPU_SHARES "$default_shares")"
+[[ "$CPU_SHARES" =~ ^[0-9]+$ ]] && (( CPU_SHARES >= 2 && CPU_SHARES <= 262144 )) \
+    || die "HOLT_PROD_CPU_SHARES must be a number from 2 to 262144, not '$CPU_SHARES'"
 
 # Secrets and the GitHub token (env.sh). The contact details are checked
 # here because only the web build needs them: the policy pages must never
@@ -83,6 +102,7 @@ for k in CONTACT_EMAIL CONTACT_CITY; do
     [[ -n "${!v}" && "${!v}" != "$k" ]] || die "$k is not set in $SECRETS; the policy pages (/terms, /privacy, /refunds, /contact) would show the placeholder"
 done
 log "contact: $NEXT_PUBLIC_CONTACT_EMAIL, $NEXT_PUBLIC_CONTACT_CITY"
+log "web containers: $replicas; CPU shares: $CPU_SHARES"
 
 # --- the commit ----------------------------------------------------------------
 if [[ ! -d "$SRC/.git" ]]; then
@@ -165,8 +185,25 @@ os.replace(tmp, env["OUT"])
 PY
 }
 
-healthy() {   # the site answers on 127.0.0.1 within $HEALTH_WAIT seconds
-    local deadline=$((SECONDS + HEALTH_WAIT)) code=
+# The two checks of healthy(), from inside one web container on its own
+# port: a request through the edge reaches only one of them.
+REPLICA_CHECK='
+const get = (path) => fetch("http://127.0.0.1:3000" + path, { signal: AbortSignal.timeout(20000) }).then((r) => r.status);
+Promise.all([get("/"), get("/api/public/report/pallets/flask")]).then(
+  ([home, api]) => process.exit(home === 200 && (api === 200 || api === 404) ? 0 : 1),
+  () => process.exit(1));'
+replicas_healthy() {   # every web container answers; sets $sick to the one that doesn't
+    local id n=0
+    for id in $(_swap_ids web); do
+        docker exec "$id" node -e "$REPLICA_CHECK" >/dev/null 2>&1 || { sick="web container ${id:0:12}"; return 1; }
+        n=$((n + 1))
+    done
+    (( n > 0 )) || { sick="no web container"; return 1; }
+    sick=
+}
+
+healthy() {   # the site and every web container answer within $HEALTH_WAIT seconds
+    local deadline=$((SECONDS + HEALTH_WAIT)) code= sick=
     while (( SECONDS < deadline )); do
         code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "http://127.0.0.1:$port/" || true)"
         if [[ "$code" == 200 ]]; then
@@ -176,11 +213,11 @@ healthy() {   # the site answers on 127.0.0.1 within $HEALTH_WAIT seconds
             # works; 502 is the server unreachable, 401 a bad internal key.
             code="$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 \
                     "http://127.0.0.1:$port/api/public/report/pallets/flask" || true)"
-            [[ "$code" == 200 || "$code" == 404 ]] && return 0
+            if [[ "$code" == 200 || "$code" == 404 ]]; then replicas_healthy && return 0; fi
         fi
         sleep 5
     done
-    log "health check failed (last status $code)"; return 1
+    log "health check failed (last status $code${sick:+; no answer from $sick})"; return 1
 }
 
 # --- wait for room ---------------------------------------------------------------
@@ -228,11 +265,29 @@ compose --profile migrate run --rm migrate-server >>"$dlog" 2>&1 || die "server 
 edge_seed "$EDGE_CONF" "$STATE/edge" || die "$EDGE_MSG"
 [[ -n "$EDGE_MSG" ]] && log "$EDGE_MSG"
 
-# Server, then web: each new container starts next to the old one and takes
-# over once its health check passes, so the site never stops answering
-# (../swap.sh). A new container that never gets healthy is removed and the
-# old one keeps serving. Then `compose up` for the rest (db, edge, umami):
-# server and web already match the config, so it leaves them alone.
+# CPU priority, not a cap: when the box is busy the kernel shares CPU time
+# between containers by these shares (a container's default is 1024), and
+# when it isn't nothing changes. Set on the running containers, because
+# cpu_shares in compose.yml would make compose recreate the db and the edge,
+# which is a gap. Docker keeps it across restarts, and every deploy sets it
+# on the containers it started. Not the warm pass (a one-off container).
+prioritise() {
+    local svc id
+    for svc in db server web edge; do
+        for id in $(_swap_ids "$svc"); do
+            docker update --cpu-shares "$CPU_SHARES" "$id" >/dev/null 2>&1 \
+                || log "note: couldn't set CPU shares on $svc (${id:0:12})"
+        done
+    done
+    return 0
+}
+
+# Server, then web: the new containers start next to the old ones and take
+# over once every one passes its health check, so the site never stops
+# answering (../swap.sh). If one never gets healthy, all the new ones are
+# removed and the old ones keep serving. Then `compose up` for the rest (db,
+# edge, umami): server and web already match the config, so it leaves them
+# alone.
 swap_all() {   # log lines go to the deploy log and stdout
     local svc
     for svc in server web; do
@@ -240,6 +295,7 @@ swap_all() {   # log lines go to the deploy log and stdout
         log "$SWAP_MSG"
     done
     compose up -d --remove-orphans >>"$dlog" 2>&1 || { log "compose up failed; see $dlog"; return 1; }
+    prioritise
 }
 
 write_build_json deploying "starting $short"
