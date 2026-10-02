@@ -174,11 +174,11 @@ test("signed out: the data routes behind account pages answer 401 before reading
   assert.equal(refused.error.code, "unauthorized");
   assert.equal(signedInGate("user-1"), null);
   const api = join(import.meta.dirname, "../app/api");
-  for (const route of ["preflight", "preflight-jobs/[job]/events", "merge-plan-jobs/[job]/events", "playbook-jobs/[job]/events"]) {
+  for (const route of ["preflight", "preflight-jobs/[job]/events", "merge-plan-jobs/[job]/events", "playbook-jobs/[job]/events", "picks"]) {
     const src = readFileSync(join(api, route, "route.ts"), "utf-8");
     const get = src.slice(src.indexOf("export async function GET"));
     const gate = get.indexOf("signedInGate(");
-    const data = get.search(/preflightState\(|proxyJobEvents\(/);
+    const data = get.search(/preflightState\(|proxyJobEvents\(|recommendations\(/);
     assert.ok(gate >= 0 && data > gate, `${route}: the gate comes before the data`);
   }
 });

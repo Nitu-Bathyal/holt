@@ -3,23 +3,23 @@
 // end. Signed in only, never cached: the picks are one person's.
 import { NextResponse, type NextRequest } from "next/server";
 import { recommendations } from "@/lib/api";
+import { signedInGate } from "@/lib/gate";
 import { parseOffset, PICKS_PART } from "@/lib/recommendations";
 import { currentUser } from "@/lib/session";
+import type { ApiError } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
 const PRIVATE = { "Cache-Control": "private, no-store" };
-
-function refuse(status: number, code: string, message: string) {
-  return NextResponse.json({ error: { code, message } }, { status, headers: PRIVATE });
-}
+const refuse = (status: number, error: ApiError) => NextResponse.json({ error }, { status, headers: PRIVATE });
 
 export async function GET(req: NextRequest) {
   const user = await currentUser();
-  if (!user) return refuse(401, "unauthorized", "Sign in to see your picks.");
+  const refused = signedInGate(user?.id);
+  if (refused || !user) return refuse(401, refused?.error ?? { code: "unauthorized", message: "Sign in first." });
   const offset = parseOffset(req.nextUrl.searchParams.get("offset"));
-  if (offset === null) return refuse(400, "invalid_request", "We couldn't read that. Please try again.");
+  if (offset === null) return refuse(400, { code: "invalid_request", message: "We couldn't read that. Please try again." });
   const r = await recommendations(user.id, PICKS_PART, offset);
-  if (!r.ok) return refuse(r.status, r.error.code, r.error.message);
+  if (!r.ok) return refuse(r.status, r.error);
   return NextResponse.json({ picks: r.data.picks, next: r.data.next }, { headers: PRIVATE });
 }
