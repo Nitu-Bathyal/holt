@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync } from "node:fs";
+import { readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { EXAMPLES, isExample } from "./examples.ts";
@@ -192,4 +192,22 @@ test("the sign-in wall never appears as a page a crawler is sent to", () => {
   }
   const robots = readFileSync(join(app, "robots.ts"), "utf-8");
   for (const path of ["/find", "/discover", "/compare", "/preflight", "/me/", "/settings"]) assert.match(robots, new RegExp(`"${path}[$"]`), `robots.txt allows ${path}`);
+});
+
+// A signed-out page that asks a gated route logs a 401 in the visitor's console.
+test("the open pages never ask a gated route: only signed-in parts of the app do", () => {
+  const src = join(import.meta.dirname, "..");
+  const GATED = /\/api\/(preflight|preflight-jobs|merge-plan-jobs|playbook-jobs)\b/;
+  const askers = (readdirSync(src, { recursive: true }) as string[])
+    .map((f) => f.replaceAll("\\", "/"))
+    .filter((f) => /\.tsx?$/.test(f) && !f.endsWith(".test.ts") && !f.startsWith("app/api/") && GATED.test(readFileSync(join(src, f), "utf-8")))
+    .sort();
+  // The pre-flight page (gated), the link to it, and two streams that open only after a signed-in POST starts a job.
+  assert.deepEqual(askers, ["components/preflight/preflight-link.tsx", "components/preflight/preflight-view.tsx", "components/report/merge-plan-panel.tsx", "components/report/playbook-section.tsx"]);
+  // The link asks as soon as it is on the page, so it is only ever there for someone signed in.
+  const uses = (readdirSync(src, { recursive: true }) as string[])
+    .filter((f) => /\.tsx$/.test(f) && !f.endsWith("preflight-link.tsx"))
+    .flatMap((f) => readFileSync(join(src, f), "utf-8").split("\n").filter((line) => line.includes("<PreflightLink")));
+  assert.ok(uses.length >= 1);
+  for (const line of uses) assert.match(line, /signedIn && <PreflightLink/, line.trim());
 });
