@@ -5,6 +5,7 @@ import { me, orders } from "@/lib/api";
 import { shortDate } from "@/lib/format";
 import { formatPrice, isOrderId } from "@/lib/payments";
 import { currentUser } from "@/lib/session";
+import { PLAN_SETTINGS } from "@/lib/settings";
 import { CONTACT_EMAIL } from "@/lib/site";
 import { OrderWaiter } from "@/components/order-waiter";
 import { PageHead } from "@/components/page-head";
@@ -18,8 +19,8 @@ export default async function ThanksPage({ searchParams }: PageProps<"/pricing/t
   const sp = await searchParams;
   const id = isOrderId(sp.order) ? sp.order : null;
   const user = await currentUser();
-  if (!user) redirect(`/signin?callbackUrl=${encodeURIComponent(id ? `/pricing/thanks?order=${id}` : "/settings/ai-reports")}`);
-  if (!id) redirect("/settings/ai-reports#purchases");
+  if (!user) redirect(`/signin?callbackUrl=${encodeURIComponent(id ? `/pricing/thanks?order=${id}` : PLAN_SETTINGS)}`);
+  if (!id) redirect(`${PLAN_SETTINGS}#purchases`);
 
   const [list, account] = await Promise.all([orders(user.id), me(user.id)]);
   const order = list.ok ? list.data.orders.find((o) => o.id === id) : undefined;
@@ -72,7 +73,7 @@ export default async function ThanksPage({ searchParams }: PageProps<"/pricing/t
             ) : (
               <Link href="/" className="btn-primary">check a repo →</Link>
             )}
-            <Link href="/settings/ai-reports#purchases" className="btn-ghost">your purchases</Link>
+            <Link href={`${PLAN_SETTINGS}#purchases`} className="btn-ghost">your purchases</Link>
           </div>
         </div>
       </>
