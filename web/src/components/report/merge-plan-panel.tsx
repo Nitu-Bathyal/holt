@@ -7,7 +7,8 @@ import Link from "next/link";
 import { startTransition, useCallback, useEffect, useRef, useState } from "react";
 import { MergePlanView } from "@/components/merge-plan/merge-plan-view";
 import { PlanProgress } from "@/components/merge-plan/plan-progress";
-import { failedMessage, leftLabel, planOffer } from "@/lib/merge-plan-offer";
+import { ComingSoon } from "@/components/coming-soon";
+import { failedMessage, leftLabel, planOffer, planTag } from "@/lib/merge-plan-offer";
 import { EXAMPLE_PATH } from "@/lib/example-report";
 import type { ApiError, MergePlan, MergePlanState } from "@/lib/types";
 
@@ -112,8 +113,8 @@ export function MergePlanPanel({ repo }: { repo: string }) {
     !plan && (
       <div className="mt-3 max-w-3xl font-sans" data-merge-plan-off>
         <p className="text-[1rem] leading-snug text-muted sm:text-[1.05rem]">
-          Merge plans aren&apos;t available yet. When they are, one reads this repo&apos;s pull request threads and gives you a step-by-step plan for your first
-          pull request.
+          Holt reads this repo&apos;s pull request threads and gives you a step-by-step plan for your first pull request: what gets merged, what gets
+          closed and who reviews.
         </p>
         <Link href={EXAMPLE_PATH} className="text-link tap mt-4 inline-block text-[0.92rem]">
           see an example plan →
@@ -180,9 +181,13 @@ export function MergePlanPanel({ repo }: { repo: string }) {
 
   return (
     // Set like the report's verdict block (and the plan's own, merge-plan-view.tsx): a bar down the side, the label, the heading.
-    <section aria-labelledby="merge-plan" className={`border-l-4 pl-4 sm:pl-6 ${failed ? "border-orange" : "border-blue"}`} data-merge-plan-panel>
+    <section aria-labelledby="merge-plan" className={`border-l-4 pl-4 sm:pl-6 ${failed ? "border-orange" : s.available ? "border-blue" : "border-line-strong"}`} data-merge-plan-panel>
       <p className="flex items-center gap-2 text-[0.76rem] uppercase tracking-[0.08em] text-faint">
-        <span className="border border-line-strong px-1.5 py-0.5 tracking-[0.12em] text-ink">pro</span>
+        {planTag(s.available) === "pro" ? (
+          <span className="border border-line-strong px-1.5 py-0.5 tracking-[0.12em] text-ink">pro</span>
+        ) : (
+          <ComingSoon small className="normal-case tracking-normal" />
+        )}
         merge plan
       </p>
       <h1 id="merge-plan" className={`display mt-3 text-[1.6rem] leading-none sm:text-[2.25rem] ${failed ? "text-orange" : "text-ink"}`}>

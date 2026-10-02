@@ -1,9 +1,10 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { PageTransition } from "@/components/motion/page-transition";
+import { ComingSoon } from "@/components/coming-soon";
 import { PageHead } from "@/components/page-head";
 import { VerdictPill } from "@/components/report/verdict-pill";
-import { getReport } from "@/lib/api";
+import { getReport, mergePlansAvailable } from "@/lib/api";
 import { compact } from "@/lib/discover";
 import { EXAMPLE_PATH } from "@/lib/example-report";
 import { EXAMPLES, EXAMPLES_PATH } from "@/lib/examples";
@@ -33,7 +34,7 @@ interface Row {
 // cache, as one calm list: a place to pick one and open it. Reading the cache
 // starts no checks.
 export default async function ExamplesPage() {
-  const [reports, user] = await Promise.all([Promise.all(EXAMPLES.map((e) => getReport(e.repo))), currentUser()]);
+  const [reports, user, mergePlans] = await Promise.all([Promise.all(EXAMPLES.map((e) => getReport(e.repo))), currentUser(), mergePlansAvailable()]);
   const planRepo = EXAMPLES.find((e) => e.repo === EXAMPLE_PLAN.repo);
   const rows: Row[] = [
     ...EXAMPLES.map((e, i) => {
@@ -72,6 +73,7 @@ export default async function ExamplesPage() {
                       {r.repo}
                     </span>
                     {r.plan && <span className="shrink-0 border border-blue/60 px-1.5 text-[0.72rem] leading-5 text-blue">merge plan</span>}
+                    {r.plan && !mergePlans && <ComingSoon small />}
                   </span>
                   <span className="justify-self-end lg:justify-self-start">
                     {r.verdict && <VerdictPill headline={r.verdict.headline} tone={r.verdict.tone} className="whitespace-nowrap" />}

@@ -18,6 +18,21 @@ export function planOffer(s: Pick<MergePlanState, "available" | "access">): Plan
   return { kind: "locked", message: s.access.message ?? "You've used your free merge plans." };
 }
 
+/** A way into the merge plan: it starts one (through sign-in when signed out), or says "coming soon" and goes nowhere. */
+export type PlanCta = { kind: "start"; href: string } | { kind: "soon" };
+
+/** `available` is the server's (MergePlanState): false while merge plans can't be made, and then nothing may offer one. */
+export function planCta(repo: string, o: { available: boolean; signedIn: boolean }): PlanCta {
+  if (!o.available) return { kind: "soon" };
+  const href = `/${repo}?mode=ai`;
+  return { kind: "start", href: o.signedIn ? href : `/signin?callbackUrl=${encodeURIComponent(href)}` };
+}
+
+/** The tag beside "Merge plan": the Pro sticker, or "coming soon" in its place. */
+export function planTag(available: boolean): "pro" | "coming soon" {
+  return available ? "pro" : "coming soon";
+}
+
 /** "3 left", "1 left", or nothing when the allowance is unlimited. */
 export function leftLabel(left: number | null): string | null {
   return left == null ? null : `${left} left`;

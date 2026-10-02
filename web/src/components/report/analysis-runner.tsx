@@ -21,7 +21,7 @@ import { StarterIssues, type IssuesState } from "./starter-issues";
  * fresh check fails. `ticket`: a signed-out check (lib/anon-check.ts), which
  * ends on the teaser.
  */
-export function AnalysisRunner({ repo, mode, days, signedIn, fallback, ticket }: { repo: string; mode: Mode; days: number; signedIn: boolean; fallback?: Report; ticket?: string }) {
+export function AnalysisRunner({ repo, mode, days, signedIn, mergePlans, fallback, ticket }: { repo: string; mode: Mode; days: number; signedIn: boolean; mergePlans: boolean; fallback?: Report; ticket?: string }) {
   // Signed in, the check carries on if they leave; the app says when it's ready.
   const stays = signedIn && !ticket;
   const { state, retry } = useAnalysis(repo, mode, days, true, ticket, stays);
@@ -65,14 +65,14 @@ export function AnalysisRunner({ repo, mode, days, signedIn, fallback, ticket }:
             Try again
           </button>
         </p>
-        <ReportView report={fallback} issues={<StarterIssues issues={issues} repo={fallback.repo} />} signedIn={signedIn} />
+        <ReportView report={fallback} issues={<StarterIssues issues={issues} repo={fallback.repo} />} signedIn={signedIn} mergePlans={mergePlans} />
       </div>
     );
   if (state.phase === "error") return <ErrorPanel error={state.error} repo={repo} onRetry={retry} />;
   if (state.phase === "done")
     return (
       <ViewTransition enter="sk-in" default="none">
-        <ReportView report={state.report} issues={<StarterIssues issues={issues} repo={state.report.repo} />} signedIn={signedIn} reveal land={state.fresh} />
+        <ReportView report={state.report} issues={<StarterIssues issues={issues} repo={state.report.repo} />} signedIn={signedIn} mergePlans={mergePlans} reveal land={state.fresh} />
       </ViewTransition>
     );
   return (

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { passes } from "@/lib/api";
+import { ComingSoon } from "@/components/coming-soon";
+import { mergePlansAvailable, passes } from "@/lib/api";
 import { EXAMPLE_PATH } from "@/lib/example-report";
 import { formatPrice, passToBuy, perMonth } from "@/lib/payments";
 import { currentUser } from "@/lib/session";
@@ -17,13 +18,19 @@ export const metadata: Metadata = {
 };
 
 /** A plan's lines: what you get, then what it does for you. */
-const Items = ({ items }: { items: PlanItem[] }) => (
+/** The merge plan lines, in Free and in Pro: marked "coming soon" while none can be made. */
+const MERGE_PLAN_ITEMS = new Set(["plans", "merge_plan"]);
+
+const Items = ({ items, mergePlans }: { items: PlanItem[]; mergePlans: boolean }) => (
   <ul className="mt-5 flex-1 space-y-3.5 font-sans text-[0.92rem]">
     {items.map((i) => (
       <li key={i.id} className="flex gap-2.5">
         <span aria-hidden="true" className="text-green">✓</span>
         <div className="min-w-0">
-          <p className="font-medium text-ink">{i.title}</p>
+          <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-medium text-ink">
+            {i.title}
+            {!mergePlans && MERGE_PLAN_ITEMS.has(i.id) && <ComingSoon small />}
+          </p>
           {i.line && <p className="mt-0.5 leading-relaxed text-muted">{i.line}</p>}
         </div>
       </li>
@@ -34,7 +41,7 @@ const Items = ({ items }: { items: PlanItem[] }) => (
 export default async function PricingPage({ searchParams }: PageProps<"/pricing">) {
   // Passes appear only while the server has them on sale (payments switched
   // on, a price set); until then Pro shows as coming, with no price.
-  const [sale, user, sp] = await Promise.all([passes(), currentUser(), searchParams]);
+  const [sale, user, sp, mergePlans] = await Promise.all([passes(), currentUser(), searchParams, mergePlansAvailable()]);
   const onSale = sale.ok && sale.data.on_sale ? sale.data.passes : [];
   const selling = onSale.length > 0;
   const pro = proItems(selling && sale.ok ? sale.data.features : []);
@@ -63,7 +70,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
               <span className="text-[0.89rem] font-normal tracking-normal text-muted">with a free account</span>
             </p>
             <p className="mt-3 font-sans text-muted">Everything you need to pick a project.</p>
-            <Items items={FREE} />
+            <Items items={FREE} mergePlans={mergePlans} />
             <Link href="/" className="btn-primary mt-6 w-full">check a repo →</Link>
           </li>
 
@@ -74,7 +81,7 @@ export default async function PricingPage({ searchParams }: PageProps<"/pricing"
             </div>
             <p className="mt-3 text-[1.3rem] font-semibold leading-tight tracking-tight">Holt watches for you.</p>
             <p className="mt-3 font-sans text-muted">Everything in Free. Alerts reach you on the bell in Holt and by email.</p>
-            <Items items={pro} />
+            <Items items={pro} mergePlans={mergePlans} />
             {selling ? (
               <a href="#passes" className="btn-ghost mt-6 w-full">choose a pass →</a>
             ) : (

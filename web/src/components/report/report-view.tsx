@@ -4,6 +4,7 @@ import { ChevronDown, Info } from "lucide-react";
 import Link from "next/link";
 import { shortDate, timeAgo } from "@/lib/format";
 import { EXAMPLE_PATH } from "@/lib/example-report";
+import { planCta } from "@/lib/merge-plan-offer";
 import { SITE_URL } from "@/lib/site";
 import type { Report } from "@/lib/types";
 import { CatFace } from "../cat-face";
@@ -210,6 +211,7 @@ export function ReportView({
   report,
   issues,
   signedIn,
+  mergePlans,
   reveal,
   land,
   example,
@@ -218,6 +220,8 @@ export function ReportView({
   /** The starter-issues block: streamed by the server page, fetched by the runner. */
   issues: React.ReactNode;
   signedIn: boolean;
+  /** Merge plans can be made on this server; when not, the card says "coming soon" and starts nothing. */
+  mergePlans: boolean;
   /** The report just arrived on this page: step its parts in. A server-rendered report doesn't wait. */
   reveal?: boolean;
   /** The check ran while the visitor watched: the answer lands (VerdictHero) and the numbers count up. */
@@ -226,6 +230,7 @@ export function ReportView({
   example?: boolean;
 }) {
   const repo = report.repo;
+  const plan = planCta(repo, { available: mergePlans, signedIn });
   const url = example ? `${SITE_URL}${EXAMPLE_PATH}` : `${SITE_URL}/${repo}`;
   const shareText = example ? `An example report on Holt, for ${repo}.` : `${repo} on Holt: ${report.headline}.`;
   const viable = report.verdict === "viable";
@@ -283,7 +288,7 @@ export function ReportView({
             the page isn't twice as long as it is on a laptop. */}
         {!brief && report.mode === "rules" && (
           <div className="lg:hidden">
-            <UpgradeCard repo={repo} signedIn={signedIn} />
+            <UpgradeCard plan={plan} />
           </div>
         )}
         {report.about && (
@@ -338,9 +343,9 @@ export function ReportView({
       <aside className="hidden space-y-4 lg:block" aria-label="About the project and more">
         {/* The merge plan sits right under Statistics, where it's seen, not under six cards. */}
         {report.about ? (
-          <ProjectSidebar about={report.about} repo={repo} noPeople={brief} links={starting} afterStats={!brief && report.mode === "rules" ? <UpgradeCard repo={repo} signedIn={signedIn} /> : undefined} />
+          <ProjectSidebar about={report.about} repo={repo} noPeople={brief} links={starting} afterStats={!brief && report.mode === "rules" ? <UpgradeCard plan={plan} /> : undefined} />
         ) : (
-          !brief && report.mode === "rules" && <UpgradeCard repo={repo} signedIn={signedIn} />
+          !brief && report.mode === "rules" && <UpgradeCard plan={plan} />
         )}
         {!example && <VerdictFeedback report={report} />}
         {!example && !brief && <CompareCard repo={repo} />}

@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { ComingSoon } from "@/components/coming-soon";
+import { mergePlansAvailable } from "@/lib/api";
 import { MergePlanView } from "@/components/merge-plan/merge-plan-view";
 import { PageTransition } from "@/components/motion/page-transition";
 import { RepoAvatar } from "@/components/repo-card/repo-avatar";
@@ -22,7 +24,8 @@ export const metadata: Metadata = {
 };
 
 export default async function ExampleMergePlanPage({ searchParams }: PageProps<"/example-merge-plan">) {
-  const locked = (await searchParams).view === "locked";
+  const [sp, mergePlans] = await Promise.all([searchParams, mergePlansAvailable()]);
+  const locked = sp.view === "locked";
   return (
     <PageTransition>
       <div className="relative">
@@ -37,7 +40,7 @@ export default async function ExampleMergePlanPage({ searchParams }: PageProps<"
               <Link href={locked ? EXAMPLE_PATH : `${EXAMPLE_PATH}?view=locked`} className="text-link tap">
                 {locked ? "see the whole plan" : "what you see before unlocking"}
               </Link>
-              <Link href="/" className="text-link tap">get one for your repo</Link>
+              {mergePlans ? <Link href="/" className="text-link tap">get one for your repo</Link> : <ComingSoon />}
             </span>
           </aside>
 
@@ -53,7 +56,7 @@ export default async function ExampleMergePlanPage({ searchParams }: PageProps<"
                 github.com/{plan.repo} ↗
               </a>
             </div>
-            <ReportModeLink mode="ai" rulesHref={`/${plan.repo}`} aiHref={EXAMPLE_PATH} />
+            <ReportModeLink mode="ai" rulesHref={`/${plan.repo}`} plan={{ kind: "start", href: EXAMPLE_PATH }} />
           </div>
 
           <MergePlanView plan={plan} locked={locked} />

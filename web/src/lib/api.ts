@@ -12,6 +12,7 @@ import type { FeedbackInput } from "./feedback";
 import { isJobId } from "./ids";
 import * as mock from "./mock/server";
 import { isValidRepo } from "./repo";
+import { ttlMemo } from "./ttl-memo";
 import { retryDropped } from "./upstream-retry";
 
 export const MOCK = process.env.MOCK_API === "1";
@@ -217,6 +218,28 @@ export async function mergePlanState(repo: string, caller: Caller): Promise<Resu
   if (MOCK) return mock.mergePlanState(repo, caller.userId ?? undefined);
   return call(`/v1/merge-plan/${repoPath(repo)}`, { caller });
 }
+
+/**
+ * Whether merge plans can be made on this server (MergePlanState's `available`,
+ * the same for every repo and visitor: one anonymous, database-only read).
+ * Asked on most pages, so this process keeps the answer for a minute and
+ * shares one read between renders; the read gives up after 2 seconds, so a
+ * slow server never holds a page. A failed read keeps the last answer (at
+ * first: no) and is tried again 5 seconds later.
+ */
+export const mergePlansAvailable = ttlMemo<boolean>(
+  async () => {
+    if (MOCK) {
+      const r = await mock.mergePlanState(AVAILABILITY_REPO);
+      return r.ok ? r.data.available : null;
+    }
+    const r = await call<MergePlanState>(`/v1/merge-plan/${repoPath(AVAILABILITY_REPO)}`, { signal: AbortSignal.timeout(2_000) });
+    return r.ok ? r.data.available : null;
+  },
+  // The mock's switch (MOCK_PRO) is read each time, so a dev server follows it.
+  { ttlMs: MOCK ? 0 : 60_000, retryMs: MOCK ? 0 : 5_000, fallback: false },
+);
+const AVAILABILITY_REPO = "processing/p5.js";
 
 /** Make a merge plan: the server checks and charges the user, then queues it. */
 export async function startMergePlan(repo: string, userId: string): Promise<Result<MergePlanStart>> {
