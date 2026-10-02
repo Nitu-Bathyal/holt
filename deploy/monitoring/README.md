@@ -130,12 +130,12 @@ Measured on the home server with every piece running:
 
 | | Memory in use | Limit |
 |---|---|---|
-| Grafana | 150–190 MB | 320 MB |
+| Grafana | 60 MB idle, up to 190 MB with a dashboard open | 320 MB |
 | Prometheus | 90–100 MB | 256 MB |
 | cAdvisor | 50 MB | 128 MB |
-| Alertmanager | 36 MB | 64 MB |
+| Alertmanager | 15–36 MB | 64 MB |
 | the three exporters | 25 MB | 120 MB |
-| **Together** | **about 400 MB** | 888 MB |
+| **Together** | **260 MB idle, about 400 MB in use** | 888 MB |
 
 CPU: about 2% of one core, all seven containers together.
 

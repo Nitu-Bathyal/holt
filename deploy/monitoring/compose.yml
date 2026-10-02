@@ -20,7 +20,7 @@
 # Nothing in the production stack changes, restarts or depends on this.
 #
 # Images are pinned. Every container has a memory limit; together 888 MB at
-# the very most, about 400 MB in practice (README.md, "What it costs").
+# the very most, 260 to 400 MB in practice (README.md, "What it costs").
 
 x-common: &common
   restart: unless-stopped
