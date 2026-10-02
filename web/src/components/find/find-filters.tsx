@@ -14,7 +14,8 @@ import { SuggestInput } from "./suggest-input";
 // are lowercase; notes and hints in brackets or after "·" run on in lowercase.
 const TIME_SHORT: Record<number, string> = { 1: "Evening", 3: "Weekend", 7: "Week", 30: "Month" };
 
-const seg = "flex min-h-11 items-center sm:min-h-9 justify-center border px-3 text-[0.82rem] transition-colors focus-visible:outline-2 focus-visible:outline-blue";
+// Controls are 40px tall on a phone and 32px from tablets up, so the bar that holds them stays thin.
+const seg = "flex h-10 items-center justify-center whitespace-nowrap border px-2 text-[0.75rem] transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue sm:h-8 sm:px-3 sm:text-[0.8rem]";
 const segOn = "border-green bg-green font-semibold text-on-accent";
 const segOff = "border-line-strong text-muted hover:border-blue hover:text-ink";
 const chipOn = "border-blue bg-blue text-on-accent";
@@ -23,25 +24,42 @@ const chipOff = "border-line-strong text-muted hover:border-blue hover:text-ink"
 const MAX_LANGS = 10;
 const MAX_TOPICS = 10;
 const KNOWN = new Set(LANGS.map((l) => l.toLowerCase()));
-const chip = "inline-flex min-h-11 shrink-0 sm:min-h-9 select-none items-center border px-3.5 text-[0.82rem] transition-colors focus-visible:outline-2 focus-visible:outline-blue";
+const chip = "inline-flex h-10 shrink-0 select-none items-center whitespace-nowrap border px-3 text-[0.8rem] transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue sm:h-8";
 
-export function FindFilters({ picks, onChange, hf, footer }: {
+export function FindFilters({ picks, onChange, hf, busy = false }: {
   picks: Picks;
   onChange: (p: Picks) => void;
   hf: { note: string } | null;
-  /** The tray's last row: how the search went, and what to do with the picks (find-view.tsx). */
-  footer?: React.ReactNode;
+  /** A search with these picks is on its way. */
+  busy?: boolean;
 }) {
   const extras = extraCount(picks);
-  const [more, setMore] = useState(extras > 0);
+  // The rare filters open under the bar, over the results; Escape or a tap elsewhere closes them.
+  const [more, setMore] = useState(false);
+  const tray = useRef<HTMLDivElement>(null);
+  const moreButton = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!more) return;
+    const away = (e: PointerEvent) => {
+      if (e.target instanceof Node && !tray.current?.contains(e.target)) setMore(false);
+    };
+    document.addEventListener("pointerdown", away);
+    return () => document.removeEventListener("pointerdown", away);
+  }, [more]);
+  const onTrayKey = (e: React.KeyboardEvent) => {
+    // Not when Escape just closed a suggestion list (suggest-input.tsx).
+    if (e.key !== "Escape" || !more || e.defaultPrevented) return;
+    setMore(false);
+    moreButton.current?.focus();
+  };
   // Only what's being typed; the applied topics show as chips.
   const [topicText, setTopicText] = useState("");
   const panelId = useId();
-  // Phones scroll the language row: bring the first picked one into view once.
+  // The language row scrolls sideways: bring the first picked one into view once.
   const langRow = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const row = langRow.current;
-    const on = row?.querySelector<HTMLElement>("[aria-pressed=true]");
+    const on = row?.querySelector<HTMLElement>("[data-lang][aria-pressed=true]");
     if (row && on && row.scrollWidth > row.clientWidth) row.scrollLeft = on.offsetLeft - row.offsetLeft - 12;
   }, []);
   const set = (patch: Partial<Picks>) => onChange({ ...picks, ...patch });
@@ -68,8 +86,7 @@ export function FindFilters({ picks, onChange, hf, footer }: {
     setTopicText("");
     if (t.length !== picks.topics.length) set({ topics: t });
   };
-  // The applied topics, each one tap to remove: in the panel, and beside
-  // "more filters" while it's closed, so they're never out of sight.
+  // The applied topics, each one tap to remove.
   const topicChips = picks.topics.map((t) => (
     <button key={t} type="button" aria-pressed="true" aria-label={`Topic ${t}, remove`} onClick={() => set({ topics: picks.topics.filter((x) => x !== t) })} className={`${chip} ${chipOn} gap-1.5`}>
       {t}
@@ -77,63 +94,73 @@ export function FindFilters({ picks, onChange, hf, footer }: {
     </button>
   ));
 
-  return (
-    <div className="find-tray">
-      <div ref={langRow} role="group" aria-label="Languages you can read" className="flex gap-2 overflow-x-auto py-3 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:pb-3 sm:pt-4">
-        <button type="button" aria-pressed={!picks.langs.length} onClick={() => set({ langs: [] })} className={`${chip} ${!picks.langs.length ? chipOn : chipOff} max-sm:order-first`}>
-          Any language
-        </button>
-        {LANGS.map((l) => {
-          const id = l.toLowerCase();
-          const on = picks.langs.includes(id);
-          return (
-            <button key={id} type="button" aria-pressed={on} onClick={() => set({ langs: toggle(picks.langs, id) })} className={`${chip} ${on ? chipOn : chipOff} gap-2`}>
-              <LangDot color={langColor(l)} />
-              {l}
-            </button>
-          );
-        })}
-        {custom.map((id) => (
-          <button key={id} type="button" aria-pressed="true" aria-label={`${langName(id)}, remove`} onClick={() => set({ langs: toggle(picks.langs, id) })} className={`${chip} ${chipOn} gap-2`}>
-            <LangDot color={langColor(langName(id))} />
-            {langName(id)}
-            <span aria-hidden="true" className="opacity-70">×</span>
-          </button>
-        ))}
-        <form
-          onSubmit={(e) => {
-            e.preventDefault();
-            addLangs();
-          }}
-          // On a phone the row scrolls sideways: the box sits right after "Any language", where it's seen.
-          data-suggest-anchor
-          className="flex min-h-11 w-44 shrink-0 items-center border border-line-strong bg-bg transition-colors focus-within:border-blue max-sm:order-first sm:min-h-9"
-        >
-          <label htmlFor={`${panelId}-lang`} className="sr-only">Add a language</label>
-          <span aria-hidden="true" className="pl-2.5 text-[0.82rem] text-faint">+</span>
-          <SuggestInput
-            id={`${panelId}-lang`}
-            type="text"
-            value={langText}
-            onChange={setLangText}
-            onPick={addLangs}
-            options={MORE_LANGS.filter((l) => !picks.langs.includes(l.toLowerCase()))}
-            onKeyDown={onLangKey}
-            placeholder={full ? "10 languages at most" : "add a language"}
-            readOnly={full}
-            maxLength={40}
-            spellCheck={false}
-            enterKeyHint="done"
-            className="min-w-0 flex-1 bg-transparent px-1.5 text-[0.82rem] outline-none placeholder:text-faint read-only:cursor-not-allowed"
-          />
-          {langText.trim() && <button type="submit" className="self-stretch px-2.5 text-[0.82rem] text-muted hover:text-ink">add</button>}
-        </form>
-      </div>
+  const hfLabel = "Hacktoberfest only";
 
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-3 border-t border-line py-3">
-        <div role="radiogroup" aria-label="Time you have" className="flex w-full items-center gap-2 sm:w-auto">
-          <span className="shrink-0 text-[0.82rem] text-faint">Time</span>
-          <div className="grid flex-1 grid-cols-4 sm:flex">
+  return (
+    <div ref={tray} className="find-tray" onKeyDown={onTrayKey}>
+      {/* One row once the bar is wide enough for it; before that, languages over time. */}
+      <div className="find-bar flex flex-wrap items-center gap-x-4 gap-y-1.5 py-1.5 @5xl:flex-nowrap">
+        {/* Positioned, so the hidden label inside scrolls with the row instead of widening the page. */}
+        <div ref={langRow} className="relative flex w-full min-w-0 gap-1.5 overflow-x-auto pr-6 [mask-image:linear-gradient(to_right,#000_calc(100%-1.5rem),transparent)] [scrollbar-width:none] @5xl:w-auto @5xl:flex-1">
+          {/* Below one row there's no room beside Time, so the switch leads the chips. */}
+          {hf && (
+            <button type="button" role="switch" aria-checked={picks.hf} aria-label={hfLabel} onClick={() => set({ hf: !picks.hf })} className={`${chip} @5xl:hidden ${picks.hf ? "border-hf bg-hf-bg font-semibold text-hf" : chipOff}`}>
+              Hacktoberfest
+            </button>
+          )}
+          <div role="group" aria-label="Languages you can read" className="contents">
+            <button type="button" aria-pressed={!picks.langs.length} onClick={() => set({ langs: [] })} className={`${chip} ${!picks.langs.length ? chipOn : chipOff}`}>
+              Any language
+            </button>
+            {LANGS.map((l) => {
+              const id = l.toLowerCase();
+              const on = picks.langs.includes(id);
+              return (
+                <button key={id} type="button" data-lang aria-pressed={on} onClick={() => set({ langs: toggle(picks.langs, id) })} className={`${chip} ${on ? chipOn : chipOff} gap-2`}>
+                  <LangDot color={langColor(l)} />
+                  {l}
+                </button>
+              );
+            })}
+            {custom.map((id) => (
+              <button key={id} type="button" data-lang aria-pressed="true" aria-label={`${langName(id)}, remove`} onClick={() => set({ langs: toggle(picks.langs, id) })} className={`${chip} ${chipOn} gap-2`}>
+                <LangDot color={langColor(langName(id))} />
+                {langName(id)}
+                <span aria-hidden="true" className="opacity-70">×</span>
+              </button>
+            ))}
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                addLangs();
+              }}
+              data-suggest-anchor
+              className="flex h-10 w-40 shrink-0 items-center border border-line-strong bg-bg transition-colors focus-within:border-blue sm:h-8"
+            >
+              <label htmlFor={`${panelId}-lang`} className="sr-only">Add a language</label>
+              <span aria-hidden="true" className="pl-2.5 text-[0.8rem] text-faint">+</span>
+              <SuggestInput
+                id={`${panelId}-lang`}
+                type="text"
+                value={langText}
+                onChange={setLangText}
+                onPick={addLangs}
+                options={MORE_LANGS.filter((l) => !picks.langs.includes(l.toLowerCase()))}
+                onKeyDown={onLangKey}
+                placeholder={full ? "10 languages at most" : "add a language"}
+                readOnly={full}
+                maxLength={40}
+                spellCheck={false}
+                enterKeyHint="done"
+                className="min-w-0 flex-1 bg-transparent px-1.5 text-[0.8rem] outline-none placeholder:text-faint read-only:cursor-not-allowed"
+              />
+              {langText.trim() && <button type="submit" className="self-stretch px-2.5 text-[0.8rem] text-muted hover:text-ink">add</button>}
+            </form>
+          </div>
+        </div>
+
+        <div className="flex w-full min-w-0 items-center gap-x-3 sm:gap-x-4 @5xl:w-auto @5xl:shrink-0">
+          <div role="radiogroup" aria-label="Time you have" className="grid min-w-0 flex-1 grid-cols-4 sm:flex sm:flex-none">
             {TIME.map((t, i) => {
               const on = picks.days === t.days;
               return (
@@ -151,40 +178,37 @@ export function FindFilters({ picks, onChange, hf, footer }: {
               );
             })}
           </div>
-        </div>
 
-        {hf && (
-          <button type="button" role="switch" aria-checked={picks.hf} onClick={() => set({ hf: !picks.hf })} className="group flex min-h-11 items-center gap-2.5 text-left text-[0.82rem] sm:min-h-9">
-            <span
-              aria-hidden="true"
-              className={`relative h-6 w-11 shrink-0 rounded-full border transition-colors after:absolute after:left-0.5 after:top-0.5 after:size-4.5 after:rounded-full after:transition-transform group-focus-visible:outline-2 group-focus-visible:outline-blue ${picks.hf ? "border-hf bg-hf-bg after:translate-x-5 after:bg-hf" : "border-line-strong bg-panel-2 after:bg-faint"}`}
-            />
-            <span>
-              Hacktoberfest only <span className="hidden text-faint sm:inline">· {hf.note}</span>
-            </span>
+          {hf && (
+            <button type="button" role="switch" aria-checked={picks.hf} onClick={() => set({ hf: !picks.hf })} className="group hidden h-8 shrink-0 items-center gap-2 text-left text-[0.8rem] @5xl:flex">
+              <span
+                aria-hidden="true"
+                className={`relative h-5 w-9 shrink-0 rounded-full border transition-colors after:absolute after:left-0.5 after:top-0.5 after:size-3.5 after:rounded-full after:transition-transform group-focus-visible:outline-2 group-focus-visible:outline-blue ${picks.hf ? "border-hf bg-hf-bg after:translate-x-4 after:bg-hf" : "border-line-strong bg-panel-2 after:bg-faint"}`}
+              />
+              <span>
+                {hfLabel} <span className="hidden text-faint @7xl:inline">· {hf.note}</span>
+              </span>
+            </button>
+          )}
+
+          <button
+            ref={moreButton}
+            type="button"
+            aria-expanded={more}
+            aria-controls={panelId}
+            onClick={() => setMore(!more)}
+            className="ml-auto flex h-10 shrink-0 items-center gap-1.5 text-[0.8rem] text-muted hover:text-ink sm:h-8"
+          >
+            {/* Lit while a search with the new picks is on its way; its room is always kept, so nothing shifts. */}
+            <span aria-hidden="true" className={`size-1.5 rounded-full bg-blue ${busy ? "animate-pulse" : "invisible"}`} />
+            <span className="max-sm:hidden">more</span> filters{extras > 0 && <span className="rounded-full bg-blue px-1.5 text-[0.72rem] text-on-accent">{extras}</span>}
+            <span aria-hidden="true" className={`transition-transform ${more ? "rotate-180" : ""}`}>▾</span>
           </button>
-        )}
-
-        {!more && topicChips.length > 0 && (
-          <div role="group" aria-label="Topics" className="flex flex-wrap gap-2">
-            {topicChips}
-          </div>
-        )}
-
-        <button
-          type="button"
-          aria-expanded={more}
-          aria-controls={panelId}
-          onClick={() => setMore(!more)}
-          className="ml-auto flex min-h-11 items-center gap-1.5 sm:min-h-9 text-[0.82rem] text-muted hover:text-ink"
-        >
-          more filters{extras > 0 && <span className="rounded-full bg-blue px-1.5 text-[0.72rem] text-on-accent">{extras}</span>}
-          <span aria-hidden="true" className={`transition-transform ${more ? "rotate-180" : ""}`}>▾</span>
-        </button>
+        </div>
       </div>
 
       {more && (
-        <div id={panelId} className="grid gap-5 border-t border-line py-3 sm:grid-cols-[auto_1fr] sm:gap-x-8 sm:py-4 lg:grid-cols-[auto_minmax(0,1fr)_minmax(16rem,24rem)]">
+        <div id={panelId} className="find-more grid gap-5 py-3 sm:grid-cols-[auto_1fr] sm:gap-x-8 sm:py-4 lg:grid-cols-[auto_minmax(0,1fr)_minmax(16rem,24rem)]">
           <div role="radiogroup" aria-label="Your experience">
             <p className="mb-2 text-[0.82rem] text-faint">Your experience</p>
             <div className="flex">
@@ -236,16 +260,14 @@ export function FindFilters({ picks, onChange, hf, footer }: {
                 readOnly={topicsFull}
                 maxLength={300}
                 enterKeyHint="search"
-                className="min-h-11 min-w-0 flex-1 border sm:min-h-9 border-line-strong bg-bg px-3 text-[0.82rem] outline-none focus-visible:border-blue read-only:cursor-not-allowed"
+                className="h-10 min-w-0 flex-1 border border-line-strong bg-bg px-3 text-[0.82rem] outline-none focus-visible:border-blue read-only:cursor-not-allowed sm:h-8"
               />
-              <button type="submit" disabled={topicsFull} className="btn-ghost min-h-11 text-[0.82rem] sm:min-h-9">add</button>
+              <button type="submit" disabled={topicsFull} className="btn-ghost h-10 min-h-0 text-[0.82rem] sm:h-8">add</button>
             </div>
             {topicChips.length > 0 && <div className="mt-2 flex flex-wrap gap-2">{topicChips}</div>}
           </form>
         </div>
       )}
-
-      {footer && <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-line py-2.5 text-[0.82rem] text-faint">{footer}</div>}
     </div>
   );
 }
