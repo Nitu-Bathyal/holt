@@ -41,9 +41,9 @@ export const EDGE_CACHE = "public, max-age=0, must-revalidate, s-maxage=60";
  */
 export const EDGE_CACHE_CDN = "public, s-maxage=60, stale-while-revalidate=300";
 
-// Exact paths. /find and /hacktoberfest are left out: they can carry a search
-// that is still running, with its job id.
-const PAGES = new Set(["/", "/discover", "/examples", "/example-ai-report", "/pricing", "/how-it-works", "/terms", "/privacy", "/refunds", "/contact"]);
+// Exact paths. /hacktoberfest is left out: it can carry a search that is
+// still running, with its job id. Account pages (lib/gate.ts) never belong here.
+const PAGES = new Set(["/", "/examples", "/example-ai-report", "/pricing", "/how-it-works", "/terms", "/privacy", "/refunds", "/contact"]);
 
 // First segments that are never a GitHub owner and that the proxy never sees (its matcher leaves them out); refused here too.
 const NOT_PAGES = new Set(["api", "badge", "_next"]);
@@ -72,8 +72,6 @@ export function edgeCacheKind(q: CacheQuestion): "page" | "report" | null {
   if (PAGES.has(path)) return "page";
   const parts = path.split("/").filter(Boolean);
   if (parts.length !== 2) return null;
-  // A language board: /discover/python.
-  if (parts[0] === "discover") return "page";
   // A report at its plain address. Another time budget or the AI tab (?days=, ?mode=) is asked for rarely, and each would need its own check.
   if (!isAppRoute(parts[0]) && !NOT_PAGES.has(parts[0].toLowerCase()) && isValidRepo(parts[0], parts[1]) && q.search === "") return "report";
   return null;

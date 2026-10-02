@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { test } from "node:test";
 import { EXAMPLES, isExample } from "./examples.ts";
-import { findGate, pasteHref, pasteTarget, reportAccess, signInHref, startGate } from "./gate.ts";
+import { arrivalGate, findGate, needsAccount, pasteHref, pasteTarget, reportAccess, signedInGate, signInHref, startGate } from "./gate.ts";
 import { afterSignIn } from "./home.ts";
 
 const back = (href: string) => new URL(href, "https://holt.test").searchParams.get("callbackUrl");
@@ -98,4 +98,98 @@ test("a paste box asks whether the repo exists before a sign-in wall, and only t
   assert.equal(await pasteTarget("octo/typo", true, says(false)), "/octo/typo");
   assert.equal(await pasteTarget(EXAMPLES[0].repo, false, says(false)), `/${EXAMPLES[0].repo}`);
   assert.deepEqual(asked, []);
+});
+
+// Account pages (Find, Browse, Compare, pre-flight, the dashboard, settings).
+const SIGNED_OUT_COOKIES = [[], ["__cf_bm"], ["authjs.csrf-token", "authjs.callback-url", "holt-rail"]];
+const SESSIONS = ["authjs.session-token", "__Secure-authjs.session-token", "__Secure-authjs.session-token.0"];
+const ACCOUNT_URLS = [
+  "/discover", "/discover/", "/discover?sort=stars&topic=cli", "/discover/python", "/discover/c%2B%2B?sort=trending",
+  "/find", "/find?go=1&lang=python&days=7", "/compare", "/compare?repos=pallets/flask,psf/requests", "/preflight?pr=https://github.com/o/r/pull/1",
+  "/me", "/me/repos?show=saved", "/settings", "/settings/profile",
+];
+const OPEN_URLS = [
+  "/", "/hacktoberfest", "/hacktoberfest?lang=go", "/examples", "/example-merge-plan", "/pricing", "/how-it-works", "/badge", "/badge?repo=o/r",
+  "/terms", "/privacy", "/refunds", "/contact", "/signin?callbackUrl=%2Fdiscover", "/alerts/unsubscribe?t=x", "/pricing/thanks",
+  "/pallets/flask", "/pallets/flask?mode=ai",
+  // GitHub owners that only start like an account page.
+  "/find/repo", "/compare/repo", "/preflight/repo", "/discovery/repo", "/finder", "/mes/repo",
+];
+
+const arrive = (url: string, cookies: string[]) => {
+  const [pathname, query] = url.split("?");
+  return arrivalGate(pathname, query ? `?${query}` : "", cookies);
+};
+
+test("signed out, arriving on an account page goes to sign-in, then back to that exact page", () => {
+  for (const cookies of SIGNED_OUT_COOKIES) {
+    for (const url of ACCOUNT_URLS) {
+      const to = arrive(url, cookies);
+      assert.ok(to, `${url} with [${cookies}]`);
+      assert.ok(to.startsWith("/signin?callbackUrl="), to);
+      assert.equal(back(to), url);
+      // /signin accepts it as a place to come back to.
+      assert.equal(afterSignIn(back(to)), url);
+    }
+  }
+});
+
+test("a session cookie is let through to the page, which asks who it is", () => {
+  for (const session of SESSIONS) {
+    for (const url of ACCOUNT_URLS) assert.equal(arrive(url, [session]), null, `${url} with ${session}`);
+  }
+  // A cookie that only looks like one is not a session.
+  for (const fake of ["session-token", "authjs.session-token-x", "xauthjs.session-token", "holt-signed-in"]) {
+    assert.ok(arrive("/discover", [fake]), fake);
+  }
+});
+
+test("the public pages, reports and repos named like an account page stay open", () => {
+  for (const url of OPEN_URLS) assert.equal(arrive(url, []), null, url);
+});
+
+test("every account page asks the server who is signed in before it loads anything", () => {
+  const app = join(import.meta.dirname, "../app");
+  for (const page of ["find", "discover", "discover/[language]", "compare", "preflight"]) {
+    const src = readFileSync(join(app, page, "page.tsx"), "utf-8");
+    // The page, and its metadata when that is worked out per request.
+    const entries = src.split(/^export (?:default )?async function /m).slice(1);
+    assert.ok(entries.length >= 1, page);
+    for (const body of entries) {
+      const gate = body.indexOf("await requireUser(");
+      assert.ok(gate >= 0, `${page}: ${body.slice(0, 20)} never asks`);
+      // Before it, only the request's own address is read.
+      assert.deepEqual(body.slice(0, gate).match(/await [^;]+/g)?.filter((a) => !/^await (searchParams|Promise\.all\(\[params, searchParams\]\))$/.test(a)) ?? [], [], page);
+    }
+    assert.doesNotMatch(src, /currentUser\(/, `${page}: no path for a visitor without an account`);
+  }
+  // The board itself can't be rendered without a user.
+  assert.match(readFileSync(join(import.meta.dirname, "../components/discover/discover-view.tsx"), "utf-8"), /user: SessionUser;/);
+});
+
+test("signed out: the data routes behind account pages answer 401 before reading anything", () => {
+  const refused = signedInGate(null);
+  assert.ok(refused);
+  assert.equal(refused.status, 401);
+  assert.equal(refused.error.code, "unauthorized");
+  assert.equal(signedInGate("user-1"), null);
+  const api = join(import.meta.dirname, "../app/api");
+  for (const route of ["preflight", "preflight-jobs/[job]/events", "merge-plan-jobs/[job]/events", "playbook-jobs/[job]/events"]) {
+    const src = readFileSync(join(api, route, "route.ts"), "utf-8");
+    const get = src.slice(src.indexOf("export async function GET"));
+    const gate = get.indexOf("signedInGate(");
+    const data = get.search(/preflightState\(|proxyJobEvents\(/);
+    assert.ok(gate >= 0 && data > gate, `${route}: the gate comes before the data`);
+  }
+});
+
+test("the sign-in wall never appears as a page a crawler is sent to", () => {
+  const app = join(import.meta.dirname, "../app");
+  const sitemap = readFileSync(join(app, "sitemap.ts"), "utf-8");
+  for (const path of ["/find", "/discover", "/compare", "/preflight"]) {
+    assert.ok(needsAccount(path), path);
+    assert.doesNotMatch(sitemap, new RegExp(`["\`]${path}["/\`]`), `sitemap lists ${path}`);
+  }
+  const robots = readFileSync(join(app, "robots.ts"), "utf-8");
+  for (const path of ["/find", "/discover", "/compare", "/preflight", "/me/", "/settings"]) assert.match(robots, new RegExp(`"${path}[$"]`), `robots.txt allows ${path}`);
 });

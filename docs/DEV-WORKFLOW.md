@@ -40,7 +40,7 @@ the live site; the rest of each page is illustrative. Which URL shows which stat
 | `/example/new-thing`, `/tiny/thing` | The same, ending in **Not enough evidence** (any name containing `tiny`, `empty` or `new-` does). |
 | `/mock/outdated` | The "we couldn't refresh this" fallback (an old report whose fresh check fails). |
 | `/doesnotexist/x`, `/private/x` | The repository-not-found page. |
-| `/discover`, `/find`, `/hacktoberfest`, `/compare?repos=home-assistant/core,pallets/flask` | The list pages, filled from the mock repos. |
+| `/discover`, `/find`, `/hacktoberfest`, `/compare?repos=home-assistant/core,pallets/flask` | The list pages, filled from the mock repos. All but `/hacktoberfest` need the dev sign-in. |
 | `/signin`, `/settings`, `/me/repos`, `/for-you` | Signed-out versions until you sign in (below). |
 
 Other switches: `MOCK_PRO=0` (hide
