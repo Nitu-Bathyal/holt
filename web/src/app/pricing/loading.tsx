@@ -7,9 +7,9 @@ export default function Loading() {
     <LoadingTransition>
       <SkeletonRegion>
         <PageHeadSkeleton />
-        <div className="wrap py-10 sm:py-14">
-          <ul className="grid gap-4 lg:grid-cols-3">
-            {[0, 1, 2].map((i) => (
+        <div className="wrap py-8 sm:py-10">
+          <ul className="grid gap-4 md:grid-cols-2">
+            {[0, 1].map((i) => (
               <li key={i} className="flex flex-col border border-line-strong bg-panel p-6 shadow-soft">
                 <Skeleton className="h-3 w-24" />
                 <span className="mt-3 flex h-[2.4rem] items-center gap-3">
@@ -18,7 +18,7 @@ export default function Loading() {
                 </span>
                 <SkeletonText lines={2} lineHeight="1.65rem" bar="0.85rem" className="mt-3" />
                 <span className="mt-5 block flex-1 space-y-2">
-                  <SkeletonText lines={3} lineHeight="1.5rem" bar="0.75rem" last="75%" />
+                  <SkeletonText lines={8} lineHeight="1.5rem" bar="0.75rem" last="75%" />
                 </span>
                 <Skeleton className="mt-6 h-11 w-full" />
               </li>
