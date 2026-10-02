@@ -1,4 +1,4 @@
-// What the AI tab offers around the merge plan, from the server's answer
+// What the merge plan page offers around the plan, from the server's answer
 // (API.md, Merge plan). Pure, so it can be tested without React.
 import type { MergePlanState } from "./types";
 

@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { creditsNote, evidenceLabel, mergeTone, noReplyTone, statLines, fieldLabel, outcomeLabel } from "./format.ts";
+import { evidenceLabel, mergeTone, noReplyTone, statLines, fieldLabel, outcomeLabel } from "./format.ts";
 
 const stats = (attempts: number, merged: number, noReply: number) => ({
   outsider_attempts: attempts, outsider_merged: merged, no_reply: noReply,
@@ -36,13 +36,6 @@ test("evidence labels are plain words, never the engine's values", () => {
     { label: "Merged after review", bad: false });
   assert.equal(evidenceLabel({ kind: "repo_kind", value: "real_software" }).label, "Kind of project");
   assert.equal(evidenceLabel({ kind: "onboarding", value: "boilerplate" }).label, "Contributor guide");
-});
-
-test("creditsNote says free only when every credit is free", () => {
-  const c = { ai_available: true, balance: 13, can_claim: false, claim_every_days: 7, free: 3, next_claim_at: null, purchased: 10 };
-  assert.equal(creditsNote(c), "13 AI reports left. This one uses 1. A failed report doesn't count.");
-  assert.equal(creditsNote({ ...c, balance: 3, purchased: 0 }), "3 free AI reports left. This one uses 1. A failed report doesn't count.");
-  assert.equal(creditsNote({ ...c, balance: 1, free: 1, purchased: 0 }).startsWith("1 free AI report left."), true);
 });
 
 test("the merge plan's AI findings use the site's labels", () => {

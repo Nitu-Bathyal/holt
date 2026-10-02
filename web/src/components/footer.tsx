@@ -35,7 +35,7 @@ const SIGN_OFF = "git commit --to-the-right-repo";
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
 /** First path segments that are the site's own pages, not a repository owner. */
-const SITE_ROUTES = new Set(["api", "badge", "compare", "contact", "discover", "example-ai-report", "examples", "find", "hacktoberfest", "how-it-works", "me", "preflight", "pricing", "privacy", "profile", "refunds", "settings", "signin", "terms"]);
+const SITE_ROUTES = new Set(["api", "badge", "compare", "contact", "discover", "example-ai-report", "example-merge-plan", "examples", "find", "hacktoberfest", "how-it-works", "me", "preflight", "pricing", "privacy", "profile", "refunds", "settings", "signin", "terms"]);
 
 /** /owner/repo, and not one of the site's own two-part pages such as /me/repos. */
 function isReportPath(path: string | null): boolean {

@@ -16,8 +16,8 @@ export function ErrorPanel({ error, repo, onRetry, retryHref }: { error: ApiErro
       <div className="mt-5 flex flex-wrap gap-3">
         {account && (
           <>
-            {repo && <Link href={`/${repo}`} className="btn-primary">back to the free report</Link>}
-            {error.code === "quota_exceeded" && <Link href="/settings/ai-reports" className="btn-ghost">claim a free AI report</Link>}
+            {repo && <Link href={`/${repo}`} className="btn-primary">back to the report</Link>}
+            {error.code === "quota_exceeded" && <Link href="/pricing" className="btn-ghost">see Pro</Link>}
           </>
         )}
         {(error.code === "unauthorized" || error.code === "needs_key") && (

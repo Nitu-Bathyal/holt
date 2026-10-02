@@ -18,7 +18,7 @@ function Meta({ r }: { r: YourRepo }) {
   const parts: React.ReactNode[] = [];
   if (r.checking) parts.push(<span className="text-blue">checking now</span>);
   if (r.savedAt) parts.push(<>saved <time dateTime={r.savedAt}>{timeAgo(r.savedAt)}</time></>);
-  else if (r.checkedAt) parts.push(<>{r.ai ? "AI report" : "checked"} <time dateTime={r.checkedAt}>{timeAgo(r.checkedAt)}</time></>);
+  else if (r.checkedAt) parts.push(<>checked <time dateTime={r.checkedAt}>{timeAgo(r.checkedAt)}</time></>);
   return (
     <p className="mt-0.5 text-[0.72rem] text-faint">
       {parts.map((p, i) => <span key={i}>{i > 0 && " · "}{p}</span>)}
@@ -66,7 +66,7 @@ export function RepoRows({ rows, saved, compact = false }: { rows: YourRepo[]; s
               <div className="flex min-w-0 items-center gap-3">
                 <RepoAvatar repo={r.repo} size={compact ? 28 : 32} />
                 <div className="min-w-0">
-                  <Link href={`/${r.repo}${r.ai ? "?mode=ai" : ""}`} onClick={() => rememberBack(r.repo)} className={`block truncate font-semibold tracking-tight after:absolute after:inset-0 hover:text-blue ${compact ? "text-[0.88rem]" : ""}`}>
+                  <Link href={`/${r.repo}`} onClick={() => rememberBack(r.repo)} className={`block truncate font-semibold tracking-tight after:absolute after:inset-0 hover:text-blue ${compact ? "text-[0.88rem]" : ""}`}>
                     <span className="font-normal text-muted">{owner}/</span>{name}
                   </Link>
                   <Meta r={r} />
