@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { ABOUT_ROWS, aboutCells, bareNames, cells, compareHref, compareTitle, contenders, leaders, parseList, pickRepo, ROWS, savedToAdd } from "./compare.ts";
+import { ABOUT_ROWS, aboutCells, bareNames, cells, compareHref, compareTitle, contenders, leaders, MAX, parseList, pickRepo, ROWS, savedToAdd, SUGGESTIONS } from "./compare.ts";
 import { humanHours } from "./format.ts";
 import type { Stats, Verdict } from "./types.ts";
 
@@ -16,6 +16,16 @@ test("parseList takes names and URLs, split by commas or spaces, without duplica
 test("compareHref", () => {
   assert.equal(compareHref([]), "/compare");
   assert.equal(compareHref(["a/b", "c/d"]), "/compare?repos=a/b,c/d");
+});
+
+test("removing the last repo ends on the empty page, and each suggestion there loads a full comparison", () => {
+  const list = ["a/b"];
+  assert.equal(compareHref(list.filter((r) => r !== "a/b")), "/compare");
+  for (const s of SUGGESTIONS) {
+    assert.ok(s.repos.length >= 2 && s.repos.length <= MAX, s.label);
+    // The link reads back as the same list: nothing dropped or renamed on the way in.
+    assert.deepEqual(parseList(compareHref(s.repos).split("repos=")[1]), s.repos);
+  }
 });
 
 test("leaders mark the best column on each number, ties included", () => {
@@ -35,22 +45,22 @@ const ASK = "Which one will review your pull request?";
 
 test("compareTitle goes by verdict first; the merge rate only breaks a tie", () => {
   // A higher merge rate doesn't beat a better verdict.
-  assert.equal(compareTitle(true, [col("a/b", "long_shot", { outsider_merged: 9 }), col("c/d", "viable", { outsider_merged: 3 })]), "c/d is the one worth your time.");
-  assert.equal(compareTitle(true, [col("a/b", "viable", { outsider_merged: 8 }), col("c/d", "viable")]), "Both are worth your time; a/b merges outsiders most often.");
-  assert.equal(compareTitle(true, [col("a/b", "viable"), col("c/d", "viable"), col("e/f", "viable")]), "All 3 are worth your time.");
-  assert.equal(compareTitle(true, [col("a/b", "viable"), col("c/d", "viable", { outsider_merged: 7 }), col("e/f", "not_viable", { outsider_merged: 9 })]), "2 of these are worth your time; c/d merges outsiders most often.");
+  assert.equal(compareTitle([col("a/b", "long_shot", { outsider_merged: 9 }), col("c/d", "viable", { outsider_merged: 3 })]), "c/d is the one worth your time.");
+  assert.equal(compareTitle([col("a/b", "viable", { outsider_merged: 8 }), col("c/d", "viable")]), "Both are worth your time; a/b merges outsiders most often.");
+  assert.equal(compareTitle([col("a/b", "viable"), col("c/d", "viable"), col("e/f", "viable")]), "All 3 are worth your time.");
+  assert.equal(compareTitle([col("a/b", "viable"), col("c/d", "viable", { outsider_merged: 7 }), col("e/f", "not_viable", { outsider_merged: 9 })]), "2 of these are worth your time; c/d merges outsiders most often.");
   // django vs flask: the long shot is the best of them, and the title says it's still a long shot.
-  assert.equal(compareTitle(true, [col("pallets/flask", "not_viable", { outsider_merged: 1 }), col("django/django", "long_shot")]), "django/django is your best shot here, but still a long shot.");
-  assert.equal(compareTitle(true, [col("a/b", "long_shot", { outsider_merged: 1 }), col("c/d", "long_shot")]), "No sure bets here; c/d is the best of the long shots.");
-  assert.equal(compareTitle(true, [col("a/b", "long_shot"), col("c/d", "long_shot")]), "No sure bets here, only long shots.");
-  assert.equal(compareTitle(true, [col("a/b", "not_viable"), col("c/d", "insufficient_evidence")]), "None of these looks like a good bet right now.");
+  assert.equal(compareTitle([col("pallets/flask", "not_viable", { outsider_merged: 1 }), col("django/django", "long_shot")]), "django/django is your best shot here, but still a long shot.");
+  assert.equal(compareTitle([col("a/b", "long_shot", { outsider_merged: 1 }), col("c/d", "long_shot")]), "No sure bets here; c/d is the best of the long shots.");
+  assert.equal(compareTitle([col("a/b", "long_shot"), col("c/d", "long_shot")]), "No sure bets here, only long shots.");
+  assert.equal(compareTitle([col("a/b", "not_viable"), col("c/d", "insufficient_evidence")]), "None of these looks like a good bet right now.");
 });
 
-test("compareTitle keeps the question for the example, a single repo, or one not checked yet", () => {
+test("compareTitle keeps the question for an empty page, a single repo, or one not checked yet", () => {
   const two = [col("a/b", "viable"), col("c/d", "long_shot")];
-  assert.equal(compareTitle(false, two), ASK);
-  assert.equal(compareTitle(true, [col("a/b", "viable")]), ASK);
-  assert.equal(compareTitle(true, [...two, null]), ASK);
+  assert.equal(compareTitle([]), ASK);
+  assert.equal(compareTitle([col("a/b", "viable")]), ASK);
+  assert.equal(compareTitle([...two, null]), ASK);
 });
 
 test("only repos worth trying or long shots can lead a row", () => {

@@ -1,6 +1,6 @@
 "use client";
 
-// The AI tab: this user's merge plan for the repo (API.md, Merge plan). It
+// The merge plan page: this user's merge plan for the repo (API.md, Merge plan). It
 // loads its own state, follows a plan being made, and offers to make one. The
 // server checks and charges; the button is only a hint.
 import Link from "next/link";
@@ -8,6 +8,7 @@ import { startTransition, useCallback, useEffect, useRef, useState } from "react
 import { MergePlanView } from "@/components/merge-plan/merge-plan-view";
 import { PlanProgress } from "@/components/merge-plan/plan-progress";
 import { failedMessage, leftLabel, planOffer } from "@/lib/merge-plan-offer";
+import { EXAMPLE_PATH } from "@/lib/example-report";
 import type { ApiError, MergePlan, MergePlanState } from "@/lib/types";
 
 type Run =
@@ -114,7 +115,7 @@ export function MergePlanPanel({ repo }: { repo: string }) {
           Merge plans aren&apos;t available yet. When they are, one reads this repo&apos;s pull request threads and gives you a step-by-step plan for your first
           pull request.
         </p>
-        <Link href="/example-ai-report" className="text-link tap mt-4 inline-block text-[0.92rem]">
+        <Link href={EXAMPLE_PATH} className="text-link tap mt-4 inline-block text-[0.92rem]">
           see an example plan →
         </Link>
       </div>
@@ -149,7 +150,7 @@ export function MergePlanPanel({ repo }: { repo: string }) {
               <span className="mr-1 tabular-nums text-ink">{offer.left}</span> left
             </span>
           )}
-          <Link href="/example-ai-report" className="text-link tap text-[0.88rem]">
+          <Link href={EXAMPLE_PATH} className="text-link tap text-[0.88rem]">
             see an example
           </Link>
         </div>

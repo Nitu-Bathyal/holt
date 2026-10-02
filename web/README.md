@@ -36,14 +36,14 @@ npm run dev -- -p $PORT
 | Path | What |
 |---|---|
 | `/` | Landing: paste box, find CTA, Hacktoberfest banner, URL trick |
-| `/{owner}/{repo}` | Report. Signed in: starts a rules analysis if nothing is cached and streams progress. `?mode=ai` for the AI report, `?days=` for the time budget. Signed out: the curated examples in full, any other repo as a teaser (verdict, reason, odds bar and one number; the rest locked behind sign-in). With nothing cached it runs the rules check first, for people only (never bots), with a ticket only this page mints and the server's per-IP limit; over the limit it asks for sign-in (`src/lib/gate.ts`, `src/lib/anon-check.ts`) |
-| `/examples` | The curated example reports anyone can read without signing in (`src/lib/examples.ts`), plus the example AI report |
+| `/{owner}/{repo}` | Report. Signed in: starts a rules analysis if nothing is cached and streams progress. `?mode=ai` for the merge plan, `?days=` for the time budget. Signed out: the curated examples in full, any other repo as a teaser (verdict, reason, odds bar and one number; the rest locked behind sign-in). With nothing cached it runs the rules check first, for people only (never bots), with a ticket only this page mints and the server's per-IP limit; over the limit it asks for sign-in (`src/lib/gate.ts`, `src/lib/anon-check.ts`) |
+| `/examples` | The curated example reports anyone can read without signing in (`src/lib/examples.ts`), plus the example merge plan |
 | `/github.com/o/r`, `/https://github.com/o/r`, `/o/r/pulls`… | Redirect to `/o/r` (`src/proxy.ts`) |
 | `/{owner}/{repo}/opengraph-image` | Per-repo share image |
 | `/find` | Beginner flow: languages, time, Hacktoberfest → welcoming repos + starter issues |
 | `/compare?repos=a/b,c/d` | Up to 4 repos side by side |
-| `/example-ai-report` | A recorded merge plan (the AI report) for processing/p5.js, readable without signing in; `?view=locked` shows it before unlocking. Static: `src/lib/example-merge-plan.json` |
-| `/signin`, `/settings`, `/pricing`, `/me/repos`, `/how-it-works` | Account and free AI reports, plans, history, methodology |
+| `/example-merge-plan` | A recorded merge plan for processing/p5.js, readable without signing in; `?view=locked` shows it before unlocking. Static: `src/lib/example-merge-plan.json` |
+| `/signin`, `/settings`, `/pricing`, `/me/repos`, `/how-it-works` | Account, plan and purchases, pricing, history, methodology |
 | `/for-you` | Picked for you: repos Holt rates Worth your time that match the profile and merged pull requests, with reasons and starter issues (`GET /v1/me/recommendations`). Two picks free; the rest with a plan. `MOCK_PLAN=pro` shows every pick in the mock |
 | `/me/contributions` | My Contributions: a connected user's public pull requests with Holt's verdict per repo, "found via Holt", refresh with a 15-minute cooldown |
 | `/settings/alerts`, the bell | PR watch (API.md, "PR watch (alerts)"): the bell in the app's top bar, a mute toggle and a "new" tag on My Contributions rows, the "turn on alerts" card, and the alert settings. All hidden while the server has it switched off (`access.state` is `unavailable`). The browser goes through `/api/alerts/*`; the email address is the signed-in account's own, added there, never typed. `MOCK_PR_WATCH=0` hides it in the mock, `MOCK_PR_WATCH=ended` shows it after the 14 days |

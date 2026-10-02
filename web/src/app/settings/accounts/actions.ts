@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { oauthProviders, signIn } from "@/auth";
 import { connectGitHub, disconnectGitHub, setStatsOptOut } from "@/lib/api";
-import { linkedGitHubId, PENDING_COOKIE, unlinkGitHubIfNotSignIn } from "@/lib/github-account";
+import { linkedGitHubId, PENDING_COOKIE, PENDING_COOKIE_PATH, unlinkGitHubIfNotSignIn } from "@/lib/github-account";
 import { currentUser } from "@/lib/session";
 import { ACCOUNT_SETTINGS, connectFailed, CONNECT_GITHUB, PRIVACY_SETTINGS } from "@/lib/settings";
 
@@ -37,7 +37,7 @@ export async function connect(form: FormData) {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
-    path: "/api/github/connect",
+    path: PENDING_COOKIE_PATH,
     maxAge: 600,
   });
   await signIn("github", { redirectTo: "/api/github/connect" });

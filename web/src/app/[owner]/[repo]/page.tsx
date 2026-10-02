@@ -101,7 +101,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
 
   // Only the report (and, signed in, whether it's saved: one database read)
   // blocks the page; starter issues (a live GitHub call) stream in.
-  // The AI tab is the merge plan, made from the free report: its header reads that.
+  // ?mode=ai is the merge plan, made from the free report: its header reads that.
   const [report, saved] = await Promise.all([
     getReport(name, "rules", days),
     user ? savedState(user.id, name) : null,
@@ -186,7 +186,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
 
         {!signedIn && access === "full" && report.ok && <ExampleNote />}
 
-        {/* Switching between the free and AI tabs crossfades the report, not the page. */}
+        {/* Switching between the report and the merge plan crossfades the body, not the page. */}
         <ViewTransition key={mode} name="report-body" share="swap" enter="swap" exit="swap" default="none">
           <div>
             {mode === "ai" ? (

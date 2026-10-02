@@ -22,5 +22,5 @@ test("sign-in: the example caption stays below the decorative report sheet", asy
     return el.contains(document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2));
   })).toBe(true);
   await link.click();
-  await expect(page).toHaveURL(/\/example-ai-report$/);
+  await expect(page).toHaveURL(/\/example-merge-plan$/);
 });

@@ -17,11 +17,14 @@ export async function DiscoverView({ sort, language, topic }: { sort: DiscoverSo
   const [result, saved] = await Promise.all([discover(sort, language, topic), savedNames(user?.id)]);
   const here = boardHref({ sort, language, topic });
   const data = result.ok ? result.data : null;
-  // The order and language chips, in the tray.
+  // The order and language chips: one row in the bar once it's wide enough, two before that.
+  const chip = "inline-flex h-10 items-center whitespace-nowrap border px-3 text-[0.8rem] transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue sm:h-8";
+  const chipOn = "border-blue bg-blue text-on-accent";
+  const chipOff = "border-line-strong text-muted hover:border-blue hover:text-ink";
   const filters = (
-    <>
-      <nav aria-label="Order" className="py-3 sm:pb-3 sm:pt-4">
-        <ul className="grid grid-cols-3 sm:inline-grid">
+    <div className="find-bar flex flex-wrap items-center gap-x-4 gap-y-1.5 py-1.5 @3xl:flex-nowrap">
+      <nav aria-label="Order" className="w-full @3xl:w-auto @3xl:shrink-0">
+        <ul className="grid grid-cols-3 @3xl:flex">
           {SORTS.map((s, i) => (
             <li key={s.id} className={i ? "-ml-px" : ""}>
               <Link
@@ -29,7 +32,7 @@ export async function DiscoverView({ sort, language, topic }: { sort: DiscoverSo
                 href={boardHref({ sort: s.id, language, topic })}
                 scroll={false}
                 aria-current={s.id === sort ? "page" : undefined}
-                className={`relative flex min-h-11 items-center sm:min-h-9 justify-center border px-2 text-center text-[0.8rem] leading-tight transition-colors sm:px-4 sm:text-[0.82rem] ${s.id === sort ? "z-10 border-green bg-green font-semibold text-on-accent" : "border-line-strong text-muted hover:border-blue hover:text-ink"}`}
+                className={`relative flex h-10 items-center justify-center border px-2 text-center text-[0.78rem] leading-tight sm:whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-blue sm:h-8 sm:px-3.5 sm:text-[0.8rem] ${s.id === sort ? "z-10 border-green bg-green font-semibold text-on-accent" : "border-line-strong text-muted hover:border-blue hover:text-ink"}`}
               >
                 {s.label}
               </Link>
@@ -38,11 +41,10 @@ export async function DiscoverView({ sort, language, topic }: { sort: DiscoverSo
         </ul>
       </nav>
       {data && data.languages.length > 0 && (
-        <nav aria-label="Language" className="border-t border-line">
-          <ul className="flex gap-2 overflow-x-auto py-3 [scrollbar-width:none] sm:flex-wrap sm:overflow-visible sm:py-4">
+        <nav aria-label="Language" className="w-full min-w-0 @3xl:w-auto @3xl:flex-1">
+          <ul className="flex gap-1.5 overflow-x-auto pr-6 [mask-image:linear-gradient(to_right,#000_calc(100%-1.5rem),transparent)] [scrollbar-width:none]">
             <li className="shrink-0">
-              <Link rel="nofollow" href={boardHref({ sort, topic })} scroll={false} aria-current={!language ? "page" : undefined}
-                className={`inline-flex min-h-11 items-center sm:min-h-9 whitespace-nowrap border px-3.5 text-[0.82rem] transition-colors ${!language ? "border-blue bg-blue text-on-accent" : "border-line-strong text-muted hover:border-blue hover:text-ink"}`}>
+              <Link rel="nofollow" href={boardHref({ sort, topic })} scroll={false} aria-current={!language ? "page" : undefined} className={`${chip} ${!language ? chipOn : chipOff}`}>
                 Any language
               </Link>
             </li>
@@ -50,8 +52,7 @@ export async function DiscoverView({ sort, language, topic }: { sort: DiscoverSo
               const on = l.name.toLowerCase() === language?.toLowerCase();
               return (
                 <li key={l.name} className="shrink-0">
-                  <Link rel="nofollow" href={boardHref({ sort, language: l.name, topic })} scroll={false} aria-current={on ? "page" : undefined}
-                    className={`inline-flex min-h-11 items-center sm:min-h-9 gap-2 whitespace-nowrap border px-3.5 text-[0.82rem] transition-colors ${on ? "border-blue bg-blue text-on-accent" : "border-line-strong text-muted hover:border-blue hover:text-ink"}`}>
+                  <Link rel="nofollow" href={boardHref({ sort, language: l.name, topic })} scroll={false} aria-current={on ? "page" : undefined} className={`${chip} gap-2 ${on ? chipOn : chipOff}`}>
                     <LangDot color={langColor(l.name)} />
                     {l.name}
                   </Link>
@@ -61,23 +62,20 @@ export async function DiscoverView({ sort, language, topic }: { sort: DiscoverSo
           </ul>
         </nav>
       )}
-    </>
+    </div>
   );
 
   return (
     <PageTransition>
       <FindFrame tab="browse" title={boardTitle(sort, language)} signedIn={Boolean(user)}>
         <div className="find-tray">{filters}</div>
-        <div className="mb-4 mt-5 flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 text-[0.8rem] text-faint">
-          {data && data.repos.length > 0 && <p>{data.repos.length} repo{data.repos.length === 1 ? "" : "s"}, {sort === "welcoming" ? "most welcoming first" : sort === "stars" ? "biggest first" : "most checked first"}</p>}
-          {topic && (
-            <p>
-              Only repos tagged <strong className="font-semibold text-ink">{topic}</strong>.{" "}
-              <Link rel="nofollow" href={boardHref({ sort, language })} className="text-link">Show all topics</Link>
-            </p>
-          )}
-        </div>
-        <section aria-label={boardTitle(sort, language)}>
+        {topic && (
+          <p className="mt-4 text-[0.8rem] text-faint">
+            Only repos tagged <strong className="font-semibold text-ink">{topic}</strong>.{" "}
+            <Link rel="nofollow" href={boardHref({ sort, language })} className="text-link">Show all topics</Link>
+          </p>
+        )}
+        <section aria-label={boardTitle(sort, language)} className="mt-5">
           {!result.ok ? (
             <ErrorPanel error={result.error} retryHref={here} />
           ) : data!.repos.length ? (
