@@ -16,7 +16,7 @@ restarts or depends on it.
 | Alertmanager | Sends the alerts: email, a webhook, a dead man's ping |
 | Grafana | Two dashboards, on `127.0.0.1` only |
 
-Prometheus rather than VictoriaMetrics: at this size (about 4,000 series)
+Prometheus rather than VictoriaMetrics: at this size (a few thousand series)
 both fit in 100 MB, and Prometheus evaluates the alert rules and tests them
 (`promtool`) itself, where VictoriaMetrics needs a second service for that.
 
