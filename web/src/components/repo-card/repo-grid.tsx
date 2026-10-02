@@ -28,6 +28,8 @@ type Common = {
   fadeUnsaved?: boolean;
   /** False leaves the verdict off the cards (the focus view keeps it): for a list where every repo has the same one. */
   verdict?: boolean;
+  /** Each card says why this repo for this person (a pick's first `why` line). */
+  why?: boolean;
 };
 
 type Card = (r: CardRepo) => React.ReactNode;
@@ -86,7 +88,7 @@ type ListProps = Common & { repos: CardRepo[]; layout: (card: Card) => React.Rea
 
 /** Owns which repos are saved, so a card and its focus view agree, and lays the cards out around the focus view. */
 function FocusList(props: ListProps) {
-  const { saved, actions, fadeUnsaved, verdict } = props;
+  const { saved, actions, fadeUnsaved, verdict, why } = props;
   const [set, setSet] = useState(() => [...changed].reduce((s, [repo, v]) => withSaved(s, repo, v), savedSet(saved ?? [])));
   const isSaved = (repo: string) => set.has(repo.toLowerCase());
 
@@ -103,7 +105,7 @@ function FocusList(props: ListProps) {
     return extra && button ? <>{extra}{button}</> : extra ?? button;
   };
   const card: Card = (r) => (
-    <ListCard r={r} report={reportHref(r.repo, props.days)} actions={actionsFor(r.repo, true)} faded={Boolean(fadeUnsaved && saved && !isSaved(r.repo))} verdict={verdict} />
+    <ListCard r={r} report={reportHref(r.repo, props.days)} actions={actionsFor(r.repo, true)} faded={Boolean(fadeUnsaved && saved && !isSaved(r.repo))} verdict={verdict} why={why} />
   );
 
   return (
@@ -116,11 +118,11 @@ function FocusList(props: ListProps) {
 // Opens a card in the focus view; absent until the address can be read (then cards are plain links).
 const OpenFocus = createContext<((repo: string) => void) | null>(null);
 
-function ListCard({ r, report, actions, faded, verdict }: { r: CardRepo; report: string; actions: React.ReactNode; faded: boolean; verdict?: boolean }) {
+function ListCard({ r, report, actions, faded, verdict, why }: { r: CardRepo; report: string; actions: React.ReactNode; faded: boolean; verdict?: boolean; why?: boolean }) {
   const open = use(OpenFocus);
   return (
     <div className={`h-full transition-opacity duration-300 ${faded ? "opacity-55 focus-within:opacity-100 hover:opacity-100" : ""}`}>
-      <RepoCard r={r} report={report} focusHref={`?${PARAM}=${encodeURIComponent(r.repo)}`} onOpen={open ? () => open(r.repo) : undefined} actions={actions} verdict={verdict} />
+      <RepoCard r={r} report={report} focusHref={`?${PARAM}=${encodeURIComponent(r.repo)}`} onOpen={open ? () => open(r.repo) : undefined} actions={actions} verdict={verdict} why={why} />
     </div>
   );
 }
