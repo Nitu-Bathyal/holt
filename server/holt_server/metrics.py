@@ -75,7 +75,8 @@ REPORTS_EVERY_S = 60.0
 # Requests that aren't traffic: the container's health check and the scrape.
 UNCOUNTED = frozenset({"/health", "/metrics"})
 
-HTTP_BUCKETS = (0.025, 0.1, 0.25, 0.5, 1, 2.5, 5, 10, 20)
+# 2 s is an edge because the slow-requests alert asks "over 2 s?" (deploy/monitoring).
+HTTP_BUCKETS = (0.025, 0.1, 0.25, 0.5, 1, 2, 5, 10, 20)
 POOL_BUCKETS = (0.001, 0.01, 0.1, 0.5, 1, 2.5, 5, 10)
 WAIT_BUCKETS = (1, 5, 15, 30, 60, 120, 300, 600)
 RUN_BUCKETS = (2.5, 5, 10, 20, 40, 60, 120, 180, 300, 480)

@@ -1,0 +1,171 @@
+# Holt's monitoring stack (compose project holt-monitoring). Optional: Holt
+# runs the same without it.
+#
+# Start it with up.sh, never by hand with `compose up`: up.sh makes the data
+# directories on /home, renders the configs into $HOLT_MON_HOME/config, makes
+# the secrets and the read-only database role, and checks every config first.
+#
+#   prometheus  scrapes everything below, keeps 15 days, evaluates the alerts
+#     server:8000/metrics      the API's own numbers (holt_server/metrics.py)
+#     node-exporter            the host: CPU, memory, disks, load
+#     cadvisor                 memory and CPU of the Holt containers
+#     postgres-exporter        the Holt database
+#     blackbox                 is the site up, did the last deploy fail
+#   alertmanager  sends the alerts (email, a webhook, a dead man's ping)
+#   grafana       the dashboards, on 127.0.0.1 only (an SSH tunnel)
+#
+# It reads the production stack over that stack's own Docker network
+# (`target`, holt-prod_default), which prometheus, postgres-exporter and
+# blackbox join. Nothing here is published except Grafana, on 127.0.0.1.
+# Nothing in the production stack changes, restarts or depends on this.
+#
+# Images are pinned. Every container has a memory limit; together 888 MB at
+# the very most, about 400 MB in practice (README.md, "What it costs").
+
+x-common: &common
+  restart: unless-stopped
+  logging:
+    driver: json-file
+    options: { max-size: "5m", max-file: "2" }
+
+services:
+  prometheus:
+    <<: *common
+    image: prom/prometheus:v2.54.1
+    user: "${HOLT_MON_UID:?run up.sh}:${HOLT_MON_GID:?run up.sh}"
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      # 15 days, and never more than 2 GB on /home whatever happens.
+      - --storage.tsdb.retention.time=${HOLT_MON_RETENTION:-15d}
+      - --storage.tsdb.retention.size=${HOLT_MON_RETENTION_SIZE:-2GB}
+      - --web.enable-lifecycle
+    environment:
+      GOMEMLIMIT: 200MiB
+    volumes:
+      - ${HOLT_MON_HOME:?run up.sh}/config/prometheus:/etc/prometheus:ro
+      - ${HOLT_MON_HOME}/data/prometheus:/prometheus
+    networks: [default, target]
+    mem_limit: 256m
+
+  alertmanager:
+    <<: *common
+    image: prom/alertmanager:v0.27.0
+    user: "${HOLT_MON_UID}:${HOLT_MON_GID}"
+    command:
+      - --config.file=/etc/alertmanager/alertmanager.yml
+      - --storage.path=/alertmanager
+      - --cluster.listen-address=
+    volumes:
+      - ${HOLT_MON_HOME}/config/alertmanager:/etc/alertmanager:ro
+      - ${HOLT_MON_HOME}/secrets/smtp-password:/run/secrets/smtp_password:ro
+      - ${HOLT_MON_HOME}/data/alertmanager:/alertmanager
+    # So a webhook or the watchdog ping can be a service on this machine
+    # (healthchecks, uptime-kuma): http://host.docker.internal:<port>/...
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    mem_limit: 64m
+
+  grafana:
+    <<: *common
+    image: grafana/grafana:11.2.2
+    user: "${HOLT_MON_UID}:${HOLT_MON_GID}"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      # Read on Grafana's first start only; change it in Grafana after that.
+      GF_SECURITY_ADMIN_PASSWORD__FILE: /run/secrets/grafana_admin
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_AUTH_ANONYMOUS_ENABLED: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_NEWS_NEWS_FEED_ENABLED: "false"
+      # Alerts are Prometheus's and Alertmanager's (prometheus/rules), not Grafana's.
+      GF_UNIFIED_ALERTING_ENABLED: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/dashboards/holt-health.json
+    volumes:
+      - ${HOLT_MON_HOME}/config/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ${HOLT_MON_HOME}/config/grafana/dashboards:/etc/grafana/dashboards:ro
+      - ${HOLT_MON_HOME}/secrets/grafana-admin:/run/secrets/grafana_admin:ro
+      - ${HOLT_MON_HOME}/data/grafana:/var/lib/grafana
+    # The one published port, and only on this machine: reach it through an
+    # SSH tunnel (README.md).
+    ports:
+      - "127.0.0.1:${HOLT_GRAFANA_PORT:-8320}:3000"
+    mem_limit: 320m
+
+  # The host's own numbers. It sees the host's /proc and / read-only; it
+  # can change nothing.
+  node-exporter:
+    <<: *common
+    image: prom/node-exporter:v1.8.2
+    command:
+      - --path.rootfs=/host
+      - --collector.disable-defaults
+      - --collector.cpu
+      - --collector.meminfo
+      - --collector.loadavg
+      - --collector.filesystem
+      - --collector.diskstats
+      - --collector.pressure
+      - --collector.uname
+      - --collector.time
+      - --collector.filesystem.fs-types-exclude=^(tmpfs|devtmpfs|overlay|squashfs|proc|sysfs|cgroup2?|nsfs|tracefs|fuse\..*|autofs|ramfs|efivarfs)$$
+      - --collector.filesystem.mount-points-exclude=^/(dev|proc|sys|run|boot|snap|var/lib/docker)($$|/)
+    pid: host
+    volumes:
+      - /:/host:ro,rslave
+    mem_limit: 48m
+
+  # Memory and CPU per container. It reads every container on the host
+  # (read-only); prometheus keeps only Holt's and this stack's.
+  cadvisor:
+    <<: *common
+    image: gcr.io/cadvisor/cadvisor:v0.49.1
+    command:
+      - --docker_only=true
+      - --housekeeping_interval=30s
+      - --store_container_labels=false
+      - --whitelisted_container_labels=com.docker.compose.project,com.docker.compose.service
+      - --disable_metrics=advtcp,cpu_topology,cpuset,disk,diskIO,hugetlb,memory_numa,network,percpu,perf_event,process,referenced_memory,resctrl,sched,tcp,udp
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    mem_limit: 128m
+
+  # Connects as holt_monitor (made by up.sh): Postgres's pg_monitor role and
+  # nothing else, so it reads statistics and can't read a row of Holt's data.
+  postgres-exporter:
+    <<: *common
+    image: quay.io/prometheuscommunity/postgres-exporter:v0.15.0
+    user: "${HOLT_MON_UID}:${HOLT_MON_GID}"
+    command:
+      - --no-collector.stat_user_tables
+      - --no-collector.statio_user_tables
+    environment:
+      DATA_SOURCE_URI: db:5432/holt?sslmode=disable
+      DATA_SOURCE_USER: holt_monitor
+      DATA_SOURCE_PASS_FILE: /run/secrets/db_password
+    volumes:
+      - ${HOLT_MON_HOME}/secrets/db-password:/run/secrets/db_password:ro
+    networks: [default, target]
+    mem_limit: 48m
+
+  blackbox:
+    <<: *common
+    image: prom/blackbox-exporter:v0.25.0
+    command:
+      - --config.file=/etc/blackbox/blackbox.yml
+    volumes:
+      - ${HOLT_MON_HOME}/config/blackbox:/etc/blackbox:ro
+    networks: [default, target]
+    mem_limit: 24m
+
+networks:
+  default: {}
+  # The monitored stack's network. It must exist: Holt is deployed first.
+  target:
+    name: ${HOLT_MON_NETWORK:?run up.sh}
+    external: true
