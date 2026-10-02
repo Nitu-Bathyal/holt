@@ -11,7 +11,6 @@ import pytest
 
 from conftest import STATS, canned_report
 from holt.starter import RULES_VERSION
-from holt_server import recommendations
 from holt_server.db import (
     ENGINE_VERSION,
     Contribution,
