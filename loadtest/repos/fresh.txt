@@ -1,0 +1,38 @@
+# Repos staging has never checked: the fresh-check scenarios take them from
+# the top (FRESH_MAX of them, after skipping FRESH_SKIP). One owner/name per
+# line, spelled as GitHub spells it.
+#
+# A repo is fresh once. After a run, staging has its report, and the next run
+# reports it as "cached" and checks nothing, so move down the list with
+# FRESH_SKIP or replace the lines. README.md has the query that lists which
+# of these staging still hasn't seen.
+chalk/chalk
+sindresorhus/got
+jqlang/jq
+junegunn/fzf
+charmbracelet/gum
+marshmallow-code/marshmallow
+pallets/click
+Kludex/starlette
+httpie/cli
+tmux/tmux
+BurntSushi/ripgrep
+Textualize/rich
+python-poetry/poetry
+psf/requests-html
+pallets/jinja
+pallets/werkzeug
+Kludex/uvicorn
+sindresorhus/execa
+tj/commander.js
+expressjs/express
+koajs/koa
+lodash/lodash
+jashkenas/underscore
+gorilla/mux
+spf13/cobra
+spf13/viper
+urfave/cli
+stretchr/testify
+go-chi/chi
+labstack/echo

@@ -7,7 +7,7 @@ import { SwapHost } from "@/components/motion/swap-host";
 import { ScrollMarquee } from "@/components/motion/scroll-marquee";
 import { FocusOnHash } from "@/components/shell/check-focus";
 import { PasteBox } from "@/components/paste-box";
-import { EXAMPLE_PATH } from "@/lib/example-report";
+import { EXAMPLES_PATH } from "@/lib/examples";
 import { humanHours } from "@/lib/format";
 import { buildReplay } from "@/lib/landing-replay";
 import { landingReport } from "@/lib/landing-report";
@@ -18,7 +18,7 @@ import { Receipts } from "@/components/landing/receipts";
 import { Words } from "@/components/landing/words";
 import { currentUser } from "@/lib/session";
 import type { Report } from "@/lib/types";
-import { GITHUB_REPO_URL, WELCOME_AI_CREDITS, hacktoberfest } from "@/lib/site";
+import { GITHUB_REPO_URL, hacktoberfest } from "@/lib/site";
 import { PageTransition } from "@/components/motion/page-transition";
 import { ProfileOnboarding } from "@/components/profile-onboarding";
 import { Suspense } from "react";
@@ -74,9 +74,9 @@ function people(r: Report): Person[] {
   ];
 }
 
-// Section 06's call to action. Signed-in people already have their free AI
-// reports, so they get their history instead of a sign-in button.
-async function AiReportsCta() {
+// Section 06's call to action. Signed-in people get their history instead of
+// a sign-in button.
+async function ReportsCta() {
   if (await currentUser()) {
     return (
       <Link href="/me/repos?show=checked" className="bracket-link">[ your reports → ]</Link>
@@ -84,8 +84,8 @@ async function AiReportsCta() {
   }
   return (
     <>
-      <Link href="/signin" className="bracket-link">[ sign in for {WELCOME_AI_CREDITS} free AI reports → ]</Link>
-      <Link href={EXAMPLE_PATH} className="text-link inline-flex min-h-11 items-center text-[0.89rem]">[ read an example first ]</Link>
+      <Link href="/signin" className="bracket-link">[ check a repo → ]</Link>
+      <Link href={EXAMPLES_PATH} className="text-link inline-flex min-h-11 items-center text-[0.89rem]">[ read an example first ]</Link>
     </>
   );
 }
@@ -226,7 +226,7 @@ export default async function Home() {
             <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3" data-reveal>
               <Link href="/how-it-works" className="text-link inline-flex min-h-11 items-center font-mono text-[0.89rem]">[ how it decides ]</Link>
               <Suspense fallback={null}>
-                <AiReportsCta />
+                <ReportsCta />
               </Suspense>
             </div>
           </Grid>

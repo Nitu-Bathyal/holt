@@ -53,10 +53,10 @@ export function savedToAdd(saved: string[], list: string[], limit = 6): string[]
   return saved.filter((s) => !inList.has(s.toLowerCase())).slice(0, limit);
 }
 
-/** Well-known repos for the example on an empty page; only ones with a report already cached are shown. */
+/** Well-known repos a report offers to compare itself with (report/compare-card.tsx). */
 export const EXAMPLE_POOL = ["pallets/flask", "psf/requests", "pytorch/pytorch", "home-assistant/core", "NixOS/nixpkgs", "django/django", "facebook/react", "microsoft/vscode"];
 
-/** One-tap comparisons people often want. */
+/** One-tap comparisons people often want: the way in from an empty page. */
 export const SUGGESTIONS: { label: string; repos: string[] }[] = [
   { label: "flask vs django vs fastapi", repos: ["pallets/flask", "django/django", "fastapi/fastapi"] },
   { label: "react vs vue vs svelte", repos: ["facebook/react", "vuejs/core", "sveltejs/svelte"] },
@@ -107,12 +107,12 @@ export function leaders(stats: (Stats | null)[]): Record<Lead, number[]> {
  * The page's one sentence, verdicts first: which repo is worth your time, or
  * the best of the long shots, or that none is. The merge rate only breaks a
  * tie between repos with the same verdict, so a better number never outranks
- * a better verdict. Once you've picked two or more and every one has a
- * report; otherwise the question the page answers.
+ * a better verdict. Once there are two or more and every one has a report;
+ * otherwise (an empty page too) the question the page answers.
  */
-export function compareTitle(picked: boolean, cols: Checked[]): string {
+export function compareTitle(cols: Checked[]): string {
   const checked = cols.filter((c) => c != null);
-  if (!picked || cols.length < 2 || checked.length < cols.length) return "Which one will review your pull request?";
+  if (cols.length < 2 || checked.length < cols.length) return "Which one will review your pull request?";
   const top = (group: NonNullable<Checked>[]) => {
     const m = leaders(group.map((c) => c.stats)).merged;
     return m.length === 1 ? group[m[0]].repo : null;

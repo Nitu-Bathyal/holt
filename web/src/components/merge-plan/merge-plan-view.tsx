@@ -1,4 +1,4 @@
-// The merge plan: the paid AI report, in the free report's look (verdict card,
+// The merge plan, in the free report's look (verdict card,
 // numbered sections, stats grid, meters). Read top to bottom as what to do:
 // the call, what the AI found in the threads, a first-PR timeline you can tick
 // off, then the counted patterns behind it. Every claim shows its count and
@@ -250,11 +250,10 @@ function LockedRest({ plan }: { plan: MergePlan }) {
           </li>
         ))}
       </ul>
-      <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-3">
+      <div className="mt-6">
         <button type="button" className="btn-primary">
           unlock the merge plan <span aria-hidden="true">→</span>
         </button>
-        <span className="font-sans text-[0.88rem] text-faint">1 credit</span>
       </div>
     </section>
   );

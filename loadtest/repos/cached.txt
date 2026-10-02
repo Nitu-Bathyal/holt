@@ -1,0 +1,34 @@
+# Repos staging already has a report for: the reader scenarios open these,
+# signed out, so each shows as a teaser. Not the examples (web/src/lib/examples.ts):
+# those show in full, and FULL_REPOS names the ones to open.
+# One owner/name per line. A repo with no report is left out at the start of
+# a run (with a warning), so a stale line here costs nothing.
+bitnami/sealed-secrets
+charmbracelet/glow
+cherrypy/cheroot
+denoland/deno
+django/django
+electron/electron
+eslint/eslint
+excalidraw/excalidraw
+facebook/zstd
+fastapi/fastapi
+godotengine/godot
+graphql/graphiql
+huggingface/transformers
+infection/infection
+MahApps/MahApps.Metro
+matrix-org/matrix-js-sdk
+microsoft/vscode
+neovim/neovim
+NixOS/nixpkgs
+nodejs/node
+numpy/numpy
+pandas-dev/pandas
+python/cpython
+RSS-Bridge/rss-bridge
+rust-lang/rust
+samchon/nestia
+scikit-learn/scikit-learn
+sveltejs/svelte
+vitejs/vite

@@ -3,7 +3,7 @@
 import "server-only";
 import { cache } from "react";
 import type {
-  AlertCount, AlertList, AlertSettings, AlertSettingsBody, AnalysisStart, ApiError, Checkout, Contributions, Credits, DiscoverOut, DiscoverSort, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection,
+  AlertCount, AlertList, AlertSettings, AlertSettingsBody, AnalysisStart, ApiError, Checkout, Contributions, DiscoverOut, DiscoverSort, Entitlements, FeedbackOut, FindQuery, FindResult, FindStart, GitHubConnection,
   History, JobStatus, Me, MergePlanStart, MergePlanState, Mode, Order, OrderConfirmed, Passes, PlaybookStart, PlaybookState, PreflightStart, PreflightState,
   ProfileOut, ProfilePrefs, RazorpaySuccess, Recommendations, RepoSearch, Report, Result, SavedList, SavedState, StarterIssue, Unsubscribed,
 } from "./types";
@@ -96,7 +96,7 @@ export function labEmails(): Promise<Result<import("./api-schema").LabEmails>> {
   return call("/v1/lab/emails");
 }
 
-/** The model for AI reports is server configuration; the web never picks one. */
+/** The model is server configuration; the web never picks one. */
 export function startAnalysis(repo: string, mode: Mode, days: number, refresh: boolean, caller: Caller): Promise<Result<AnalysisStart>> {
   if (MOCK) return mock.startAnalysis(repo, mode, days, refresh, caller.userId ?? undefined);
   return call("/v1/analyses", { method: "POST", body: JSON.stringify({ repo, mode, days, refresh }), caller });
@@ -255,9 +255,10 @@ export function me(userId: string): Promise<Result<Me>> {
   return call("/v1/me", { caller: { userId } });
 }
 
-export function claimCredit(userId: string): Promise<Result<Credits>> {
-  if (MOCK) return mock.claimCredit(userId);
-  return call("/v1/me/credits/claim", { method: "POST", caller: { userId } });
+/** What the user's plan covers now (API.md, Account): one `Access` per paid feature. */
+export function entitlements(userId: string): Promise<Result<Entitlements>> {
+  if (MOCK) return mock.entitlements(userId);
+  return call("/v1/me/entitlements", { caller: { userId } });
 }
 
 export function history(userId: string, limit = 50): Promise<Result<History>> {
@@ -377,7 +378,7 @@ export function setAlertEmailByToken(token: string, on: boolean): Promise<Result
   return call(`/v1/alerts/${on ? "resubscribe" : "unsubscribe"}`, { method: "POST", body: JSON.stringify({ token }) });
 }
 
-/** Recommendations for you (API.md). Ranked by rules from cached data; the server shows 2 picks without a plan. */
+/** Recommendations for you (API.md). Ranked by rules from cached data; free for everyone. */
 export function recommendations(userId: string, limit = 10): Promise<Result<Recommendations>> {
   if (MOCK) return mock.recommendations(userId, limit);
   return call(`/v1/me/recommendations?limit=${Math.min(10, Math.max(1, Math.floor(limit)))}`, { caller: { userId } });

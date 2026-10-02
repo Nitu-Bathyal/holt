@@ -2,7 +2,7 @@
 // reports return at once, anything else becomes a job with stages over SSE.
 import "server-only";
 import type {
-  AlertSettings, AlertSettingsBody, AnalysisStart, ApiError, Credits, DiscoverOut, DiscoverRepo, DiscoverSort, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, History, HistoryItem,
+  AlertSettings, AlertSettingsBody, AnalysisStart, ApiError, DiscoverOut, DiscoverRepo, DiscoverSort, Entitlements, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, History, HistoryItem,
   ContributionType, JobStatus, Me, Mode, Passes, ProfileOut, ProfilePrefs, Recommendation, Recommendations, RepoSearch, Report, Result, SavedList, SavedState, Stats, StarterIssue,
 } from "../types";
 import type { FeedbackInput } from "../feedback";
@@ -10,7 +10,7 @@ import type { Timing } from "../api-schema";
 import * as watch from "./alerts";
 import { verdictView, withDerived } from "./derived";
 import { canonicalName, isMockNotFound, mockAbout, mockFindPool, mockIssues, mockReport, PRECACHED } from "./fixtures";
-import { mergePlanEvents } from "./merge-plan";
+import { access as mergePlanAccess, mergePlanEvents } from "./merge-plan";
 import { playbookEvents } from "./playbook";
 import { preflightEvents } from "./preflight";
 
@@ -361,17 +361,9 @@ export async function me(userId: string): Promise<Result<Me>> {
   return { ok: true, data: user(userId).me };
 }
 
-export async function claimCredit(userId: string): Promise<Result<Credits>> {
-  const c = user(userId).me.credits;
-  if (!c.can_claim) {
-    const when = c.next_claim_at ? new Date(c.next_claim_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" }) : "later";
-    return err(409, "claim_not_ready", `Your next free AI report can be claimed on ${when}.`);
-  }
-  c.balance++;
-  c.free++;
-  c.can_claim = false;
-  c.next_claim_at = new Date(Date.now() + CLAIM_EVERY_DAYS * DAY_MS).toISOString();
-  return { ok: true, data: c };
+export async function entitlements(userId: string): Promise<Result<Entitlements>> {
+  const { plan, plan_expires_at } = user(userId).me;
+  return { ok: true, data: { plan, plan_expires_at, features: [mergePlanAccess(userId)] } };
 }
 
 // Payments stay off in the mock: no passes, no orders.
@@ -561,9 +553,10 @@ export async function refreshContributions(userId: string): Promise<Result<Contr
   return { ok: true, data: mockContributions(userId, acct.login) };
 }
 
-// Recommendations: a fixed ranked list once there is a profile or a connection.
-// The real ranking is server rules (server/holt_server/recommendations.py).
-// MOCK_PLAN=pro shows every pick; otherwise the free taste of two.
+// Recommendations: a fixed ranked list. With no profile and no connection
+// (a new account) the reasons that speak of the user are left out, as the
+// server's popular-language picks do. The real ranking is server rules
+// (server/holt_server/recommendations.py).
 function mockPicks(): Recommendation[] {
   const at = (hoursAgo: number) => new Date(Date.now() - hoursAgo * 3_600_000).toISOString();
   const stats = (attempts: number, merged: number, noReply: number, reply: number, firstTimers: number): Stats => ({
@@ -615,13 +608,11 @@ function mockPicks(): Recommendation[] {
 export async function recommendations(userId: string, limit: number): Promise<Result<Recommendations>> {
   const prefs = profiles().get(userId) ?? null;
   const connected = connections().has(userId);
-  const full = process.env.MOCK_PLAN === "pro" || user(userId).me.plan !== "free";
-  const picks = prefs || connected ? mockPicks() : [];
-  const shown = picks.slice(0, full ? limit : Math.min(limit, 2));
+  const picks = prefs || connected ? mockPicks() : mockPicks().map((p) => ({ ...p, why: p.why.filter((w) => !/\byou/i.test(w)) }));
   return {
     ok: true,
     data: {
-      picks: shown, locked: full ? 0 : Math.max(picks.length - 2, 0), full,
+      picks: picks.slice(0, limit),
       basis: {
         languages: prefs?.languages ?? [], topics: prefs?.topics ?? [], level: prefs?.level ?? "newcomer", contributions: prefs?.contributions ?? [],
         history_languages: connected ? ["Python", "Rust"] : [], already_contributing: connected ? 4 : 0, has_profile: prefs !== null, connected,

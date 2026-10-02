@@ -67,6 +67,7 @@ export interface RazorpaySuccess {
 }
 
 export type Access = S.Access;
+export type Entitlements = S.Entitlements;
 export type Playbook = S.Playbook;
 export type PlaybookItem = S.PlaybookItem;
 export type PlaybookSource = S.PlaybookSource;

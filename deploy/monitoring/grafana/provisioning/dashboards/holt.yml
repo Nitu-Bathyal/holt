@@ -1,0 +1,12 @@
+apiVersion: 1
+providers:
+  - name: holt
+    folder: Holt
+    type: file
+    # Built by deploy/monitoring/grafana/dashboards.py, which is the source:
+    # they can't be saved over from Grafana.
+    allowUiUpdates: false
+    disableDeletion: true
+    updateIntervalSeconds: 30
+    options:
+      path: /etc/grafana/dashboards

@@ -15,6 +15,7 @@ app and API server.
 | `staging/compose.pro.yml` | The optional paid-features service beside staging, compose project `stage-holt-pro`, joined to the staging network as `pro`, no published port. `preview.sh` runs it; see "Paid features". |
 | `staging/make-env.sh` | Writes `staging/.env` (gitignored): random keys, `gh auth token` (overridden on each run, see "The GitHub token"), `STAGING_HOST`. |
 | `prod/` | Production, https://githolt.com: compose project `holt-prod` on `127.0.0.1:8310` behind a Cloudflare tunnel, built only from `origin/main` by `prod/deploy.sh`, which `prod/follow.sh` runs by itself for each main commit once CI and staging are green on it (pausable), nightly backups. See [`prod/README.md`](prod/README.md) and [`prod/TUNNEL.md`](prod/TUNNEL.md). |
+| `monitoring/` | Optional monitoring beside production, compose project `holt-monitoring`: Prometheus, Alertmanager, Grafana (on `127.0.0.1:8320`, an SSH tunnel) and exporters for the host, the containers and Postgres. It reads the API's `/metrics` over production's Docker network and changes nothing there. Started by hand with `monitoring/up.sh`. See [`monitoring/README.md`](monitoring/README.md). |
 
 ## Staging: https://staging.githolt.com
 

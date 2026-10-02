@@ -3,6 +3,12 @@
 // (find a repo → pick an issue → open a PR → get it merged), worked out from
 // the account by lib/home.ts. Below it, each hidden when empty: also for you,
 // in flight, next repos for you, your repos.
+//
+// A new account (nothing saved, checked or opened) has none of those, so its
+// home is what Holt has without knowing the person: the repo box in the head,
+// repos to start in (the picks, from popular languages until there's a profile
+// or a merged pull request), issues to start with from those picks, and what
+// connecting GitHub adds.
 import type { Metadata } from "next";
 import Link from "next/link";
 import { cookies } from "next/headers";
@@ -24,7 +30,7 @@ import { timeAgo } from "@/lib/format";
 import { alsoForYou, clock, dismissedNudges, homeFacts, homeNudge, moveLead, moveTitle, needsYou, nextMove, NUDGE_COOKIE, othersInFlight, outsidePulls, type NextMove, type Nudge } from "@/lib/home";
 import { showPreflight } from "@/lib/preflight";
 import { SKIP_COOKIE } from "@/lib/profile";
-import { basisLine, lockedLine } from "@/lib/recommendations";
+import { basisLine, emptyReason, starterRows } from "@/lib/recommendations";
 import { fromPick } from "@/lib/repo-card";
 import { caller, currentUser } from "@/lib/session";
 import { CONNECT_GITHUB, PROFILE_SETTINGS } from "@/lib/settings";
@@ -43,6 +49,12 @@ const NUDGES: Record<Nudge, { text: string; href: string; cta: string }> = {
   profile: { text: "Tell Holt your languages and it picks repos for you.", href: PROFILE_SETTINGS, cta: "add your languages" },
   github: { text: "Connect GitHub to see your pull requests here.", href: CONNECT_GITHUB, cta: "connect GitHub" },
 };
+
+/** What connecting GitHub adds to the home, for someone who hasn't. */
+const CONNECTED = [
+  "Your open pull requests, with how long each repo usually takes to reply.",
+  "Picks in the languages you've already been merged in.",
+];
 
 function mood(m: NextMove): CatMood {
   if (m.kind === "merged") return "celebrating";
@@ -81,7 +93,16 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
   // Not connected is a 404; any other error means connected but GitHub was slow.
   const connected = prs.ok || prs.error.code !== "not_found";
   // Picks already come from somewhere (a profile or GitHub): no asking for languages over them.
-  const nudge = homeNudge({ askingProfile, hasProfile: pickCards.length ? true : hasProfile, connected, dismissed: dismissedNudges(jar.get(NUDGE_COOKIE)?.value) });
+  const dismissed = dismissedNudges(jar.get(NUDGE_COOKIE)?.value);
+  const starting = move.kind === "first" && !askingProfile;
+  // While you're starting, connecting gets a panel that says what it adds, not the one-line nudge.
+  const connectPanel = starting && !connected && !dismissed.includes("github");
+  const nudge = homeNudge({ askingProfile, hasProfile: pickCards.length ? true : hasProfile, connected: connected || connectPanel, dismissed });
+  // Nothing saved, checked or opened yet: the repo box is the head's action.
+  const fresh = move.kind === "first" && !move.again && repos.length === 0;
+  // Picks matched on nothing about the person (popular languages).
+  const generic = picks.ok && emptyReason(picks.data.basis) === "nothing-to-match";
+  const starters = starting && picks.ok ? starterRows(picks.data.picks.slice(0, 3), 4) : [];
   const notice = typeof sp.profile === "string" ? NOTICES[sp.profile] : undefined;
   const preflight = pre.ok && showPreflight(pre.data);
   const firstPicks = move.kind === "first" && pickCards.length > 0;
@@ -105,7 +126,16 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
         <Link href="/find" className="text-link text-[0.9rem]">or a new repo</Link>
       </>
     );
-  } else if (move.kind === "first" && !askingProfile) {
+  } else if (fresh) {
+    primary = (
+      <>
+        <div id="check" className="w-full scroll-mt-24">
+          <QuickCheck variant="inline" className="max-w-xl!" />
+        </div>
+        <Link href="/find" className="text-link tap text-[0.9rem]">or find a project</Link>
+      </>
+    );
+  } else if (starting) {
     primary = (
       <Link href="/find" className="find-cta">
         <span aria-hidden="true" className="find-cta-icon"><Icon name="find" className="size-5" /></span>
@@ -122,9 +152,11 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
     <PageTransition>
       <div className="app-page">
         <FocusOnHash />
-        <div id="check" className="mb-4 scroll-mt-24 md:hidden">
-          <QuickCheck variant="inline" />
-        </div>
+        {!fresh && (
+          <div id="check" className="mb-4 scroll-mt-24 md:hidden">
+            <QuickCheck variant="inline" />
+          </div>
+        )}
         <MoveHead title={moveTitle(move)} lead={moveLead(move, repos)} mood={mood(move)} step={move.step} loop={repos.length > 0 || pulls.length > 0}>
           {facts.length > 0 && (
             <p className="mt-3 flex flex-wrap gap-x-2 text-[0.8rem] text-faint">
@@ -191,7 +223,11 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
                     <li key={a.repo.repo} className="app-row grid-cols-[minmax(0,1fr)_auto]">
                       <p className="min-w-0 font-sans text-[0.86rem] [overflow-wrap:anywhere]">
                         <span className="font-mono font-semibold">{a.repo.repo}</span>
-                        <span className="text-muted">{a.kind === "checking" ? ": the check is still running." : ": the report is ready."}</span>
+                        <span className="text-muted">
+                          {a.repo.ai
+                            ? a.kind === "checking" ? ": the merge plan is still being written." : ": the merge plan is ready."
+                            : a.kind === "checking" ? ": the check is still running." : ": the report is ready."}
+                        </span>
                       </p>
                       <Link href={`/${a.repo.repo}${a.repo.ai ? "?mode=ai" : ""}`} className="text-link text-[0.8rem]">{a.kind === "checking" ? "Watch" : "Open"}</Link>
                     </li>
@@ -236,15 +272,65 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
 
           {pickCards.length > 0 && picks.ok && (
             <section id="picks" aria-labelledby="picks-h" className="scroll-mt-24">
-              <SectionHead id="picks-h" title={firstPicks ? "Picked for you" : "Next repos for you"} more={{ href: PROFILE_SETTINGS, label: "edit your profile" }} />
+              <SectionHead
+                id="picks-h"
+                title={generic ? "Good places to start" : firstPicks ? "Picked for you" : "Next repos for you"}
+                more={{ href: PROFILE_SETTINGS, label: generic ? "add your languages" : "edit your profile" }}
+              />
               {basisLine(picks.data.basis) && <p className="-mt-1 mb-4 font-sans text-[0.9rem] text-muted">{basisLine(picks.data.basis)}</p>}
               <RepoGrid repos={pickCards.slice(0, 3)} cols={3} saved={savedNames} topicBase="/discover" />
-              {picks.data.locked > 0 && (
-                <p className="mt-4 font-sans text-[0.9rem] text-muted">
-                  {lockedLine(picks.data.locked)} <Link href="/pricing" className="text-link font-mono text-[0.86rem]">see plans</Link>
-                </p>
-              )}
             </section>
+          )}
+
+          {(starters.length > 0 || connectPanel) && (
+            <div className={starters.length > 0 && connectPanel ? "grid items-start gap-10 lg:grid-cols-[minmax(0,1.7fr)_minmax(0,1fr)]" : undefined}>
+              {starters.length > 0 && (
+                <section aria-labelledby="starters-h" className="home-section min-w-0">
+                  <SectionHead id="starters-h" title="Issues to start with" />
+                  <ul className="home-list">
+                    {starters.map(({ repo, issue }) => (
+                      <li key={issue.url} className="app-row grid-cols-[minmax(0,1fr)]">
+                        <div className="min-w-0">
+                          <a href={issue.url} className="block font-sans text-[0.86rem] leading-snug [overflow-wrap:anywhere] after:absolute after:inset-0 hover:underline">
+                            {issue.title}
+                          </a>
+                          <p className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-[0.72rem] text-faint">
+                            <span className="font-mono text-muted">{repo} #{issue.number}</span>
+                            {issue.labels.slice(0, 2).map((l) => (
+                              <span key={l} className="border border-line-strong px-1.5 py-px text-muted">{l}</span>
+                            ))}
+                            {issue.created_at && <span>opened {timeAgo(issue.created_at)}</span>}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              )}
+              {connectPanel && (
+                <section aria-labelledby="connect-h" className="home-section min-w-0">
+                  <SectionHead id="connect-h" title="Connect GitHub" />
+                  <div className="border border-line-strong bg-panel px-4 py-4">
+                    <ul className="space-y-2 font-sans text-[0.86rem] leading-snug text-muted">
+                      {CONNECTED.map((line) => (
+                        <li key={line} className="flex gap-2">
+                          <span aria-hidden="true" className="text-green">+</span>
+                          <span>{line}</span>
+                        </li>
+                      ))}
+                    </ul>
+                    <form action={dismissNudge} className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+                      <input type="hidden" name="nudge" value="github" />
+                      <Link href={CONNECT_GITHUB} className="home-btn gap-2">
+                        <Icon name="github" className="size-4" />
+                        connect GitHub
+                      </Link>
+                      <button type="submit" className="tap text-[0.8rem] text-faint hover:text-ink">not now</button>
+                    </form>
+                  </div>
+                </section>
+              )}
+            </div>
           )}
 
           {repos.length > 0 && (

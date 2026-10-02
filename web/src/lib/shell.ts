@@ -115,6 +115,8 @@ export const RETIRED: Record<string, string> = {
   "/me/saved": "/me/repos?show=saved",
   "/me/history": "/me/repos?show=checked",
   "/connect": "/settings/accounts#github",
+  "/settings/ai-reports": "/settings/plan",
+  "/example-ai-report": "/example-merge-plan",
 };
 
 /** Where an old address now lives, or null. A trailing slash doesn't matter. */

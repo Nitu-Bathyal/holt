@@ -1,0 +1,135 @@
+# Holt's alerts. Each one names something the owner can act on; the short
+# "what to do" is in README.md ("When an alert arrives"). Thresholds are
+# chosen for the home server (8 cores, 15 GB, shared); why each number is
+# what it is lives in the maintainers' ops notes.
+#
+# Test a change: deploy/monitoring/up.sh --check (promtool, rules.test.yml).
+groups:
+  - name: holt
+    rules:
+      - alert: HoltSiteDown
+        expr: probe_success{job="holt-site"} == 0
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "githolt.com is not answering ({{ $labels.path }} check)"
+          description: >-
+            {{ $labels.instance }} has failed for 2 minutes. "public" failing
+            alone means Cloudflare or the tunnel; "internal" failing means the
+            edge or the web app.
+
+      - alert: HoltApiDown
+        expr: absent(up{job="holt-server"} == 1)
+        for: 2m
+        labels: { severity: critical }
+        annotations:
+          summary: "The Holt API server is not answering"
+          description: >-
+            No server container has answered /metrics for 2 minutes: it is
+            down, restarting in a loop, or too busy to answer in 10 seconds.
+
+      - alert: HoltServerErrors
+        expr: >-
+          sum(rate(holt_http_requests_total{status=~"5.."}[5m]))
+            / sum(rate(holt_http_requests_total[5m])) > 0.05
+          and sum(rate(holt_http_requests_total[5m])) > 0.1
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "{{ $value | humanizePercentage }} of API requests are failing"
+          description: "More than 5% of requests have ended in a 5xx for 5 minutes."
+
+      - alert: HoltSlowRequests
+        expr: >-
+          histogram_quantile(0.95,
+            sum by (le) (rate(holt_http_request_duration_seconds_bucket[5m]))) > 2
+          and sum(rate(holt_http_request_duration_seconds_count[5m])) > 0.1
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "API requests are slow: p95 is {{ $value | humanizeDuration }}"
+          description: >-
+            19 in 20 requests should start answering within 2 seconds; for 5
+            minutes they have not.
+
+      - alert: HoltDbPoolWaiting
+        expr: max(holt_db_pool_waiting) > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Requests are waiting for a database connection"
+          description: >-
+            Every pool connection has been busy for 5 minutes
+            ({{ $value }} waiting now). Something holds connections too long,
+            or HOLT_DB_POOL_SIZE is too small for the traffic.
+
+      - alert: HoltDbPoolTimeouts
+        expr: sum(increase(holt_db_pool_timeouts_total[10m])) > 0
+        labels: { severity: critical }
+        annotations:
+          summary: "Requests gave up waiting for a database connection"
+          description: >-
+            {{ $value | printf "%.0f" }} waits hit HOLT_DB_POOL_TIMEOUT in the
+            last 10 minutes: those requests failed.
+
+      - alert: HoltGithubPointsLow
+        expr: sum(min by (token) (holt_github_points_left)) < 500
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "GitHub points are nearly used up ({{ $value }} left)"
+          description: >-
+            Fewer than 500 GraphQL points are left until the hourly reset;
+            new checks will start failing with "try again later".
+
+      - alert: HoltQueueWait
+        expr: max(holt_jobs_oldest_queued_seconds{lane="user"}) > 60
+        for: 2m
+        labels: { severity: warning }
+        annotations:
+          summary: "People's checks are waiting over a minute to start"
+          description: >-
+            The longest-waiting check has been queued for
+            {{ $value | humanizeDuration }}: every user worker
+            (HOLT_JOB_CONCURRENCY) is busy.
+
+      - alert: HoltDeployFailed
+        expr: probe_failed_due_to_regex{job="holt-deploy"} == 1
+        for: 1m
+        labels: { severity: warning }
+        annotations:
+          summary: "The last production deploy failed"
+          description: >-
+            /__build says the last deploy failed or is held back. Production
+            stays on the previous commit: deploy/prod/follow.sh --status.
+
+      - alert: HostRootDiskLow
+        expr: >-
+          node_filesystem_avail_bytes{mountpoint="/"}
+            / node_filesystem_size_bytes{mountpoint="/"} < 0.10
+        for: 10m
+        labels: { severity: critical }
+        annotations:
+          summary: "The server's / disk has {{ $value | humanizePercentage }} free"
+          description: >-
+            / holds Docker's images and build cache. Under 10% free, the next
+            build can fill it and stop every container on the machine.
+
+      - alert: HostMemoryLow
+        expr: node_memory_MemAvailable_bytes < 1e9
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "The server has {{ $value | humanize1024 }}B of memory available"
+          description: >-
+            Under 1 GB available for 5 minutes. The next deploy's build or a
+            traffic peak can push the machine into swap or the OOM killer.
+
+      # Always firing, on purpose: Alertmanager passes it on as a ping every
+      # few minutes, and the receiving check (healthchecks) alerts when the
+      # pings stop, which is how the owner hears that monitoring itself died.
+      - alert: Watchdog
+        expr: vector(1)
+        labels: { severity: none }
+        annotations:
+          summary: "Monitoring is alive"

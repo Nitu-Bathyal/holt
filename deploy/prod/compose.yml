@@ -31,18 +31,20 @@ services:
       - pgdata:/var/lib/postgresql/data
       - ./initdb:/docker-entrypoint-initdb.d:ro
     # max_connections, the budget (the most each client can hold open):
-    #   server            14  HOLT_DB_POOL_SIZE 10, its health check's own 1, and 1
-    #                         per background pass under a lock (the contributions
+    #   server            15  HOLT_DB_POOL_SIZE 10, its health check's own 1,
+    #                         /metrics' own 1 once it is scraped, and 1 per
+    #                         background pass under a lock (the contributions
     #                         refresh; PR watch and its mailer when on)
-    #   a second server   14  while a deploy swaps containers (deploy/swap.sh)
+    #   a second server   15  while a deploy swaps containers (deploy/swap.sh)
     #   warm pass         13  warm.sh's one-off server container: pool 10, its
     #                         lock, and a second timer starting while it runs
     #   web               10  5 each (web/src/db/index.ts), two during a swap
     #   umami             10
     #   one-offs           4  migrate-web, migrate-server, backup.sh, psql
-    #   total             65  of 80
+    #   monitoring         3  holt_monitor's limit (deploy/monitoring); it uses 1
+    #   total             70  of 80
     # A connection costs about 2 MB here once it has run the usual queries
-    # (measured), so all 65 at once is ~130 MB next to shared_buffers, inside
+    # (measured), so all 70 at once is ~140 MB next to shared_buffers, inside
     # mem_limit; on a normal day about 30 are open. Raise HOLT_DB_POOL_SIZE
     # and this together, and mem_limit with them.
     command: ["postgres", "-c", "shared_buffers=32MB", "-c", "max_connections=80"]
@@ -170,6 +172,10 @@ services:
     group_add: ["${HOLT_GITHUB_APP_KEY_GID:-10001}", "${HOLT_EVIDENCE_GID:-65534}"]
     depends_on:
       db: { condition: service_healthy }
+    # GET /metrics (holt_server/metrics.py) is on the same port, 8000, which
+    # is not published: only this network reaches it. The optional monitoring
+    # stack (deploy/monitoring) joins this network and scrapes every container
+    # that answers to `server`.
     # The image's own check, polled every second while it starts so
     # deploy/swap.sh can retire the old server as soon as this one is ready.
     healthcheck:

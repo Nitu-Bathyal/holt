@@ -43,12 +43,12 @@ test("the button only promises what the server allowed", () => {
   assert.deepEqual(checkOffer(null, false), { kind: "sign-in" });
   const credits = checkOffer(access(), false);
   assert.equal(credits.kind, "can-check");
-  assert.match((credits as { note: string }).note, /Uses 1 credit\. A check that fails costs nothing/);
+  assert.match((credits as { note: string }).note, /^A check that fails costs nothing/);
   const plan = checkOffer(access({ via: "plan", cost: 0, left_this_month: 4 }), false);
   assert.match((plan as { note: string }).note, /Included in your plan \(4 left this month\)/);
   const soon = checkOffer(access({ allowed: false, via: null, code: "quota_exceeded", message: "no credits" }), false);
   assert.equal(soon.kind, "coming-soon");
-  assert.match((soon as { note: string }).note, /aren't on sale yet\. It will cost 1 credit per check\./);
+  assert.match((soon as { note: string }).note, /aren't on sale yet\.$/);
   const blocked = checkOffer(access({ allowed: false, via: null, code: "quota_exceeded", message: "no credits" }), true);
   assert.deepEqual(blocked, { kind: "blocked", note: "no credits", buy: true });
 });
