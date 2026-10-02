@@ -13,10 +13,11 @@ async function language(slug: string): Promise<string | null> {
   return languageFromSlug(slug, r.data.languages.map((l) => l.name));
 }
 
-export async function generateMetadata({ params }: PageProps<"/discover/[language]">): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: PageProps<"/discover/[language]">): Promise<Metadata> {
   const name = await language((await params).language);
   if (!name) notFound();
   return {
+    ...(Object.keys(await searchParams).length ? { robots: { index: false } } : {}),
     title: boardTitle("welcoming", name),
     description: `${name} repos that are worth your time, ranked by how they treat outside contributors: replies, merges and how fast. Built from Holt's rules, never AI.`,
     alternates: { canonical: `/discover/${languageSlug(name)}` },

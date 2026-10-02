@@ -109,7 +109,7 @@ export function RepoFocus({ r, report, actions, topicBase }: { r: CardRepo; repo
             )}
             {r.topics.slice(0, 3).map((t) =>
               topicBase ? (
-                <Link key={t} href={`${topicBase}${topicBase.includes("?") ? "&" : "?"}topic=${encodeURIComponent(t)}`} className="border border-line px-1.5 py-px hover:border-blue hover:text-ink">
+                <Link key={t} rel="nofollow" href={`${topicBase}${topicBase.includes("?") ? "&" : "?"}topic=${encodeURIComponent(t)}`} className="border border-line px-1.5 py-px hover:border-blue hover:text-ink">
                   {t}
                 </Link>
               ) : (
