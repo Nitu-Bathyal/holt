@@ -683,7 +683,7 @@ into, all on the server, never taken from the client, and a checkout for
 passes that stays switched off (below):
 
 - **Features** (`ai_report`, `playbook`, `preflight`, `guidance`,
-  `recommendations`, `merge_plan`, `pr_watch`, `repo_watch`, `issue_watch`)
+  `merge_plan`, `pr_watch`, `repo_watch`, `issue_watch`)
   and what one use costs in credits, **plans** (`free`, `pro`: what each
   covers, unlimited, N uses per UTC month, or N uses in all) and **passes** (days of Pro for
   one payment, with INR and USD prices) are defined in a JSON catalogue
@@ -1320,7 +1320,8 @@ nothing charged.
 
 `GET /v1/me/recommendations?limit=10` → `Recommendations`: a short, ranked list
 of repositories (with starter issues) picked for the signed-in user. Reads
-only the database: no GitHub call, no model, no rate limit, never charged.
+only the database: no GitHub call, no model, no rate limit. Free for every
+signed-in user: every pick is returned, up to `limit`.
 
 - **Which repos**: only ones whose latest 7-day rules report (checked in the
   last 14 days) says `viable`, plus `viable` find results from the last 7 days
@@ -1332,13 +1333,16 @@ only the database: no GitHub call, no model, no rate limit, never charged.
   the user's pull requests were merged in (connected users), or a profile
   topic. Newcomers never get "long odds" repos, see only issues labelled for
   first-timers, and a repo whose known issues have none is dropped.
+- **Nothing to match on** (no profile languages or topics, no merged pull
+  requests: a new account): the picks are repos written in a popular language
+  (Python, JavaScript, TypeScript, Java, Go, Rust, C++), under the newcomer
+  rules, the best of each language first. Their `why` lines never mention the
+  user. `basis.languages`, `basis.topics` and `basis.history_languages` are
+  all empty then, which is how a client tells these picks from matched ones.
 - **Ranking** is fixed points, never a model: stated language 4, merged-in
   language 3 (both: 8), 2 per shared topic (up to 2), odds good 3 / fair 1,
   first-timers merged recently 2 (newcomers), fitting starter issues 2, one of
   the user's contribution types 1. Ties: merged share, reply time, sample.
-- **Paid**: the `recommendations` feature. A plan that covers it gets every
-  pick (`full: true`); everyone else gets the first 2 and `locked`, the number
-  held back.
 
 ```jsonc
 { "picks": [ { "repo": "owner/repo", "verdict": "viable", "headline": "Worth your time",
@@ -1353,15 +1357,14 @@ only the database: no GitHub call, no model, no rate limit, never charged.
     "open_pull_requests": 12|null, "contributors": 812|null,  // as on Discover
     "issues": [StarterIssue],     // up to 3, fitted to level and contribution types; [] when none known
     "checked_at": "…"|null } ],
-  "locked": 3, "full": false,
   "basis": { "languages": ["python"], "topics": ["cli"], "level": "newcomer",
              "contributions": ["docs"], "history_languages": ["Rust"],
              "already_contributing": 4, "has_profile": true, "connected": true },
   "computed_at": "…" }
 ```
 
-Empty `picks` with `has_profile: false` and `connected: false` means there is
-nothing to match on yet. Starter issues older than 72 hours aren't shown.
+Empty `picks` means nothing fits right now (or Holt has no repos to offer
+yet). Starter issues older than 72 hours aren't shown.
 
 ### Feedback: "Was this verdict right?"
 - `POST /v1/feedback` body `{"repo": "owner/repo", "mode": "rules"|"ai", "days": 7,

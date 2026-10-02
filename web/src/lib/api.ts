@@ -377,7 +377,7 @@ export function setAlertEmailByToken(token: string, on: boolean): Promise<Result
   return call(`/v1/alerts/${on ? "resubscribe" : "unsubscribe"}`, { method: "POST", body: JSON.stringify({ token }) });
 }
 
-/** Recommendations for you (API.md). Ranked by rules from cached data; the server shows 2 picks without a plan. */
+/** Recommendations for you (API.md). Ranked by rules from cached data; free for everyone. */
 export function recommendations(userId: string, limit = 10): Promise<Result<Recommendations>> {
   if (MOCK) return mock.recommendations(userId, limit);
   return call(`/v1/me/recommendations?limit=${Math.min(10, Math.max(1, Math.floor(limit)))}`, { caller: { userId } });
