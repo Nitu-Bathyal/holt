@@ -658,6 +658,27 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/v1/me/merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Merge
+         * @description Merge `from_user` into the caller. Asked again after it worked, there
+         *     is nothing left to move and nothing changes.
+         */
+        post: operations["merge_v1_me_merge_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/v1/me/merge-plan/{owner}/{repo}": {
         parameters: {
             query?: never;
@@ -2245,6 +2266,13 @@ export interface components {
             /** Plan Expires At */
             plan_expires_at: string | null;
         };
+        /** MergeIn */
+        MergeIn: {
+            /** From User */
+            from_user: string;
+            /** Github Id */
+            github_id: number;
+        };
         /** MergePlan */
         MergePlan: {
             ai: components["schemas"]["PlanAi"] | null;
@@ -3757,6 +3785,7 @@ export type LandingPath = components['schemas']['LandingPath'];
 export type Language = components['schemas']['Language'];
 export type LanguageCount = components['schemas']['LanguageCount'];
 export type Me = components['schemas']['Me'];
+export type MergeIn = components['schemas']['MergeIn'];
 export type MergePlan = components['schemas']['MergePlan'];
 export type MergePlanJob = components['schemas']['MergePlanJob'];
 export type MergePlanJobStatus = components['schemas']['MergePlanJobStatus'];
@@ -5273,6 +5302,41 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["History"];
                 };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    merge_v1_me_merge_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-user"?: string | null;
+                "x-holt-client-ip"?: string | null;
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
             /** @description Default Response */
             default: {

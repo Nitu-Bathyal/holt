@@ -7,6 +7,7 @@ import { db } from "@/db";
 import { reportSignIn } from "@/lib/api";
 import { accounts, sessions, users, verificationTokens } from "@/db/schema";
 import { authSecret } from "@/lib/auth-secret";
+import { confirmedGitHub } from "@/lib/github-account";
 import { withoutTokens } from "@/lib/oauth-account";
 
 const providers: Provider[] = [];
@@ -34,6 +35,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   secret: authSecret(process.env),
   pages: { signIn: "/signin" },
   callbacks: {
+    // Runs once the provider has confirmed the account, before Auth.js links
+    // it or refuses to. Connect GitHub (the Auth.js route) wants to know
+    // which GitHub account that was; nothing else is listening.
+    signIn({ account }) {
+      const seen = confirmedGitHub.getStore();
+      if (seen && account?.provider === "github") seen.id = account.providerAccountId;
+      return true;
+    },
     session({ session, user }) {
       session.user.id = user.id;
       return session;

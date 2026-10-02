@@ -23,3 +23,13 @@ export function ConnectSubmit({ viaGitHub }: { viaGitHub: boolean }) {
     </button>
   );
 }
+
+/** The merge offer's one button. */
+export function MergeSubmit() {
+  const { pending } = useFormStatus();
+  return (
+    <button type="submit" className="btn-primary disabled:cursor-wait" disabled={pending} aria-busy={pending}>
+      {pending ? "merging…" : "merge accounts"}
+    </button>
+  );
+}

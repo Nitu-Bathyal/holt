@@ -842,6 +842,39 @@ people contribute) unless `stats_opt_out` is true. Turning it on (PATCH, or a
 POST that changes it) or disconnecting takes them out of every repository's
 numbers in the same request.
 
+### Merging accounts
+
+A person who signed in with GitHub once and with Google later has two
+accounts. When they connect GitHub from the second, `web/` finds the GitHub
+account is the first one's sign-in and offers to merge. `web/` asks for this
+only while it holds proof of both accounts from the same browser: the session
+of the account being kept, and a GitHub sign-in for exactly that GitHub id that
+succeeded in the last 10 minutes. `from_user` is the owner of that GitHub
+sign-in in `web/`'s own Auth.js tables, never user input; `web/` moves the
+sign-in to the caller in the same step.
+
+- `POST /v1/me/merge` body `{"from_user": "<user id>", "github_id": 583231}` → 204.
+  Everything `from_user` has moves to the caller, in one transaction (all of
+  it, or nothing), and `from_user`'s `users` row is deleted:
+  - orders, credit lots and the credit ledger, plan events, analyses (the
+    history), pre-flights, sent alert emails: all change owner;
+  - saved repos, viewed repos, pull requests and their counting choices, muted
+    pull requests, alerts, merge plans, playbooks, the sent-log of account
+    emails, feedback: the union; where both have the same thing, the caller's
+    stays;
+  - the GitHub connection comes along (the caller has none yet);
+  - profile, alert settings, account-email settings: the caller's; `from_user`'s
+    only where the caller has none (with new unsubscribe links);
+  - the plan that runs longer stays; credit balances add up; anything free takes
+    the more-used value, so merging never hands it back: each allowance counter
+    (`plan_usage`), the earlier `alerts_trial_ends_at`, the later weekly claim.
+
+  Asked again after it worked, nothing is left to move: 204, no change. 400
+  `invalid_request` when `from_user` is the caller. 409 `invalid_request`, with
+  nothing moved, when `github_id` is connected to a third account, when either
+  account is connected to a different GitHub account, or when the two can't be
+  one (both have a running monthly plan from before passes).
+
 ### My Contributions
 
 A connected user's public pull requests, each with Holt's verdict for its
