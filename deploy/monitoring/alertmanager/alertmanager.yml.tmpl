@@ -1,0 +1,56 @@
+# Rendered by up.sh into $HOLT_MON_HOME/config/alertmanager/alertmanager.yml.
+# up.sh keeps the lines between "#if X" and "#endif" only when X is set up,
+# and fills in the names between at-signs. The SMTP password and the two
+# webhook URLs are never written here: Alertmanager reads them from files.
+global:
+  resolve_timeout: 5m
+#if EMAIL
+  smtp_smarthost: "@SMTP_HOST@"
+  smtp_from: "@EMAIL_FROM@"
+  smtp_auth_username: "@SMTP_USER@"
+  smtp_auth_password_file: /run/secrets/smtp_password
+  smtp_require_tls: true
+#endif
+
+route:
+  receiver: owner
+  # One message per alert, 1 minute after it starts (so a blip that clears
+  # says nothing), at most one more every 30 minutes while it changes, and a
+  # reminder once a day while it lasts. The email provider's daily allowance
+  # is shared with the emails Holt sends its users.
+  group_by: [alertname]
+  group_wait: 1m
+  group_interval: 30m
+  repeat_interval: 24h
+  routes:
+    - matchers: [alertname = "Watchdog"]
+      receiver: watchdog
+      group_wait: 0s
+      group_interval: 1m
+      repeat_interval: 5m
+
+receivers:
+  - name: owner
+#if EMAIL
+    email_configs:
+      - to: "@EMAIL_TO@"
+        send_resolved: true
+        headers:
+          Subject: '[Holt] {{ if eq .Status "resolved" }}Resolved: {{ end }}{{ .CommonAnnotations.summary }}'
+#endif
+#if WEBHOOK
+    webhook_configs:
+      - url_file: /etc/alertmanager/webhook-url
+        send_resolved: true
+#endif
+  - name: watchdog
+#if WATCHDOG
+    webhook_configs:
+      - url_file: /etc/alertmanager/watchdog-url
+        send_resolved: false
+#endif
+
+inhibit_rules:
+  # With the site or the API down, the slow/errors/queue alerts are noise.
+  - source_matchers: [alertname =~ "HoltSiteDown|HoltApiDown"]
+    target_matchers: [alertname =~ "HoltServerErrors|HoltSlowRequests|HoltQueueWait"]

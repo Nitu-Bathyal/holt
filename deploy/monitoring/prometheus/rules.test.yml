@@ -1,0 +1,218 @@
+# promtool test rules (up.sh --check runs it): each alert fires on what it should
+# and stays quiet on what it shouldn't.
+rule_files:
+  - rules/holt.yml
+evaluation_interval: 30s
+
+tests:
+  - name: a healthy system raises nothing but the watchdog
+    interval: 30s
+    input_series:
+      - series: 'probe_success{job="holt-site", path="public", instance="https://githolt.com/"}'
+        values: '1x40'
+      - series: 'up{job="holt-server", instance="10.0.0.2:8000"}'
+        values: '1x40'
+      - series: 'holt_http_requests_total{route="/v1/reports/{owner}/{repo}", status="200"}'
+        values: '0+60x40'
+      - series: 'holt_http_request_duration_seconds_bucket{le="0.1"}'
+        values: '0+60x40'
+      - series: 'holt_http_request_duration_seconds_bucket{le="+Inf"}'
+        values: '0+60x40'
+      - series: 'holt_http_request_duration_seconds_count'
+        values: '0+60x40'
+      - series: 'holt_db_pool_waiting'
+        values: '0 0 2 0 0 1x4 0x30'
+      - series: 'holt_db_pool_timeouts_total'
+        values: '0x40'
+      - series: 'holt_github_points_left{token="1"}'
+        values: '4000x40'
+      - series: 'holt_jobs_oldest_queued_seconds{lane="user"}'
+        values: '0 0 45 70 0x36'
+      - series: 'holt_jobs_oldest_queued_seconds{lane="background"}'
+        values: '900x40'
+      - series: 'probe_failed_due_to_regex{job="holt-deploy"}'
+        values: '0x40'
+      - series: 'node_filesystem_avail_bytes{mountpoint="/"}'
+        values: '18e9x40'
+      - series: 'node_filesystem_size_bytes{mountpoint="/"}'
+        values: '98e9x40'
+      - series: 'node_memory_MemAvailable_bytes'
+        values: '7e9x40'
+    alert_rule_test:
+      - eval_time: 20m
+        alertname: HoltSiteDown
+      - eval_time: 20m
+        alertname: HoltApiDown
+      - eval_time: 20m
+        alertname: HoltServerErrors
+      - eval_time: 20m
+        alertname: HoltSlowRequests
+      - eval_time: 20m
+        alertname: HoltDbPoolWaiting
+      - eval_time: 20m
+        alertname: HoltDbPoolTimeouts
+      - eval_time: 20m
+        alertname: HoltGithubPointsLow
+      - eval_time: 20m
+        alertname: HoltQueueWait
+      - eval_time: 20m
+        alertname: HoltDeployFailed
+      - eval_time: 20m
+        alertname: HostRootDiskLow
+      - eval_time: 20m
+        alertname: HostMemoryLow
+      - eval_time: 20m
+        alertname: Watchdog
+        exp_alerts:
+          - exp_labels: { severity: none }
+            exp_annotations: { summary: "Monitoring is alive" }
+
+  - name: everything wrong at once
+    interval: 30s
+    input_series:
+      - series: 'probe_success{job="holt-site", path="public", instance="https://githolt.com/"}'
+        values: '0x40'
+      - series: 'probe_success{job="holt-site", path="internal", instance="http://edge:8080/"}'
+        values: '1x40'
+      # The old server went away in a deploy and the new one never answered.
+      - series: 'up{job="holt-server", instance="10.0.0.2:8000"}'
+        values: '1 1 _x38'
+      - series: 'up{job="holt-server", instance="10.0.0.3:8000"}'
+        values: '_ _ 0x38'
+      - series: 'holt_http_requests_total{route="/v1/find", status="200"}'
+        values: '0+54x40'
+      - series: 'holt_http_requests_total{route="/v1/find", status="500"}'
+        values: '0+6x40'
+      # Half the requests take between 2 and 5 seconds.
+      - series: 'holt_http_request_duration_seconds_bucket{le="2"}'
+        values: '0+30x40'
+      - series: 'holt_http_request_duration_seconds_bucket{le="5"}'
+        values: '0+60x40'
+      - series: 'holt_http_request_duration_seconds_bucket{le="+Inf"}'
+        values: '0+60x40'
+      - series: 'holt_http_request_duration_seconds_count'
+        values: '0+60x40'
+      - series: 'holt_db_pool_waiting{instance="10.0.0.2:8000"}'
+        values: '3x40'
+      - series: 'holt_db_pool_timeouts_total{instance="10.0.0.2:8000"}'
+        values: '0x30 4x10'
+      # Two servers during a swap report the same token: it counts once.
+      - series: 'holt_github_points_left{token="1", instance="10.0.0.2:8000"}'
+        values: '300x40'
+      - series: 'holt_github_points_left{token="1", instance="10.0.0.3:8000"}'
+        values: '310x40'
+      - series: 'holt_jobs_oldest_queued_seconds{lane="user"}'
+        values: '0+30x40'
+      - series: 'probe_failed_due_to_regex{job="holt-deploy"}'
+        values: '1x40'
+      - series: 'node_filesystem_avail_bytes{mountpoint="/"}'
+        values: '8e9x40'
+      - series: 'node_filesystem_size_bytes{mountpoint="/"}'
+        values: '98e9x40'
+      - series: 'node_memory_MemAvailable_bytes'
+        values: '6e8x40'
+    alert_rule_test:
+      - eval_time: 18m
+        alertname: HoltSiteDown
+        exp_alerts:
+          - exp_labels:
+              severity: critical
+              job: holt-site
+              path: public
+              instance: https://githolt.com/
+            exp_annotations:
+              summary: "githolt.com is not answering (public check)"
+              description: >-
+                https://githolt.com/ has failed for 2 minutes. "public" failing
+                alone means Cloudflare or the tunnel; "internal" failing means the
+                edge or the web app.
+      - eval_time: 18m
+        alertname: HoltApiDown
+        exp_alerts:
+          - exp_labels: { severity: critical }
+            exp_annotations:
+              summary: "The Holt API server is not answering"
+              description: >-
+                No server container has answered /metrics for 2 minutes: it is
+                down, restarting in a loop, or too busy to answer in 10 seconds.
+      - eval_time: 18m
+        alertname: HoltServerErrors
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations:
+              summary: "10% of API requests are failing"
+              description: "More than 5% of requests have ended in a 5xx for 5 minutes."
+      - eval_time: 18m
+        alertname: HoltSlowRequests
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations:
+              summary: "API requests are slow: p95 is 4.7s"
+              description: >-
+                19 in 20 requests should start answering within 2 seconds; for 5
+                minutes they have not.
+      - eval_time: 18m
+        alertname: HoltDbPoolWaiting
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations:
+              summary: "Requests are waiting for a database connection"
+              description: >-
+                Every pool connection has been busy for 5 minutes
+                (3 waiting now). Something holds connections too long,
+                or HOLT_DB_POOL_SIZE is too small for the traffic.
+      - eval_time: 18m
+        alertname: HoltDbPoolTimeouts
+        exp_alerts:
+          - exp_labels: { severity: critical }
+            exp_annotations:
+              summary: "Requests gave up waiting for a database connection"
+              description: >-
+                4 waits hit HOLT_DB_POOL_TIMEOUT in the
+                last 10 minutes: those requests failed.
+      - eval_time: 18m
+        alertname: HoltGithubPointsLow
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations:
+              summary: "GitHub points are nearly used up (300 left)"
+              description: >-
+                Fewer than 500 GraphQL points are left until the hourly reset;
+                new checks will start failing with "try again later".
+      - eval_time: 18m
+        alertname: HoltQueueWait
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations:
+              summary: "People's checks are waiting over a minute to start"
+              description: >-
+                The longest-waiting check has been queued for
+                18m 0s: every user worker
+                (HOLT_JOB_CONCURRENCY) is busy.
+      - eval_time: 18m
+        alertname: HoltDeployFailed
+        exp_alerts:
+          - exp_labels: { severity: warning, job: holt-deploy }
+            exp_annotations:
+              summary: "The last production deploy failed"
+              description: >-
+                /__build says the last deploy failed or is held back. Production
+                stays on the previous commit: deploy/prod/follow.sh --status.
+      - eval_time: 18m
+        alertname: HostRootDiskLow
+        exp_alerts:
+          - exp_labels: { severity: critical, mountpoint: / }
+            exp_annotations:
+              summary: "The server's / disk has 8.163% free"
+              description: >-
+                / holds Docker's images and build cache. Under 10% free, the next
+                build can fill it and stop every container on the machine.
+      - eval_time: 18m
+        alertname: HostMemoryLow
+        exp_alerts:
+          - exp_labels: { severity: warning }
+            exp_annotations:
+              summary: "The server has 572.2MiB of memory available"
+              description: >-
+                Under 1 GB available for 5 minutes. The next deploy's build or a
+                traffic peak can push the machine into swap or the OOM killer.
