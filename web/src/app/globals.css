@@ -282,15 +282,54 @@
   }
 }
 
+/* The public pages' measures: the reading width (.wrap) and the wide one
+   (the landing, a report). --page-* is the measure of the page you're on,
+   which the header and the footer follow, so the logo starts at the content's
+   left edge and the last action ends at its right. From 1024px only: below
+   that the header is the phone and tablet one. */
+:root {
+  --wrap-max: 1120px;
+  --wrap-gut: 16px;
+  --wide-max: 1680px;
+  --wide-gut: clamp(16px, 4vw, 80px);
+  /* The landing's desktop gutter: a lane for the companion cat (.landing-wide). */
+  --wide-gut-lane: max(var(--wide-gut), 136px);
+  --page-max: var(--wrap-max);
+  --page-gut: var(--wrap-gut);
+  /* The landing's small type (the hero's foot line), and the header's own
+     size: 1rem, or grown by that same scale on the landing. */
+  --ls-small: clamp(0.85rem, min(0.95vw, 1.8svh), 1rem);
+  --nav-base: 1rem;
+}
+@media (min-width: 781px) {
+  :root {
+    --wrap-gut: 24px;
+  }
+}
+@media (min-width: 1024px) {
+  :root:has([data-shell="marketing"] .report-wide) {
+    --page-max: var(--wide-max);
+    --page-gut: var(--wide-gut);
+  }
+  :root:has([data-shell="marketing"] .landing-wide) {
+    --page-max: var(--wide-max);
+    --page-gut: var(--wide-gut-lane);
+    --nav-base: calc(var(--ls-small) / 0.85);
+  }
+}
+
 @layer components {
   .wrap {
-    width: min(calc(100% - 32px), 1120px);
+    width: min(calc(100% - 2 * var(--wrap-gut)), var(--wrap-max));
     margin-inline: auto;
   }
-  @media (min-width: 781px) {
-    .wrap {
-      width: min(calc(100% - 48px), 1120px);
-    }
+  .site-header .wrap,
+  .site-footer .wrap {
+    width: min(calc(100% - 2 * var(--page-gut)), var(--page-max));
+  }
+  /* The marketing header's type and gaps are in em of this (header.tsx). */
+  .site-header .wrap {
+    font-size: var(--nav-base);
   }
 
   /* One screen of a stacked page (the landing, /how-it-works): at least the
@@ -973,7 +1012,7 @@
     }
   }
   /* About 2/3 of a landing section heading and 2.5x the line under it: one
-     line across the footer's 1120px measure. */
+     line across the footer's narrowest desktop measure (--wrap-max). */
   .ft-signoff {
     font-size: clamp(1.3rem, 3.4vw, 2.6rem);
     line-height: 1.15;
@@ -1023,7 +1062,7 @@
   /* Reduced motion: the strip becomes a still, wrapped list. */
   @media (prefers-reduced-motion: reduce) {
     .ft-ticker-mask {
-      width: min(calc(100% - 32px), 1120px);
+      width: min(calc(100% - 2 * var(--page-gut)), var(--page-max));
       margin-inline: auto;
       -webkit-mask-image: none;
       mask-image: none;
@@ -1309,7 +1348,7 @@
   }
   .menu[popover] {
     top: 64px;
-    right: max(16px, calc((100vw - 1120px) / 2));
+    right: max(16px, calc((100vw - var(--page-max)) / 2));
     transform-origin: top right;
   }
   .menu[popover]:not(:popover-open) {
@@ -1602,13 +1641,13 @@
    purpose: it overrides the sections' fixed text-[…] utilities, and only
    inside .landing-wide (the landing's Grid). */
 .landing-wide {
-  --gut: clamp(16px, 4vw, 80px);
-  width: min(calc(100% - 2 * var(--gut)), 1680px);
+  --gut: var(--wide-gut);
+  width: min(calc(100% - 2 * var(--gut)), var(--wide-max));
 }
 /* Report pages (the report, the merge plan and their skeletons): as wide
    as the landing, without its lane for the walking cat. */
 .report-wide {
-  width: min(calc(100% - 2 * clamp(16px, 4vw, 80px)), 1680px);
+  width: min(calc(100% - 2 * var(--wide-gut)), var(--wide-max));
   margin-inline: auto;
 }
 /* Signed in, a report sits in the app's frame like every other app page (the
@@ -1624,7 +1663,7 @@
    22px from the edge), never sits on a section's text, cards or buttons. */
 @media (min-width: 1024px) {
   .landing-wide {
-    --gut: max(clamp(16px, 4vw, 80px), 136px);
+    --gut: var(--wide-gut-lane);
   }
 }
 .landing-wide .h2 {
@@ -1752,7 +1791,7 @@
   gap: 0.75rem 2rem;
   max-width: 880px;
   margin-top: clamp(0.8rem, 2svh, 1.8rem);
-  font-size: clamp(0.85rem, min(0.95vw, 1.8svh), 1rem);
+  font-size: var(--ls-small);
 }
 /* Phones held sideways: compact, as before. */
 @media (orientation: landscape) and (max-height: 500px) {
