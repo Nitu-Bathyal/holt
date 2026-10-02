@@ -32,5 +32,7 @@ OPENROUTER_API_KEY=
 # STAGING_*_OAUTH_* from ~/.config/holt/secrets.env on every run. It also
 # overrides GITHUB_TOKENS above with a fresh one (secrets.env, else gh).
 HOLT_JOB_CONCURRENCY=1
+# Web containers behind the edge: 1 to 3.
+HOLT_WEB_REPLICAS=2
 ENV
 echo "wrote $(pwd)/.env"

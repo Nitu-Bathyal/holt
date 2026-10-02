@@ -744,6 +744,10 @@ if (( ${#BUILD[@]} )) && ! docker buildx inspect "$BUILDER" >/dev/null 2>&1; the
         --driver-opt memory=3g --driver-opt "env.BUILDKIT_STEP_LOG_MAX_SIZE=10485760" >/dev/null
 fi
 port="$(sed -n 's/^HOLT_STAGE_PORT=//p' "$DEPLOY/.env")"; port="${port:-9110}"
+# Web containers (compose.yml, `deploy.replicas`), as production: 1 to 3,
+# because the db's max_connections is sized for three.
+replicas="$(sed -n 's/^HOLT_WEB_REPLICAS=//p' "$DEPLOY/.env" | tail -1 | tr -d "\"'")"; replicas="${replicas:-2}"
+[[ "$replicas" =~ ^[1-3]$ ]] || fail "HOLT_WEB_REPLICAS in $DEPLOY/.env must be 1, 2 or 3, not '$replicas'"
 
 blog="$STATE/logs/build-$(date -u +%Y%m%dT%H%M%SZ).log"
 log "building ${BUILD[*]:-nothing} (log: $blog)"
@@ -797,9 +801,10 @@ fi
 edge_seed "$DEPLOY/edge.conf" "$EDGE_DIR" || fail "$EDGE_MSG"
 [[ -n "$EDGE_MSG" ]] && log "$EDGE_MSG"
 # Migrations first (they must work with the running release), then server
-# and web one at a time: the new container starts beside the old one and
-# takes over once healthy, so staging never shows an error page mid-update.
-# A new one that never gets healthy is removed and the old one stays.
+# and web one at a time: the new containers (one server, $replicas web)
+# start beside the old ones and take over once every one is healthy, so
+# staging never shows an error page mid-update. If one never gets healthy,
+# the new ones are removed and the old ones stay.
 compose up -d db >>"$blog" 2>&1 || fail "db didn't start; see $blog"
 compose run --rm migrate-web >>"$blog" 2>&1 || fail "web migration failed; see $blog"
 compose run --rm migrate-server >>"$blog" 2>&1 || fail "server migration failed; see $blog"

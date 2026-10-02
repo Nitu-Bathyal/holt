@@ -6,7 +6,14 @@
 # the health check fails. Only the edge publishes a port, on 127.0.0.1, and
 # the Cloudflare tunnel (see TUNNEL.md) is the one public way in.
 #
-#   tunnel -> edge (nginx, /__build, www redirect) -> web (Next.js) -> server (FastAPI) -> db
+#   tunnel -> edge (nginx, /__build, www redirect) -> web (Next.js) x N -> server (FastAPI) -> db
+#
+# web runs HOLT_WEB_REPLICAS containers (default 2); the edge spreads
+# requests over them. The server stays one process.
+#
+# CPU priority is not set here: deploy.sh gives db, server, web and edge
+# more CPU shares on the running containers (`docker update`), because
+# setting it here would make compose recreate the db and the edge.
 #
 # Secrets come from ~/.local/share/holt-prod/.env (make-env.sh writes it;
 # deploy.sh passes it with --env-file). Nothing here auto-updates.
@@ -35,17 +42,22 @@ services:
     #                         /metrics' own 1 once it is scraped, and 1 per
     #                         background pass under a lock (the contributions
     #                         refresh; PR watch and its mailer when on)
-    #   a second server   15  while a deploy swaps containers (deploy/swap.sh)
+    #   a second server   15  while a deploy swaps the server (deploy/swap.sh)
     #   warm pass         13  warm.sh's one-off server container: pool 10, its
     #                         lock, and a second timer starting while it runs
-    #   web               10  5 each (web/src/db/index.ts), two during a swap
+    #   web               15  5 each (web/src/db/index.ts), HOLT_WEB_REPLICAS
+    #                         at its most, 3
+    #   a second web set  15  while a deploy swaps web
     #   umami             10
     #   one-offs           4  migrate-web, migrate-server, backup.sh, psql
     #   monitoring         3  holt_monitor's limit (deploy/monitoring); it uses 1
-    #   total             70  of 80
+    # A deploy swaps the server first and web after it, never both at once, so
+    # the most open together is 75 of 80 (in either swap, with three web
+    # containers). A fourth would need 85 during the web swap: deploy.sh
+    # refuses HOLT_WEB_REPLICAS over 3 until this is raised.
     # A connection costs about 2 MB here once it has run the usual queries
-    # (measured), so all 70 at once is ~140 MB next to shared_buffers, inside
-    # mem_limit; on a normal day about 30 are open. Raise HOLT_DB_POOL_SIZE
+    # (measured), so all 75 at once is ~150 MB next to shared_buffers, inside
+    # mem_limit; on a normal day about 35 are open. Raise HOLT_DB_POOL_SIZE
     # and this together, and mem_limit with them.
     command: ["postgres", "-c", "shared_buffers=32MB", "-c", "max_connections=80"]
     healthcheck:
@@ -223,12 +235,21 @@ services:
       # because web publishes no port: the one way in is tunnel -> edge
       # (127.0.0.1) -> web.
       TRUST_PROXY_HEADERS: "1"
-      NODE_OPTIONS: --max-old-space-size=384
+      # Two thirds of mem_limit for the heap; the rest is buffers, compiled
+      # code and response streams (about 120 MB under load).
+      NODE_OPTIONS: --max-old-space-size=512
     depends_on:
       server: { condition: service_healthy }
-    # deploy/swap.sh starts the new web beside the old one and waits for
-    # this before retiring the old one. robots.txt is rendered by Next.js
-    # but never calls the API.
+    # One Next.js process renders on one core, about 23 pages a second, so
+    # the site runs several: HOLT_WEB_REPLICAS in $HOLT_PROD_HOME/.env, 1 to
+    # 3 (the db's max_connections above is sized for 3). All of them answer
+    # to `web`, and the edge picks one per request. Each keeps its own small
+    # caches and per-IP counters (web/src/lib/rate-limit.ts, find-cache.ts).
+    deploy:
+      replicas: ${HOLT_WEB_REPLICAS:-2}
+    # deploy/swap.sh starts the new web containers beside the old ones and
+    # waits for this on every one before retiring the old ones. robots.txt
+    # is rendered by Next.js but never calls the API.
     healthcheck:
       test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/robots.txt').then(r => process.exit(r.ok ? 0 : 1), () => process.exit(1))"]
       interval: 15s
@@ -236,11 +257,13 @@ services:
       retries: 3
       start_period: 90s
       start_interval: 1s
-    mem_limit: 512m
+    # Per container. One process reached 503 MB under 200 concurrent readers.
+    mem_limit: 768m
     restart: unless-stopped
 
   # Front door: keeps the published port across deploys (web is recreated
-  # behind it), serves /__build, redirects www to the apex, proxies the rest.
+  # behind it), serves /__build, redirects www to the apex, and spreads the
+  # rest over the web containers.
   # Its config is a directory: deploy.sh copies edge.conf into
   # $HOLT_PROD_HOME/edge/default.conf, checks it with nginx -t and reloads,
   # so config changes go live without restarting the edge. (A single-file
