@@ -96,8 +96,11 @@ export function picksQuery(p: Picks): string {
   return q.toString();
 }
 
+/** How many results a find page starts with; the list loads the rest of the index as it is scrolled. */
+export const FIND_FIRST = 12;
+
 /** The part of the picks the server searches on (the rest is applied in the browser). */
-export function findQuery(p: Picks, limit = 12): FindQuery {
+export function findQuery(p: Picks, limit = FIND_FIRST): FindQuery {
   return { languages: p.langs, topics: p.topics, days: p.days, hacktoberfest: p.hf, limit };
 }
 

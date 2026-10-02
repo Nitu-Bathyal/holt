@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { track } from "@/lib/analytics";
 import { defaultPicks, PICKS_COOKIE, picksQuery, searchKey, widen, type Picks, type PicksSource } from "@/lib/find-picks";
 import { signInHref } from "@/lib/gate";
-import { personalise } from "@/lib/profile";
+import { personalise, type Fit } from "@/lib/profile";
 import type { ApiError, FindResult, FindStart, Result } from "@/lib/types";
 import type { Prefs } from "@/lib/profile-flow";
 import { saveFromFind } from "@/app/profile/actions";
@@ -13,7 +13,7 @@ import { CatFace } from "../cat-face";
 import { ErrorPanel } from "../error-panel";
 import { EmptyState } from "../shell/app-page";
 import { FindFilters } from "./find-filters";
-import { FindResults } from "./find-results";
+import { FindList } from "./find-list";
 import { FindResultsSkeleton } from "./find-skeleton";
 import { useFindJob } from "./use-find-job";
 
@@ -167,7 +167,8 @@ export function FindView({ initialPicks, searched = initialPicks, initial, sourc
         </p>
       )}
       {notice}
-      <Results pending={pending} locked={locked} list={list} searching={searching} error={error} progress={job.stage.progress} days={picks.days} saved={saved} picks={picks} setPicks={setPicks} onRetry={retryNow} />
+      {/* The list carries on into the index once the search has settled on these picks; a search still running, or about to, keeps to its own results. */}
+      <Results pending={pending} locked={locked} list={list} raw={raw ?? []} fit={fit} more={searching || pending ? null : picksQuery({ ...picks, level: "experienced", types: [] })} searching={searching} error={error} progress={job.stage.progress} days={picks.days} saved={saved} picks={picks} setPicks={setPicks} onRetry={retryNow} />
     </>
   );
 }
@@ -177,12 +178,17 @@ function sameAsProfile(p: Picks, prof: Pick<Prefs, "languages" | "topics" | "day
   return same(p.langs, prof.languages) && same(p.topics, prof.topics) && same(p.types, prof.contributions) && p.days === prof.days && p.level === prof.level;
 }
 
-function Results({ pending, locked, list, searching, error, progress, days, saved, picks, setPicks, onRetry }: {
+function Results({ pending, locked, list, raw, fit, more, searching, error, progress, days, saved, picks, setPicks, onRetry }: {
   pending: boolean;
   /** Signed out and the picks changed: where to come back to after signing in. */
   locked: string | null;
   /** The personalised results, or null while the search runs with nothing to show yet. */
   list: FindResult[] | null;
+  /** The same results before they were fitted to the reader, and what fits them. */
+  raw: FindResult[];
+  fit: Fit;
+  /** The search as a query string, when the list may load the rest of the index (FindList). */
+  more: string | null;
   /** The search is still adding to `list`. */
   searching: boolean;
   error: ApiError | null;
@@ -212,7 +218,7 @@ function Results({ pending, locked, list, searching, error, progress, days, save
     body = (
       <>
         {searching && <SearchProgress progress={progress} />}
-        <FindResults results={list} days={days} saved={saved} />
+        <FindList results={raw} fit={fit} more={more} days={days} saved={saved} />
       </>
     );
   }

@@ -86,6 +86,7 @@ export type MergePlanStart = S.Queued;
 export type AnalysisStart = S.AnalysisDone | S.Queued;
 export type PlaybookStart = S.PlaybookDone | S.Queued;
 export type FindStart = S.FindDone | S.FindQueued;
+export type FindIndexPart = S.FindIndexPart;
 
 /** Result of a call: either data or a plain-English error. */
 export type Result<T> = { ok: true; data: T } | { ok: false; error: ApiError; status: number };
