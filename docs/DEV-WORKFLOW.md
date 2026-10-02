@@ -43,7 +43,7 @@ the live site; the rest of each page is illustrative. Which URL shows which stat
 | `/discover`, `/find`, `/hacktoberfest`, `/compare?repos=home-assistant/core,pallets/flask` | The list pages, filled from the mock repos. |
 | `/signin`, `/settings`, `/me/repos`, `/for-you` | Signed-out versions until you sign in (below). |
 
-Other switches: `MOCK_PLAN=pro` (every pick on `/for-you`), `MOCK_PRO=0` (hide
+Other switches: `MOCK_PRO=0` (hide
 the playbook), `MOCK_PRO_OFF=1` (pre-flight "coming soon"). The full list is
 in [`web/README.md`](../web/README.md).
 

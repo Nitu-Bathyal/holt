@@ -6,7 +6,6 @@
     "playbook": {"name": "Contribution playbook", "credits": 1, "free_credits": false},
     "preflight": {"name": "PR pre-flight check", "credits": 1, "free_credits": false},
     "guidance": {"name": "Personalised guidance", "credits": 1, "free_credits": false},
-    "recommendations": {"name": "Repository recommendations", "credits": null, "free_credits": false},
     "merge_plan": {"name": "Merge plan", "credits": null, "free_credits": false},
     "pr_watch": {"name": "PR watch", "credits": null, "free_credits": false},
     "repo_watch": {"name": "Repo watch", "credits": null, "free_credits": false},

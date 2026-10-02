@@ -508,6 +508,38 @@ With ~5,000 seeds a cold pass is about 5,000 × ~9 ≈ 45,000 points, so warm a
 new list with `--wait-for-budget` or in `--limit` steps rather than in one
 burst.
 
+## Metrics
+
+`GET /metrics` serves this process's numbers in Prometheus's text format
+(`holt_server/metrics.py`), for the optional monitoring stack in
+`deploy/monitoring/`. It needs no key and is not part of the web app's API
+(`API.md`): the server publishes no port, the web app proxies no such path,
+so only the stack's own Docker network reaches it. Nothing in it names a
+user, a repository or a token.
+
+```sh
+curl -s localhost:20130/metrics | grep '^holt_'
+```
+
+| Metric | What it says |
+|---|---|
+| `holt_http_requests_total{method,route,status}`, `holt_http_request_duration_seconds` | Requests and the time to the first byte, by route template (`/v1/reports/{owner}/{repo}`), never by URL. `/health` and `/metrics` aren't counted. |
+| `holt_http_requests_in_flight` | Requests being answered now, open event streams included. |
+| `holt_jobs{status,lane}`, `holt_jobs_oldest_queued_seconds{lane}` | The queue, read from the `jobs` table: jobs queued and running in every process, and how long the longest-waiting one has waited. `lane` is `user` (a person's job) or `background` (badges, warm passes). |
+| `holt_job_wait_seconds{lane}`, `holt_job_duration_seconds{kind}`, `holt_jobs_finished_total{kind,lane,outcome}` | Each job this process ran: its wait, its run time, and how it ended (`done`, `error`, `timeout`). |
+| `holt_job_workers{lane}`, `holt_job_workers_busy{lane}` | Workers per lane (`HOLT_JOB_CONCURRENCY`, `HOLT_BADGE_CONCURRENCY`) and how many are running a job. |
+| `holt_db_pool_size`, `holt_db_pool_in_use`, `holt_db_pool_waiting`, `holt_db_pool_wait_seconds`, `holt_db_pool_timeouts_total` | The database pool: connections out, requests waiting for one, how long they waited, and waits that gave up at `HOLT_DB_POOL_TIMEOUT`. |
+| `holt_github_points_left{token}`, `holt_github_points_reset_timestamp_seconds{token}`, `holt_github_token_usable{token}`, `holt_github_points_used_total` | GraphQL points as GitHub last reported them (no call is made to ask), when they come back, and points seen spent. Tokens are numbered, never shown. |
+| `holt_ai_budget_usd`, `holt_ai_committed_usd`, `holt_ai_spent_usd{kind}` | AI spend against `HOLT_AI_BUDGET_USD`, by kind of run (`merge_plan`, `analysis`, ...). |
+| `holt_emails_last_day{stream,status}`, `holt_email_daily_limit` | Alert and account emails handed to the provider in the last 24 hours, sent and failed. |
+| `holt_repos_reported{engine}`, `holt_warm_pass_running` | Repos whose newest quick report is from this engine or an older one, and whether a warm pass holds its lock (Postgres only). |
+| `holt_metrics_db_ok`, `holt_build_info{version,engine_version}`, `process_*` | Whether this scrape could read the database; the versions; the process's memory and CPU. |
+
+The numbers read from the database come over a connection of their own
+(`Database.stats`), like the health check's, so they still answer while every
+pool connection is busy. It is opened by the first scrape and counted in the
+budget in `deploy/prod/compose.yml`.
+
 ## Tests
 
 ```sh

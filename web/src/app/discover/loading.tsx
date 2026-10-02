@@ -9,15 +9,18 @@ export default function Loading() {
       <SkeletonRegion>
         <FindFrameSkeleton>
           <div aria-hidden="true" className="find-tray">
-            <div className="py-3 sm:pb-3 sm:pt-4"><Skeleton className="h-9 w-full sm:w-[27rem]" /></div>
-            <div className="flex gap-2 overflow-hidden border-t border-line py-3 sm:py-4">
-              {[12, 8, 10, 10, 4, 6, 6].map((w, i) => (
-                <Skeleton key={i} className="h-9 shrink-0" style={{ width: `calc(${w}ch + 28px)` }} />
-              ))}
+            <div className="find-bar flex flex-wrap items-center gap-x-4 gap-y-1.5 py-1.5 @3xl:flex-nowrap">
+              <Skeleton className="h-10 w-full sm:h-8 @3xl:w-[22rem] @3xl:shrink-0" />
+              <div className="flex w-full min-w-0 gap-1.5 overflow-hidden @3xl:w-auto @3xl:flex-1">
+                {[12, 8, 10, 10, 4, 6, 6].map((w, i) => (
+                  <Skeleton key={i} className="h-10 shrink-0 sm:h-8" style={{ width: `calc(${w}ch + 24px)` }} />
+                ))}
+              </div>
             </div>
           </div>
-          <Skeleton className="mb-4 mt-7 h-3 w-56" />
-          <FindResultsSkeleton />
+          <div className="mt-5">
+            <FindResultsSkeleton />
+          </div>
         </FindFrameSkeleton>
       </SkeletonRegion>
     </LoadingTransition>

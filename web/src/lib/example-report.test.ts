@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 import { EXAMPLE_REPORT, exampleRecordedOn } from "./example-report.ts";
 
-test("the example is a complete AI report anyone can read", () => {
+test("the recorded example is complete", () => {
   const r = EXAMPLE_REPORT;
   assert.equal(r.mode, "ai");
   assert.ok(r.bottom_line && r.summary, "the written explanation is there");

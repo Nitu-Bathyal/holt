@@ -322,6 +322,8 @@ class JobRunner:
         what = f"{job.kind}/{job.mode}" if job.kind == "analysis" else job.kind
         log.info("job %s started: %s %s, %s lane, waited %.0fs", job.id, what,
                  job.repo or "", lane, waited)
+        self.services.metrics.job_started(job, lane, waited)
+        outcome = "error"
         stop = threading.Event()
         evidence: Evidence | None = None
         # One writer applies the job's progress steps in the order they were
@@ -369,6 +371,7 @@ class JobRunner:
                 loop.call_soon(steps.put_nowait, None)
                 await writer
         except JobTimedOut:
+            outcome = "timeout"
             log.warning("job %s timed out after %.0fs (%s %s)", job.id, limit, what,
                         job.repo or "")
             # It may still be running, and spending: it keeps its whole hold.
@@ -383,8 +386,12 @@ class JobRunner:
             await self._fail(job, ApiError(
                 "internal", "Something went wrong on our side. Please try again in a minute."))
         else:
+            outcome = "done"
             log.info("job %s done in %.1fs", job.id, time.monotonic() - started)
             await self._finish(job, result, evidence)
+        finally:
+            self.services.metrics.job_finished(job, lane, outcome,
+                                               time.monotonic() - started)
 
     async def in_thread(self, stop: threading.Event, limit: float, fn, *args) -> Any:
         """`fn(*args)` on the runner's executor, for at most `limit` seconds.

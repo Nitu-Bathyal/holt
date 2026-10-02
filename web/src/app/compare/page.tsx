@@ -5,13 +5,12 @@ import { redirect } from "next/navigation";
 import { Suspense } from "react";
 import { CompareTable, Issues, IssuesSkeleton, type Column } from "@/components/compare/compare-table";
 import { PageTransition } from "@/components/motion/page-transition";
-import { AppPageHeader, EmptyState } from "@/components/shell/app-page";
+import { AppPageHeader } from "@/components/shell/app-page";
 import { SignInToCheck } from "@/components/sign-in-to-check";
 import { getReport, savedNames, searchRepos, starterIssues } from "@/lib/api";
-import { bareNames, compareHref as href, compareTitle, EXAMPLE_POOL, MAX, parseList, pickRepo, savedToAdd, SUGGESTIONS } from "@/lib/compare";
+import { bareNames, compareHref as href, compareTitle, MAX, parseList, pickRepo, savedToAdd, SUGGESTIONS } from "@/lib/compare";
 import { clock } from "@/lib/home";
 import { caller, currentUser, type SessionUser } from "@/lib/session";
-import type { Report } from "@/lib/types";
 
 export const metadata: Metadata = {
   title: "Compare repositories",
@@ -50,22 +49,15 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
   const saved = (await savedNames(user?.id)) ?? [];
   const fromSaved = savedToAdd(saved, all);
 
-  // Nothing picked yet: an example from reports already cached (reading the
-  // cache costs nothing and starts no checks), so the page shows an answer.
-  let example: { repo: string; report: Report }[] = [];
-  if (!all.length) {
-    const cached = await Promise.all(EXAMPLE_POOL.map((r) => getReport(r)));
-    example = cached.flatMap((r) => (r.ok ? [{ repo: r.data.repo, report: r.data }] : [])).slice(0, 3);
-  }
-  const shown = all.length ? all.map((repo, i) => ({ repo, r: reports[i] })) : example.map((e) => ({ repo: e.repo, r: { ok: true as const, data: e.report } }));
-  const list = shown.map((s) => s.repo);
-  const title = compareTitle(all.length > 0, shown.map(({ r }) => (r.ok ? r.data : null)));
+  // Nothing picked (or the last one removed): no table, only the ways to start one.
+  const shown = all.map((repo, i) => ({ repo, r: reports[i] }));
+  const title = compareTitle(shown.map(({ r }) => (r.ok ? r.data : null)));
 
   const columns: Column[] = shown.map(({ repo, r }) => {
-    const removeHref = href(list.filter((x) => x !== repo));
+    const removeHref = href(all.filter((x) => x !== repo));
     if (r.ok) return { repo, removeHref, kind: "report", report: r.data };
     // Cached reports compare for anyone; a new check needs an account.
-    if (r.error.code === "not_found") return user ? { repo, removeHref, kind: "live" } : { repo, removeHref, kind: "note", note: <SignInToCheck back={href(list)} className="" /> };
+    if (r.error.code === "not_found") return user ? { repo, removeHref, kind: "live" } : { repo, removeHref, kind: "note", note: <SignInToCheck back={href(all)} className="" /> };
     return { repo, removeHref, kind: "note", note: <p className="font-sans text-[0.86rem] text-orange">{r.error.message}</p> };
   });
   const issues = columns.map((c) =>
@@ -80,6 +72,25 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
     <PageTransition>
       <div className="app-page">
         <AppPageHeader sentence title={title} mood={shown.length ? "ready" : "thinking"}>
+          {!all.length && (
+            <form action="/compare" method="get" className="mt-6 flex max-w-xl items-center border border-line-strong bg-panel transition-colors focus-within:border-blue">
+              <label htmlFor="add" className="sr-only">Repos to compare: names, owner/name, or GitHub links</label>
+              <span aria-hidden="true" className="pl-3 text-amber">+</span>
+              <input
+                id="add"
+                name="add"
+                required
+                placeholder="excalidraw, pallets/flask"
+                autoComplete="off"
+                autoCapitalize="none"
+                spellCheck={false}
+                className="min-w-0 flex-1 bg-transparent px-2 py-3 text-[0.92rem] outline-none placeholder:text-faint"
+              />
+              <button type="submit" className="self-stretch border-l border-line-strong px-4 text-[0.85rem] text-muted transition-colors hover:text-ink">
+                compare
+              </button>
+            </form>
+          )}
           {problems.length > 0 && (
             <p role="status" className="mt-3 max-w-xl font-sans text-[0.86rem] leading-snug text-orange">
               {problems.map((l) => (
@@ -130,23 +141,14 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
           )}
         </AppPageHeader>
 
-        {shown.length === 0 ? (
-          <EmptyState title="Nothing to compare yet.">
-            <Link href="/me/repos" className="btn-primary">pick from your repos →</Link>
-          </EmptyState>
-        ) : (
+        {shown.length > 0 && (
           <>
-            {!all.length && (
-              <p className="mb-3 text-[0.82rem] text-faint">
-                Example: <Link href={href(list)} className="text-link">{short(list)}</Link>
-              </p>
-            )}
             {shown.length > 2 && (
               <p aria-hidden="true" className="mb-2 text-[0.8rem] text-faint sm:hidden">
                 Swipe sideways to see all {shown.length} repos →
               </p>
             )}
-            <CompareTable columns={columns} issues={issues} now={clock()} label={all.length ? `Comparing ${short(list)}` : `Example: ${short(list)}`} />
+            <CompareTable columns={columns} issues={issues} now={clock()} label={`Comparing ${short(all)}`} />
             {/* The table's key: each mark in its own column, its meaning beside it. */}
             <dl className="mt-5 grid max-w-2xl grid-cols-[1.5rem_minmax(0,1fr)] gap-x-2 gap-y-2 border-t border-line pt-4 font-sans text-[0.8rem] leading-snug text-faint">
               {shown.length > 1 && (

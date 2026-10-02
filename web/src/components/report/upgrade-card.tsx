@@ -1,11 +1,11 @@
 import Link from "next/link";
 import { EXAMPLE_PATH } from "@/lib/example-report";
 
-/** What the merge plan holds, in the words the AI tab uses for its sections. */
+/** What the merge plan holds, in the words the plan uses for its sections. */
 const INSIDE = ["Your first pull request, step by step", "What gets merged here", "Why outside ones get closed"];
 
 /**
- * The free report's way into the merge plan (the AI tab). Dressed like the
+ * The free report's way into the merge plan. Dressed like the
  * sidebar's other cards: a quiet heading, plain text, one button.
  */
 export function UpgradeCard({ repo, signedIn }: { repo: string; signedIn: boolean }) {

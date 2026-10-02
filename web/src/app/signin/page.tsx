@@ -12,7 +12,6 @@ import { afterSignIn } from "@/lib/home";
 import { EXAMPLE_PLAN, planRecordedOn } from "@/lib/merge-plan";
 import { currentUser } from "@/lib/session";
 import { signInNotice } from "@/lib/signin";
-import { WELCOME_AI_CREDITS } from "@/lib/site";
 import { ProviderButtons, type Provider } from "./provider-buttons";
 
 export const metadata: Metadata = { title: "Sign in", robots: { index: false } };
@@ -69,7 +68,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
               Sign in to Holt
             </h1>
             <p className="prose-sans mt-3 text-[1rem]">
-              Get {WELCOME_AI_CREDITS} free AI reports. Holt also keeps the repos you save and shows where your open PRs stand.
+              Holt keeps the repos you save and shows where your open PRs stand.
             </p>
 
             {notice && (
@@ -124,7 +123,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
   );
 }
 
-/** Desktop only: what an AI report looks like, from the recorded example. */
+/** Desktop only: what a merge plan looks like, from the recorded example. */
 function ExampleReport() {
   const p = EXAMPLE_PLAN;
   return (
@@ -135,7 +134,7 @@ function ExampleReport() {
         <div className="relative border border-line-strong bg-panel shadow-card">
           <div className="flex min-h-10 items-center justify-between border-b border-line px-5 text-[0.8rem] text-faint">
             <span>{p.repo}</span>
-            <span>example AI report · {planRecordedOn()}</span>
+            <span>example merge plan · {planRecordedOn()}</span>
           </div>
           <div className="p-7">
             <div className="flex items-center justify-between">
@@ -157,7 +156,7 @@ function ExampleReport() {
         </div>
       </div>
       <figcaption className="mt-7 font-sans text-[0.88rem] text-muted">
-        The rules pick the verdict. The AI report turns it into a plan for your first pull request.{" "}
+        The rules pick the verdict. A merge plan turns it into steps for your first pull request.{" "}
         <Link href={EXAMPLE_PATH} className="text-link">Read the full example</Link>.
       </figcaption>
     </figure>

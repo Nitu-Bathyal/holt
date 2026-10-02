@@ -94,7 +94,7 @@ export function ReportBodySkeleton() {
   );
 }
 
-/** The repo line and the free / AI tabs. */
+/** The repo line and the merge plan button. */
 export function ReportHeaderSkeleton() {
   return (
     <>

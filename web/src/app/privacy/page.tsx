@@ -51,7 +51,7 @@ export default function PrivacyPage() {
         <li><strong>Your analyses and history:</strong> which repositories you checked, when, in which mode, and the resulting reports, so your history page works.</li>
         <li id="profile"><strong>Your profile, if you fill one in:</strong> the languages, topics, time, kinds of contribution and experience you choose, and when you confirmed you&rsquo;re 18 or older, used only to pre-fill your searches; delete it any time in <Link href="/settings/privacy" className="text-link">settings</Link>.</li>
         <li id="saved"><strong>Repos you save:</strong> which repositories you saved and when, so your <Link href="/me/repos?show=saved" className="text-link">saved list</Link> works. Unsave one any time; deleting your account deletes the list.</li>
-        <li><strong>Your free AI reports:</strong> how many you have left, when you last claimed one, a record of each one given, used or given back, and your plan.</li>
+        <li><strong>Your plan and merge plans:</strong> your plan, how many merge plans you have left, and a record of each one given, used or given back.</li>
       </ul>
 
       <h3>If you pay for something</h3>
@@ -93,7 +93,7 @@ export default function PrivacyPage() {
         <li>It is <strong>never sold</strong>.</li>
         <li>It is <strong>never shared</strong> with anyone except the services listed in section 8, and only as far as running Holt needs (for example, your name and email go to the payment processor if you buy a plan).</li>
         <li>It is <strong>never used for advertising</strong>, and Holt shows no ads.</li>
-        <li>It is <strong>never used to train AI models</strong>, ours or anyone else&rsquo;s. AI reports never include anything about you (see section 7).</li>
+        <li>It is <strong>never used to train AI models</strong>, ours or anyone else&rsquo;s. What Holt sends to an AI model never includes anything about you (see section 7).</li>
         <li>No human at Holt reads it except to answer a request you&rsquo;ve made, or to keep the service running.</li>
       </ul>
       <h3>Where it&rsquo;s stored and for how long</h3>
@@ -189,7 +189,7 @@ export default function PrivacyPage() {
 
       <h2>7. AI providers</h2>
       <p>
-        AI reports are optional. The verdict is computed by rules without a model. When you ask for an AI explanation, Holt sends the
+        Merge plans are optional. The verdict is computed by rules without a model. When you ask for a merge plan, Holt sends the
         model the evidence it collected: excerpts of public pull-request titles, comments and metadata from the repository being
         analysed, plus Holt&rsquo;s own findings. <strong>Nothing about you</strong> (no name, email or account information) is included.
       </p>
@@ -202,7 +202,7 @@ export default function PrivacyPage() {
       <ul>
         <li><strong>GitHub</strong>: we read public data through its API. GitHub and Google also handle sign-in.</li>
         <li><strong>Razorpay</strong> and <strong>Dodo Payments</strong>: payments, as described above.</li>
-        <li><strong>OpenRouter</strong> and the AI model vendors: only for AI reports, as described above.</li>
+        <li><strong>OpenRouter</strong> and the AI model vendors: only for merge plans, as described above.</li>
         <li><strong>Resend</strong>: delivers our emails: the account emails, and alert emails if you turn <a href="#alerts" className="text-link">alerts</a> on.</li>
         <li><strong>Cloudflare</strong>: DNS and the connection to our server, so it sees the same request data any web proxy does.</li>
         <li><strong>Our hosting provider</strong>: the server and database run there.</li>

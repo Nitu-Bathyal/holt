@@ -8,7 +8,7 @@ test("signed out, every page wears the marketing shell", () => {
 
 test("signed in, the app pages get the sidebar and the pages that explain or sell Holt don't", () => {
   for (const p of ["/me", "/me/saved", "/me/history", "/me/contributions", "/find", "/discover", "/discover/python", "/compare",
-    "/pallets/flask", "/settings", "/settings/ai-reports", "/preflight", "/hacktoberfest", "/example-ai-report"]) {
+    "/pallets/flask", "/settings", "/settings/plan", "/preflight", "/hacktoberfest", "/example-merge-plan"]) {
     assert.equal(shellFor(p, true), "app", p);
   }
   for (const p of ["/", "/how-it-works", "/pricing", "/pricing/thanks", "/privacy", "/terms", "/refunds", "/contact", "/badge", "/signin", "/pricing/"]) {

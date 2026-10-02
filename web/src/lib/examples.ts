@@ -1,7 +1,7 @@
 // The curated example reports: the few reports anyone can read in full
 // without signing in (every other report shows signed-out visitors a teaser;
 // see gate.ts). At least two of each verdict, picked from repos with a current report,
-// plus the recorded AI report at /example-ai-report. The verdict here only
+// plus the recorded merge plan at /example-merge-plan. The verdict here only
 // orders and labels the list; the page always shows what the rules say today.
 // No runtime imports, so it runs under `node --test` and in the browser.
 import type { Verdict } from "./types.ts";

@@ -1,14 +1,14 @@
-// The way between a repo's report and its merge plan (the AI tab): one small
+// The way between a repo's report and its merge plan: one small
 // button in the report header, beside Save, with a PRO sticker. On the report
 // it offers the merge plan; on the plan it opens the report, and a back arrow
 // at the start of the header (ReportBackLink) goes there too. The report page
-// and the example AI report both draw them, so this is the one place they're worded.
+// and the example merge plan both draw them, so this is the one place they're worded.
 import Link from "next/link";
 import { LinkHint } from "../motion/link-hint";
 
 const BASE = "relative inline-flex min-h-11 shrink-0 items-center gap-1.5 border px-3 text-[0.82rem] font-medium transition-colors sm:min-h-9";
 
-/** `mode` is the page being shown; the button goes to the other one. No prefetch: for most visitors the AI report is sign-in. */
+/** `mode` is the page being shown; the button goes to the other one. No prefetch: for most visitors the merge plan is sign-in. */
 export function ReportModeLink({ mode, rulesHref, aiHref, hint = false }: { mode: "rules" | "ai"; rulesHref: string; aiHref: string; hint?: boolean }) {
   return mode === "rules" ? (
     <Link href={aiHref} prefetch={false} className={`${BASE} border-blue/60 text-blue hover:bg-blue hover:text-on-accent`} data-report-mode="ai">

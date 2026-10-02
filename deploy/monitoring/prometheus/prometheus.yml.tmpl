@@ -1,0 +1,103 @@
+# Rendered by up.sh into $HOLT_MON_HOME/config/prometheus/prometheus.yml,
+# which fills in the names between at-signs: the monitored compose project
+# (holt-prod), this stack's project, and the site's public address. Edit
+# this file, then run up.sh again.
+global:
+  scrape_interval: 30s
+  scrape_timeout: 10s
+  evaluation_interval: 30s
+
+rule_files:
+  - /etc/prometheus/rules/*.yml
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: [alertmanager:9093]
+
+scrape_configs:
+  # The API's own numbers. Docker's DNS answers `server` with every server
+  # container on the target network, so both are scraped while a deploy
+  # swaps them, and a one-off container (a warm pass) never is.
+  - job_name: holt-server
+    dns_sd_configs:
+      - names: [server]
+        type: A
+        port: 8000
+        refresh_interval: 15s
+
+  - job_name: node
+    static_configs:
+      - targets: [node-exporter:9100]
+
+  # cAdvisor reports every container on the host. Keep the monitored stack's
+  # and this one's, as stack="holt" / stack="monitoring" and service="web"...,
+  # and drop the rest before it is stored.
+  - job_name: cadvisor
+    static_configs:
+      - targets: [cadvisor:8080]
+    metric_relabel_configs:
+      - source_labels: [container_label_com_docker_compose_project]
+        regex: '@TARGET_PROJECT@'
+        target_label: stack
+        replacement: holt
+      - source_labels: [container_label_com_docker_compose_project]
+        regex: '@MON_PROJECT@'
+        target_label: stack
+        replacement: monitoring
+      - source_labels: [__name__, stack]
+        regex: container_.*;
+        action: drop
+      - source_labels: [container_label_com_docker_compose_service]
+        target_label: service
+      - regex: container_label_.*|id|image
+        action: labeldrop
+
+  - job_name: postgres
+    static_configs:
+      - targets: [postgres-exporter:9187]
+    metric_relabel_configs:
+      # Of Postgres's ~300 settings, keep the one a dashboard reads.
+      - source_labels: [__name__]
+        regex: pg_settings_max_connections
+        target_label: __tmp_keep
+        replacement: "1"
+      - source_labels: [__name__, __tmp_keep]
+        regex: pg_settings_.*;
+        action: drop
+      - regex: __tmp_keep
+        action: labeldrop
+
+  # Is the site up: once from outside (Cloudflare, the tunnel, the edge, the
+  # web app) and once from inside (the edge and the web app only), so an
+  # alert says which half broke.
+  - job_name: holt-site
+    metrics_path: /probe
+    params:
+      module: [http_2xx]
+    static_configs:
+      - targets: ["@SITE_URL@/"]
+        labels: { path: public }
+      - targets: ["http://edge:8080/"]
+        labels: { path: internal }
+    relabel_configs: &probe
+      - source_labels: [__address__]
+        target_label: __param_target
+      - source_labels: [__param_target]
+        target_label: instance
+      - target_label: __address__
+        replacement: blackbox:9115
+
+  # Did the last deploy fail (blackbox.yml, deploy_state).
+  - job_name: holt-deploy
+    metrics_path: /probe
+    scrape_interval: 60s
+    params:
+      module: [deploy_state]
+    static_configs:
+      - targets: ["http://edge:8080/__build"]
+    relabel_configs: *probe
+
+  - job_name: prometheus
+    static_configs:
+      - targets: [localhost:9090]

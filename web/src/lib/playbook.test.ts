@@ -33,11 +33,11 @@ test("code spans are split out, nothing else is interpreted", () => {
 test("the unlock offer follows the server's answer", () => {
   assert.deepEqual(unlockOffer(null, false), { kind: "sign-in" });
   assert.equal(unlockOffer(access, false).kind, "can-unlock");
-  assert.match((unlockOffer(access, false) as { note: string }).note, /Uses 1 credit\./);
+  assert.match((unlockOffer(access, false) as { note: string }).note, /^A playbook that fails costs nothing\.$/);
   const plan = unlockOffer({ ...access, via: "plan", cost: 0, left_this_month: 9 }, false) as { note: string };
   assert.match(plan.note, /Included in your plan \(9 left this month\)/);
   const refused = { ...access, allowed: false, via: null, code: "quota_exceeded", message: "You don't have enough purchased credits." };
-  assert.deepEqual(unlockOffer(refused, false), { kind: "coming-soon", note: "Coming soon: playbooks aren't on sale yet. It will cost 1 credit per repository." });
+  assert.deepEqual(unlockOffer(refused, false), { kind: "coming-soon", note: "Coming soon: playbooks aren't on sale yet." });
   assert.deepEqual(unlockOffer(refused, true), { kind: "blocked", note: "You don't have enough purchased credits." });
 });
 

@@ -14,7 +14,7 @@ export function parseShow(v: string | string[] | undefined): Show {
 export interface YourRepo {
   repo: string;
   savedAt: string | null;
-  /** Your latest finished check, and whether it was an AI report. */
+  /** Your latest finished check, and whether it ran in the old "ai" mode. */
   checkedAt: string | null;
   ai: boolean;
   /** A check of yours is running (or queued) now, newer than the last finished one. */
