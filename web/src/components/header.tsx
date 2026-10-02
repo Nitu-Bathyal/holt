@@ -19,20 +19,21 @@ export async function doSignOut() {
   await signOut({ redirectTo: "/" });
 }
 
-const LOGO = "cat-perk inline-flex min-h-11 shrink-0 items-center gap-3";
+// Sizes and gaps in em: the marketing header grows them with the landing on a wide screen (globals.css, --nav-base).
+const LOGO = "cat-perk inline-flex min-h-11 shrink-0 items-center gap-[0.75em]";
 
 function LogoBody() {
   return (
     <>
-      <CatFace className="text-[1.05rem]" perk />
-      <span className="text-[0.95rem] font-semibold tracking-tight">holt<span className="sr-only"> home</span></span>
+      <CatFace className="text-[1.05em]" perk />
+      <span className="text-[0.95em] font-semibold tracking-tight">holt<span className="sr-only"> home</span></span>
     </>
   );
 }
 
 function Logo({ href }: { href: string }) {
   return (
-    <Link href={href} className={LOGO}>
+    <Link href={href} className={`${LOGO} text-[1rem]`}>
       <LogoBody />
     </Link>
   );
@@ -93,18 +94,18 @@ export function MarketingHeader({ user }: { user: SessionUser | null }) {
             <LogoBody />
           </LogoLink>
         </span>
-        <PublicNav signedIn={!!user} className="hidden items-center gap-5 text-[0.84rem] text-muted lg:flex" />
+        <PublicNav signedIn={!!user} className="hidden items-center gap-[1.5em] text-[0.84em] text-muted lg:flex" />
         <div className="flex items-center gap-1">
           <ThemeToggle />
           {user ? (
             <>
-              <Link href={HOME} className="btn-primary ml-1 min-h-11 whitespace-nowrap px-4 text-[0.84rem] sm:min-h-10">open Holt →</Link>
+              <Link href={HOME} className="btn-primary ml-1 min-h-11 whitespace-nowrap px-[1.2em] text-[0.84em] sm:min-h-10">open Holt →</Link>
               <AccountMenu user={user} />
             </>
           ) : (
             <>
-              <Link href={EXAMPLES_PATH} className="hidden min-h-11 items-center px-3 text-[0.86rem] text-ink transition-colors hover:text-blue sm:inline-flex">try an example</Link>
-              <Link href="/signin" className="btn-primary ml-1 min-h-11 whitespace-nowrap px-4 text-[0.84rem] sm:min-h-10">sign in</Link>
+              <Link href={EXAMPLES_PATH} className="hidden min-h-11 items-center px-[0.87em] text-[0.86em] text-ink transition-colors hover:text-blue sm:inline-flex">try an example</Link>
+              <Link href="/signin" className="btn-primary ml-1 min-h-11 whitespace-nowrap px-[1.2em] text-[0.84em] sm:min-h-10">sign in</Link>
             </>
           )}
           <MenuButton target="mobile-nav" label="Menu" />
