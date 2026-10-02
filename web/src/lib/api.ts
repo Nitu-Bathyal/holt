@@ -282,6 +282,16 @@ export function connectGitHub(userId: string, githubId: string, statsOptOut: boo
   });
 }
 
+/**
+ * Merge the account `fromUser` into `userId` (API.md, "Merging accounts").
+ * Only lib/github-account.ts calls it, with the owner of a GitHub sign-in the
+ * person just proved is theirs. The mock API has one account per sign-in.
+ */
+export function mergeAccount(userId: string, fromUser: string, githubId: string): Promise<Result<void>> {
+  if (MOCK) return Promise.resolve({ ok: true, data: undefined });
+  return call("/v1/me/merge", { method: "POST", body: JSON.stringify({ from_user: fromUser, github_id: Number(githubId) }), caller: { userId } });
+}
+
 export function setStatsOptOut(userId: string, statsOptOut: boolean): Promise<Result<GitHubConnection>> {
   if (MOCK) return mock.setStatsOptOut(userId, statsOptOut);
   return call("/v1/me/github", { method: "PATCH", body: JSON.stringify({ stats_opt_out: statsOptOut }), caller: { userId } });

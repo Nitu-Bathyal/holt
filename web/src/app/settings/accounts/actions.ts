@@ -1,12 +1,12 @@
 "use server";
-// GitHub in settings: connect (the form in Accounts), the statistics switch,
-// disconnect.
+// GitHub in settings: connect (the form in Accounts), merging the account a
+// GitHub sign-in belongs to, the statistics switch, disconnect.
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { oauthProviders, signIn } from "@/auth";
 import { connectGitHub, disconnectGitHub, setStatsOptOut } from "@/lib/api";
-import { linkedGitHubId, PENDING_COOKIE, PENDING_COOKIE_PATH, unlinkGitHubIfNotSignIn } from "@/lib/github-account";
+import { linkedGitHubId, MERGE_COOKIE, MERGE_COOKIE_PATH, mergeGitHubAccount, mergeProofFor, PENDING_COOKIE, PENDING_COOKIE_PATH, unlinkGitHubIfNotSignIn } from "@/lib/github-account";
 import { currentUser } from "@/lib/session";
 import { ACCOUNT_SETTINGS, connectFailed, CONNECT_GITHUB, PRIVACY_SETTINGS } from "@/lib/settings";
 
@@ -41,6 +41,25 @@ export async function connect(form: FormData) {
     maxAge: 600,
   });
   await signIn("github", { redirectTo: "/api/github/connect" });
+}
+
+/**
+ * Merge the account that signs in with the GitHub account this browser just
+ * confirmed into the one signed in here, then connect GitHub. Everything it
+ * acts on comes from the session and the signed proof, nothing from the form.
+ */
+export async function merge() {
+  const user = await signedIn(CONNECT_GITHUB);
+  const proof = await mergeProofFor(user.id);
+  if (!proof) redirect(connectFailed("link"));
+  (await cookies()).delete({ name: MERGE_COOKIE, path: MERGE_COOKIE_PATH });
+
+  if (!(await mergeGitHubAccount(proof.githubId, user.id))) redirect(connectFailed("save"));
+  const r = await connectGitHub(user.id, proof.githubId, proof.optOut);
+  // Saved repos, history and the plan all changed, not only settings.
+  revalidatePath("/", "layout");
+  if (!r.ok) redirect(connectFailed("save"));
+  redirect(`${ACCOUNT_SETTINGS}?github=merged`);
 }
 
 export async function setStats(form: FormData) {
