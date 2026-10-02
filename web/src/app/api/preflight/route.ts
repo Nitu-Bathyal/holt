@@ -4,6 +4,7 @@
 // sends decides what it costs.
 import { NextResponse, type NextRequest } from "next/server";
 import { preflightState, startPreflight } from "@/lib/api";
+import { signedInGate } from "@/lib/gate";
 import { caller } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
@@ -11,8 +12,11 @@ export const dynamic = "force-dynamic";
 const str = (v: unknown, max: number) => (typeof v === "string" && v.trim() ? v.trim().slice(0, max) : undefined);
 
 export async function GET(req: NextRequest) {
+  const who = await caller();
+  const refused = signedInGate(who.userId);
+  if (refused) return NextResponse.json({ error: refused.error }, { status: refused.status });
   const p = req.nextUrl.searchParams;
-  const r = await preflightState({ pr: p.get("pr"), repo: p.get("repo"), branch: p.get("branch"), base: p.get("base") }, await caller());
+  const r = await preflightState({ pr: p.get("pr"), repo: p.get("repo"), branch: p.get("branch"), base: p.get("base") }, who);
   if (!r.ok) return NextResponse.json({ error: r.error }, { status: r.status });
   return NextResponse.json(r.data, { headers: { "Cache-Control": "private, no-store" } });
 }

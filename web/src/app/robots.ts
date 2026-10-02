@@ -10,9 +10,11 @@ export default function robots(): MetadataRoute.Robots {
   }
   return {
     rules: { userAgent: "*", allow: "/", disallow: [
-        "/api/", "/me/", "/settings", "/signin",
-        // Board facets run a heavy query per hit; the bare /discover stays crawlable.
-        "/discover/", "/discover?", "/find?", "/hacktoberfest?",
+        "/api/", "/signin",
+        // Account pages (lib/gate.ts): signed out, each is a redirect to sign-in.
+        // The "$" keeps repos whose owner starts the same way (/finder/x) crawlable.
+        "/me/", "/settings", "/discover$", "/discover/", "/discover?", "/find$", "/find?", "/compare$", "/compare?", "/preflight$", "/preflight?",
+        "/hacktoberfest?",
       ],
     },
     sitemap: `${SITE_URL}/sitemap.xml`,
