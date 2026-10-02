@@ -1,4 +1,4 @@
-// The merge plan: the AI report (paid, written by holt-pro's POST
+// The merge plan (paid, written by holt-pro's POST
 // /v1/merge-plan and served by the server's GET /v1/merge-plan). Its shape is
 // API.md's `MergePlan`, generated into api-schema.ts; this file re-exports it
 // with the helpers the plan's components share, and the recorded example.
@@ -26,7 +26,7 @@ export function share(seen: number | null, of: number | null): number {
   return Math.round((Math.min(seen, of) / of) * 100);
 }
 
-/** The recorded example at /example-ai-report (processing/p5.js). */
+/** The recorded example at /example-merge-plan (processing/p5.js). */
 export const EXAMPLE_PLAN = data as MergePlan;
 
 /** "30 September 2026": when the example's evidence was recorded. */

@@ -222,12 +222,12 @@ export function ReportView({
   reveal?: boolean;
   /** The check ran while the visitor watched: the answer lands (VerdictHero) and the numbers count up. */
   land?: boolean;
-  /** A recorded example (/example-ai-report): shares its own link, and takes no votes, badge or view count. */
+  /** A recorded example: shares its own link, and takes no votes, badge or view count. */
   example?: boolean;
 }) {
   const repo = report.repo;
   const url = example ? `${SITE_URL}${EXAMPLE_PATH}` : `${SITE_URL}/${repo}`;
-  const shareText = example ? `An example AI report on Holt, for ${repo}.` : `${repo} on Holt: ${report.headline}.`;
+  const shareText = example ? `An example report on Holt, for ${repo}.` : `${repo} on Holt: ${report.headline}.`;
   const viable = report.verdict === "viable";
   // Not worth your time / Not enough evidence / Personal project: nothing here to start on, so the
   // issues, where work lands, how to contribute, the evidence, the merge plan,
@@ -243,21 +243,6 @@ export function ReportView({
         {/* A bar in the verdict's colour runs from the verdict down to the issues, as on the landing page's answers. */}
         <div className={`space-y-8 border-l-4 ${TONE[report.tone].border} pl-4 sm:pl-6`} data-verdict-block>
         <VerdictHero report={report} reveal={reveal} land={land} />
-
-        {(report.bottom_line || report.summary) && (
-          <div className="border-l-2 border-blue pl-4" data-ai-explanation>
-            <p className="text-[0.85rem] text-blue">AI explanation</p>
-            {report.bottom_line && (
-              <p className="mt-1.5 font-sans text-[1rem] font-medium leading-snug text-ink" data-bottom-line>
-                {report.bottom_line}
-              </p>
-            )}
-            {report.summary && <p className="mt-1.5 font-sans text-[0.93rem] leading-snug text-ink">{report.summary}</p>}
-            <p className="mt-1.5 text-[0.75rem] text-faint">
-              Written by AI from the evidence below. The rules picked the verdict.
-            </p>
-          </div>
-        )}
 
         {!viable && (
           <div className="flex flex-wrap items-center justify-between gap-3 border border-line-strong p-4">

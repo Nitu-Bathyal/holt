@@ -2,7 +2,7 @@
 // reports return at once, anything else becomes a job with stages over SSE.
 import "server-only";
 import type {
-  AlertSettings, AlertSettingsBody, AnalysisStart, ApiError, Credits, DiscoverOut, DiscoverRepo, DiscoverSort, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, History, HistoryItem,
+  AlertSettings, AlertSettingsBody, AnalysisStart, ApiError, DiscoverOut, DiscoverRepo, DiscoverSort, Entitlements, FeedbackOut, FindJobStatus, FindQuery, FindResult, FindStart, Contributions, GitHubConnection, History, HistoryItem,
   ContributionType, JobStatus, Me, Mode, Passes, ProfileOut, ProfilePrefs, Recommendation, Recommendations, RepoSearch, Report, Result, SavedList, SavedState, Stats, StarterIssue,
 } from "../types";
 import type { FeedbackInput } from "../feedback";
@@ -10,7 +10,7 @@ import type { Timing } from "../api-schema";
 import * as watch from "./alerts";
 import { verdictView, withDerived } from "./derived";
 import { canonicalName, isMockNotFound, mockAbout, mockFindPool, mockIssues, mockReport, PRECACHED } from "./fixtures";
-import { mergePlanEvents } from "./merge-plan";
+import { access as mergePlanAccess, mergePlanEvents } from "./merge-plan";
 import { playbookEvents } from "./playbook";
 import { preflightEvents } from "./preflight";
 
@@ -361,17 +361,9 @@ export async function me(userId: string): Promise<Result<Me>> {
   return { ok: true, data: user(userId).me };
 }
 
-export async function claimCredit(userId: string): Promise<Result<Credits>> {
-  const c = user(userId).me.credits;
-  if (!c.can_claim) {
-    const when = c.next_claim_at ? new Date(c.next_claim_at).toLocaleDateString("en-GB", { day: "numeric", month: "long", timeZone: "UTC" }) : "later";
-    return err(409, "claim_not_ready", `Your next free AI report can be claimed on ${when}.`);
-  }
-  c.balance++;
-  c.free++;
-  c.can_claim = false;
-  c.next_claim_at = new Date(Date.now() + CLAIM_EVERY_DAYS * DAY_MS).toISOString();
-  return { ok: true, data: c };
+export async function entitlements(userId: string): Promise<Result<Entitlements>> {
+  const { plan, plan_expires_at } = user(userId).me;
+  return { ok: true, data: { plan, plan_expires_at, features: [mergePlanAccess(userId)] } };
 }
 
 // Payments stay off in the mock: no passes, no orders.

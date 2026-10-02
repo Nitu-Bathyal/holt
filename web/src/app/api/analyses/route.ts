@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
   const days = clampDays(body?.days);
   const who = await caller();
   if (mode === "ai" && !who.userId) {
-    return NextResponse.json({ error: { code: "unauthorized", message: "Sign in to get an AI report." } }, { status: 401 });
+    return NextResponse.json({ error: { code: "unauthorized", message: "Sign in first." } }, { status: 401 });
   }
   const repo = `${ref.owner}/${ref.repo}`;
   // Checks are for signed-in people, and for anyone opening a report with no

@@ -55,8 +55,8 @@ export function stageTime(seconds: number): string {
 export const TYPICAL_CHECK_SECONDS = 20;
 
 /**
- * "about 15s left", "almost done", or null when there's no honest guess: an
- * AI report (the model's time varies too much), or a check already running
+ * "about 15s left", "almost done", or null when there's no honest guess: a
+ * check in "ai" mode (the model's time varies too much), or a check already running
  * well past the typical time. `ahead`: checks in the queue before this one.
  */
 export function eta(s: { mode: "rules" | "ai"; elapsed: number; ahead?: number }): string | null {

@@ -1,4 +1,4 @@
-import type { Credits, StarterIssue, Stats, Tone } from "./types";
+import type { StarterIssue, Stats, Tone } from "./types";
 
 export function pct(n: number, d: number): number {
   return d > 0 ? Math.round((n / d) * 100) : 0;
@@ -41,19 +41,6 @@ export function shortDate(iso: string): string {
   const t = new Date(iso);
   if (Number.isNaN(t.getTime())) return "";
   return t.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric", timeZone: "UTC" });
-}
-
-/**
- * "N free AI reports left", and what to do when there are none. Credits bought
- * or granted aren't free, so a balance that includes any is just "AI reports".
- */
-export function creditsNote(c: Credits): string {
-  if (!c.ai_available) return "AI reports aren't switched on yet. Your free ones will be waiting when they are.";
-  const kind = c.purchased > 0 ? "AI report" : "free AI report";
-  const left = `${c.balance} ${kind}${c.balance === 1 ? "" : "s"} left.`;
-  if (c.balance > 0) return `${left} This one uses 1. A failed report doesn't count.`;
-  if (c.can_claim) return `${left} Claim 1 more in your settings now.`;
-  return `${left} You can claim 1 more${c.next_claim_at ? ` on ${shortDate(c.next_claim_at)}` : " each week"}.`;
 }
 
 export function daysLabel(days: number): string {

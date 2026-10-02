@@ -4,11 +4,11 @@ import { ABOUT_ROWS, ROWS } from "@/lib/compare";
 import { useSearchParams } from "next/navigation";
 import { Skeleton } from "../skeleton";
 
-/** Reads ?repos= so the skeleton has as many columns as the page will. */
-export function CompareGridSkeleton({ fallback = 2 }: { fallback?: number }) {
+/** Reads ?repos= so the skeleton has as many columns as the page will: none for the empty page, which has no table. */
+export function CompareGridSkeleton() {
   const sp = useSearchParams();
-  const n = Math.min(4, (sp.get("repos") ?? "").split(",").filter(Boolean).length + (sp.get("add") ? 1 : 0)) || fallback;
-  return <CompareColumns n={n} />;
+  const n = Math.min(4, (sp.get("repos") ?? "").split(",").filter(Boolean).length + (sp.get("add") ? 1 : 0));
+  return n ? <CompareColumns n={n} /> : null;
 }
 
 export function CompareColumns({ n }: { n: number }) {
