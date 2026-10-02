@@ -15,6 +15,9 @@ GitHub is never called while the page is served:
 * **Matching** uses what the user told us (profile languages and topics) and
   what they did (the languages of repositories where their pull requests were
   merged, for connected users). A repository must match at least one of them.
+  With none of that to go on (a new account), the picks are repositories in
+  `POPULAR_LANGUAGES`, the best of each language first, and no reason claims
+  to know the user.
 * **Ranking** adds up fixed points (`POINTS`): a stated language, a language
   they've been merged in, each shared topic, the odds, first-timers merged
   (for a newcomer) and fitting starter issues. Ties go to the Discover order
@@ -28,9 +31,7 @@ pass, repository details daily (discover.py), a connected user's pull
 requests daily (contributions.py). So the list is computed per request, from
 the database only, and moves as those do.
 
-Recommendations are a paid feature (`recommendations` in pricing.json): a
-plan that covers it shows every pick; everyone else gets the first
-`FREE_PICKS` and a count of the rest. Viewing is never charged.
+Recommendations are free: every signed-in user gets every pick.
 """
 
 from __future__ import annotations
@@ -44,7 +45,7 @@ from fastapi import APIRouter, Depends, Query, Request
 from sqlalchemy import select
 from sqlalchemy.orm import load_only
 
-from holt_server import entitlements, repos, schema
+from holt_server import repos, schema
 from holt_server.db import (
     Contribution,
     FindCache,
@@ -62,10 +63,10 @@ from holt_server.services import Services
 
 router = APIRouter(prefix="/v1", responses={"default": {"model": schema.ErrorBody}})
 
-FEATURE = "recommendations"
-# Picks shown without a plan that covers recommendations.
-FREE_PICKS = 2
 MAX_PICKS = 10
+# What a new account's picks are drawn from, until a profile or merged pull
+# requests say more (lower-case, as languages are matched).
+POPULAR_LANGUAGES = ("python", "javascript", "typescript", "java", "go", "rust", "c++")
 ISSUES_PER_PICK = 3
 REPORT_MAX_DAYS = 14
 FIND_MAX_DAYS = 7
@@ -119,6 +120,11 @@ class Basis:
     excluded: set[str]
     login: str | None
     has_profile: bool
+
+    @property
+    def unknown(self) -> bool:
+        """Nothing to match on: no profile languages or topics, nothing merged."""
+        return not (self.languages or self.topics or self.history)
 
 
 def hours_phrase(hours: float) -> str:
@@ -278,7 +284,10 @@ def score(c: Candidate, b: Basis, raw_issues: list[dict] | None) -> Scored | Non
     merged_in = b.history.get(lang, 0) if lang else 0
     wanted_topics = set(b.topics)
     shared = [t for t in c.topics if t.lower() in wanted_topics][:MAX_TOPICS]
-    if not (stated or merged_in or shared):
+    if b.unknown:
+        if lang not in POPULAR_LANGUAGES:
+            return None
+    elif not (stated or merged_in or shared):
         return None
     issues = None
     if raw_issues is not None:
@@ -336,6 +345,18 @@ def rank(scored: list[Scored]) -> list[Scored]:
     return sorted(scored, key=key)
 
 
+def spread(ranked: list[Scored]) -> list[Scored]:
+    """The best of each language first, then each one's second, and so on, so a
+    list matched on nothing in particular isn't all one language."""
+    seen: Counter = Counter()
+    turns = []
+    for i, x in enumerate(ranked):
+        lang = (x.candidate.language or "").lower()
+        turns.append((seen[lang], i, x))
+        seen[lang] += 1
+    return [x for _, _, x in sorted(turns, key=lambda t: t[:2])]
+
+
 def pick(x: Scored) -> schema.Recommendation:
     c = x.candidate
     return schema.Recommendation(
@@ -355,7 +376,10 @@ async def recommend(svc: Services, user_id: str, limit: int = MAX_PICKS,
     cached = await starter_issues(svc, list(pool))
     scored = [x for c in pool.values()
               if (x := score(c, b, cached.get(c.key, c.issues))) is not None]
-    return [pick(x) for x in rank(scored)[:limit]], b
+    ranked = rank(scored)
+    if b.unknown:
+        ranked = spread(ranked)
+    return [pick(x) for x in ranked[:limit]], b
 
 
 # --- the route ------------------------------------------------------------------------
@@ -367,12 +391,9 @@ async def get_recommendations(request: Request, limit: int = Query(MAX_PICKS, ge
     """Reads only the database: no GitHub call, no model, no rate limit."""
     svc = services(request)
     user_id = signed_in(who)
-    access = await entitlements.check(svc, user_id, FEATURE)
-    picks, b = await recommend(svc, user_id)
-    shown = picks[:limit] if access.allowed else picks[:min(limit, FREE_PICKS)]
+    picks, b = await recommend(svc, user_id, limit)
     return schema.Recommendations(
-        picks=shown, locked=0 if access.allowed else max(len(picks) - FREE_PICKS, 0),
-        full=access.allowed,
+        picks=picks,
         basis=schema.RecommendationBasis(
             languages=b.languages, topics=b.topics, level=b.level,
             contributions=b.contributions, history_languages=b.history_names,

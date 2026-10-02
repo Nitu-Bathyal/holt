@@ -1605,7 +1605,7 @@
   --gut: clamp(16px, 4vw, 80px);
   width: min(calc(100% - 2 * var(--gut)), 1680px);
 }
-/* Report pages (the free report, the AI report and their skeletons): as wide
+/* Report pages (the report, the merge plan and their skeletons): as wide
    as the landing, without its lane for the walking cat. */
 .report-wide {
   width: min(calc(100% - 2 * clamp(16px, 4vw, 80px)), 1680px);
@@ -2630,7 +2630,7 @@
     color: var(--ink);
   }
 
-  /* The foot: you, your AI reports, then the small print. */
+  /* The foot: you, then the small print. */
   .side-foot {
     margin-top: auto;
     border-top: 1px solid var(--line);
@@ -2939,34 +2939,46 @@
     line-height: 1;
   }
   /* Find a project has no page head: the tabs (.find-band) and the filter
-     tray (.find-tray) carry on from the top bar in its colour, edge to edge
-     of the column, and one line closes the band. Content stays in the frame,
-     so the chips line up under the check box. */
+     bar (.find-tray > .find-bar) carry on from the top bar in its colour,
+     edge to edge of the column, and one line closes the band. Content stays
+     in the frame, so the chips line up under the check box. */
   .find-band,
-  .find-tray {
+  .find-bar,
+  .find-more {
     background: var(--header);
     box-shadow: 0 0 0 100vmax var(--header);
     clip-path: inset(0 -100vmax);
   }
-  /* The tabs and the tray stay under the top bar while results scroll
-     (find-stick.tsx measures where), from tablets up, unless they'd fill
-     most of the screen. */
-  @media (min-width: 768px) {
-    :root:not([data-find-tall]) .find-band {
-      position: sticky;
-      top: var(--find-top, 61px);
-      z-index: 21;
-    }
-    :root:not([data-find-tall]) .app-page .find-tray {
-      position: sticky;
-      top: var(--find-tray-top, 122px);
-      z-index: 20;
-    }
+  /* The filter bar stays under the top bar while results scroll
+     (find-stick.tsx measures where): one row of controls, two on a narrow
+     screen. The tabs scroll away with the page, except on a tab with no
+     filters, where they are the bar. It's a container, so the bar goes to
+     one row by its own width, whatever the rail takes. */
+  .app-page .find-tray,
+  .app-page:not(:has(.find-tray)) .find-band {
+    position: sticky;
+    top: var(--find-top, 61px);
+    z-index: 20;
   }
-  .find-tray,
+  .find-tray {
+    container-type: inline-size;
+  }
+  .find-bar,
+  .find-more,
   .app-page:not(:has(.find-tray)) .find-band {
     box-shadow: 0 0 0 100vmax var(--header), 0 1px 0 100vmax var(--line-strong);
     clip-path: inset(0 -100vmax -1px);
+  }
+  /* "more filters" opens under the bar, over the results, so the bar keeps
+     its height; on a short screen it scrolls inside itself. */
+  .find-more {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    left: 0;
+    max-height: calc(100dvh - var(--find-top, 61px) - 100% - 16px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
   }
   /* Suggestions under a box (suggest-input.tsx): the menus' panel, border and
      shadow, at most six rows so it never scrolls. Placed by script. */
@@ -3004,7 +3016,7 @@
     gap: 4px;
     overflow-x: auto;
     border-bottom: 1px solid var(--line);
-    padding: 8px 0;
+    padding: 4px 0;
     scrollbar-width: none;
   }
   .find-tabs-end {

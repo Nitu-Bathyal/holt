@@ -7,14 +7,15 @@ app and API server.
 |---|---|
 | `server/Dockerfile` | API server (`server/`) plus the engine (`src/holt`). uv, slim Python, non-root. Build context: repo root. uv's cache is a BuildKit cache mount. |
 | `web/Dockerfile` | Web app (`web/`). Next.js standalone output when `web/next.config` sets `output: "standalone"`, otherwise `next start` with production `node_modules`. Build context: `web/`. npm's cache and `.next/cache` (Turbopack's incremental build cache) are BuildKit cache mounts, so a small change rebuilds only what it touches. |
-| `staging/compose.yml` | The staging stack, compose project `stage-holt-new`: Postgres, one-shot web and server migrations, server, web, and a small nginx `edge` that serves `/__build` and proxies everything else to web. Only `edge` publishes a port, on `127.0.0.1:9110`. Every URL in it comes from `STAGING_HOST`. |
+| `staging/compose.yml` | The staging stack, compose project `stage-holt-new`: Postgres, one-shot web and server migrations, server, web (`HOLT_WEB_REPLICAS` containers, default 2), and a small nginx `edge` that serves `/__build` and spreads everything else over the web containers. Only `edge` publishes a port, on `127.0.0.1:9110`. Every URL in it comes from `STAGING_HOST`. |
 | `staging/preview.sh` | One update: build `origin/main` + every open PR labelled `staging` + `staging/extra-branches`, rebuild only the images whose inputs changed, run the migrations, swap server and web with no gap (`swap.sh`), then start the smoke tests. |
 | `staging/install.sh` | One-time setup: the timer's copy of `preview.sh` (and `edge.sh`, `swap.sh`), the systemd `--user` timer (1 minute after the last run ends) and the smoke-test unit. It does not touch the public route. |
 | `edge.sh` | Sourced by `prod/deploy.sh` and `staging/preview.sh`: when `edge.conf` changed, checks it with `nginx -t` in the running edge and reloads it (the port stays open); a rejected config is put back and the run fails. |
-| `swap.sh` | Sourced by `prod/deploy.sh` and `staging/preview.sh`: `swap_service` replaces a service's container with no gap (the new one starts beside the old one; the old one goes once the new one is healthy). The edges also show a "Holt is updating" page (503, never cached) if web can't be reached; see [`prod/README.md`](prod/README.md#the-updating-page). |
+| `swap.sh` | Sourced by `prod/deploy.sh` and `staging/preview.sh`: `swap_service` replaces a service's containers with no gap (the new ones start beside the old ones, as many as the compose file's `deploy.replicas` asks for; the old ones go once every new one is healthy). The edges also show a "Holt is updating" page (503, never cached) if web can't be reached; see [`prod/README.md`](prod/README.md#the-updating-page). |
 | `staging/compose.pro.yml` | The optional paid-features service beside staging, compose project `stage-holt-pro`, joined to the staging network as `pro`, no published port. `preview.sh` runs it; see "Paid features". |
 | `staging/make-env.sh` | Writes `staging/.env` (gitignored): random keys, `gh auth token` (overridden on each run, see "The GitHub token"), `STAGING_HOST`. |
 | `prod/` | Production, https://githolt.com: compose project `holt-prod` on `127.0.0.1:8310` behind a Cloudflare tunnel, built only from `origin/main` by `prod/deploy.sh`, which `prod/follow.sh` runs by itself for each main commit once CI and staging are green on it (pausable), nightly backups. See [`prod/README.md`](prod/README.md) and [`prod/TUNNEL.md`](prod/TUNNEL.md). |
+| `monitoring/` | Optional monitoring beside production, compose project `holt-monitoring`: Prometheus, Alertmanager, Grafana (on `127.0.0.1:8320`, an SSH tunnel) and exporters for the host, the containers and Postgres. It reads the API's `/metrics` over production's Docker network and changes nothing there. Started by hand with `monitoring/up.sh`. See [`monitoring/README.md`](monitoring/README.md). |
 
 ## Staging: https://staging.githolt.com
 
@@ -289,8 +290,18 @@ To take it away: remove `STAGING_HOLT_PRO_KEY`, run `preview.sh` with
   `preview.sh --no-smoke`. `touch ~/.local/share/holt-staging/no-smoke`
   skips them for every build until the file is removed;
   `HOLT_STAGE_SMOKE=0` in the service's environment does the same.
-- Memory limits: web 512m, server 512m, db 256m, edge 32m, and the
-  paid-features service 256m when it runs.
+- Web runs in `HOLT_WEB_REPLICAS` containers behind the edge, 2 by default
+  and 3 at most, the same as production
+  ([`prod/README.md`](prod/README.md#web-containers) says how requests are
+  spread and what each container keeps to itself), so a load test here
+  measures what production runs. To change it, put `HOLT_WEB_REPLICAS=3` in
+  `staging/.env` (the one in `~/.local/share/holt-staging/src/deploy/staging/`);
+  the next build swaps to that many, and `FORCE=1 preview.sh` does it now.
+  The timer's copy of `swap.sh` must be the current one for a swap to wait
+  for every container: re-run `staging/install.sh` after `swap.sh` changes.
+- Memory limits: web 768m each, server 512m, db 256m, edge 32m, and the
+  paid-features service 256m when it runs: 2.6 GB of limits with 2 web
+  containers, 3.4 GB with 3.
 - The policy pages' contact details (`CONTACT_EMAIL`, `CONTACT_CITY`) are
   read from `~/.config/holt/secrets.env` on every run, the same file
   production uses. Besides those two, only the `STAGING_*` keys above are

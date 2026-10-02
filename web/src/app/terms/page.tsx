@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { ContactEmail, LegalPage } from "@/components/legal-page";
-import { CLAIM_EVERY_DAYS, CONTACT_CITY, GITHUB_REPO_URL, PAYMENT_BRAND, WELCOME_AI_CREDITS } from "@/lib/site";
+import { CONTACT_CITY, GITHUB_REPO_URL, PAYMENT_BRAND } from "@/lib/site";
 
 export const metadata: Metadata = {
   title: "Terms of Service",
@@ -41,7 +41,7 @@ export default function TermsPage() {
       <h2>3. Your account</h2>
       <p>
         You can browse Holt and read its example reports without an account. Checking a repo needs a free
-        account. Signing in with GitHub or Google also gives you free AI reports and a report history.
+        account. Signing in with GitHub or Google also gives you free merge plans and a report history.
       </p>
       <ul>
         <li>You must be at least 13 years old to use Holt, and at least 18 (or have a parent or guardian&rsquo;s permission) to buy anything.</li>
@@ -59,22 +59,22 @@ export default function TermsPage() {
       </ul>
       <p>We may slow down, limit, or suspend accounts and IP addresses that do these things.</p>
 
-      <h2>5. Free AI reports</h2>
+      <h2>5. Free merge plans</h2>
       <p>
-        Signed-in users get {WELCOME_AI_CREDITS} free AI reports when they first sign in, and can claim 1 more every {CLAIM_EVERY_DAYS} days
-        from their settings. Unclaimed weeks don&rsquo;t add up. An AI report that fails doesn&rsquo;t use one up.
+        Every account can make a few merge plans for free. Your settings show how many you have left.
+        A merge plan that fails doesn&rsquo;t use one up.
       </p>
       <ul>
-        <li>Free AI reports have no cash value and can&rsquo;t be transferred or exchanged.</li>
-        <li>We may change how many are given, or pause AI reports, for example if the model provider is down. Reports already written stay available.</li>
+        <li>Free merge plans have no cash value and can&rsquo;t be transferred or exchanged.</li>
+        <li>We may change how many are given, or pause merge plans, for example if the model provider is down. Plans already made stay available.</li>
         <li>The website doesn&rsquo;t accept your own AI API key. The open-source command-line tool does, and runs on your own machine.</li>
       </ul>
 
       <h2>6. Free and paid features</h2>
       <p>
         Rules reports, finding and comparing projects, badges and share images are free, and we intend to keep them free.
-        Signed-in users also get free AI reports, as described in section 5. Some features are paid, or will be:
-        Pro, sold as a pass that covers a set period.
+        Signed-in users also get free merge plans, as described in section 5. Some features are paid, or will be:
+        Pro, sold as a pass that covers a set period, with more merge plans and alerts.
       </p>
       <ul>
         <li>The price, currency and what you get are shown before you pay. Prices may include tax where the law requires it.</li>

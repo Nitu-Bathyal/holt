@@ -24,6 +24,7 @@ from holt_server import (
     feedback,
     mailer,
     merge_plan,
+    metrics,
     payments,
     playbook,
     preflight,
@@ -97,6 +98,8 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
                   openapi_url="/openapi.json" if dev else None)
     app.state.services = svc
     errors.install(app)
+    app.add_middleware(metrics.HttpMetrics, metrics=svc.metrics)
+    app.include_router(metrics.router)
     app.include_router(public)
     app.include_router(router)
     app.include_router(credits.router)

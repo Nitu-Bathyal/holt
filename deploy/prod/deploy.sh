@@ -75,9 +75,10 @@ replicas="$(env_value HOLT_WEB_REPLICAS 2)"
 [[ "$replicas" =~ ^[1-3]$ ]] \
     || die "HOLT_WEB_REPLICAS must be 1, 2 or 3, not '$replicas' (the db's max_connections in compose.yml is sized for three)"
 export HOLT_WEB_REPLICAS="$replicas"
-# CPU shares for db, server, web and edge (prioritise, below); a container's
-# default is 1024. A rehearsal under another project name gets no priority.
-default_shares=4096; [[ "$PROJECT" == holt-prod ]] || default_shares=1024
+# CPU shares for db, server, web and edge (prioritise, below). A container's
+# default is 1024; 8192 is about five times its weight when the box is busy.
+# A rehearsal under another project name gets no priority.
+default_shares=8192; [[ "$PROJECT" == holt-prod ]] || default_shares=1024
 CPU_SHARES="$(env_value HOLT_PROD_CPU_SHARES "$default_shares")"
 [[ "$CPU_SHARES" =~ ^[0-9]+$ ]] && (( CPU_SHARES >= 2 && CPU_SHARES <= 262144 )) \
     || die "HOLT_PROD_CPU_SHARES must be a number from 2 to 262144, not '$CPU_SHARES'"

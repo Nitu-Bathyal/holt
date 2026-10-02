@@ -1,8 +1,9 @@
 # Holt production: https://githolt.com
 
 The production stack on this box (until it moves to Hetzner): Postgres, the
-API server, the web app and a small nginx `edge`, compose project
-**`holt-prod`**, published only on **127.0.0.1:8310**. Cloudflare's tunnel
+API server, the web app in [several containers](#web-containers) and a small
+nginx `edge`, compose project **`holt-prod`**, published only on
+**127.0.0.1:8310**. Cloudflare's tunnel
 is the public route ([TUNNEL.md](TUNNEL.md)). It is built **only from
 `origin/main`**, and it **deploys itself**: every new commit on main goes
 live once its CI is green and staging is running it
@@ -11,10 +12,10 @@ pause it, and `deploy.sh` still works by hand.
 
 | File | What |
 |---|---|
-| `compose.yml` | The stack. Images are tagged with the deployed commit (`holt-prod-web:<sha>`), everything is labelled `holt.stack=holt-prod`, memory limits web 512m / server 512m / db 256m / edge 32m. |
+| `compose.yml` | The stack. Images are tagged with the deployed commit (`holt-prod-web:<sha>`), everything is labelled `holt.stack=holt-prod`, memory limits web 768m each / server 1536m / db 256m / edge 32m ([Web containers](#web-containers)). |
 | `follow.sh` | The auto-deploy: one tick checks origin/main against CI and staging and runs `deploy.sh` for it. `--status`, `--pause`, `--resume`, `--retry`. See [Auto-deploy](#auto-deploy). |
 | `install-follow.sh` | One-time: the timer that runs `follow.sh` every 2 minutes (`--remove` takes it out). |
-| `deploy.sh` | One deploy: build main's images, migrate, swap, health-check, roll back on failure, prune only this stack's images, stop the builder container. |
+| `deploy.sh` | One deploy: build main's images, migrate, swap, health-check (every web container), roll back on failure, set the CPU shares, prune only this stack's images, stop the builder container. |
 | `env.sh` | Sourced by `deploy.sh` and `warm.sh`: state paths, `secrets.env`, the GitHub App's settings and the GitHub token fallback (`load_prod_env`); makes the evidence directory. |
 | `github-app.sh` | Who production reads GitHub as (the GitHub App or `GITHUB_TOKENS`), its points left, and a test read of a public repository. Prints no secret. Setup is in the maintainers' ops notes. |
 | `make-env.sh` | Writes `~/.local/share/holt-prod/.env` once: fresh `AUTH_SECRET`, `HOLT_INTERNAL_KEY`, `HOLT_SECRET_KEY`, db password. Nothing shared with staging. |
@@ -23,8 +24,8 @@ pause it, and `deploy.sh` still works by hand.
 | `warm.sh` | Runs `python -m holt_server.warm` detached in the server image (fills the caches), with the same secrets and token as a deploy. |
 | `warm-refresh.sh` | The report refresh: weekly tier (saved or recently viewed repos), then monthly tier (the other seeds), in the foreground. Off until switched on. See [Report refresh](#report-refresh). |
 | `warm-meta.sh` | The daily details-only warm pass (language, stars, topics for Discover), in the foreground, holding the deploy lock. See [Repository details](#repository-details). |
-| `edge.conf` | nginx: keeps the port across deploys, `/__build`, `www` → apex redirect, SSE-friendly proxy, the Umami paths. A deploy puts changes live with a reload ([Edge config](#edge-config)). |
-| `../swap.sh` | Sourced by `deploy.sh` (and staging's `preview.sh`): `swap_service` starts a service's new container beside the old one and retires the old one once the new one is healthy. |
+| `edge.conf` | nginx: keeps the port across deploys, spreads requests over the web containers, `/__build`, `www` → apex redirect, SSE-friendly proxy, the Umami paths. A deploy puts changes live with a reload ([Edge config](#edge-config)). |
+| `../swap.sh` | Sourced by `deploy.sh` (and staging's `preview.sh`): `swap_service` starts a service's new containers beside the old ones (as many as `deploy.replicas` asks for) and retires the old ones once every new one is healthy. |
 | `../edge.sh` | Sourced by `deploy.sh` (and staging's `preview.sh`): checks a changed `edge.conf` with `nginx -t` in the running edge and reloads it. |
 | `migrate-web.sh`, `initdb/` | Auth.js tables migration (one-shot `migrate-web` service) and the `holt_web` database. The API's own migrations run in the one-shot `migrate-server` service. |
 | `TUNNEL.md` | Steps for the user to route githolt.com here. |
@@ -45,7 +46,9 @@ Fixed in `compose.yml`: `HOLT_ENV=production`, `NEXT_PUBLIC_SITE_HOST=githolt.co
 (build and run time), `HOLT_WEB_URL` and `AUTH_URL=https://githolt.com`,
 `TRUST_PROXY_HEADERS=1`, no `ROBOTS_NOINDEX` (production is indexed), no
 `MOCK_API`. From `.env`: the generated secrets, `HOLT_STARTER_CACHE_HOURS=24`,
-`HOLT_JOB_CONCURRENCY=6`, `HOLT_PROD_PORT=8310`.
+`HOLT_JOB_CONCURRENCY=6`, `HOLT_PROD_PORT=8310`, and optionally
+`HOLT_WEB_REPLICAS` (2) and `HOLT_PROD_CPU_SHARES` (8192): see
+[Web containers](#web-containers).
 
 Keys the user owns come from **`~/.config/holt/secrets.env`** (`KEY=value`
 lines, `chmod 600`), read by `deploy.sh` and `warm.sh` on every run (`env.sh`) and mapped:
@@ -77,6 +80,70 @@ Then the tunnel: [TUNNEL.md](TUNNEL.md), and the auto-deploy:
 
 ```sh
 deploy/prod/install-follow.sh # the 2-minute timer (holt-prod-follow.timer)
+```
+
+## Web containers
+
+One Next.js process renders on one core: about 23 pages a second, and it
+reached 503 MB under 200 concurrent readers. So the site runs
+`HOLT_WEB_REPLICAS` web containers, **2 by default**, each with a 768 MB
+limit (512 MB of it heap). The API server and the database stay one each.
+
+```sh
+echo HOLT_WEB_REPLICAS=3 >> ~/.local/share/holt-prod/.env   # 1, 2 or 3
+FORCE=1 deploy/prod/deploy.sh    # three new ones start, then the old ones go; no rebuild
+```
+
+More than 3 is refused: each web container can hold 5 database connections,
+twice as many containers run during a swap, and the db's `max_connections`
+(80) is sized for three (the budget is in `compose.yml`).
+
+**Load balancing.** All of them answer to the name `web` on the stack's
+network. The edge asks Docker's DNS for that name every 2 seconds, gets
+every container's address, and starts each request at a random one.
+
+**Health.**
+
+- A deploy waits for the health check of *every* new web container before
+  any old one is retired, then asks each one for the home page and a report
+  from inside the container (`healthy()` in `deploy.sh`). One that fails
+  either sends the whole release back.
+- A container that crashes or is killed for memory is restarted by Docker
+  (`restart: unless-stopped`). Meanwhile the edge skips it: a refused
+  connection goes to the next address at once, a vanished one after 1
+  second, and within 2 seconds DNS no longer lists it.
+- Not covered: a container that still accepts connections but has stopped
+  answering keeps getting its share of requests. `docker ps` shows it as
+  `unhealthy`; restarting that one container fixes it, and the others
+  carry on meanwhile.
+
+**What each container keeps to itself** (all in `web/src/lib/`): the per-IP
+limit on the public endpoints (`rate-limit.ts`: an IP can make up to
+`HOLT_WEB_REPLICAS` times the limit; the API server's own limits are
+unchanged), the 10-minute Find cache (`find-cache.ts`: at most one search
+per query per container), and the short caches for the landing page's
+report, recent checks and "does this repo exist". Sign-in sessions are in
+the database, so a visitor can land on any container.
+
+**Memory.** The limits add up to 3.7 GB with 2 web containers and 4.4 GB
+with 3 (web 768 MB each, server 1536, db 256, edge 32, Umami 320); a limit
+is a ceiling, not what is used. During the web swap of a deploy the new set
+runs beside the old one for a few seconds.
+
+**CPU priority.** Every deploy gives the db, server, web and edge containers
+`HOLT_PROD_CPU_SHARES` CPU shares (default 8192; `docker update`, no
+restart). It is a priority, not a cap: when the box is busy each gets about
+five times the CPU time of a container with the default 1024 (staging, a
+build), and when it isn't nothing changes. It is not in `compose.yml`
+because that would make compose recreate the db and the edge. It decides
+between Docker containers only. Programs run from a login (the dev workers)
+are in systemd's `user.slice`, which shares the CPU half and half with
+everything else however many of them run; that split is a host setting
+(`CPUWeight` on `user.slice`), not this stack's.
+
+```sh
+docker ps --filter label=com.docker.compose.project=holt-prod --filter label=com.docker.compose.service=web
+docker inspect -f '{{.Name}} {{.HostConfig.CpuShares}}' $(docker ps -q --filter label=holt.stack=holt-prod)
 ```
 
 ## Auto-deploy
@@ -173,14 +240,16 @@ What one run does, in order:
    deploy before anything is swapped. A rollback does not undo a migration,
    which is why migrations must keep working with the previous release.
 6. The swap, with no gap ([`../swap.sh`](../swap.sh)): server, then web.
-   Each new container starts next to the old one (`compose up --scale 2
-   --no-recreate`); once its health check passes, the old one gets SIGTERM
-   and is removed. Meanwhile both answer to the service's name: the edge
-   re-resolves `web` every 2 s and tries the other address when one
+   The new containers start next to the old ones (`compose up --scale
+   <old + new> --no-recreate`: one server, `HOLT_WEB_REPLICAS` web); once
+   every one of them passes its health check, the old ones get SIGTERM and
+   are removed. Meanwhile all of them answer to the service's name: the edge
+   re-resolves `web` every 2 s and tries another address when one
    refuses, and web retries a dropped connection to `server` once
-   (`web/src/lib/upstream-retry.ts`). A new container that never gets
-   healthy is removed and the old one keeps serving. Then `compose up -d`
-   for the rest (db, edge, umami). If web still can't be reached, the edge
+   (`web/src/lib/upstream-retry.ts`). If one new container never gets
+   healthy, all the new ones are removed and the old ones keep serving. Then
+   `compose up -d` for the rest (db, edge, umami), and the CPU shares
+   ([Web containers](#web-containers)). If web still can't be reached, the edge
    shows the [updating page](#the-updating-page) instead of Cloudflare's 502.
    Compose's project directory is always the state clone
    (`src/deploy/prod`), whichever checkout runs `deploy.sh`: the db's
@@ -190,14 +259,17 @@ What one run does, in order:
    from the checkout it was started from.)
 7. Health check: `/` answers 200 and `GET /api/public/report/pallets/flask`
    (the extension's read-only proxy: open to signed-out callers, never starts
-   an analysis) answers 200 or 404 ("no report yet"), within 5 minutes. A 502
+   an analysis) answers 200 or 404 ("no report yet"), through the edge and
+   then from inside every web container, within 5 minutes. A 502
    there means web can't reach the server. (It no longer POSTs
    `/api/analyses`: since registered-users gating that answers 401 when
    signed out.)
 8. On failure: the same swap back to the previous tag **with the previous
    release's own `compose.yml`** (kept in `releases/<sha>/` for the live and
    the previous release, or taken from that commit in git), so a commit that
-   breaks `compose.yml` itself still rolls back; checks again, records
+   breaks `compose.yml` itself still rolls back. Every web container of the
+   failed release is replaced, and their number goes back to what that file
+   asks for (one, for a release from before this setting). Checks again, records
    the failure on `/__build`, exits 1. On success: records `current`/`previous`.
 9. Edge config: when the deployed commit's `edge.conf` differs from the
    edge's, installs it, runs `nginx -t` in the running edge and reloads
@@ -461,7 +533,15 @@ To watch a swap under load, deploy once, then add an empty commit to the
 rehearsal's origin, tag the same images with its SHA (so nothing is
 built), and deploy again with a loop of requests running against
 `127.0.0.1:$PORT`: every answer should be what it was before the swap (a 200, or a 429 from
-the rate limit), never a 502 or the updating page.
+the rate limit), never a 502 or the updating page. A rehearsal's containers
+keep the default CPU shares. When the box is busy with other work,
+`HOLT_PROD_MAX_LOAD` raises the load the deploy will start under.
+
+To force a rollback, run `deploy.sh` from a copy of `deploy/` whose
+`compose.yml` gives web a wrong `HOLT_INTERNAL_KEY` (the containers get
+healthy, the report check answers 401, both web containers go back), or tag
+an image that exits at start as the new commit's web image (the new
+containers are removed and the old ones never stop).
 
 The follower on top: the same three variables, plus a fake origin (a bare
 repository whose `main` you move), a stand-in for `gh` that prints the

@@ -107,7 +107,7 @@ export function FindView({ initialPicks, searched = initialPicks, initial, sourc
   const untouched = picks === initialPicks;
   const locked = pending && !signedIn ? `/find?${q}` : null;
 
-  // The search's state, lifted here so its one-line summary sits in the tray.
+  // The search's state.
   const r = shown.result;
   // A new search comes with what Holt has already checked (`results`), shown
   // while the search adds to it; if the search fails, that still stands.
@@ -119,7 +119,6 @@ export function FindView({ initialPicks, searched = initialPicks, initial, sourc
   const fitted = raw ? personalise(raw, fit) : null;
   // Nothing of the index fits yet: wait for the search rather than say "none".
   const list = searching && !fitted?.length ? null : fitted;
-  const status = locked || error ? "" : !list ? "Checking which repos reply to outsiders. A new search takes up to a minute." : list.length ? `${list.length} repo${list.length === 1 ? "" : "s"} that merge outside PRs, best starter issues first` : "";
 
   // "save as my profile": only with a profile to update, and picks that differ from it.
   const [saving, setSaving] = useState<"idle" | "saving" | "saved" | "adult" | "error">("idle");
@@ -132,45 +131,41 @@ export function FindView({ initialPicks, searched = initialPicks, initial, sourc
     setSaving(res.ok ? "saved" : res.adult ? "adult" : "error");
   };
 
-  const footer = (
-    <>
-      <p aria-live="polite" className="flex items-center gap-x-2">
-        {pending && !locked ? (
-          <>
-            <span aria-hidden="true" className="inline-block size-2 animate-pulse rounded-full bg-blue" />
-            Updating…
-          </>
-        ) : (
-          status
-        )}
-      </p>
-      <p className="flex flex-wrap items-baseline gap-x-4">
-        {source === "profile" && untouched && (
-          <span>
-            Started from your profile. <Link href="/settings/profile" className="text-link">edit it</Link>
-          </span>
-        )}
-        {source === "last" && untouched && !differs && <span>Your last search.</span>}
-        {saving === "saved" && !differs && <span role="status" className="text-green">Saved as your profile.</span>}
-        {saving === "adult" && <Link href="/settings/profile" className="text-link">finish your profile in settings</Link>}
-        {saving === "error" && <span role="status" className="text-orange">Couldn&apos;t save. Try again.</span>}
-        {differs && saving !== "adult" && (
-          <button type="button" onClick={saveAsProfile} disabled={saving === "saving"} className="min-h-6 text-muted underline decoration-dotted underline-offset-4 hover:text-ink disabled:opacity-60">
-            {saving === "saving" ? "saving…" : "save as my profile"}
-          </button>
-        )}
-        {!isDefault && (
-          <button type="button" onClick={() => setPicks(defaultPicks(hf?.on ?? false))} className="min-h-6 text-muted underline decoration-dotted underline-offset-4 hover:text-ink">
-            reset filters
-          </button>
-        )}
-      </p>
-    </>
-  );
+  // Under the bar, scrolling away with the results: where the picks came from, and what to do with them.
+  const reset = () => setPicks(defaultPicks(hf?.on ?? false));
+  const action = "min-h-6 text-muted underline decoration-dotted underline-offset-4 hover:text-ink disabled:opacity-60";
+  const fromProfile = source === "profile" && untouched;
+  const lastSearch = source === "last" && untouched && !differs;
+  const canSave = differs && saving !== "adult";
+  const aside = fromProfile || lastSearch || canSave || !isDefault || (saving === "saved" && !differs) || saving === "adult" || saving === "error";
 
   return (
     <>
-      <FindFilters picks={picks} onChange={setPicks} hf={hf} footer={footer} />
+      <FindFilters picks={picks} onChange={setPicks} hf={hf} busy={pending && !locked} />
+      <p role="status" className="sr-only">{pending && !locked ? "Updating…" : ""}</p>
+      {aside && (
+        <p className="mt-3 flex flex-wrap items-baseline gap-x-4 gap-y-1 text-[0.8rem] text-faint">
+          {fromProfile && (
+            <span>
+              Started from your profile. <Link href="/settings/profile" className="text-link">edit it</Link>
+            </span>
+          )}
+          {lastSearch && <span>Your last search.</span>}
+          {saving === "saved" && !differs && <span role="status" className="text-green">Saved as your profile.</span>}
+          {saving === "adult" && <Link href="/settings/profile" className="text-link">finish your profile in settings</Link>}
+          {saving === "error" && <span role="status" className="text-orange">Couldn&apos;t save. Try again.</span>}
+          {canSave && (
+            <button type="button" onClick={saveAsProfile} disabled={saving === "saving"} className={action}>
+              {saving === "saving" ? "saving…" : "save as my profile"}
+            </button>
+          )}
+          {!isDefault && (
+            <button type="button" onClick={reset} className={action}>
+              reset filters
+            </button>
+          )}
+        </p>
+      )}
       {notice}
       <Results pending={pending} locked={locked} list={list} searching={searching} error={error} progress={job.stage.progress} days={picks.days} saved={saved} picks={picks} setPicks={setPicks} onRetry={retryNow} />
     </>
@@ -206,6 +201,7 @@ function Results({ pending, locked, list, searching, error, progress, days, save
   } else if (!list) {
     body = (
       <>
+        <p className="mb-3 text-[0.82rem] text-faint">Checking which repos reply to outsiders. A new search takes up to a minute.</p>
         <SearchProgress progress={progress} />
         <FindResultsSkeleton count={3} />
       </>

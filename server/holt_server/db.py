@@ -12,8 +12,9 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import time
 import uuid
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from datetime import UTC, date, datetime
 
 from sqlalchemy import (
@@ -31,7 +32,13 @@ from sqlalchemy import (
     text,
 )
 from sqlalchemy.engine import make_url
-from sqlalchemy.ext.asyncio import AsyncEngine, async_sessionmaker, create_async_engine
+from sqlalchemy.exc import TimeoutError as PoolTimeout
+from sqlalchemy.ext.asyncio import (
+    AsyncConnection,
+    AsyncEngine,
+    async_sessionmaker,
+    create_async_engine,
+)
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 from sqlalchemy.pool import AsyncAdaptedQueuePool, NullPool
 
@@ -394,6 +401,48 @@ def current_engine():
 # `ping` gives up after this long, well inside the container health check's
 # own timeout (deploy/*/compose.yml).
 PING_TIMEOUT_S = 1.5
+# How long `/metrics` waits for its own connection (two scrapes at once).
+STATS_TIMEOUT_S = 2.0
+
+
+class PoolMeter:
+    """What the pool is asked for, counted for `/metrics` (metrics.py):
+    requests waiting for a connection right now (or opening one), how long
+    each waited, and how many gave up at `pool_timeout`."""
+
+    def __init__(self) -> None:
+        self.waiting = 0
+        self.timeouts = 0
+        # Called with each wait, in seconds.
+        self.observe: Callable[[float], None] | None = None
+
+
+def metered_pool(meter: PoolMeter) -> type[AsyncAdaptedQueuePool]:
+    """The usual pool class, counting into `meter`. A class of its own per
+    `Database`, so the pool SQLAlchemy builds again on `dispose` still counts.
+
+    `_do_get` is SQLAlchemy's own (private) checkout step and where a request
+    waits when every connection is out. test_server_metrics.py fails if an
+    upgrade renames it."""
+
+    class MeteredPool(AsyncAdaptedQueuePool):
+        def _do_get(self):
+            started = time.monotonic()
+            meter.waiting += 1
+            try:
+                return super()._do_get()
+            except PoolTimeout as exc:
+                # `_do_get` may call itself: count a timeout once.
+                if not getattr(exc, "counted", False):
+                    exc.counted = True
+                    meter.timeouts += 1
+                raise
+            finally:
+                meter.waiting -= 1
+                if meter.observe is not None:
+                    meter.observe(time.monotonic() - started)
+
+    return MeteredPool
 
 
 class Database:
@@ -435,13 +484,23 @@ class Database:
             return ({"pool_size": size, "max_overflow": overflow, "pool_timeout": timeout}
                     if pooled else {})
 
+        # Waits on the main pool, for /metrics. The side engines aren't counted.
+        self.pool_meter = PoolMeter()
+        metered = {"poolclass": metered_pool(self.pool_meter)} if pooled else {}
         self.engine: AsyncEngine = create_async_engine(
-            url, **connect, **pool(pool_size, max_overflow, pool_timeout))
+            url, **{**connect, **metered}, **pool(pool_size, max_overflow, pool_timeout))
         self.session = async_sessionmaker(self.engine, expire_on_commit=False)
         # The health check's own connection, kept open: it must answer while
         # every pool connection is busy, without opening one each time.
         self._health: AsyncEngine = create_async_engine(
             url, isolation_level="AUTOCOMMIT", **connect, **pool(1, 0, PING_TIMEOUT_S))
+        # /metrics' own connection, kept open the same way: it has to say how
+        # long the queue is while every pool connection is busy. Opened by the
+        # first scrape, so a process nobody scrapes never opens it. (An
+        # in-memory database is one connection: the main engine's.)
+        self._stats: AsyncEngine = create_async_engine(
+            url, isolation_level="AUTOCOMMIT", **connect,
+            **pool(1, 0, STATS_TIMEOUT_S)) if pooled else self.engine
         # Advisory locks: a connection each, opened for the pass and closed
         # after it, so a lock held for minutes never takes a request's slot.
         self._locks: AsyncEngine = create_async_engine(
@@ -467,6 +526,12 @@ class Database:
             return False
 
     @contextlib.asynccontextmanager
+    async def stats(self) -> AsyncIterator[AsyncConnection]:
+        """A connection for `/metrics`' few counting queries, outside the pool."""
+        async with self._stats.connect() as conn:
+            yield conn
+
+    @contextlib.asynccontextmanager
     async def advisory_lock(self, lock_id: int) -> AsyncIterator[bool]:
         """Hold Postgres advisory lock `lock_id` for the block, so one process
         at a time does the work inside. Yields False when another process
@@ -484,6 +549,7 @@ class Database:
     async def dispose(self) -> None:
         await self.engine.dispose()
         await self._health.dispose()
+        await self._stats.dispose()
         await self._locks.dispose()
 
 
