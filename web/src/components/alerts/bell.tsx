@@ -170,7 +170,7 @@ export function AlertBell({ initial }: { initial: AlertList }) {
                 <div className="min-w-0">
                   <p className="text-[0.95rem] font-semibold tracking-tight text-ink">Know when it&rsquo;s your turn.</p>
                   <p className="mt-1 font-sans text-[0.88rem] leading-snug text-muted">
-                    Holt watches your open pull requests and tells you when a maintainer replies, asks for changes, approves or merges.
+                    Holt watches your open pull requests and lets you know when a maintainer replies, asks for changes, approves, or merges.
                   </p>
                 </div>
               </div>
@@ -183,7 +183,7 @@ export function AlertBell({ initial }: { initial: AlertList }) {
 
           {view === "ended" && (
             <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-line px-4 py-3">
-              <p className="font-sans text-[0.9rem]">Alerts ended on {dayMonth(list.access.until)}.</p>
+              <p className="font-sans text-[0.9rem]">Your alerts ended on {dayMonth(list.access.until)}.</p>
               <Link href="/pricing" onClick={close} className="text-link text-[0.82rem]">see plans</Link>
             </div>
           )}
@@ -192,7 +192,7 @@ export function AlertBell({ initial }: { initial: AlertList }) {
             <div className="flex flex-col items-center gap-2 px-4 py-8 text-center">
               <CatFace mood="ready" className="text-[1.1rem] text-faint" />
               <p className="font-sans text-[0.92rem] text-muted">You&rsquo;re all caught up.</p>
-              <p className="font-sans text-[0.8rem] text-faint">New replies on your pull requests show up here.</p>
+              <p className="font-sans text-[0.8rem] text-faint">New replies on your pull requests will show up here.</p>
             </div>
           )}
 

@@ -196,27 +196,27 @@ FRAME = alert_email.EmailFrame(
     home_url="https://githolt.com")
 
 
-def item(line: str, pr: str, title: str, tone: str) -> alert_email.EmailAlert:
+def item(kind: str, pr: str, title: str, **facts) -> alert_email.EmailAlert:
     repo, number = pr.split(" #")
-    return alert_email.EmailAlert(line, pr, title, f"https://github.com/{repo}/pull/{number}",
-                                  f"https://githolt.com/{repo}", tone)
+    return alert_email.EmailAlert(kind, repo, int(number), title,
+                                  f"https://github.com/{repo}/pull/{number}",
+                                  f"https://githolt.com/{repo}", facts)
 
 
 TURN = [
-    item("Your turn: @mkoval asked for changes on click #2811.", "pallets/click #2811",
-         'Fix <b>shell</b> completion & "nested" groups', "turn"),
-    item("Your turn: @lead replied on p5.js #7120.", "processing/p5.js #7120",
-         "Add describe() to the textToPoints reference", "turn"),
+    item("changes", "pallets/click #2811", 'Fix <b>shell</b> completion & "nested" groups',
+         who="mkoval"),
+    item("reply", "processing/p5.js #7120", "Add describe() to the textToPoints reference",
+         who="lead"),
 ]
 DAILY = [
-    item("Day 6, no reply on p5.js #7120. Most get one within 4 days here.",
-         "processing/p5.js #7120", "Add describe() to the textToPoints reference", "late"),
-    item("Quiet for 25 days on free-programming-books #11020. The bot here closes at 30.",
-         "EbookFoundation/free-programming-books #11020", "Add Rust books in Hindi", "stale"),
-    item("Approved: @jrios approved efcore #3310.", "dotnet/efcore #3310",
-         "Translate DateOnly.DayNumber on SQLite", "good"),
-    item("Closed without merging: moment #6120.", "moment/moment #6120", "Add an Odia locale",
-         "done"),
+    item("late_reply", "processing/p5.js #7120", "Add describe() to the textToPoints reference",
+         days=6, slow_hours=96),
+    item("stale_soon", "EbookFoundation/free-programming-books #11020",
+         "Add Rust books in Hindi", quiet=25, close=30),
+    item("approved", "dotnet/efcore #3310", "Translate DateOnly.DayNumber on SQLite",
+         who="jrios"),
+    item("closed", "moment/moment #6120", "Add an Odia locale"),
 ]
 
 
@@ -247,31 +247,157 @@ def test_pull_request_titles_are_escaped():
     assert "<b>shell</b>" not in html
     assert "Fix &lt;b&gt;shell&lt;/b&gt; completion &amp; &quot;nested&quot; groups" in html
     assert 'href="https://githolt.com/alerts/unsubscribe?t=abc&amp;x=1"' in html
-    hostile = item('Your turn: @x replied on b #1.', "a/b #1",
-                   '"><script>alert(1)</script><img src=x onerror=alert(2)>', "turn")
+    hostile = item("reply", "a/b #1", '"><script>alert(1)</script><img src=x onerror=alert(2)>',
+                   who="x")
     html = alert_email.your_turn_email([hostile], FRAME).html
     assert "<script>" not in html and "<img" not in html
 
 
-def test_subjects():
+def test_your_turn_on_one_pull_request():
     one = alert_email.your_turn_email(TURN[:1], FRAME)
-    # One pull request: the news is the subject and the heading.
+    # The news is the subject; the heading says it without the pull request,
+    # which the card under it shows.
     assert one.subject == "@mkoval asked for changes on click #2811"
-    assert one.text.startswith("@mkoval asked for changes on click #2811.\n\nYour turn.\n")
-    unnamed = alert_email.your_turn_email(
-        [item("Your turn: a reviewer replied on b #1.", "a/b #1", "T", "turn")], FRAME)
+    assert one.preheader == 'Your turn. Fix <b>shell</b> completion & "nested" groups'
+    assert one.text.startswith(
+        "@mkoval asked for changes on your PR.\n\nLooks like it's your turn:\n"
+        'pallets/click #2811 · Fix <b>shell</b> completion & "nested" groups\n\n'
+        "Open the PR: https://github.com/pallets/click/pull/2811\n")
+    for said in ("@mkoval asked for changes on your PR.", "Looks like it's your turn:"):
+        assert said in one.html
+    reply = alert_email.your_turn_email(TURN[1:], FRAME)
+    assert reply.subject == "@lead replied on p5.js #7120"
+    assert reply.text.startswith("@lead replied on your PR.\n\nLooks like it's your turn:\n")
+    unnamed = alert_email.your_turn_email([item("reply", "a/b #1", "T")], FRAME)
     assert unnamed.subject == "A reviewer replied on b #1"
+    assert unnamed.text.startswith("A reviewer replied on your PR.\n")
+
+
+def test_your_turn_on_two_pull_requests():
     two = alert_email.your_turn_email(TURN, FRAME)
-    assert two.text.startswith("Maintainers replied on 2 of your pull requests.\n")
-    assert alert_email.your_turn_email(TURN, FRAME).subject == "Your turn on 2 pull requests"
-    assert alert_email.daily_email(DAILY[:1], FRAME, "x").subject == (
-        "1 update on your pull requests")
-    assert alert_email.daily_email(DAILY, FRAME, "x").subject == (
-        "4 updates on your pull requests")
-    text = alert_email.daily_email(DAILY[:1], FRAME, "Wednesday 1 October").text
-    assert text.startswith("Where your pull requests stand, Wednesday 1 October\n")
-    assert "Open the PR: https://github.com/processing/p5.js/pull/7120" in text
-    assert text.endswith("Stop these emails: https://githolt.com/alerts/unsubscribe?t=abc&x=1")
+    assert two.subject == "2 of your PRs need a look"
+    assert two.preheader == (
+        "Two maintainers replied. One asked for changes, and one left a reply.")
+    assert two.text.startswith(
+        "Two maintainers replied to your pull requests.\n\n"
+        "First up, @mkoval asked for changes:\n"
+        'pallets/click #2811 · Fix <b>shell</b> completion & "nested" groups\n'
+        "Open the PR: https://github.com/pallets/click/pull/2811\n"
+        "Holt's report: https://githolt.com/pallets/click\n\n"
+        "And @lead replied here:\n"
+        "processing/p5.js #7120 · Add describe() to the textToPoints reference\n")
+    for said in ("Two maintainers replied to your pull requests.",
+                 "First up, @mkoval asked for changes:", "And @lead replied here:"):
+        assert said in two.html
+    assert "Your turn." not in two.html + two.text.split("--")[0]
+    # The other way round, and both the same.
+    back = alert_email.your_turn_email(TURN[::-1], FRAME)
+    assert back.preheader == (
+        "Two maintainers replied. One left a reply, and one asked for changes.")
+    assert "First up, @lead replied:" in back.text
+    assert "And @mkoval asked for changes here:" in back.text
+    both = alert_email.your_turn_email(
+        [TURN[0], item("changes", "a/b #1", "T")], FRAME)
+    assert both.preheader == "Two maintainers replied. Both asked for changes."
+    assert "And a reviewer asked for changes here:" in both.text
+    replies = alert_email.your_turn_email([TURN[1], item("reply", "a/b #1", "T")], FRAME)
+    assert replies.preheader == "Two maintainers replied. Both left a reply."
+    # One person on both isn't "two maintainers".
+    same = alert_email.your_turn_email(
+        [TURN[0], item("reply", "a/b #1", "T", who="mkoval")], FRAME)
+    assert same.text.startswith("@mkoval replied to two of your pull requests.\n")
+    assert same.preheader == ("@mkoval replied to two of your pull requests. "
+                              "One asked for changes, and one left a reply.")
+
+
+def test_your_turn_on_three_or_more_pull_requests():
+    third = item("changes", "a/b #1", "T")
+    three = alert_email.your_turn_email([*TURN, third], FRAME)
+    assert three.subject == "3 of your PRs need a look"
+    assert three.preheader == ("Maintainers replied to three of your pull requests. "
+                               "Two asked for changes, and one left a reply.")
+    assert three.text.startswith(
+        "Maintainers replied to three of your pull requests.\n\n"
+        "@mkoval asked for changes:\npallets/click #2811 · ")
+    # A plain list: no "First up" or "And".
+    assert "\n\n@lead replied:\nprocessing/p5.js #7120 · " in three.text
+    assert "\n\nA reviewer asked for changes:\na/b #1 · T\n" in three.text
+    assert "First up" not in three.text + three.html and "replied here" not in three.text
+    for said in ("@lead replied:", "A reviewer asked for changes:"):
+        assert said in three.html
+    assert three.html.count('class="h-ghost"') == 3 and three.html.count('class="h-btn"') == 1
+    alike = alert_email.your_turn_email([TURN[0]] + [third] * 3, FRAME)
+    assert alike.subject == "4 of your PRs need a look"
+    assert alike.preheader == ("Maintainers replied to four of your pull requests. "
+                               "All four asked for changes.")
+    many = alert_email.your_turn_email(TURN * 6, FRAME)
+    assert many.subject == "12 of your PRs need a look"
+    assert many.preheader == ("Maintainers replied to 12 of your pull requests. "
+                              "Six asked for changes, and six left a reply.")
+
+
+def test_the_daily_email():
+    daily = alert_email.daily_email(DAILY, FRAME, "Thursday 1 October")
+    assert daily.subject == "Here's what happened on your PRs today"
+    assert daily.preheader == (
+        "4 updates: one waiting, one getting close to stale, one approved, and one closed.")
+    assert daily.text.startswith(
+        "Here's where your pull requests stand, Thursday 1 October.\n\n"
+        "p5.js #7120 is on day 6 with no reply yet. Most PRs here get one within 4 days.\n"
+        "processing/p5.js #7120 · Add describe() to the textToPoints reference\n"
+        "Open the PR: https://github.com/processing/p5.js/pull/7120\n"
+        "Holt's report: https://githolt.com/processing/p5.js\n\n"
+        "free-programming-books #11020 has been quiet for 25 days. "
+        "The bot closes PRs here after 30.\n")
+    assert "\nefcore #3310 was approved by @jrios.\n" in daily.text
+    assert "\nmoment #6120 was closed without merging.\n" in daily.text
+    assert daily.text.endswith(
+        "Stop these emails: https://githolt.com/alerts/unsubscribe?t=abc&x=1")
+    # The short name leads in bold in the HTML, and plainly in the text.
+    assert "*" not in daily.text
+    assert ('<strong style="font-weight:600;">p5.js #7120</strong> is on day 6 with no reply '
+            "yet. Most PRs here get one within 4 days.") in daily.html
+    assert ('<strong style="font-weight:600;">efcore #3310</strong> was approved by @jrios.'
+            in daily.html)
+    assert "Here's where your pull requests stand</h1>" in daily.html
+    one = alert_email.daily_email(DAILY[:1], FRAME, "Thursday 1 October")
+    assert one.subject == daily.subject and one.preheader == "1 update: one waiting."
+
+
+def test_the_daily_email_says_each_kind_its_own_way():
+    """Not the bell's line (alerts.line): the pull request's short name leads."""
+    def said(kind: str, **facts) -> str:
+        email = alert_email.daily_email([item(kind, "a/b #1", "T", **facts)], FRAME, "x")
+        return email.text.splitlines()[2]
+
+    assert said("merged") == "b #1 was merged."
+    assert said("approved") == "b #1 was approved."
+    assert said("late_merge", days=12, slow_hours=168) == (
+        "b #1 is on day 12. Most merged PRs here land within 7 days.")
+    assert said("late_reply", days=2, slow_hours=24) == (
+        "b #1 is on day 2 with no reply yet. Most PRs here get one within a day.")
+    assert said("stale_soon", quiet=1, close=6) == (
+        "b #1 has been quiet for 1 day. The bot closes PRs here after 6.")
+    assert said("changes", who="lead") == "b #1 is waiting on you. @lead asked for changes."
+    assert said("reply") == "b #1 is waiting on you. A reviewer replied."
+    assert said("new_kind") == "b #1 has an update."
+
+
+def test_the_daily_preview_line_counts_each_kind():
+    def preview(*kinds: str) -> str:
+        found = [item(kind, f"a/b #{i}", "T") for i, kind in enumerate(kinds)]
+        return alert_email.daily_email(found, FRAME, "x").preheader
+
+    assert preview("merged") == "1 update: one merged."
+    assert preview("late_reply", "merged") == "2 updates: one waiting and one merged."
+    assert preview("late_reply", "late_reply", "late_reply") == "3 updates: three waiting."
+    # Several of one kind are counted once, where the first of them is.
+    assert preview("closed", "late_merge", "closed", "merged", "late_merge", "closed") == (
+        "6 updates: three closed, two waiting on a merge, and one merged.")
+    assert preview("changes", "reply", "approved") == (
+        "3 updates: one needing changes, one with a new reply, and one approved.")
+    assert preview("stale_soon", "stale_soon") == "2 updates: two getting close to stale."
+    assert preview(*["merged"] * 11, "new_kind") == "12 updates: 11 merged and one changed."
 
 
 def test_the_footer_says_when_alerts_end():
@@ -406,7 +532,8 @@ def test_a_run_sends_your_turn_and_records_it(hm):
     [msg] = hm.outbox.sent
     assert msg.to == "you@example.com"
     assert msg.subject == "@lead asked for changes on click #2811"
-    assert "@lead asked for changes on click #2811." in msg.text
+    assert msg.text.startswith("@lead asked for changes on your PR.\n")
+    assert "pallets/click #2811 · " in msg.text
     assert "Title of 2811 &lt;i&gt;" in msg.html and "moment" not in msg.html
     assert "Alerts until 11 Oct. Your turn right away, the rest at 8:00." in msg.text
     # One-click unsubscribe (RFC 8058), and the same token in the footer link.
@@ -458,8 +585,9 @@ def test_the_daily_email_carries_the_rest(hm):
          ("merged", "moment/moment", 6120, timedelta(hours=3)))
     assert run(hm, at).sent == 1
     [msg] = hm.outbox.sent
-    assert msg.subject == "2 updates on your pull requests"
-    assert msg.text.startswith("Where your pull requests stand, Friday 2 October\n")
+    assert msg.subject == "Here's what happened on your PRs today"
+    assert msg.text.startswith("Here's where your pull requests stand, Friday 2 October.\n")
+    assert "\nmoment #6120 was merged.\n" in msg.text
     assert all(a.email_via == "daily" for a in stored(hm, Alert))
 
 
@@ -487,7 +615,7 @@ def test_without_a_provider_key_nothing_is_sent_and_alerts_stay_on_the_bell(make
     assert alert_.email_via is None and alert_.emailed_at is None
     r = h.get("/v1/me/alerts", user="u1").json()
     assert r["unread"] == 1 and r["items"][0]["text"] == (
-        "Your turn: @lead asked for changes on click #2811.")
+        "Your turn. @lead asked for changes on click #2811.")
 
 
 def test_nothing_is_sent_once_access_has_ended(hm):

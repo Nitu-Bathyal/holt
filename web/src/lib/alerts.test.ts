@@ -263,20 +263,21 @@ test("the card's lines are the alerts this person's pull requests would get toda
     NOW,
   );
   assert.deepEqual(lines, [
-    { kind: "changes", text: "Your turn: @davidism asked for changes on click #2811." },
-    { kind: "late_reply", text: "Day 6, no reply on p5.js #7120. Most get one within 4 days here." },
+    { kind: "changes", text: "Your turn. @davidism asked for changes on click #2811." },
+    { kind: "late_reply", text: "Day 6 and still no reply on p5.js #7120. Most get one within 4 days here." },
   ]);
 });
 
 test("each kind in the server's words", () => {
   const one = (over: Partial<ContributionPR>) => sampleAlerts([pr(over)], NOW)[0]?.text;
-  assert.equal(one({ turn: "yours", reply_kind: "reply", reply_by: null }), "Your turn: a reviewer replied on click #2811.");
-  assert.equal(one({ reply_kind: "approved", reply_by: "jrios", first_reply_at: ago(1) }), "Approved: @jrios approved click #2811.");
-  assert.equal(one({ created_at: ago(19.5), first_reply_at: ago(18) }), "Day 20 on click #2811. Most merged ones land within 2 weeks here.");
+  assert.equal(one({ turn: "yours", reply_kind: "reply", reply_by: null }), "Your turn. A reviewer replied on click #2811.");
+  assert.equal(one({ reply_kind: "approved", reply_by: "jrios", first_reply_at: ago(1) }), "Nice. @jrios approved click #2811.");
+  assert.equal(one({ reply_kind: "approved", reply_by: null, first_reply_at: ago(1) }), "click #2811 was approved.");
+  assert.equal(one({ created_at: ago(19.5), first_reply_at: ago(18) }), "Day 20 on click #2811. Most merged PRs land within 2 weeks here.");
   const stale = { ...TIMING, stale_close_days: 30 } as Timing;
   assert.equal(
     one({ created_at: ago(40), first_reply_at: ago(39), last_activity_at: ago(25.2), verdict: { ...pr().verdict!, timing: stale } }),
-    "Quiet for 25 days on click #2811. The bot here closes at 30.",
+    "It's been quiet for 25 days on click #2811. The bot closes it at 30.",
   );
 });
 

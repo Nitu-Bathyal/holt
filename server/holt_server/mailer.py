@@ -306,9 +306,8 @@ def render(svc: Services, row: AlertSettings, access: alerts.Access, email: Emai
         prs_url=f"{web}/me/contributions", settings_url=f"{web}/settings/alerts",
         unsubscribe_url=f"{web}/alerts/unsubscribe?t={token}", home_url=web)
     items = [alert_email.EmailAlert(
-        line=alerts.line(a.kind, a.repo, a.number, a.facts), pr=f"{a.repo} #{a.number}",
-        title=a.pr_title, pr_url=a.pr_url, report_url=f"{web}/{a.repo}",
-        tone=alert_email.TONES.get(a.kind, "late")) for a in found]
+        kind=a.kind, repo=a.repo, number=a.number, title=a.pr_title, pr_url=a.pr_url,
+        report_url=f"{web}/{a.repo}", facts=a.facts or {}) for a in found]
     if all(a.kind in alerts.YOUR_TURN for a in found):
         out = alert_email.your_turn_email(items, frame)
     else:

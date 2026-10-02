@@ -77,7 +77,7 @@ export function AlertSettingsForm({ initial, accountEmail }: { initial: AlertSet
             {email && <Switch on={s.email_on} onChange={(email_on) => void change({ email_on })} label="Email" />}
           </div>
           {!email ? (
-            <p className="text-[0.8rem] text-faint">Your sign-in has no email address.</p>
+            <p className="text-[0.8rem] text-faint">Your account doesn&rsquo;t have an email address.</p>
           ) : (
             s.email_on && (
               <>
@@ -86,7 +86,7 @@ export function AlertSettingsForm({ initial, accountEmail }: { initial: AlertSet
                   <EmailChoice value={s.email_mode} onChange={(email_mode) => void change({ email_mode })} name="email-mode" />
                 </div>
                 <p className="mt-3 text-[0.8rem] text-faint">
-                  {s.email_available ? `No email between 22:00 and 8:00 (${s.tz}).` : "Email isn't being sent from this site yet."}
+                  {s.email_available ? `No emails between 22:00 and 8:00 (${s.tz}).` : "Email isn't being sent from Holt yet."}
                 </p>
               </>
             )
