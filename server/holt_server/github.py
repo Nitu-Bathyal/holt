@@ -136,6 +136,13 @@ class TokenState:
     reason: str = ""
 
 
+@dataclass(frozen=True)
+class TokenView:
+    remaining: int | None
+    reset_at: float | None
+    usable: bool
+
+
 class TokenPool:
     """`GITHUB_TOKENS` (or the GitHub App), handed out round-robin, skipping the
     ones that can't work.
@@ -158,6 +165,10 @@ class TokenPool:
         self._cursor = 0
         self._lock = threading.Lock()
         self._clock = clock
+        # GraphQL points this process has seen spent, for /metrics: each drop
+        # in a token's points-left between two replies (other readers of the
+        # same token included).
+        self.points_used = 0
 
     def __bool__(self) -> bool:
         return bool(self._tokens)
@@ -247,6 +258,22 @@ class TokenPool:
                 return None
             return sum(st.remaining or 0 for st in usable)
 
+    def states(self) -> list[TokenView]:
+        """Each token as GitHub last reported it, for /metrics (no call, and
+        nothing changed). A count whose reset time has passed is out of date,
+        so it reads as unknown."""
+        with self._lock:
+            now = self._clock()
+            out = []
+            for st in self._state:
+                known = st.remaining is not None and not (
+                    st.reset_at is not None and st.reset_at <= now)
+                low = known and st.remaining < LOW_POINTS
+                out.append(TokenView(remaining=st.remaining if known else None,
+                                     reset_at=st.reset_at if known else None,
+                                     usable=st.out_until <= now and not low))
+            return out
+
     def transport(self, http: httpx.Client | None = None,
                   index: int | None = None) -> PooledGraphQL:
         """A GraphQL client on the next usable token (or on token `index`)."""
@@ -267,6 +294,8 @@ class TokenPool:
         with self._lock:
             st = self._state[index]
             was_low = st.remaining is not None and st.remaining < LOW_POINTS
+            if st.remaining is not None and left < st.remaining:
+                self.points_used += st.remaining - left
             st.remaining, st.reset_at = left, reset
         if left < LOW_POINTS and not was_low:
             log.warning("%s is nearly used up (%d points left); skipping it "

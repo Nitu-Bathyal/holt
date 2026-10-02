@@ -15,6 +15,7 @@ from holt_server.errors import ApiError
 from holt_server.evidence_store import EvidenceStore
 from holt_server.github import GitHubLookup, build_pool
 from holt_server.jobs import JobRunner
+from holt_server.metrics import Metrics
 from holt_server.ratelimit import RateLimiter
 from holt_server.settings import Settings
 
@@ -49,6 +50,8 @@ class Services:
         # The evidence each report read, kept on disk (off without HOLT_EVIDENCE_DIR).
         self.evidence = EvidenceStore(settings.evidence_dir, settings.evidence_keep_days)
         self.runner = JobRunner(self, settings.job_concurrency, settings.badge_concurrency)
+        # What `GET /metrics` serves (metrics.py).
+        self.metrics = Metrics(self)
         self._canonical: OrderedDict[str, str] = OrderedDict()
         # Swappable seams. Tests replace these; production uses the defaults.
         self.provider_factory: Callable[[str, datetime], Any] = self._live_provider
