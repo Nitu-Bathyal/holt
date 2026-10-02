@@ -58,7 +58,12 @@ function withFocus(repo: string | null): string {
 }
 
 /** A grid of compact repo cards (`.card-grid`, at most `cols` across); `?focus=owner/name` opens one in a focus view (back closes it). */
-export function RepoGrid({ repos, cols, ...common }: Common & { repos: CardRepo[]; cols?: number }) {
+export function RepoGrid({ repos, cols, tail, ...common }: Common & {
+  repos: CardRepo[];
+  cols?: number;
+  /** More `<li>`s after the cards, in the same grid: the placeholders of a part still loading. */
+  tail?: React.ReactNode;
+}) {
   return (
     <FocusList
       {...common}
@@ -70,6 +75,7 @@ export function RepoGrid({ repos, cols, ...common }: Common & { repos: CardRepo[
               {card(r)}
             </li>
           ))}
+          {tail}
         </ol>
       )}
     />

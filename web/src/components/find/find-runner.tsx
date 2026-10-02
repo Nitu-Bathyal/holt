@@ -5,7 +5,7 @@ import { personalise, type Fit } from "@/lib/profile";
 import type { FindResult } from "@/lib/types";
 import { AnalysisProgress } from "../analysis-progress";
 import { ErrorPanel } from "../error-panel";
-import { FindResults } from "./find-results";
+import { FindList } from "./find-list";
 import { useFindJob } from "./use-find-job";
 
 /**
@@ -13,7 +13,17 @@ import { useFindJob } from "./use-find-job";
  * is what the 202 already carried (repos Holt has checked): shown while the
  * search runs, and kept if it fails.
  */
-export function FindRunner({ jobId, index = [], days, retryHref = "/find", fit = null, saved, empty }: { jobId: string; index?: FindResult[]; days: number; retryHref?: string; fit?: Fit | null; saved?: string[] | null; empty?: React.ReactNode }) {
+export function FindRunner({ jobId, index = [], days, retryHref = "/find", fit = null, saved, empty, more = null }: {
+  jobId: string;
+  index?: FindResult[];
+  days: number;
+  retryHref?: string;
+  fit?: Fit | null;
+  saved?: string[] | null;
+  empty?: React.ReactNode;
+  /** Once the search is done, the list may load the rest of the index on its button (FindList). */
+  more?: string | null;
+}) {
   const { stage, results, error } = useFindJob(jobId);
   const early = personalise(index, fit);
 
@@ -22,7 +32,7 @@ export function FindRunner({ jobId, index = [], days, retryHref = "/find", fit =
     return (
       <ViewTransition enter="sk-in" default="none">
         <div>
-          <FindResults results={results ? personalise(results, fit) : early} days={days} saved={saved} empty={empty} />
+          <FindList results={results ?? index} fit={fit} more={results ? more : null} auto={false} days={days} saved={saved} empty={empty} />
         </div>
       </ViewTransition>
     );
