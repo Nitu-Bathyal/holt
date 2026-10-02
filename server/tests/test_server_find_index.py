@@ -262,3 +262,57 @@ def test_a_search_reads_issues_for_the_first_few_only(h, finder):
     got = h.client.portal.call(find_mod.unlisted, h.svc,
                                {"languages": ["python"], "days": 7}, 2)
     assert len(got) == 2
+
+
+# --- the rest of the index, in parts ------------------------------------------------
+
+
+def index_parts(h, limit, **body):
+    out, cursor = [], None
+    while True:
+        r = h.post("/v1/find/index", {"limit": limit, "cursor": cursor, **body})
+        assert r.status_code == 200, r.text
+        out.append(r.json())
+        cursor = out[-1]["next"]
+        if cursor is None:
+            return out
+
+
+def test_the_index_comes_in_parts_in_find_order_with_no_repeats(h, finder):
+    for i in range(5):
+        indexed(h, f"py/r{i}", stats={"outsider_merged": 12 - i, "no_reply": 1})
+    indexed(h, "go/other", language="Go")
+    first = find(h, languages=["python"], limit=2)
+    whole = [f"py/r{i}" for i in range(5)]
+    assert names(first.json()["results"]) == whole[:2]
+    got = index_parts(h, 2, languages=["Python"])
+    assert [names(p["results"]) for p in got] == [whole[:2], whole[2:4], whole[4:]]
+    assert {p["total"] for p in got} == {5} and got[-1]["next"] is None
+    assert got[0]["results"][0]["issues"], "the same cards a find lists"
+
+
+def test_scrolling_the_index_never_searches_or_spends_anything(make_harness, finder):
+    h = make_harness(anon_rate_per_hour=1)
+    for i in range(3):
+        indexed(h, f"py/r{i}")
+    for _ in range(4):
+        assert len(index_parts(h, 1, languages=["python"])) == 3
+    assert finder.calls == [] and finder.read == []
+    assert h.client.post("/v1/find/index", json={}).status_code == 401, "the internal key"
+    assert h.post("/v1/find/index", {"cursor": "nope"}).status_code == 400
+
+
+def test_a_kept_index_part_reads_nothing(h, finder):
+    from sqlalchemy import event
+    for i in range(3):
+        indexed(h, f"py/r{i}")
+    first = h.post("/v1/find/index", {"limit": 2}).json()
+    seen = []
+    engine = h.svc.db.engine.sync_engine
+    note = lambda conn, cursor, statement, *rest: seen.append(statement)  # noqa: E731
+    event.listen(engine, "before_cursor_execute", note)
+    try:
+        second = h.post("/v1/find/index", {"limit": 2, "cursor": first["next"]}).json()
+    finally:
+        event.remove(engine, "before_cursor_execute", note)
+    assert names(second["results"]) == ["py/r2"] and seen == []

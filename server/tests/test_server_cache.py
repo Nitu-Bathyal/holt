@@ -191,6 +191,23 @@ def test_discover_builds_an_answer_once_and_reads_nothing_for_the_next_reader(h)
     assert kept.misses == 2
 
 
+def test_a_kept_part_of_a_board_reads_nothing_either(h):
+    add(h, *(report(f"octo/r{i}") for i in range(5)), *(meta(f"octo/r{i}") for i in range(5)))
+    first = h.get("/v1/discover", params={"limit": 2}).json()
+    params = {"limit": 2, "cursor": first["next"]}
+    second = h.get("/v1/discover", params=params)
+    with Statements(h) as seen:
+        again = h.get("/v1/discover", params=params)
+    assert again.content == second.content and seen.seen == []
+    assert [r["repo"] for r in again.json()["repos"]] == ["octo/r2", "octo/r3"]
+    # The second part was cut from the board the first one ranked.
+    assert (discover.boards(h.svc).misses, discover.boards(h.svc).hits) == (1, 1)
+    # A write starts the board again, and the cursor still finds its place.
+    add(h, report("octo/a0", outsider_merged=12), meta("octo/a0"))
+    after = h.get("/v1/discover", params=params).json()
+    assert [r["repo"] for r in after["repos"]] == ["octo/r2", "octo/r3"] and after["total"] == 6
+
+
 def test_discover_shows_a_new_report_details_and_issues_at_once(h):
     add(h, report("octo/one"), meta("octo/one"))
     assert [r["repo"] for r in h.get("/v1/discover").json()["repos"]] == ["octo/one"]
@@ -310,7 +327,7 @@ def test_only_answers_that_are_the_same_for_everyone_are_kept(h):
         assert h.get("/v1/discover", user=user).status_code == 200
         assert h.get("/v1/reports/octo/one", user=user).status_code == 200
     stores = cache._stores[h.svc]
-    assert set(stores) == {"discover", "reports"}
+    assert set(stores) == {"discover", "discover-boards", "reports"}
     for name, kept in stores.items():
         for key in kept._entries:
             assert "u1" not in map(str, key) and "u2" not in map(str, key), name

@@ -35,6 +35,13 @@ The index part is the same for everyone who picks the same filters, so it is
 built once and kept (cache.py) until this process writes a report, a repo's
 details or its starter issues, `INDEX_KEPT_S` at most. Who is asking, their
 limits and the search itself are never kept here.
+
+    POST /v1/find/index {"languages": [...], ..., "limit": 24, "cursor": <next>}
+
+The rest of the index part, for a list that loads more as it is scrolled: the
+same matches in the same order, `limit` at a time, with `total` and `next`
+(discover.py's cursor). It reads the kept index only: it never starts a
+search, calls GitHub or counts against anyone's limit.
 """
 
 from __future__ import annotations
@@ -43,13 +50,21 @@ import asyncio
 import logging
 from typing import Any
 
+from fastapi import APIRouter, Depends, Request
+from pydantic import BaseModel, ConfigDict, Field
+
 from holt_server import cache, repos, schema, starter
+from holt_server.deps import internal, services
 from holt_server.discover import (
-    BREAKDOWN, COUNTS, _latest, card_issues, kept_card, stamp, starter_issues, welcoming_key,
+    BREAKDOWN, COUNTS, _latest, card_issues, cursor_for, kept_card, read_cursor, stamp, start_of,
+    starter_issues, welcoming_key,
 )
+from holt_server.errors import ApiError
 from holt_server.services import Services
 
 log = logging.getLogger("holt_server.find")
+
+router = APIRouter(prefix="/v1", responses={"default": {"model": schema.ErrorBody}})
 
 # Index matches with no known starter issues whose issues one search reads
 # (the web's first page), and how many at a time.
@@ -127,6 +142,47 @@ async def index_results(svc: Services, params: dict[str, Any]) -> list[dict[str,
         return [_result(c, issues) for c in cards if (issues := known.get(repos.key(c.repo)))]
 
     return await indexes(svc).load(key, stamp(svc), build, lambda r: max(len(r), 1))
+
+
+class FindIndexIn(BaseModel):
+    """A find's filters (as `POST /v1/find` takes them) and which part."""
+
+    model_config = ConfigDict(extra="ignore")
+
+    languages: list[str] = Field(default_factory=list, max_length=10)
+    topics: list[str] = Field(default_factory=list, max_length=10)
+    days: int = Field(7, ge=1, le=90)
+    hacktoberfest: bool = False
+    limit: int = Field(24, ge=1, le=100)
+    cursor: str | None = Field(None, max_length=400)
+
+
+class FindIndexPart(schema.Model):
+    results: list[schema.FindResult]
+    # How many repos the index has for these filters.
+    total: int
+    # The `cursor` that asks for the part after this one; null at the end.
+    next: str | None
+
+
+@router.post("/find/index", dependencies=[Depends(internal)], response_model=FindIndexPart)
+async def find_index(body: FindIndexIn, request: Request) -> dict[str, Any]:
+    """One part of a find's index matches (see the module docstring). Reads
+    only the kept index: no search, no GitHub call, no rate limit."""
+    try:
+        offset, last = read_cursor(body.cursor)
+    except ValueError:
+        raise ApiError("invalid_request", "That isn't a cursor Find gave out.") from None
+    params = {
+        "languages": sorted({x.strip().lower()[:40] for x in body.languages if x.strip()}),
+        "topics": sorted({x.strip().lower()[:60] for x in body.topics if x.strip()}),
+        "days": body.days, "hacktoberfest": body.hacktoberfest}
+    index = await index_results(services(request), params)
+    start = start_of(index, offset, last, lambda r: r["repo"])
+    part = index[start:start + body.limit]
+    end = start + len(part)
+    return {"results": part, "total": len(index),
+            "next": cursor_for(end, part[-1]["repo"].lower()) if part and end < len(index) else None}
 
 
 async def unlisted(svc: Services, params: dict[str, Any], limit: int = FILL_ISSUES) -> list[str]:
