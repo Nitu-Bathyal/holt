@@ -5,18 +5,20 @@ import { PageTransition } from "@/components/motion/page-transition";
 import { PreflightView } from "@/components/preflight/preflight-view";
 import { AppPageHeader } from "@/components/shell/app-page";
 import { preflightState } from "@/lib/api";
-import { caller, currentUser } from "@/lib/session";
+import { caller, requireUser } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "PR pre-flight",
   description: "Paste your PR and see how it stacks up against what that repo merges: checks, tests, size, the template and linked issues.",
-  alternates: { canonical: "/preflight" },
+  // For signed-in people (lib/gate.ts), so never in a search index.
+  robots: { index: false },
 };
 
 const one = (v: string | string[] | undefined) => (Array.isArray(v) ? v[0] : v)?.trim().slice(0, 500) || null;
 
 export default async function PreflightPage({ searchParams }: PageProps<"/preflight">) {
-  const [sp, user] = await Promise.all([searchParams, currentUser()]);
+  const sp = await searchParams;
+  const user = await requireUser("/preflight", sp);
   const q = { pr: one(sp.pr), repo: one(sp.repo), branch: one(sp.branch), base: one(sp.base) };
   // `?repo=` alone (from a report page) only fills in the form.
   const complete = Boolean(q.pr || (q.repo && q.branch));
@@ -36,7 +38,7 @@ export default async function PreflightPage({ searchParams }: PageProps<"/prefli
         <AppPageHeader title="Check your PR against what this repo merges." lead="A year of its merged PRs, point by point, with the evidence." mood="determined" />
         <div className="max-w-3xl">
           {r.ok ? (
-            <PreflightView key={JSON.stringify(q)} initial={r.data} query={q} signedIn={Boolean(user)} badQuery={bad} />
+            <PreflightView key={JSON.stringify(q)} initial={r.data} query={q} signedIn badQuery={bad} />
           ) : (
             <ErrorPanel error={r.error} />
           )}

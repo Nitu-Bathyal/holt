@@ -300,7 +300,8 @@ export function ReportView({
 
         <PlaybookSection repo={repo} signedIn={signedIn} />
 
-        {!example && <PreflightLink repo={repo} />}
+        {/* Pre-flight is for signed-in people (lib/gate.ts), and so is asking whether it is on. */}
+        {!example && signedIn && <PreflightLink repo={repo} />}
 
         {!brief && report.evidence.length > 0 && (
           <CollapsibleSection id="evidence" title="The evidence" count={report.evidence.length} defaultOpen note="every claim links to GitHub">
