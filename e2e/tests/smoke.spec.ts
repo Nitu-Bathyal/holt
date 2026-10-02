@@ -46,8 +46,95 @@ test("URL trick: /github.com/owner/repo redirects to the report", async ({ page,
   await expect(page).toHaveURL(/\/pallets\/flask$/);
 });
 
-// Find, Browse, Compare and pre-flight are for signed-in people (web/src/lib/gate.ts).
-for (const path of ["/discover", "/discover/python", "/discover?sort=stars", "/find", "/find?go=1&lang=python", "/compare?repos=pallets/flask,psf/requests", "/preflight"]) {
+test("find, signed out: the default search lists a repo with an issue link", async ({ page }) => {
+  // Signed out, /find shows the shared default search; other filters ask for sign-in.
+  await page.goto("/find");
+  const results = page.getByRole("region", { name: "Results" });
+  const issue = results.locator('a[href^="https://github.com/"][href*="/issues/"]').first();
+  const failure = results.getByRole("alert");
+  await expect(issue.or(failure)).toBeVisible({ timeout: 180_000 });
+  if (await failure.isVisible()) {
+    const text = (await failure.innerText()).trim();
+    test.skip(/too many|rate/i.test(text), `rate limited on staging: ${text}`);
+    throw new Error(`find failed: ${text}`);
+  }
+  await expect(results.locator('a[href^="/"]').first()).toBeVisible();
+});
+
+test("find, signed out: other filters ask for sign-in and start no search", async ({ page }) => {
+  const searches: string[] = [];
+  page.on("request", (r) => {
+    if (r.method() === "POST" && new URL(r.url()).pathname === "/api/find") searches.push(r.url());
+  });
+  await page.goto("/find?go=1&lang=python&days=7");
+  const signIn = page.getByRole("region", { name: "Results" }).getByRole("link", { name: /sign in to search/ });
+  await expect(signIn).toHaveAttribute("href", /^\/signin\?callbackUrl=%2Ffind%3F/);
+  await page.mouse.wheel(0, 4000);
+  await page.waitForTimeout(1500);
+  expect(searches).toEqual([]);
+});
+
+// Browse is open: every board, order, language and topic, and the parts a list loads as it is scrolled.
+for (const path of ["/discover", "/discover/python", "/discover?sort=stars", "/discover/python?sort=trending"]) {
+  test(`signed out, ${path} shows its board`, async ({ page, request }) => {
+    const res = await request.get(path, { maxRedirects: 0 });
+    expect(res.status()).toBe(200);
+    await page.goto(path);
+    await expect(page).toHaveURL(new RegExp(`${path.replace(/[?]/g, "\\?")}$`));
+    await expect(page.getByRole("navigation", { name: "Order" })).toBeVisible();
+    // A card, or the board's own "nothing here yet": never the sign-in page.
+    await expect(page.getByRole("main").locator('a[href^="/"]').first()).toBeVisible();
+  });
+}
+
+test("signed out, a list's next parts come from Holt's index", async ({ request }) => {
+  const board = await request.get("/api/discover?sort=stars");
+  expect(board.status()).toBe(200);
+  expect(Array.isArray((await board.json()).items)).toBe(true);
+  const more = await request.post("/api/find/more", { data: { q: "lang=python&days=7", cursor: null } });
+  expect(more.status()).toBe(200);
+  expect(Array.isArray((await more.json()).items)).toBe(true);
+});
+
+// What only the full report has: the evidence list, starter issues, the README. (The locked teaser names the sections over placeholders.)
+const FULL_REPORT = /id="evidence"|"id":"evidence"|data-readme|"evidence":\s*\[\s*\{/;
+
+test("signed out, a report opened from a Browse card is the teaser, and nothing sends the rest", async ({ page, request }) => {
+  await page.goto("/discover?sort=stars");
+  const cards = page.getByRole("main").locator('a[href^="/"]');
+  await expect(cards.first()).toBeVisible();
+  // The first card that is a repo, and not one of the examples (those read in full signed out).
+  const hrefs = await cards.evaluateAll((as) => as.map((a) => a.getAttribute("href") ?? ""));
+  const examples = (await (await request.get("/examples")).text()).toLowerCase();
+  const href = hrefs.find((h) => /^\/[\w.-]+\/[\w.-]+$/.test(h) && !h.startsWith("/discover/") && !examples.includes(`href="${h.toLowerCase()}"`));
+  test.skip(!href, "no card on the board that isn't an example");
+  await page.locator(`a[href="${href}"]`).first().click();
+  await expect(page).toHaveURL(new RegExp(`${href}$`));
+  await expect(page.locator("[data-teaser]")).toBeVisible();
+  await expect(page.locator("[data-teaser]").getByRole("link", { name: /sign in/ }).first()).toHaveAttribute("href", /^\/signin\?callbackUrl=/);
+  await expect(page.locator("#evidence")).toHaveCount(0);
+
+  // The page itself, as a load and as a client-side navigation.
+  for (const headers of [{}, { RSC: "1" }]) {
+    const res = await request.get(href!, { headers });
+    expect(res.status()).toBe(200);
+    expect(await res.text()).not.toMatch(FULL_REPORT);
+  }
+  // The AI tab asks for sign-in.
+  const ai = await request.get(`${href}?mode=ai`, { maxRedirects: 0 });
+  // A redirect, or one sent in the page once it has started streaming.
+  const aiBody = await ai.text();
+  expect(ai.status() === 307 ? ai.headers()["location"] : aiBody).toContain("/signin?callbackUrl=");
+  expect(aiBody).not.toMatch(FULL_REPORT);
+  // The extension's route gives the verdict and counts, never the evidence; the rest answer 401.
+  const pub = await request.get(`/api/public/report${href}`);
+  if (pub.ok()) expect((await pub.json()).evidence ?? []).toEqual([]);
+  expect((await request.get("/api/analyses/x")).status()).toBe(401);
+  expect((await request.get(`/api/preflight?repo=${href!.slice(1)}`)).status()).toBe(401);
+});
+
+// Compare and pre-flight are for signed-in people (web/src/lib/gate.ts).
+for (const path of ["/compare", "/compare?repos=pallets/flask,psf/requests", "/preflight"]) {
   test(`signed out, ${path} goes to sign-in and sends no data`, async ({ page, request }) => {
     const res = await request.get(path, { maxRedirects: 0 });
     expect(res.status()).toBe(307);
@@ -143,7 +230,7 @@ test("/__build is valid JSON describing what's live", async ({ request }) => {
   expect(body.live?.built_at).toBeTruthy();
 });
 
-for (const path of ["/", "/pallets/flask", "/examples", "/pricing", "/how-it-works"]) {
+for (const path of ["/", "/pallets/flask", "/find", "/discover", "/pricing", "/how-it-works"]) {
   test(`no console errors on ${path}`, async ({ page }) => {
     const errors = watchErrors(page);
     await page.goto(path, { waitUntil: "networkidle" });

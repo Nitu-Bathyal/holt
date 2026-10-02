@@ -1,11 +1,13 @@
 // Who sees what without signing in. Signed out, a visitor can read the
 // curated example reports (examples.ts) in full and a teaser of any other
 // report: the verdict, the odds and one number, with the rest behind sign-in.
-// Opening a report with no result yet runs the free check (anon-check.ts: the
-// report page only, rate-limited per IP, never for bots); anything else that
-// starts a check or a search needs an account, and so do Find, Browse,
-// Compare, pre-flight, the dashboard and settings (ACCOUNT_PAGES): arriving
-// signed out goes to sign-in and back. The Hacktoberfest page keeps its list.
+// Find, Browse and the Hacktoberfest page are open: their lists come from
+// what Holt has already checked, and every card leads to a report (so, signed
+// out, to its teaser). Opening a report with no result yet runs the free
+// check (anon-check.ts: the report page only, rate-limited per IP, never for
+// bots); anything else that starts a check or a search needs an account, and
+// so do Compare, pre-flight, the dashboard and settings (ACCOUNT_PAGES):
+// arriving signed out goes to sign-in and back.
 // The browser extension's public API (/api/public/*) reads the cache and
 // stays open. No runtime imports, so it runs under `node --test` and in the browser.
 import { isExample } from "./examples.ts";
@@ -41,11 +43,11 @@ export function signInHref(path: string): string {
   return `/signin?callbackUrl=${encodeURIComponent(path)}`;
 }
 
-// Pages that need an account. One-segment pages match exactly (/find/x is a
-// repo whose owner is "find"); sections match with everything under them
+// Pages that need an account. One-segment pages match exactly (/compare/x is
+// a repo whose owner is "compare"); sections match with everything under them
 // (they are in lib/app-routes.ts, so never a repo).
-const ACCOUNT_PAGES = new Set(["/find", "/compare", "/preflight"]);
-const ACCOUNT_SECTIONS = new Set(["discover", "me", "settings"]);
+const ACCOUNT_PAGES = new Set(["/compare", "/preflight"]);
+const ACCOUNT_SECTIONS = new Set(["me", "settings"]);
 
 /** Whether a page is only for signed-in people. */
 export function needsAccount(pathname: string): boolean {

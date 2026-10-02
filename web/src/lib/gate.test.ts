@@ -34,6 +34,20 @@ test("signed out: an example report is shown in full, any other repo as a teaser
   assert.equal(reportAccess("octo/project", false), "teaser");
 });
 
+// A card on Find or Browse links to the report page, so this is all a signed-out visitor gets from one.
+test("signed out: the teaser is rendered on the server from the verdict, its reason and the counts, and the page gives the report to nothing else", () => {
+  const dir = join(import.meta.dirname, "../components/report");
+  for (const [file, fields] of [["partial-report.tsx", ["generated_at", "headline", "stats", "tone", "verdict_line"]], ["report-teaser.tsx", ["generated_at", "headline", "tone", "verdict_line"]]] as const) {
+    const src = readFileSync(join(dir, file), "utf-8");
+    // A client component's props are sent to the browser whole.
+    assert.doesNotMatch(src, /^["']use client["']/m, file);
+    assert.deepEqual([...new Set(src.match(/\breport\.[a-z_]+/g))].map((f) => f.slice(7)).sort(), fields, file);
+  }
+  const page = readFileSync(join(import.meta.dirname, "../app/[owner]/[repo]/page.tsx"), "utf-8");
+  const teaser = page.indexOf(") : teaser ? (");
+  assert.ok(teaser >= 0 && teaser < page.indexOf("<AnalysisRunner") && teaser < page.indexOf("<ReportView"), "the teaser is decided before the full report or a check");
+});
+
 test("signed in: every report is shown in full, as before", () => {
   assert.equal(reportAccess("octo/project", true), "full");
   assert.equal(reportAccess(EXAMPLES[0].repo, true), "full");
@@ -100,17 +114,18 @@ test("a paste box asks whether the repo exists before a sign-in wall, and only t
   assert.deepEqual(asked, []);
 });
 
-// Account pages (Find, Browse, Compare, pre-flight, the dashboard, settings).
+// Account pages (Compare, pre-flight, the dashboard, settings).
 const SIGNED_OUT_COOKIES = [[], ["__cf_bm"], ["authjs.csrf-token", "authjs.callback-url", "holt-rail"]];
 const SESSIONS = ["authjs.session-token", "__Secure-authjs.session-token", "__Secure-authjs.session-token.0"];
 const ACCOUNT_URLS = [
-  "/discover", "/discover/", "/discover?sort=stars&topic=cli", "/discover/python", "/discover/c%2B%2B?sort=trending",
-  "/find", "/find?go=1&lang=python&days=7", "/compare", "/compare?repos=pallets/flask,psf/requests", "/preflight?pr=https://github.com/o/r/pull/1",
+  "/compare", "/compare/", "/compare?repos=pallets/flask,psf/requests", "/preflight", "/preflight?pr=https://github.com/o/r/pull/1",
   "/me", "/me/repos?show=saved", "/settings", "/settings/profile",
 ];
 const OPEN_URLS = [
   "/", "/hacktoberfest", "/hacktoberfest?lang=go", "/examples", "/example-merge-plan", "/pricing", "/how-it-works", "/badge", "/badge?repo=o/r",
-  "/terms", "/privacy", "/refunds", "/contact", "/signin?callbackUrl=%2Fdiscover", "/alerts/unsubscribe?t=x", "/pricing/thanks",
+  "/terms", "/privacy", "/refunds", "/contact", "/signin?callbackUrl=%2Fcompare", "/alerts/unsubscribe?t=x", "/pricing/thanks",
+  // Find and Browse: lists of what Holt has checked, every sort, language and topic.
+  "/find", "/find?go=1&lang=python&days=7", "/discover", "/discover/", "/discover?sort=stars&topic=cli", "/discover/python", "/discover/c%2B%2B?sort=trending",
   "/pallets/flask", "/pallets/flask?mode=ai",
   // GitHub owners that only start like an account page.
   "/find/repo", "/compare/repo", "/preflight/repo", "/discovery/repo", "/finder", "/mes/repo",
@@ -140,7 +155,7 @@ test("a session cookie is let through to the page, which asks who it is", () => 
   }
   // A cookie that only looks like one is not a session.
   for (const fake of ["session-token", "authjs.session-token-x", "xauthjs.session-token", "holt-signed-in"]) {
-    assert.ok(arrive("/discover", [fake]), fake);
+    assert.ok(arrive("/compare", [fake]), fake);
   }
 });
 
@@ -150,7 +165,7 @@ test("the public pages, reports and repos named like an account page stay open",
 
 test("every account page asks the server who is signed in before it loads anything", () => {
   const app = join(import.meta.dirname, "../app");
-  for (const page of ["find", "discover", "discover/[language]", "compare", "preflight"]) {
+  for (const page of ["compare", "preflight"]) {
     const src = readFileSync(join(app, page, "page.tsx"), "utf-8");
     // The page, and its metadata when that is worked out per request.
     const entries = src.split(/^export (?:default )?async function /m).slice(1);
@@ -159,12 +174,30 @@ test("every account page asks the server who is signed in before it loads anythi
       const gate = body.indexOf("await requireUser(");
       assert.ok(gate >= 0, `${page}: ${body.slice(0, 20)} never asks`);
       // Before it, only the request's own address is read.
-      assert.deepEqual(body.slice(0, gate).match(/await [^;]+/g)?.filter((a) => !/^await (searchParams|Promise\.all\(\[params, searchParams\]\))$/.test(a)) ?? [], [], page);
+      assert.deepEqual(body.slice(0, gate).match(/await [^;]+/g)?.filter((a) => a !== "await searchParams") ?? [], [], page);
     }
     assert.doesNotMatch(src, /currentUser\(/, `${page}: no path for a visitor without an account`);
   }
-  // The board itself can't be rendered without a user.
-  assert.match(readFileSync(join(import.meta.dirname, "../components/discover/discover-view.tsx"), "utf-8"), /user: SessionUser;/);
+});
+
+test("Find and Browse are open: no page or part of a list asks for an account", () => {
+  const src = join(import.meta.dirname, "..");
+  for (const file of ["app/find/page.tsx", "app/discover/page.tsx", "app/discover/[language]/page.tsx", "components/discover/discover-view.tsx", "app/api/discover/route.ts", "app/api/find/more/route.ts"]) {
+    assert.doesNotMatch(readFileSync(join(src, file), "utf-8"), /requireUser|signedInGate|findGate/, file);
+  }
+  // The parts a list loads as it is scrolled read what Holt has checked, and never search GitHub or start a check.
+  assert.match(readFileSync(join(src, "app/api/find/more/route.ts"), "utf-8"), /await findIndex\(/);
+  for (const route of ["discover", "find/more"]) {
+    assert.doesNotMatch(readFileSync(join(src, "app/api", route, "route.ts"), "utf-8"), /cachedFind|\bfind\(|startAnalysis|@\/lib\/session/, route);
+  }
+  // Signed out, Find shows the search every visitor shares, and other filters wait for sign-in instead of searching.
+  assert.match(readFileSync(join(src, "app/find/page.tsx"), "utf-8"), /const searched = user \? picks : \{ \.\.\.defaultPicks\(/);
+  const view = readFileSync(join(src, "components/find/find-view.tsx"), "utf-8");
+  assert.match(view, /if \(!pending \|\| !signedIn\) return;/);
+  assert.match(view, /const locked = pending && !signedIn \? /);
+  // A search from the page itself is still refused signed out.
+  const post = readFileSync(join(src, "app/api/find/route.ts"), "utf-8");
+  assert.ok(post.indexOf("findGate(who.userId)") >= 0 && post.indexOf("findGate(who.userId)") < post.search(/cachedFind\(/));
 });
 
 test("signed out: the data routes behind account pages answer 401 before reading anything", () => {
@@ -181,37 +214,43 @@ test("signed out: the data routes behind account pages answer 401 before reading
     const data = get.search(/preflightState\(|proxyJobEvents\(|recommendations\(/);
     assert.ok(gate >= 0 && data > gate, `${route}: the gate comes before the data`);
   }
-  // The parts a board or a find loads as it is scrolled.
-  for (const [route, read] of [["discover", /await discover\(/], ["find/more", /req\.json\(|findIndex\(/]] as const) {
-    const src = readFileSync(join(api, route, "route.ts"), "utf-8");
-    const gate = src.indexOf("signedInGate(who.userId)");
-    assert.ok(gate >= 0 && src.search(read) > gate, `${route}: the gate comes before the data`);
-  }
 });
 
 test("the sign-in wall never appears as a page a crawler is sent to", () => {
   const app = join(import.meta.dirname, "../app");
   const sitemap = readFileSync(join(app, "sitemap.ts"), "utf-8");
-  for (const path of ["/find", "/discover", "/compare", "/preflight"]) {
+  for (const path of ["/compare", "/preflight"]) {
     assert.ok(needsAccount(path), path);
     assert.doesNotMatch(sitemap, new RegExp(`["\`]${path}["/\`]`), `sitemap lists ${path}`);
   }
   const robots = readFileSync(join(app, "robots.ts"), "utf-8");
-  for (const path of ["/find", "/discover", "/compare", "/preflight", "/me/", "/settings"]) assert.match(robots, new RegExp(`"${path}[$"]`), `robots.txt allows ${path}`);
+  for (const path of ["/compare", "/preflight", "/me/", "/settings"]) assert.match(robots, new RegExp(`"${path}[$"]`), `robots.txt allows ${path}`);
+});
+
+test("crawlers are sent to Find and the boards, and kept off the boards' facets", () => {
+  const app = join(import.meta.dirname, "../app");
+  const sitemap = readFileSync(join(app, "sitemap.ts"), "utf-8");
+  for (const path of ["/find", "/discover"]) {
+    assert.ok(!needsAccount(path), path);
+    assert.match(sitemap, new RegExp(`path: "${path}"`), `sitemap lists ${path}`);
+  }
+  assert.match(sitemap, /\/discover\/\$\{languageSlug\(/);
+  const disallow: string[] = readFileSync(join(app, "robots.ts"), "utf-8").match(/"\/[^"]*"/g) ?? [];
+  assert.ok(disallow.includes('"/discover?"') && disallow.includes('"/discover/*?"'));
+  // Nothing that would cover /find, /discover or /discover/python themselves.
+  for (const rule of disallow) assert.doesNotMatch(rule, /^"\/(find|discover\$|discover\/?")/, rule);
 });
 
 // A signed-out page that asks a gated route logs a 401 in the visitor's console.
 test("the open pages never ask a gated route: only signed-in parts of the app do", () => {
   const src = join(import.meta.dirname, "..");
-  const GATED = /\/api\/(preflight|preflight-jobs|merge-plan-jobs|playbook-jobs|discover|find\/more|picks)\b/;
+  const GATED = /\/api\/(preflight|preflight-jobs|merge-plan-jobs|playbook-jobs|picks)\b/;
   const askers = (readdirSync(src, { recursive: true }) as string[])
     .map((f) => f.replaceAll("\\", "/"))
     .filter((f) => /\.tsx?$/.test(f) && !f.endsWith(".test.ts") && !f.startsWith("app/api/") && GATED.test(readFileSync(join(src, f), "utf-8")))
     .sort();
-  // The picks', a board's and a find's next parts (gated pages), the pre-flight page (gated), the link to it, and two streams that open only after a signed-in POST starts a job.
-  assert.deepEqual(askers, ["app/me/picks/picks-list.tsx", "components/discover/board-list.tsx", "components/find/find-list.tsx", "components/preflight/preflight-link.tsx", "components/preflight/preflight-view.tsx", "components/report/merge-plan-panel.tsx", "components/report/playbook-section.tsx"]);
-  // The Hacktoberfest page is open and shows a find's list: it loads more only for someone signed in.
-  assert.match(readFileSync(join(src, "app/hacktoberfest/page.tsx"), "utf-8"), /const more = user \? /);
+  // The picks' next parts and the pre-flight page (both gated), the link to it, and two streams that open only after a signed-in POST starts a job.
+  assert.deepEqual(askers, ["app/me/picks/picks-list.tsx", "components/preflight/preflight-link.tsx", "components/preflight/preflight-view.tsx", "components/report/merge-plan-panel.tsx", "components/report/playbook-section.tsx"]);
   // The link asks as soon as it is on the page, so it is only ever there for someone signed in.
   const uses = (readdirSync(src, { recursive: true }) as string[])
     .filter((f) => /\.tsx$/.test(f) && !f.endsWith("preflight-link.tsx"))

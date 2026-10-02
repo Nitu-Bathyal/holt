@@ -29,7 +29,7 @@ const shifts = (page: Page) => page.evaluate(() => {
 });
 
 test.describe("no layout shift", () => {
-  for (const path of ["/", "/pallets/flask", "/hacktoberfest", "/pricing"]) {
+  for (const path of ["/", "/pallets/flask", "/find?go=1&lang=python&days=7", "/pricing"]) {
     test(`cold load: ${path}`, async ({ page }) => {
       await watchShifts(page);
       await page.goto(path, { waitUntil: "load" });
@@ -178,7 +178,7 @@ test.describe("menus", () => {
 
     await button.click();
     await expect.poll(open).toBe(true);
-    await expect(menu.getByRole("link", { name: "Find a project" })).toBeVisible();
+    await expect(menu.getByRole("link", { name: "How it works", exact: true })).toBeVisible();
     await page.keyboard.press("Escape");
     await expect.poll(open).toBe(false);
 
@@ -190,9 +190,8 @@ test.describe("menus", () => {
 
     // Picking a link closes it too (the header stays mounted across pages).
     await button.click();
-    await menu.getByRole("link", { name: "Find a project", exact: true }).click();
-    // Signed out, Find asks for sign-in first.
-    await expect(page).toHaveURL(/\/signin\?callbackUrl=%2Ffind$/);
+    await menu.getByRole("link", { name: "How it works", exact: true }).click();
+    await expect(page).toHaveURL(/\/how-it-works$/);
     await expect.poll(open).toBe(false);
   });
 });
