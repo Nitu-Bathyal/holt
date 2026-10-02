@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
-import { alertList, entitlements, getProfile, githubConnection } from "@/lib/api";
+import { alertList, entitlements, getProfile, githubConnection, mergePlansAvailable } from "@/lib/api";
 import { alertView } from "@/lib/alerts";
 import { shortDate } from "@/lib/format";
 import { MOTION_OPTIONS, motionFromCookies } from "@/lib/motion";
@@ -24,11 +24,11 @@ export default async function SettingsPage({ searchParams }: PageProps<"/setting
   const moved = legacySettingsHref("", q.toString());
   if (moved) redirect(moved);
 
-  const [covered, profile, gh, alerts, jar] = await Promise.all([entitlements(user.id), getProfile(user.id), githubConnection(user.id), alertList(user.id), cookies()]);
+  const [covered, profile, gh, alerts, jar, mergePlans] = await Promise.all([entitlements(user.id), getProfile(user.id), githubConnection(user.id), alertList(user.id), cookies(), mergePlansAvailable()]);
   const watch = alerts.ok ? alertView(alerts.data.access, alerts.data.enabled) : "hidden";
   const motion = motionFromCookies(jar);
   const e = covered.ok ? covered.data : null;
-  const plansLeft = e?.features.find((f) => f.feature === "merge_plan")?.left ?? null;
+  const plansLeft = mergePlans ? e?.features.find((f) => f.feature === "merge_plan")?.left ?? null : null;
   const p = profile.ok ? profile.data.profile : null;
   const acct = gh.ok ? gh.data.account : null;
 

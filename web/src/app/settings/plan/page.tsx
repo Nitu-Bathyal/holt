@@ -1,7 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { entitlements, orders, passes } from "@/lib/api";
+import { ComingSoon } from "@/components/coming-soon";
+import { entitlements, mergePlansAvailable, orders, passes } from "@/lib/api";
 import { shortDate } from "@/lib/format";
 import { formatPrice, STATUS_LABEL } from "@/lib/payments";
 import { currentUser } from "@/lib/session";
@@ -13,7 +14,7 @@ export const metadata: Metadata = { title: "Plan · Settings", robots: { index: 
 export default async function PlanSettings() {
   const user = await currentUser();
   if (!user) redirect(`/signin?callbackUrl=${PLAN_SETTINGS}`);
-  const [covered, bought, sale] = await Promise.all([entitlements(user.id), orders(user.id), passes()]);
+  const [covered, bought, sale, mergePlans] = await Promise.all([entitlements(user.id), orders(user.id), passes(), mergePlansAvailable()]);
   const e = covered.ok ? covered.data : null;
   const purchases = bought.ok ? bought.data.orders : [];
   const onSale = sale.ok && sale.data.on_sale;
@@ -40,8 +41,8 @@ export default async function PlanSettings() {
           </div>
           {left != null && (
             <div className="bg-panel p-5">
-              <p className="text-[0.87rem] text-faint">{pro ? "Merge plans left this month" : "Merge plans left"}</p>
-              <p className="mt-1 text-[1.3rem] font-semibold leading-tight tabular-nums">{left}</p>
+              <p className="text-[0.87rem] text-faint">{!mergePlans ? "Merge plans" : pro ? "Merge plans left this month" : "Merge plans left"}</p>
+              {mergePlans ? <p className="mt-1 text-[1.3rem] font-semibold leading-tight tabular-nums">{left}</p> : <p className="mt-2"><ComingSoon /></p>}
             </div>
           )}
         </div>

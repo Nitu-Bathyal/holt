@@ -218,6 +218,15 @@ export async function mergePlanState(repo: string, caller: Caller): Promise<Resu
   return call(`/v1/merge-plan/${repoPath(repo)}`, { caller });
 }
 
+/**
+ * Whether merge plans can be made on this server (MergePlanState's `available`,
+ * the same for every repo: one anonymous read). A failed read counts as no.
+ */
+export const mergePlansAvailable = cache(async (): Promise<boolean> => {
+  const r = await mergePlanState("processing/p5.js", {});
+  return r.ok && r.data.available;
+});
+
 /** Make a merge plan: the server checks and charges the user, then queues it. */
 export async function startMergePlan(repo: string, userId: string): Promise<Result<MergePlanStart>> {
   if (!repoOk(repo)) return BAD_REPO;

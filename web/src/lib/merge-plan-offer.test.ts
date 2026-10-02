@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { failedMessage, leftLabel, planOffer } from "./merge-plan-offer.ts";
+import { failedMessage, leftLabel, planCta, planOffer, planTag } from "./merge-plan-offer.ts";
 
 const access = { feature: "merge_plan", name: "Merge plan", allowed: true, via: "plan" as const, cost: 0, left_this_month: null, code: null, message: null, left: 3 };
 
@@ -18,6 +18,23 @@ test("make, with what is left of the allowance", () => {
 test("locked with the server's reason", () => {
   const locked = { ...access, allowed: false, via: null, left: 0, code: "quota_exceeded", message: "You've used your free merge plans." };
   assert.deepEqual(planOffer({ available: true, access: locked }), { kind: "locked", message: "You've used your free merge plans." });
+});
+
+test("available: the way in starts a plan, through sign-in when signed out", () => {
+  assert.deepEqual(planCta("pallets/flask", { available: true, signedIn: true }), { kind: "start", href: "/pallets/flask?mode=ai" });
+  assert.deepEqual(planCta("pallets/flask", { available: true, signedIn: false }), { kind: "start", href: "/signin?callbackUrl=%2Fpallets%2Fflask%3Fmode%3Dai" });
+  assert.equal(planTag(true), "pro");
+});
+
+test("unavailable: coming soon, and nothing starts a plan", () => {
+  for (const signedIn of [true, false]) {
+    const cta = planCta("pallets/flask", { available: false, signedIn });
+    assert.deepEqual(cta, { kind: "soon" });
+    assert.equal("href" in cta, false);
+  }
+  assert.equal(planTag(false), "coming soon");
+  // The plan page offers no "make my merge plan" either, whatever the user's allowance.
+  assert.equal(planOffer({ available: false, access }).kind, "off");
 });
 
 test("left labels", () => {

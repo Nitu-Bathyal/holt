@@ -14,11 +14,12 @@ import { RepoAbout } from "@/components/report/repo-about";
 import { StarterIssues, StarterIssuesSkeleton } from "@/components/report/starter-issues";
 import { SkeletonReveal } from "@/components/motion/reveal";
 import { isBot, mintTicket } from "@/lib/anon-check";
-import { getReport, recordView, savedState, starterIssues } from "@/lib/api";
+import { getReport, mergePlansAvailable, recordView, savedState, starterIssues } from "@/lib/api";
 import { authSecret } from "@/lib/auth-secret";
 import { budgetFrom, reportHref } from "@/lib/budget";
 import { EXAMPLES_PATH } from "@/lib/examples";
 import { reportAccess, reportShows, signInHref } from "@/lib/gate";
+import { planCta } from "@/lib/merge-plan-offer";
 import { isValidRepo } from "@/lib/repo";
 import { caller, currentUser, type SessionUser } from "@/lib/session";
 import { humanHours } from "@/lib/format";
@@ -95,9 +96,11 @@ export default async function RepoPage({ params, searchParams }: Props) {
   const sp = await searchParams;
   const { mode, days } = opts(sp);
   const name = `${owner}/${repo}`;
-  const user = await currentUser();
+  // Whether merge plans can be made here at all: while they can't, nothing on the page offers one.
+  const [user, mergePlans] = await Promise.all([currentUser(), mergePlansAvailable()]);
   const signedIn = Boolean(user);
-  if (mode === "ai" && !signedIn) redirect(signInHref(`/${name}?mode=ai`));
+  // Signed out, the plan is behind sign-in; while none can be made, the page says "coming soon" to anyone.
+  if (mode === "ai" && !signedIn && mergePlans) redirect(signInHref(`/${name}?mode=ai`));
 
   // Only the report (and, signed in, whether it's saved: one database read)
   // blocks the page; starter issues (a live GitHub call) stream in.
@@ -169,7 +172,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
               <ReportModeLink
                 mode={mode}
                 rulesHref={reportHref(display, days)}
-                aiHref={signedIn ? `/${display}?mode=ai` : `/signin?callbackUrl=${encodeURIComponent(`/${display}?mode=ai`)}`}
+                plan={planCta(display, { available: mergePlans, signedIn })}
                 hint
               />
               <SaveButton small compact key={display} repo={display} saved={user ? Boolean(saved?.ok && saved.data.saved) : null} />
@@ -209,11 +212,12 @@ export default async function RepoPage({ params, searchParams }: Props) {
               // Made by an older version of the rules: check again, with the
               // normal progress, and fall back to it only if that fails. (Signed
               // out, an example shows as it is: a re-check needs an account.)
-              <AnalysisRunner repo={report.data.repo} mode={mode} days={days} signedIn={signedIn} fallback={report.data} />
+              <AnalysisRunner repo={report.data.repo} mode={mode} days={days} signedIn={signedIn} mergePlans={mergePlans} fallback={report.data} />
             ) : report.ok ? (
               <ReportView
                 report={report.data}
                 signedIn={signedIn}
+                mergePlans={mergePlans}
                 issues={
                   <SkeletonReveal fallback={<StarterIssuesSkeleton />}>
                     <IssuesSlot repo={report.data.repo} user={user} />
@@ -221,7 +225,7 @@ export default async function RepoPage({ params, searchParams }: Props) {
                 }
               />
             ) : report.error.code === "not_found" ? (
-              <AnalysisRunner repo={name} mode={mode} days={days} signedIn={signedIn} ticket={ticket ?? undefined} />
+              <AnalysisRunner repo={name} mode={mode} days={days} signedIn={signedIn} mergePlans={mergePlans} ticket={ticket ?? undefined} />
             ) : (
               <ErrorPanel error={report.error} repo={name} retryHref={reportHref(name, days, mode)} />
             )}

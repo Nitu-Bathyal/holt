@@ -3,9 +3,11 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { devSignInEnabled, oauthProviders, signIn } from "@/auth";
 import { CatFace } from "@/components/cat-face";
+import { ComingSoon } from "@/components/coming-soon";
 import { PageTransition } from "@/components/motion/page-transition";
 import { TONE_MOOD } from "@/components/report/tone";
 import { VerdictPill } from "@/components/report/verdict-pill";
+import { mergePlansAvailable } from "@/lib/api";
 import { EXAMPLE_PATH } from "@/lib/example-report";
 import { EXAMPLES_PATH } from "@/lib/examples";
 import { afterSignIn } from "@/lib/home";
@@ -42,7 +44,8 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
   const sp = await searchParams;
   // Back to where you signed in from, else your home (/me).
   const callbackUrl = afterSignIn(sp.callbackUrl);
-  if (await currentUser()) redirect(callbackUrl);
+  const [user, mergePlans] = await Promise.all([currentUser(), mergePlansAvailable()]);
+  if (user) redirect(callbackUrl);
   const configured = new Set(oauthProviders.map((p) => p.id));
   const notice = signInNotice(sp.error);
 
@@ -116,7 +119,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
             </p>
           </section>
 
-          <ExampleReport />
+          <ExampleReport mergePlans={mergePlans} />
         </div>
       </div>
     </PageTransition>
@@ -124,7 +127,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
 }
 
 /** Desktop only: what a merge plan looks like, from the recorded example. */
-function ExampleReport() {
+function ExampleReport({ mergePlans }: { mergePlans: boolean }) {
   const p = EXAMPLE_PLAN;
   return (
     <figure className="relative m-0 hidden lg:block">
@@ -134,7 +137,10 @@ function ExampleReport() {
         <div className="relative border border-line-strong bg-panel shadow-card">
           <div className="flex min-h-10 items-center justify-between border-b border-line px-5 text-[0.8rem] text-faint">
             <span>{p.repo}</span>
-            <span>example merge plan · {planRecordedOn()}</span>
+            <span className="flex items-center gap-2">
+              example merge plan · {planRecordedOn()}
+              {!mergePlans && <ComingSoon small />}
+            </span>
           </div>
           <div className="p-7">
             <div className="flex items-center justify-between">
