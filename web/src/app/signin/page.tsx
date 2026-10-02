@@ -3,15 +3,9 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { devSignInEnabled, oauthProviders, signIn } from "@/auth";
 import { CatFace } from "@/components/cat-face";
-import { ComingSoon } from "@/components/coming-soon";
 import { PageTransition } from "@/components/motion/page-transition";
-import { TONE_MOOD } from "@/components/report/tone";
-import { VerdictPill } from "@/components/report/verdict-pill";
-import { mergePlansAvailable } from "@/lib/api";
-import { EXAMPLE_PATH } from "@/lib/example-report";
 import { EXAMPLES_PATH } from "@/lib/examples";
 import { afterSignIn } from "@/lib/home";
-import { EXAMPLE_PLAN, planRecordedOn } from "@/lib/merge-plan";
 import { currentUser } from "@/lib/session";
 import { signInNotice } from "@/lib/signin";
 import { ProviderButtons, type Provider } from "./provider-buttons";
@@ -44,8 +38,7 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
   const sp = await searchParams;
   // Back to where you signed in from, else your home (/me).
   const callbackUrl = afterSignIn(sp.callbackUrl);
-  const [user, mergePlans] = await Promise.all([currentUser(), mergePlansAvailable()]);
-  if (user) redirect(callbackUrl);
+  if (await currentUser()) redirect(callbackUrl);
   const configured = new Set(oauthProviders.map((p) => p.id));
   const notice = signInNotice(sp.error);
 
@@ -64,8 +57,8 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
     <PageTransition>
       <div className="relative overflow-hidden">
         <div aria-hidden="true" className="hero-backdrop" />
-        <div className="wrap relative grid min-h-[78dvh] items-center gap-14 py-10 sm:py-16 lg:grid-cols-[minmax(0,27rem)_minmax(0,1fr)] lg:gap-20">
-          <section aria-labelledby="signin-title" className="mx-auto w-full max-w-md border border-line-strong bg-panel p-6 shadow-card sm:p-9 lg:mx-0">
+        <div className="wrap relative flex min-h-[78dvh] items-center justify-center py-10 sm:py-16">
+          <section aria-labelledby="signin-title" className="w-full max-w-md border border-line-strong bg-panel p-6 shadow-card sm:p-9 lg:max-w-[27rem]">
             <CatFace mood={notice?.tone === "error" ? "startled" : "adoring"} blink={!notice} className="text-[1.7rem]" />
             <h1 id="signin-title" className="display mt-5 text-[2.3rem] sm:text-[2.7rem]">
               Sign in to Holt
@@ -118,54 +111,9 @@ export default async function SignInPage({ searchParams }: PageProps<"/signin">)
               Just curious? <Link href={EXAMPLES_PATH} className="text-link">Try an example report →</Link>
             </p>
           </section>
-
-          <ExampleReport mergePlans={mergePlans} />
         </div>
       </div>
     </PageTransition>
-  );
-}
-
-/** Desktop only: what a merge plan looks like, from the recorded example. */
-function ExampleReport({ mergePlans }: { mergePlans: boolean }) {
-  const p = EXAMPLE_PLAN;
-  return (
-    <figure className="relative m-0 hidden lg:block">
-      <div className="relative">
-        {/* Keep the decorative sheet behind the card, clear of the caption below. */}
-        <div aria-hidden="true" className="absolute inset-0 translate-x-3 translate-y-3 border border-line bg-panel-2" />
-        <div className="relative border border-line-strong bg-panel shadow-card">
-          <div className="flex min-h-10 items-center justify-between border-b border-line px-5 text-[0.8rem] text-faint">
-            <span>{p.repo}</span>
-            <span className="flex items-center gap-2">
-              example merge plan · {planRecordedOn()}
-              {!mergePlans && <ComingSoon small />}
-            </span>
-          </div>
-          <div className="p-7">
-            <div className="flex items-center justify-between">
-              <VerdictPill headline={p.verdict.headline} tone={p.verdict.tone} />
-              <CatFace mood={TONE_MOOD[p.verdict.tone]} className="text-[1.2rem]" />
-            </div>
-            <blockquote className="mt-5 border-l-2 border-blue pl-4 font-sans text-[1.05rem] leading-relaxed text-ink">
-              {p.call.text}
-            </blockquote>
-            <ul className="mt-6 grid grid-cols-3 gap-px border border-line bg-line">
-              {p.verdict.numbers.map(({ value, label }) => (
-                <li key={label} className="bg-panel p-3">
-                  <p className="text-[1.1rem] font-semibold tracking-tight">{value}</p>
-                  <p className="font-sans text-[0.82rem] leading-snug text-muted">{label}</p>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </div>
-      <figcaption className="mt-7 font-sans text-[0.88rem] text-muted">
-        The rules pick the verdict. A merge plan turns it into steps for your first pull request.{" "}
-        <Link href={EXAMPLE_PATH} className="text-link">Read the full example</Link>.
-      </figcaption>
-    </figure>
   );
 }
 
