@@ -219,12 +219,12 @@ export interface paths {
         };
         /**
          * Discover
-         * @description Checked repositories, filtered and sorted (see the module docstring).
-         *     Reads only the database: no GitHub call and no rate limit. The answer is
-         *     the same for everyone, so it is built once and kept (cache.py) until a
-         *     report, a repo's details, its starter issues or the trending counts
-         *     change, ANSWER_KEPT_S at most (that long, when another process wrote
-         *     them).
+         * @description Checked repositories, filtered and sorted, one part at a time (see the
+         *     module docstring). Reads only the database: no GitHub call and no rate
+         *     limit. The answer is the same for everyone, so it is built once and kept
+         *     (cache.py) until a report, a repo's details, its starter issues or the
+         *     trending counts change, ANSWER_KEPT_S at most (that long, when another
+         *     process wrote them).
          */
         get: operations["discover_v1_discover_get"];
         put?: never;
@@ -263,6 +263,27 @@ export interface paths {
         put?: never;
         /** Find */
         post: operations["find_v1_find_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/v1/find/index": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Find Index
+         * @description One part of a find's index matches (see the module docstring). Reads
+         *     only the kept index: no search, no GitHub call, no rate limit.
+         */
+        post: operations["find_index_v1_find_index_post"];
         delete?: never;
         options?: never;
         head?: never;
@@ -1738,6 +1759,8 @@ export interface components {
             language: string | null;
             /** Languages */
             languages: components["schemas"]["LanguageCount"][];
+            /** Next */
+            next: string | null;
             /** Repos */
             repos: components["schemas"]["DiscoverRepo"][];
             /**
@@ -1747,6 +1770,11 @@ export interface components {
             sort: "welcoming" | "stars" | "trending";
             /** Topic */
             topic: string | null;
+            /**
+             * Total
+             * @default 0
+             */
+            total: number;
             /** Trending Min */
             trending_min: number;
         };
@@ -1946,6 +1974,42 @@ export interface components {
             limit: number;
             /** Topics */
             topics?: string[];
+        };
+        /**
+         * FindIndexIn
+         * @description A find's filters (as `POST /v1/find` takes them) and which part.
+         */
+        FindIndexIn: {
+            /** Cursor */
+            cursor?: string | null;
+            /**
+             * Days
+             * @default 7
+             */
+            days: number;
+            /**
+             * Hacktoberfest
+             * @default false
+             */
+            hacktoberfest: boolean;
+            /** Languages */
+            languages?: string[];
+            /**
+             * Limit
+             * @default 24
+             */
+            limit: number;
+            /** Topics */
+            topics?: string[];
+        };
+        /** FindIndexPart */
+        FindIndexPart: {
+            /** Next */
+            next: string | null;
+            /** Results */
+            results: components["schemas"]["FindResult"][];
+            /** Total */
+            total: number;
         };
         /** FindJobStatus */
         FindJobStatus: {
@@ -3673,6 +3737,8 @@ export type FeedbackIn = components['schemas']['FeedbackIn'];
 export type FeedbackOut = components['schemas']['FeedbackOut'];
 export type FindDone = components['schemas']['FindDone'];
 export type FindIn = components['schemas']['FindIn'];
+export type FindIndexIn = components['schemas']['FindIndexIn'];
+export type FindIndexPart = components['schemas']['FindIndexPart'];
 export type FindJobStatus = components['schemas']['FindJobStatus'];
 export type FindQueued = components['schemas']['FindQueued'];
 export type FindResult = components['schemas']['FindResult'];
@@ -4175,6 +4241,7 @@ export interface operations {
                 language?: string | null;
                 topic?: string | null;
                 limit?: number;
+                cursor?: string | null;
                 hacktoberfest?: boolean;
             };
             header?: {
@@ -4275,6 +4342,41 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["FindQueued"];
+                };
+            };
+            /** @description Default Response */
+            default: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    find_index_v1_find_index_post: {
+        parameters: {
+            query?: never;
+            header?: {
+                "x-holt-internal-key"?: string | null;
+            };
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["FindIndexIn"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["FindIndexPart"];
                 };
             };
             /** @description Default Response */

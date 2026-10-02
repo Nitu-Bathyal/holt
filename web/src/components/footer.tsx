@@ -46,7 +46,7 @@ function isReportPath(path: string | null): boolean {
 /** The footer under a report: one line of what Holt does and doesn't do, then the links. */
 function ReportFooter({ signedIn }: { signedIn: boolean }) {
   return (
-    <footer className="mt-auto border-t border-line bg-panel">
+    <footer className="site-footer mt-auto border-t border-line bg-panel">
       <div className="wrap flex flex-col gap-5 py-8 text-[0.85rem] md:flex-row md:items-start md:justify-between">
         <div className="max-w-sm">
           <p className="font-semibold text-ink">Holt</p>
@@ -174,7 +174,7 @@ export function Footer({ signedIn = false }: { signedIn?: boolean }) {
   if (onReport) return <ReportFooter signedIn={signedIn} />;
 
   return (
-    <footer ref={root} onPointerMove={onMove} className="mt-auto overflow-clip border-t border-line bg-panel">
+    <footer ref={root} onPointerMove={onMove} className="site-footer mt-auto overflow-clip border-t border-line bg-panel">
       <div className="wrap relative pb-10 pt-16 md:pt-24">
         {/* Top right, in the padding above the sign-off. On the landing, the
             scroll companion fades out as the footer arrives and this cat

@@ -181,6 +181,12 @@ test("signed out: the data routes behind account pages answer 401 before reading
     const data = get.search(/preflightState\(|proxyJobEvents\(|recommendations\(/);
     assert.ok(gate >= 0 && data > gate, `${route}: the gate comes before the data`);
   }
+  // The parts a board or a find loads as it is scrolled.
+  for (const [route, read] of [["discover", /await discover\(/], ["find/more", /req\.json\(|findIndex\(/]] as const) {
+    const src = readFileSync(join(api, route, "route.ts"), "utf-8");
+    const gate = src.indexOf("signedInGate(who.userId)");
+    assert.ok(gate >= 0 && src.search(read) > gate, `${route}: the gate comes before the data`);
+  }
 });
 
 test("the sign-in wall never appears as a page a crawler is sent to", () => {
@@ -197,13 +203,15 @@ test("the sign-in wall never appears as a page a crawler is sent to", () => {
 // A signed-out page that asks a gated route logs a 401 in the visitor's console.
 test("the open pages never ask a gated route: only signed-in parts of the app do", () => {
   const src = join(import.meta.dirname, "..");
-  const GATED = /\/api\/(preflight|preflight-jobs|merge-plan-jobs|playbook-jobs)\b/;
+  const GATED = /\/api\/(preflight|preflight-jobs|merge-plan-jobs|playbook-jobs|discover|find\/more)\b/;
   const askers = (readdirSync(src, { recursive: true }) as string[])
     .map((f) => f.replaceAll("\\", "/"))
     .filter((f) => /\.tsx?$/.test(f) && !f.endsWith(".test.ts") && !f.startsWith("app/api/") && GATED.test(readFileSync(join(src, f), "utf-8")))
     .sort();
-  // The pre-flight page (gated), the link to it, and two streams that open only after a signed-in POST starts a job.
-  assert.deepEqual(askers, ["components/preflight/preflight-link.tsx", "components/preflight/preflight-view.tsx", "components/report/merge-plan-panel.tsx", "components/report/playbook-section.tsx"]);
+  // A board's and a find's next parts (gated pages), the pre-flight page (gated), the link to it, and two streams that open only after a signed-in POST starts a job.
+  assert.deepEqual(askers, ["components/discover/board-list.tsx", "components/find/find-list.tsx", "components/preflight/preflight-link.tsx", "components/preflight/preflight-view.tsx", "components/report/merge-plan-panel.tsx", "components/report/playbook-section.tsx"]);
+  // The Hacktoberfest page is open and shows a find's list: it loads more only for someone signed in.
+  assert.match(readFileSync(join(src, "app/hacktoberfest/page.tsx"), "utf-8"), /const more = user \? /);
   // The link asks as soon as it is on the page, so it is only ever there for someone signed in.
   const uses = (readdirSync(src, { recursive: true }) as string[])
     .filter((f) => /\.tsx$/.test(f) && !f.endsWith("preflight-link.tsx"))

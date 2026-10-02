@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { discover, savedNames } from "@/lib/api";
 import { boardHref, boardTitle, emptyText, SORTS, widenBoard } from "@/lib/discover";
-import { fromDiscover, langColor } from "@/lib/repo-card";
+import { langColor } from "@/lib/repo-card";
 import type { SessionUser } from "@/lib/session";
 import type { DiscoverSort } from "@/lib/types";
 import { ErrorPanel } from "../error-panel";
@@ -9,7 +9,7 @@ import { EmptyState } from "../shell/app-page";
 import { PageTransition } from "../motion/page-transition";
 import { FindFrame } from "../find/find-frame";
 import { LangDot } from "../repo-card/repo-avatar";
-import { RepoGrid } from "../repo-card/repo-grid";
+import { BoardList } from "./board-list";
 
 /** /discover and /discover/<language>: Find a project's browse tab, one board as a grid of cards with its order and language chips on top. */
 export async function DiscoverView({ user, sort, language, topic }: {
@@ -84,8 +84,8 @@ export async function DiscoverView({ user, sort, language, topic }: {
           {!result.ok ? (
             <ErrorPanel error={result.error} retryHref={here} />
           ) : data!.repos.length ? (
-            // The welcoming board is all "Worth your time", so its cards leave the verdict out like Find's; the others mix verdicts.
-            <RepoGrid repos={data!.repos.map(fromDiscover)} topicBase={boardHref({ sort, language })} saved={saved} verdict={false} />
+            // The first part is rendered here; the list loads the rest as it is scrolled. A new board is a new list.
+            <BoardList key={here} sort={sort} language={language} topic={topic} saved={saved} first={{ items: data!.repos, next: data!.next ?? null, total: data!.total ?? data!.repos.length }} />
           ) : (
             <EmptyState title={emptyText(sort, language, topic, data!.trending_min)}>
               {widenBoard({ sort, language, topic }).map((w, i) => (
