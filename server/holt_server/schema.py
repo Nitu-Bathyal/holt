@@ -1988,9 +1988,5 @@ class Recommendations(Model):
     """GET /v1/me/recommendations."""
 
     picks: list[Recommendation]
-    # More picks that a plan with recommendations would show; 0 when all are shown.
-    locked: int
-    # True when the user's plan covers recommendations (every pick is shown).
-    full: bool
     basis: RecommendationBasis
     computed_at: str

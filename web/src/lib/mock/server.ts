@@ -553,9 +553,10 @@ export async function refreshContributions(userId: string): Promise<Result<Contr
   return { ok: true, data: mockContributions(userId, acct.login) };
 }
 
-// Recommendations: a fixed ranked list once there is a profile or a connection.
-// The real ranking is server rules (server/holt_server/recommendations.py).
-// MOCK_PLAN=pro shows every pick; otherwise the free taste of two.
+// Recommendations: a fixed ranked list. With no profile and no connection
+// (a new account) the reasons that speak of the user are left out, as the
+// server's popular-language picks do. The real ranking is server rules
+// (server/holt_server/recommendations.py).
 function mockPicks(): Recommendation[] {
   const at = (hoursAgo: number) => new Date(Date.now() - hoursAgo * 3_600_000).toISOString();
   const stats = (attempts: number, merged: number, noReply: number, reply: number, firstTimers: number): Stats => ({
@@ -607,13 +608,11 @@ function mockPicks(): Recommendation[] {
 export async function recommendations(userId: string, limit: number): Promise<Result<Recommendations>> {
   const prefs = profiles().get(userId) ?? null;
   const connected = connections().has(userId);
-  const full = process.env.MOCK_PLAN === "pro" || user(userId).me.plan !== "free";
-  const picks = prefs || connected ? mockPicks() : [];
-  const shown = picks.slice(0, full ? limit : Math.min(limit, 2));
+  const picks = prefs || connected ? mockPicks() : mockPicks().map((p) => ({ ...p, why: p.why.filter((w) => !/\byou/i.test(w)) }));
   return {
     ok: true,
     data: {
-      picks: shown, locked: full ? 0 : Math.max(picks.length - 2, 0), full,
+      picks: picks.slice(0, limit),
       basis: {
         languages: prefs?.languages ?? [], topics: prefs?.topics ?? [], level: prefs?.level ?? "newcomer", contributions: prefs?.contributions ?? [],
         history_languages: connected ? ["Python", "Rust"] : [], already_contributing: connected ? 4 : 0, has_profile: prefs !== null, connected,

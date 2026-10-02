@@ -3163,10 +3163,6 @@ export interface components {
             basis: components["schemas"]["RecommendationBasis"];
             /** Computed At */
             computed_at: string;
-            /** Full */
-            full: boolean;
-            /** Locked */
-            locked: number;
             /** Picks */
             picks: components["schemas"]["Recommendation"][];
         };

@@ -1,17 +1,16 @@
 """Recommendations for you: rules only, "Worth your time" repos with maintainers
 still answering, matched to the profile and to merged pull requests, never a
-repo the user is already in, with reasons, and a free taste of the list."""
+repo the user is already in, with reasons, and free for everyone. A new
+account, with nothing to match on, gets the popular languages."""
 
 from __future__ import annotations
 
-import json
 from datetime import timedelta
 
 import pytest
 
 from conftest import STATS, canned_report
 from holt.starter import RULES_VERSION
-from holt_server import entitlements, recommendations
 from holt_server.db import (
     ENGINE_VERSION,
     Contribution,
@@ -26,20 +25,10 @@ from holt_server.db import (
 
 URL = "/v1/me/recommendations"
 
-# The shipped Pro doesn't cover recommendations (nothing sells them now), so
-# these tests bring a catalogue where it does.
-CATALOGUE = {
-    "features": {"recommendations": {"name": "Repository recommendations", "credits": None}},
-    "plans": {"free": {"name": "Free", "features": {}},
-              "pro": {"name": "Pro", "features": {"recommendations": {"unlimited": True}}}},
-}
-
 
 @pytest.fixture
-def h(make_harness, tmp_path):
-    path = tmp_path / "pricing.json"
-    path.write_text(json.dumps(CATALOGUE), encoding="utf-8")
-    return make_harness(HOLT_PRICING_FILE=str(path))
+def h(make_harness):
+    return make_harness()
 
 
 def add(h, *items):
@@ -89,13 +78,6 @@ def starters(repo, *issues, age_hours=0):
                         created_at=now() - timedelta(hours=age_hours))
 
 
-def pro(h, user="u1"):
-    async def go():
-        await entitlements.set_plan(h.svc, user, "pro", expires_at=None, reason="test",
-                                    actor="test")
-    h.client.portal.call(go)
-
-
 def get(h, user="u1", **params):
     r = h.get(URL, user=user, params=params)
     assert r.status_code == 200, r.text
@@ -111,15 +93,40 @@ def test_signed_in_only(h):
     assert h.client.get(URL, headers={"X-Holt-User": "u1"}).status_code == 401
 
 
-def test_nothing_to_match_on_gives_an_empty_list_that_says_why(h):
-    add(h, report("octo/py"), meta("octo/py", "Python"))
+def test_a_new_account_gets_popular_languages_spread_out(h):
+    add(h, report("octo/py1", outsider_merged=20), meta("octo/py1", "Python"),
+        report("octo/py2", outsider_merged=15), meta("octo/py2", "Python"),
+        report("octo/go", outsider_merged=10), meta("octo/go", "Go"),
+        report("octo/nix"), meta("octo/nix", "Nix"),
+        report("octo/none"), meta("octo/none"),
+        report("octo/dead", "not_viable"), meta("octo/dead", "Python"))
     body = get(h)
-    assert body["picks"] == [] and body["locked"] == 0
-    assert body["basis"]["has_profile"] is False and body["basis"]["connected"] is False
+    # The best of each language first; nothing outside the popular ones.
+    assert names(body) == ["octo/py1", "octo/go", "octo/py2"]
+    b = body["basis"]
+    assert b["has_profile"] is False and b["connected"] is False
+    assert b["languages"] == b["topics"] == b["history_languages"] == []
+    # No reason claims to know the user.
+    assert not any("you" in line.lower() for p in body["picks"] for line in p["why"])
+    assert "locked" not in body and "full" not in body
+
+
+def test_a_new_account_is_a_newcomer(h):
+    add(h, report("octo/first"), meta("octo/first", "Python"),
+        starters("octo/first", issue(1), issue(2, labels=("bug",))),
+        report("octo/hard"), meta("octo/hard", "Python"),
+        starters("octo/hard", issue(3, labels=("bug",))))
+    body = get(h)
+    assert names(body) == ["octo/first"]
+    assert [i["number"] for i in body["picks"][0]["issues"]] == [1]
+
+
+def test_a_profile_with_nothing_matching_stays_empty(h):
+    add(h, profile(languages=("haskell",)), report("octo/py"), meta("octo/py", "Python"))
+    assert get(h)["picks"] == []
 
 
 def test_only_worth_your_time_with_maintainers_answering(h):
-    pro(h)
     add(h, profile(),
         report("octo/good"), meta("octo/good", "Python"),
         report("octo/no", "not_viable"), meta("octo/no", "Python"),
@@ -144,14 +151,12 @@ def test_only_worth_your_time_with_maintainers_answering(h):
 
 
 def test_the_newest_report_decides(h):
-    pro(h)
     add(h, profile(), report("octo/changed"), meta("octo/changed", "Python"))
     add(h, report("octo/changed", "not_viable"))
     assert names(get(h)) == []
 
 
 def test_merged_pull_requests_add_languages_and_already_in_repos_are_left_out(h):
-    pro(h)
     add(h, profile(languages=()), connection(),
         pr("rust-lang/done"), pr("rust-lang/done", 2), pr("octo/tried", state="closed"),
         meta("rust-lang/done", "Rust"), meta("octo/tried", "Rust"),
@@ -168,7 +173,6 @@ def test_merged_pull_requests_add_languages_and_already_in_repos_are_left_out(h)
 
 
 def test_rank_is_by_points_then_the_discover_order(h):
-    pro(h)
     add(h, profile(languages=("python",), topics=("cli",)), connection(),
         pr("octo/old"), meta("octo/old", "Python"),
         report("octo/both"), meta("octo/both", "Python", topics=["cli"]),
@@ -184,7 +188,6 @@ def test_rank_is_by_points_then_the_discover_order(h):
 
 
 def test_newcomers_see_beginner_issues_and_skip_long_odds(h):
-    pro(h)
     add(h, profile(level="newcomer", contributions=("docs",)),
         report("octo/long", outsider_merged=0), meta("octo/long", "Python"),
         report("octo/none"), meta("octo/none", "Python"),
@@ -205,7 +208,6 @@ def test_newcomers_see_beginner_issues_and_skip_long_odds(h):
 
 
 def test_experienced_users_see_every_issue_and_long_odds(h):
-    pro(h)
     add(h, profile(level="experienced"),
         report("octo/long", outsider_merged=0), meta("octo/long", "Python"),
         report("octo/help"), meta("octo/help", "Python"),
@@ -217,14 +219,12 @@ def test_experienced_users_see_every_issue_and_long_odds(h):
 
 
 def test_old_starter_issues_are_not_shown(h):
-    pro(h)
     add(h, profile(), report("octo/a"), meta("octo/a", "Python"),
         starters("octo/a", issue(1), age_hours=100))
     assert get(h)["picks"][0]["issues"] == []
 
 
 def test_issues_nobody_is_on_come_first_then_fitting_ones(h):
-    pro(h)
     add(h, profile(level="experienced", contributions=("docs",)),
         report("octo/a"), meta("octo/a", "Python"),
         starters("octo/a", issue(1, title="Fix the docs", people=2), issue(2),
@@ -233,14 +233,12 @@ def test_issues_nobody_is_on_come_first_then_fitting_ones(h):
 
 
 def test_issues_cached_before_they_said_who_is_on_them_are_not_shown(h):
-    pro(h)
     old = {k: v for k, v in issue(1).items() if k not in ("people", "open_prs")}
     add(h, profile(), report("octo/a"), meta("octo/a", "Python"), starters("octo/a", old))
     assert get(h)["picks"][0]["issues"] == []
 
 
 def test_find_results_fill_in_repos_without_a_report(h):
-    pro(h)
     found = {"repo": "octo/found", "verdict": "viable", "language": "Python",
              "description": "d", "stars": 5, "stats": dict(STATS), "issues": [issue(9)]}
     partial = {"repo": "octo/partial", "verdict": "viable", "language": "Python",
@@ -253,20 +251,16 @@ def test_find_results_fill_in_repos_without_a_report(h):
     assert body["picks"][0]["issues"][0]["number"] == 9
 
 
-def test_free_users_get_a_taste_and_a_count_of_the_rest(h):
+def test_every_pick_is_free(h):
     add(h, profile(), *[x for i in range(5) for x in (report(f"octo/r{i}"),
                                                       meta(f"octo/r{i}", "Python"))])
     body = get(h)
-    assert len(body["picks"]) == recommendations.FREE_PICKS == 2
-    assert body["locked"] == 3 and body["full"] is False
-    pro(h)
-    body = get(h)
-    assert len(body["picks"]) == 5 and body["locked"] == 0 and body["full"] is True
+    assert len(body["picks"]) == 5
+    assert "locked" not in body and "full" not in body
     assert len(get(h, limit=1)["picks"]) == 1
 
 
 def test_no_github_call_and_no_charge(h):
-    pro(h)
     add(h, profile(), report("octo/a"), meta("octo/a", "Python"))
     calls = len(h.svc.lookup.details.calls)
     get(h)

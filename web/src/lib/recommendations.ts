@@ -2,7 +2,7 @@
 // their order and their reasons all come from the server's rules. Pure, so it
 // runs under `node --test`.
 import { LANGS } from "./profile.ts";
-import type { RecommendationBasis } from "./types";
+import type { Recommendation, RecommendationBasis, StarterIssue } from "./types";
 
 /** "python" as the profile stores it -> "Python" as people write it. */
 export function languageName(lang: string): string {
@@ -40,6 +40,13 @@ export function emptyReason(b: RecommendationBasis): EmptyReason {
   return hasSignals ? "no-match" : "nothing-to-match";
 }
 
-export function lockedLine(n: number): string {
-  return n === 1 ? "1 more pick is ready for you." : `${n} more picks are ready for you.`;
+/** Up to `max` issues to start with, taken across the picks in turn (each
+ * pick's first, then each one's second), so no one repo fills the list. */
+export function starterRows(picks: Pick<Recommendation, "repo" | "issues">[], max: number): { repo: string; issue: StarterIssue }[] {
+  const rows: { repo: string; issue: StarterIssue }[] = [];
+  const deepest = Math.max(0, ...picks.map((p) => p.issues.length));
+  for (let i = 0; i < deepest; i++) {
+    for (const p of picks) if (p.issues[i]) rows.push({ repo: p.repo, issue: p.issues[i] });
+  }
+  return rows.slice(0, max);
 }
