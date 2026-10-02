@@ -30,7 +30,7 @@ import { timeAgo } from "@/lib/format";
 import { alsoForYou, clock, dismissedNudges, homeFacts, homeNudge, moveLead, moveTitle, needsYou, nextMove, NUDGE_COOKIE, othersInFlight, outsidePulls, type NextMove, type Nudge } from "@/lib/home";
 import { showPreflight } from "@/lib/preflight";
 import { SKIP_COOKIE } from "@/lib/profile";
-import { basisLine, emptyReason, starterRows } from "@/lib/recommendations";
+import { allPicksLabel, basisLine, emptyReason, HOME_PICKS, starterRows } from "@/lib/recommendations";
 import { fromPick } from "@/lib/repo-card";
 import { caller, currentUser } from "@/lib/session";
 import { CONNECT_GITHUB, PROFILE_SETTINGS } from "@/lib/settings";
@@ -70,7 +70,7 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
   const [checks, saved, picks, prs, profile, pre] = await Promise.all([
     history(user.id, 50),
     savedRepos(user.id),
-    recommendations(user.id, 10),
+    recommendations(user.id, HOME_PICKS),
     contributions(user.id),
     getProfile(user.id),
     preflightState({}, who),
@@ -102,10 +102,11 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
   const fresh = move.kind === "first" && !move.again && repos.length === 0;
   // Picks matched on nothing about the person (popular languages).
   const generic = picks.ok && emptyReason(picks.data.basis) === "nothing-to-match";
-  const starters = starting && picks.ok ? starterRows(picks.data.picks.slice(0, 3), 4) : [];
+  const starters = starting && picks.ok ? starterRows(picks.data.picks, 4) : [];
   const notice = typeof sp.profile === "string" ? NOTICES[sp.profile] : undefined;
   const preflight = pre.ok && showPreflight(pre.data);
   const firstPicks = move.kind === "first" && pickCards.length > 0;
+  const allPicks = picks.ok ? allPicksLabel(picks.data.total) : null;
   const facts = homeFacts({ repos, pulls });
 
   let primary: React.ReactNode = null;
@@ -278,7 +279,12 @@ export default async function HomePage({ searchParams }: PageProps<"/me">) {
                 more={{ href: PROFILE_SETTINGS, label: generic ? "add your languages" : "edit your profile" }}
               />
               {basisLine(picks.data.basis) && <p className="-mt-1 mb-4 font-sans text-[0.9rem] text-muted">{basisLine(picks.data.basis)}</p>}
-              <RepoGrid repos={pickCards.slice(0, 3)} cols={3} saved={savedNames} topicBase="/discover" />
+              <RepoGrid repos={pickCards} cols={3} saved={savedNames} topicBase="/discover" />
+              {allPicks && (
+                <p className="mt-3 text-[0.82rem]">
+                  <Link href="/me/picks" className="inline-flex min-h-11 items-center text-blue hover:underline sm:min-h-0">{allPicks} →</Link>
+                </p>
+              )}
             </section>
           )}
 

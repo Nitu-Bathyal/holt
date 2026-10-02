@@ -572,6 +572,40 @@ function mockPicks(): Recommendation[] {
     const r = withDerived({ ...mockReport(repo, "rules", 7), stats: s });
     return { repo, ...counts(mockAbout(repo)), ...verdictView("viable"), verdict: "viable", odds: r.odds, reason: r.verdict_line, numbers_line: r.numbers_line, why, stats: s, description, language, languages: [language], stars, topics, issues, checked_at: at(5) };
   };
+  // Enough further picks for /me/picks to load in parts.
+  const MORE: [repo: string, language: string, description: string, stars: number][] = [
+    ["encode/httpx", "Python", "A next generation HTTP client for Python.", 13_800],
+    ["pytest-dev/pytest", "Python", "The pytest framework makes it easy to write small tests, yet scales to support complex functional testing.", 12_600],
+    ["python-poetry/poetry", "Python", "Python packaging and dependency management made easy.", 32_500],
+    ["pydantic/pydantic", "Python", "Data validation using Python type hints.", 22_400],
+    ["psf/black", "Python", "The uncompromising Python code formatter.", 39_800],
+    ["tiangolo/sqlmodel", "Python", "SQL databases in Python, designed for simplicity, compatibility, and robustness.", 15_200],
+    ["Textualize/textual", "Python", "The lean application framework for Python.", 27_100],
+    ["pallets/flask", "Python", "The Python micro framework for building web applications.", 68_900],
+    ["pallets/jinja", "Python", "A very fast and expressive template engine.", 10_600],
+    ["python-attrs/attrs", "Python", "Python classes without boilerplate.", 5_400],
+    ["mkdocs/mkdocs", "Python", "Project documentation with Markdown.", 19_800],
+    ["nedbat/coveragepy", "Python", "The code coverage tool for Python.", 3_100],
+    ["BurntSushi/ripgrep", "Rust", "ripgrep recursively searches directories for a regex pattern while respecting your gitignore.", 49_300],
+    ["sharkdp/bat", "Rust", "A cat(1) clone with wings.", 50_700],
+    ["sharkdp/fd", "Rust", "A simple, fast and user-friendly alternative to find.", 34_900],
+    ["clap-rs/clap", "Rust", "A full featured, fast Command Line Argument Parser for Rust.", 14_500],
+    ["tokio-rs/axum", "Rust", "Ergonomic and modular web framework built with Tokio, Tower, and Hyper.", 19_600],
+    ["starship/starship", "Rust", "The minimal, blazing-fast, and infinitely customizable prompt for any shell.", 45_800],
+    ["nushell/nushell", "Rust", "A new type of shell.", 33_100],
+    ["helix-editor/helix", "Rust", "A post-modern modal text editor.", 34_400],
+    ["casey/just", "Rust", "Just a command runner.", 22_300],
+    ["ajeetdsouza/zoxide", "Rust", "A smarter cd command. Supports all major shells.", 23_700],
+    ["python-pillow/Pillow", "Python", "Python Imaging Library (Fork).", 12_400],
+    ["urllib3/urllib3", "Python", "urllib3 is a user-friendly HTTP client library for Python.", 3_800],
+    ["jazzband/pip-tools", "Python", "A set of tools to keep your pinned Python dependencies fresh.", 7_800],
+    ["marshmallow-code/marshmallow", "Python", "A lightweight library for converting complex objects to and from simple Python datatypes.", 7_100],
+  ];
+  const more = MORE.map(([repo, language, description, stars], i) =>
+    pick(repo, language, description, stars, [], stats(30 + i, 12 + (i % 7), 4, 8 + 3 * i, 3 + (i % 5)), [
+      language === "Rust" ? "Written in Rust, where you've had pull requests merged before." : "Written in Python, one of your languages.",
+      `Maintainers usually reply within ${8 + 3 * i < 24 ? `${8 + 3 * i} hours` : `${Math.round((8 + 3 * i) / 24)} days`}.`,
+    ], []));
   return [
     pick("pallets/click", "Python", "Python composable command line interface toolkit", 16_200, ["cli", "python"], stats(42, 19, 3, 6, 9), [
       "Written in Python, one of your languages, and you've had pull requests merged in it.",
@@ -602,17 +636,20 @@ function mockPicks(): Recommendation[] {
     pick("httpie/cli", "Python", "Modern, user-friendly command-line HTTP client for the API era.", 34_000, ["cli", "http"], stats(28, 7, 5, 40, 4), [
       "Written in Python, one of your languages.", "About cli and http, topics you picked.", "Maintainers usually reply within 2 days.",
     ], []),
+    ...more,
   ];
 }
 
-export async function recommendations(userId: string, limit: number): Promise<Result<Recommendations>> {
+export async function recommendations(userId: string, limit: number, offset = 0): Promise<Result<Recommendations>> {
   const prefs = profiles().get(userId) ?? null;
   const connected = connections().has(userId);
   const picks = prefs || connected ? mockPicks() : mockPicks().map((p) => ({ ...p, why: p.why.filter((w) => !/\byou/i.test(w)) }));
   return {
     ok: true,
     data: {
-      picks: picks.slice(0, limit),
+      picks: picks.slice(offset, offset + limit),
+      total: picks.length,
+      next: offset + limit < picks.length ? offset + limit : null,
       basis: {
         languages: prefs?.languages ?? [], topics: prefs?.topics ?? [], level: prefs?.level ?? "newcomer", contributions: prefs?.contributions ?? [],
         history_languages: connected ? ["Python", "Rust"] : [], already_contributing: connected ? 4 : 0, has_profile: prefs !== null, connected,

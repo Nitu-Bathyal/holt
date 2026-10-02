@@ -10,10 +10,11 @@ import { LangDot, RepoAvatar } from "./repo-avatar";
  * marked odds bar, two more numbers and one issue to start with. Everything else is in
  * the focus view (`focusHref`), which `onOpen` shows without a page load.
  * `verdict={false}` leaves the verdict out, for a list where every repo has
- * the same one; the starter issues' summary takes its place. A click anywhere
- * on the card that isn't a link or a button opens the focus view.
+ * the same one; the starter issues' summary takes its place. `why` adds the
+ * line that says why this repo for this person (a pick's first reason). A
+ * click anywhere on the card that isn't a link or a button opens the focus view.
  */
-export function RepoCard({ r, report, focusHref, onOpen, actions, verdict = true }: { r: CardRepo; report: string; focusHref: string; onOpen?: () => void; actions?: React.ReactNode; verdict?: boolean }) {
+export function RepoCard({ r, report, focusHref, onOpen, actions, verdict = true, why = false }: { r: CardRepo; report: string; focusHref: string; onOpen?: () => void; actions?: React.ReactNode; verdict?: boolean; why?: boolean }) {
   const [owner, name] = r.repo.split("/");
   const issue = r.issues[0];
   // The merged share is marked on the bar; the other numbers sit under it as plain text, not tags.
@@ -61,6 +62,11 @@ export function RepoCard({ r, report, focusHref, onOpen, actions, verdict = true
           )}
         </div>
       </div>
+
+      {/* Two lines tall whatever its length, so the rows below line up across the grid. */}
+      {why && r.why[0] && (
+        <p className="mt-3 line-clamp-2 min-h-[2.75em] border-l-2 border-blue pl-2.5 font-sans text-[0.88rem] leading-snug text-ink" title={r.why[0]}>{r.why[0]}</p>
+      )}
 
       {/* The verdict or the starter issues on the left, the save button on the right. */}
       {(verdict || issues || actions) && (

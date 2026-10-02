@@ -3173,8 +3173,12 @@ export interface components {
             basis: components["schemas"]["RecommendationBasis"];
             /** Computed At */
             computed_at: string;
+            /** Next */
+            next: number | null;
             /** Picks */
             picks: components["schemas"]["Recommendation"][];
+            /** Total */
+            total: number;
         };
         /** Release */
         Release: {
@@ -5513,6 +5517,7 @@ export interface operations {
         parameters: {
             query?: {
                 limit?: number;
+                offset?: number;
             };
             header?: {
                 "x-holt-user"?: string | null;

@@ -11,6 +11,7 @@ import pytest
 
 from conftest import STATS, canned_report
 from holt.starter import RULES_VERSION
+from holt_server import recommendations
 from holt_server.db import (
     ENGINE_VERSION,
     Contribution,
@@ -258,6 +259,64 @@ def test_every_pick_is_free(h):
     assert len(body["picks"]) == 5
     assert "locked" not in body and "full" not in body
     assert len(get(h, limit=1)["picks"]) == 1
+
+
+def many(n, language="Python"):
+    """`n` repos that all fit, better ones first: octo/r00 is merged most."""
+    return [x for i in range(n) for x in (
+        report(f"octo/r{i:02}", outsider_attempts=200, outsider_merged=150 - i),
+        meta(f"octo/r{i:02}", language))]
+
+
+def test_parts_keep_one_order_with_no_repeats_and_an_end(h):
+    add(h, profile(), *many(25))
+    whole = get(h, limit=30)
+    assert whole["total"] == 25 and whole["next"] is None
+    assert names(whole) == [f"octo/r{i:02}" for i in range(25)]
+
+    seen, offset = [], 0
+    while offset is not None:
+        part = get(h, limit=10, offset=offset)
+        assert part["total"] == 25
+        seen += names(part)
+        offset = part["next"]
+    assert seen == names(whole) and len(set(seen)) == 25
+    # The parts were 10, 10 and 5; asking again gives the same part.
+    assert get(h, limit=10, offset=20)["next"] is None
+    assert names(get(h, limit=10, offset=10)) == names(whole)[10:20]
+    # Past the end: nothing, and no part after it.
+    past = get(h, offset=40)
+    assert past["picks"] == [] and past["next"] is None and past["total"] == 25
+
+
+def test_a_part_that_ends_on_the_last_pick_is_the_end(h):
+    add(h, profile(), *many(10))
+    assert get(h, limit=10)["next"] is None
+    assert get(h, limit=9)["next"] == 9
+
+
+def test_at_most_sixty_picks_are_ranked_for_one_person(h):
+    add(h, profile(), *many(recommendations.MAX_PICKS + 5))
+    first = get(h, limit=30)
+    assert first["total"] == recommendations.MAX_PICKS == 60 and first["next"] == 30
+    last = get(h, limit=30, offset=30)
+    assert last["next"] is None and names(last)[-1] == "octo/r59"
+    assert get(h, offset=60)["picks"] == []
+
+
+def test_a_new_accounts_spread_is_the_same_across_parts(h):
+    add(h, *many(6), *[x for i in range(3) for x in (
+        report(f"octo/go{i}", outsider_attempts=200, outsider_merged=100 - i),
+        meta(f"octo/go{i}", "Go"))])
+    whole = names(get(h, limit=30))
+    assert whole[:6] == ["octo/r00", "octo/go0", "octo/r01", "octo/go1", "octo/r02", "octo/go2"]
+    parts = [n for offset in (0, 4, 8) for n in names(get(h, limit=4, offset=offset))]
+    assert parts == whole
+
+
+def test_limit_and_offset_are_checked(h):
+    for params in ({"limit": 0}, {"limit": 31}, {"offset": -1}):
+        assert h.get(URL, user="u1", params=params).status_code == 400, params
 
 
 def test_no_github_call_and_no_charge(h):

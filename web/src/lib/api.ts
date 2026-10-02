@@ -378,10 +378,12 @@ export function setAlertEmailByToken(token: string, on: boolean): Promise<Result
   return call(`/v1/alerts/${on ? "resubscribe" : "unsubscribe"}`, { method: "POST", body: JSON.stringify({ token }) });
 }
 
-/** Recommendations for you (API.md). Ranked by rules from cached data; free for everyone. */
-export function recommendations(userId: string, limit = 10): Promise<Result<Recommendations>> {
-  if (MOCK) return mock.recommendations(userId, limit);
-  return call(`/v1/me/recommendations?limit=${Math.min(10, Math.max(1, Math.floor(limit)))}`, { caller: { userId } });
+/** Recommendations for you (API.md), a part at a time: `next` in the answer is the `offset` of the part after. Ranked by rules from cached data; free for everyone. */
+export function recommendations(userId: string, limit = 10, offset = 0): Promise<Result<Recommendations>> {
+  const n = Math.min(30, Math.max(1, Math.floor(limit)));
+  const from = Math.max(0, Math.floor(offset));
+  if (MOCK) return mock.recommendations(userId, n, from);
+  return call(`/v1/me/recommendations?limit=${n}&offset=${from}`, { caller: { userId } });
 }
 
 // Saved repos (API.md, "Saved repos"). Saving and unsaving are idempotent.

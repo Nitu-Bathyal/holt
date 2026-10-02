@@ -1328,10 +1328,20 @@ nothing charged.
 
 ### Recommendations for you
 
-`GET /v1/me/recommendations?limit=10` → `Recommendations`: a short, ranked list
-of repositories (with starter issues) picked for the signed-in user. Reads
-only the database: no GitHub call, no model, no rate limit. Free for every
-signed-in user: every pick is returned, up to `limit`.
+`GET /v1/me/recommendations?limit=10&offset=0` → `Recommendations`: a ranked
+list of repositories (with starter issues) picked for the signed-in user, a
+part at a time. Reads only the database: no GitHub call, no model, no rate
+limit. Free for every signed-in user.
+
+- **Parts**: `limit` is 1 to 30 (default 10) and `offset` is where the part
+  starts (default 0); outside those, 400 `invalid_request`. `next` is the
+  `offset` to ask for next, or `null` when this part is the last. `total` is
+  how many picks there are in all. At most **60** picks are ranked for one
+  person; an `offset` past the end returns no picks and `next: null`. The
+  order is the same on every request while the data behind it is, so parts
+  don't repeat or skip a repo. It is computed per request, so when a report
+  or a profile changes between two requests a repo can show up twice or be
+  missed: drop repeats by `repo`.
 
 - **Which repos**: only ones whose latest 7-day rules report (checked in the
   last 14 days) says `viable`, plus `viable` find results from the last 7 days
@@ -1367,14 +1377,15 @@ signed-in user: every pick is returned, up to `limit`.
     "open_pull_requests": 12|null, "contributors": 812|null,  // as on Discover
     "issues": [StarterIssue],     // up to 3, fitted to level and contribution types; [] when none known
     "checked_at": "…"|null } ],
+  "total": 37, "next": 10,        // next: the offset of the part after this one, or null
   "basis": { "languages": ["python"], "topics": ["cli"], "level": "newcomer",
              "contributions": ["docs"], "history_languages": ["Rust"],
              "already_contributing": 4, "has_profile": true, "connected": true },
   "computed_at": "…" }
 ```
 
-Empty `picks` means nothing fits right now (or Holt has no repos to offer
-yet). Starter issues older than 72 hours aren't shown.
+Empty `picks` with `total: 0` means nothing fits right now (or Holt has no
+repos to offer yet). Starter issues older than 72 hours aren't shown.
 
 ### Feedback: "Was this verdict right?"
 - `POST /v1/feedback` body `{"repo": "owner/repo", "mode": "rules"|"ai", "days": 7,

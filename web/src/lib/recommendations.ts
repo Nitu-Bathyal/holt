@@ -50,3 +50,43 @@ export function starterRows(picks: Pick<Recommendation, "repo" | "issues">[], ma
   }
   return rows.slice(0, max);
 }
+
+/** The home shows this many picks; /me/picks has the rest. */
+export const HOME_PICKS = 3;
+/** One part of /me/picks: whole rows at one, two, three and four cards across. */
+export const PICKS_PART = 12;
+
+/** The home's link to every pick, or null when the home already shows them all. */
+export function allPicksLabel(total: number): string | null {
+  return total > HOME_PICKS ? `all ${total} picks` : null;
+}
+
+/**
+ * Whether a pick's card carries its reason (why this repo for this person):
+ * the server's first `why` line, which is the language or topic it matched
+ * on. Not for picks matched on nothing (a new account): their reasons are
+ * about the repo, and the card already shows those numbers.
+ */
+export function cardReasons(b: RecommendationBasis): boolean {
+  return emptyReason(b) === "no-match";
+}
+
+/** Where /api/picks?offset= starts: a whole number from 0, or null when it isn't one. */
+export function parseOffset(raw: string | null): number | null {
+  if (raw === null) return 0;
+  return /^\d{1,4}$/.test(raw) ? Number(raw) : null;
+}
+
+export interface NoPicks {
+  line: string;
+  /** What gets some, the first one loudest. "github" only for someone not connected. */
+  actions: ("profile" | "github")[];
+}
+
+/** /me/picks with no picks at all: one line and the way to get some. */
+export function noPicks(b: RecommendationBasis): NoPicks {
+  const actions: NoPicks["actions"] = b.connected ? ["profile"] : ["profile", "github"];
+  return emptyReason(b) === "nothing-to-match"
+    ? { line: "No picks yet.", actions }
+    : { line: "Nothing fits your profile right now.", actions };
+}
