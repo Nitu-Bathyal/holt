@@ -3,9 +3,12 @@
 // A repo that doesn't exist on GitHub gets the 404 page with a 404 status.
 // Signed-out views of the public pages are marked as cacheable by a shared
 // cache in front of the site (lib/edge-cache.ts); nothing else is.
+// Signed out, an account page (Find, Browse, Compare, the dashboard) is
+// answered with a redirect to sign-in before it renders (lib/gate.ts).
 import { NextResponse, type NextRequest } from "next/server";
 import { isAppRoute } from "@/lib/app-routes";
 import { EDGE_CACHE, EDGE_CACHE_CDN, edgeCacheKind } from "@/lib/edge-cache";
+import { arrivalGate } from "@/lib/gate";
 import { isValidRepo, redirectTargetForPath } from "@/lib/repo";
 import { reportKnown } from "@/lib/report-known-check";
 import { retiredRedirect } from "@/lib/shell";
@@ -18,6 +21,10 @@ export async function proxy(req: NextRequest) {
   // Pages that were merged into others (lib/shell.ts).
   const retired = retiredRedirect(req.nextUrl.pathname);
   if (retired) return NextResponse.redirect(new URL(retired, req.url), 308);
+
+  const cookies = req.cookies.getAll().map((c) => c.name);
+  const signIn = arrivalGate(req.nextUrl.pathname, req.nextUrl.search, cookies);
+  if (signIn) return NextResponse.redirect(new URL(signIn, req.url), 307);
 
   const parts = req.nextUrl.pathname.split("/").filter(Boolean);
   if (parts.length === 2 && !isAppRoute(parts[0]) && isValidRepo(parts[0], parts[1])) {
@@ -35,7 +42,7 @@ export async function proxy(req: NextRequest) {
     method: req.method,
     pathname: req.nextUrl.pathname,
     search: req.nextUrl.search,
-    cookies: req.cookies.getAll().map((c) => c.name),
+    cookies,
     header: (name) => req.headers.get(name),
   });
   if (kind === null || (kind === "report" && !(await reportKnown(`${parts[0]}/${parts[1]}`)))) return NextResponse.next();

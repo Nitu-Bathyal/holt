@@ -6,28 +6,29 @@ import { Suspense } from "react";
 import { CompareTable, Issues, IssuesSkeleton, type Column } from "@/components/compare/compare-table";
 import { PageTransition } from "@/components/motion/page-transition";
 import { AppPageHeader } from "@/components/shell/app-page";
-import { SignInToCheck } from "@/components/sign-in-to-check";
 import { getReport, savedNames, searchRepos, starterIssues } from "@/lib/api";
 import { bareNames, compareHref as href, compareTitle, MAX, parseList, pickRepo, savedToAdd, SUGGESTIONS } from "@/lib/compare";
 import { clock } from "@/lib/home";
-import { caller, currentUser, type SessionUser } from "@/lib/session";
+import { caller, requireUser, type SessionUser } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "Compare repositories",
   description: "Put up to four repos side by side and see which one reviews and merges outside pull requests.",
+  // For signed-in people (lib/gate.ts), so never in a search index.
+  robots: { index: false },
 };
 
 const short = (list: string[]) => list.map((r) => r.split("/")[1]).join(" vs ");
 const CHIP = "border border-line px-2 py-1 text-muted transition-colors hover:border-blue hover:text-ink";
 
-async function IssuesSlot({ repo, user }: { repo: string; user: SessionUser | null }) {
+async function IssuesSlot({ repo, user }: { repo: string; user: SessionUser }) {
   const r = await starterIssues(repo, 2, await caller(user));
   return <Issues issues={r.ok ? r.data.issues : null} />;
 }
 
 export default async function ComparePage({ searchParams }: PageProps<"/compare">) {
   const sp = await searchParams;
-  const user = await currentUser();
+  const user = await requireUser("/compare", sp);
   // A word with no owner ("excalidraw") is looked up on GitHub: the most starred repo with that name. At most three lookups a visit.
   const who = await caller(user);
   const names = [...new Set([...bareNames(sp.repos), ...bareNames(sp.add)])].slice(0, 3);
@@ -46,7 +47,7 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
   if (sp.add !== undefined && !problems.length) redirect(href(all));
   const reports = await Promise.all(all.map((r) => getReport(r)));
   // The way in from a shortlist: your saved repos, one tap each.
-  const saved = (await savedNames(user?.id)) ?? [];
+  const saved = (await savedNames(user.id)) ?? [];
   const fromSaved = savedToAdd(saved, all);
 
   // Nothing picked (or the last one removed): no table, only the ways to start one.
@@ -56,8 +57,7 @@ export default async function ComparePage({ searchParams }: PageProps<"/compare"
   const columns: Column[] = shown.map(({ repo, r }) => {
     const removeHref = href(all.filter((x) => x !== repo));
     if (r.ok) return { repo, removeHref, kind: "report", report: r.data };
-    // Cached reports compare for anyone; a new check needs an account.
-    if (r.error.code === "not_found") return user ? { repo, removeHref, kind: "live" } : { repo, removeHref, kind: "note", note: <SignInToCheck back={href(all)} className="" /> };
+    if (r.error.code === "not_found") return { repo, removeHref, kind: "live" };
     return { repo, removeHref, kind: "note", note: <p className="font-sans text-[0.86rem] text-orange">{r.error.message}</p> };
   });
   const issues = columns.map((c) =>
