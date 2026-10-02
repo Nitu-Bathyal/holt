@@ -1,7 +1,7 @@
 // Every pick (the home shows the first three): the repos Holt picked for this
 // person, in the server's order, each card with its reason. The first part
 // comes with the page; the rest load as the reader nears the end
-// (components/shell/load-more.tsx).
+// (picks-list.tsx).
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
@@ -9,7 +9,7 @@ import { ErrorPanel } from "@/components/error-panel";
 import { PageTransition } from "@/components/motion/page-transition";
 import { AppPageHeader } from "@/components/shell/app-page";
 import { recommendations, savedNames } from "@/lib/api";
-import { basisLine, cardReasons, emptyReason, noPicks, PICKS_PART } from "@/lib/recommendations";
+import { basisLine, cardReasons, emptyReason, noPicks, pickCursor, PICKS_PART } from "@/lib/recommendations";
 import { currentUser } from "@/lib/session";
 import { CONNECT_GITHUB, PROFILE_SETTINGS } from "@/lib/settings";
 import { PicksList } from "./picks-list";
@@ -61,7 +61,7 @@ export default async function PicksPage() {
             <Link href={PROFILE_SETTINGS} className="inline-flex min-h-11 items-center text-blue hover:underline sm:min-h-0">{profile}</Link>
           </p>
         </AppPageHeader>
-        <PicksList first={{ items: picks.data.picks, next }} saved={saved ?? []} why={cardReasons(basis)} />
+        <PicksList first={{ items: picks.data.picks, next: pickCursor(next), total }} saved={saved ?? []} why={cardReasons(basis)} />
       </div>
     </PageTransition>
   );

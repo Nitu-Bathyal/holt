@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
-import { allPicksLabel, basisLine, cardReasons, emptyReason, excludedLine, languageName, listWords, noPicks, parseOffset, starterRows } from "./recommendations.ts";
+import { allPicksLabel, basisLine, cardReasons, emptyReason, excludedLine, languageName, listWords, noPicks, parseOffset, pickCursor, starterRows } from "./recommendations.ts";
 
 const basis = (over: Partial<Parameters<typeof basisLine>[0]> = {}) => ({
   languages: [], topics: [], level: "newcomer" as const, contributions: [], history_languages: [],
@@ -61,6 +61,13 @@ test("a card says why only when the picks were matched on something", () => {
   assert.equal(cardReasons(basis()), false);
   assert.equal(cardReasons(basis({ languages: ["python"] })), true);
   assert.equal(cardReasons(basis({ history_languages: ["Rust"] })), true);
+});
+
+test("the server's next offset is the list's cursor, and back", () => {
+  assert.equal(pickCursor(null), null);
+  assert.equal(pickCursor(undefined), null);
+  assert.equal(pickCursor(12), "12");
+  assert.equal(parseOffset(pickCursor(12)), 12);
 });
 
 test("the offset of a part is a whole number from 0", () => {

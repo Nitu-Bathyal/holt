@@ -71,7 +71,12 @@ export function cardReasons(b: RecommendationBasis): boolean {
   return emptyReason(b) === "no-match";
 }
 
-/** Where /api/picks?offset= starts: a whole number from 0, or null when it isn't one. */
+/** The server's `next` (an offset) as the cursor a list that loads in parts asks with (lib/parts.ts). */
+export function pickCursor(next: number | null | undefined): string | null {
+  return next == null ? null : String(next);
+}
+
+/** A cursor back as the offset its part starts at: a whole number from 0 (none: the start), or null when it isn't one. */
 export function parseOffset(raw: string | null): number | null {
   if (raw === null) return 0;
   return /^\d{1,4}$/.test(raw) ? Number(raw) : null;
