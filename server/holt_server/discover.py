@@ -39,13 +39,13 @@ from typing import Any, Literal
 from urllib.parse import urlsplit
 from weakref import WeakKeyDictionary
 
-from fastapi import APIRouter, Depends, Query, Request
+from fastapi import APIRouter, Depends, Query, Request, Response
 from holt.about import MAX_README
 from pydantic import Field
 from sqlalchemy import func, select
 from sqlalchemy.orm import load_only
 
-from holt_server import repos, schema, starter
+from holt_server import cache, repos, schema, starter
 from holt_server.db import (
     FindCache, RepoMeta, Report, StarterCache, Usage, current_engine, iso, now, utc,
 )
@@ -154,6 +154,12 @@ FILL_BATCH = 200
 # (seconds): `_mark` can't see details written with an older `fetched_at`
 # than another writer's, which two overlapping writers can do.
 BOARD_KEPT_S = 60.0
+# A finished answer (one sort, language, topic and size, as it is sent) is
+# served for this long at most, and only until this process writes something
+# it was built from (`stamp`). At most this many, and this many bytes of them.
+ANSWER_KEPT_S = 60.0
+ANSWERS_KEPT = 256
+ANSWERS_KEPT_BYTES = 16 * 1024 * 1024
 
 
 class _Kept:
@@ -222,6 +228,14 @@ async def _mark(svc: Services) -> tuple:
         return (*(await s.execute(select(func.max(Report.id), func.count(Report.id)))).one(),
                 *(await s.execute(select(func.max(RepoMeta.fetched_at),
                                          func.count(RepoMeta.repo_key)))).one())
+
+
+def stamp(svc: Services) -> tuple:
+    """Changes whenever this process writes anything a board or Find's index
+    is built from: a report, a repo's details, the starter issues a card
+    carries. No database read (cache.py), so a kept answer costs none."""
+    return cache.writes(svc).table(
+        Report.__tablename__, RepoMeta.__tablename__, StarterCache.__tablename__)
 
 
 def _board(kept: _Kept, mark: tuple) -> list[tuple] | None:
@@ -427,16 +441,38 @@ async def discover_body(svc: Services, sort: Sort, language: str | None,
         trending_min=TRENDING_MIN)
 
 
-@router.get("/discover", dependencies=[Depends(internal)])
+def answers(svc: Services) -> cache.Kept[cache.Body]:
+    """This process's finished Discover answers."""
+    return cache.store(svc, "discover", lambda: cache.Kept(
+        ANSWER_KEPT_S, ANSWERS_KEPT, ANSWERS_KEPT_BYTES))
+
+
+@router.get("/discover", dependencies=[Depends(internal)], response_model=DiscoverOut)
 async def discover(request: Request,
                    sort: Sort = "welcoming",
                    language: str | None = Query(None, max_length=80),
                    topic: str | None = Query(None, max_length=80),
                    limit: int = Query(24, ge=1, le=100),
-                   hacktoberfest: bool = False) -> DiscoverOut:
+                   hacktoberfest: bool = False) -> Response:
     """Checked repositories, filtered and sorted (see the module docstring).
-    Reads only the database: no GitHub call and no rate limit."""
-    return await discover_body(services(request), sort, language, topic, limit, hacktoberfest)
+    Reads only the database: no GitHub call and no rate limit. The answer is
+    the same for everyone, so it is built once and kept (cache.py) until a
+    report, a repo's details, its starter issues or the trending counts
+    change, ANSWER_KEPT_S at most (that long, when another process wrote
+    them)."""
+    svc = services(request)
+    language, topic = _norm(language), _norm(topic)
+    await checked_this_week(svc)
+    # When the trending counts were last counted: a recount starts new answers.
+    counted = _kept_for(svc).views[0]
+
+    async def build() -> cache.Body:
+        return cache.body_of(
+            await discover_body(svc, sort, language, topic, limit, hacktoberfest))
+
+    body = await answers(svc).load((sort, language, topic, limit, hacktoberfest),
+                                   (stamp(svc), counted), build, len)
+    return cache.respond(request, body)
 
 
 # --- the warm pass's part -------------------------------------------------------
@@ -475,8 +511,10 @@ async def with_meta(s, results: list[dict[str, Any]]) -> list[dict[str, Any]]:
     keys = {repos.key(r["repo"]) for r in results if isinstance(r, dict) and r.get("repo")}
     if not keys:
         return results
+    # The card's columns only: the README and the page's other long ones stay put.
     metas = {m.repo_key: m for m in (await s.execute(
-        select(RepoMeta).where(RepoMeta.repo_key.in_(keys)))).scalars()}
+        select(RepoMeta).options(load_only(*CARD_META, raiseload=True))
+        .where(RepoMeta.repo_key.in_(keys)))).scalars()}
     breakdowns = await _breakdowns(s, keys)
     out = []
     for r in results:

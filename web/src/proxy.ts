@@ -1,9 +1,13 @@
 // The URL trick: /https://github.com/o/r, /github.com/o/r and deep GitHub
 // paths like /o/r/pulls all land on the report page /o/r.
 // A repo that doesn't exist on GitHub gets the 404 page with a 404 status.
+// Signed-out views of the public pages are marked as cacheable by a shared
+// cache in front of the site (lib/edge-cache.ts); nothing else is.
 import { NextResponse, type NextRequest } from "next/server";
 import { isAppRoute } from "@/lib/app-routes";
+import { EDGE_CACHE, EDGE_CACHE_CDN, edgeCacheKind } from "@/lib/edge-cache";
 import { isValidRepo, redirectTargetForPath } from "@/lib/repo";
+import { reportKnown } from "@/lib/report-known-check";
 import { retiredRedirect } from "@/lib/shell";
 import { repoExists } from "@/lib/repo-exists-check";
 
@@ -26,7 +30,20 @@ export async function proxy(req: NextRequest) {
       return NextResponse.redirect(new URL(`/${found.renamed}${req.nextUrl.search}`, req.url), 308);
     }
   }
-  return NextResponse.next();
+
+  const kind = edgeCacheKind({
+    method: req.method,
+    pathname: req.nextUrl.pathname,
+    search: req.nextUrl.search,
+    cookies: req.cookies.getAll().map((c) => c.name),
+    header: (name) => req.headers.get(name),
+  });
+  if (kind === null || (kind === "report" && !(await reportKnown(`${parts[0]}/${parts[1]}`)))) return NextResponse.next();
+  const res = NextResponse.next();
+  // Next keeps a Cache-Control that is already set, in place of its own "private, no-store".
+  res.headers.set("Cache-Control", EDGE_CACHE);
+  res.headers.set("CDN-Cache-Control", EDGE_CACHE_CDN);
+  return res;
 }
 
 export const config = {

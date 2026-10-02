@@ -463,6 +463,15 @@ when an older engine version made it (see "Engine version and `outdated`"). Publ
 (used for shareable pages and OG images), but it still requires the internal
 key like every `/v1` route.
 
+The free report (`mode=rules`) is the same for every reader, so the server
+keeps it as sent, in the process, for up to 60 seconds. A report, the repo's
+details or Holt users' numbers written by the same process show on the next
+read; written by another process (a warm pass run from the command line),
+within those 60 seconds. `GET /v1/discover` and the index part of `POST
+/v1/find` are kept the same way. Nothing that depends on who is asking is
+kept. This endpoint and `GET /v1/discover` send an `ETag` and answer `304`
+with no body to a matching `If-None-Match`.
+
 ### `GET /v1/repos/{owner}/{repo}/starter-issues?limit=20`
 Open issues in this repo that suit a newcomer and nobody has taken, best
 first (issues nobody is on before the rest):

@@ -220,7 +220,11 @@ export interface paths {
         /**
          * Discover
          * @description Checked repositories, filtered and sorted (see the module docstring).
-         *     Reads only the database: no GitHub call and no rate limit.
+         *     Reads only the database: no GitHub call and no rate limit. The answer is
+         *     the same for everyone, so it is built once and kept (cache.py) until a
+         *     report, a repo's details, its starter issues or the trending counts
+         *     change, ANSWER_KEPT_S at most (that long, when another process wrote
+         *     them).
          */
         get: operations["discover_v1_discover_get"];
         put?: never;
@@ -1060,7 +1064,13 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Get Report */
+        /**
+         * Get Report
+         * @description The free report is the same for every reader, so it is kept as sent
+         *     (cache.py): a read costs no session, and no parsing, validating and
+         *     serialising of the report again. AI reports are read from the database
+         *     every time.
+         */
         get: operations["get_report_v1_reports__owner___repo__get"];
         put?: never;
         post?: never;
