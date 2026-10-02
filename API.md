@@ -960,17 +960,18 @@ get replies, merges and closes, but no "past normal" or stale-bot alert.
 
 | `kind` | When | `text` |
 |---|---|---|
-| `changes` | Someone on the team asked for changes after your last move. | Your turn: @reviewer asked for changes on click #2811. |
-| `reply` | Someone on the team commented or reviewed after your last move. | Your turn: @reviewer replied on click #2811. |
-| `approved` | A team member approved, or the review decision became approved. | Approved: @reviewer approved click #2811. |
-| `late_reply` | No team reply yet, and the wait passed the repository's **slow** first reply (`timing.first_reply_slow_hours`, the wait within which 8 in 10 get one). Never the typical one. | Day 6, no reply on p5.js #7120. Most get one within 4 days here. |
-| `late_merge` | There has been a reply, it's their turn, and the wait passed `timing.merge_slow_days`. | Day 20 on efcore #3310. Most merged ones land within 2 weeks here. |
-| `stale_soon` | The repository's stale bot has a known day count (`timing.stale_close_days`) and the pull request has been quiet for all but 5 of those days (and at least half of them). | Quiet for 25 days on free-programming-books #11020. The bot here closes at 30. |
-| `merged` | It was merged. | Merged: kubernetes #128811. |
-| `closed` | It was closed without merging. | Closed without merging: moment #6120. |
+| `changes` | Someone on the team asked for changes after your last move. | Your turn. @reviewer asked for changes on click #2811. |
+| `reply` | Someone on the team commented or reviewed after your last move. | Your turn. @reviewer replied on click #2811. |
+| `approved` | A team member approved, or the review decision became approved. | Nice. @reviewer approved click #2811. |
+| `late_reply` | No team reply yet, and the wait passed the repository's **slow** first reply (`timing.first_reply_slow_hours`, the wait within which 8 in 10 get one). Never the typical one. | Day 6 and still no reply on p5.js #7120. Most get one within 4 days here. |
+| `late_merge` | There has been a reply, it's their turn, and the wait passed `timing.merge_slow_days`. | Day 20 on efcore #3310. Most merged PRs land within 2 weeks here. |
+| `stale_soon` | The repository's stale bot has a known day count (`timing.stale_close_days`) and the pull request has been quiet for all but 5 of those days (and at least half of them). | It's been quiet for 25 days on free-programming-books #11020. The bot closes it at 30. |
+| `merged` | It was merged. | kubernetes #128811 was merged. |
+| `closed` | It was closed without merging. | moment #6120 was closed without merging. |
 
-`text` is rendered by the server, so the bell, the email and the extension say
-the same thing. Without a name to give, it says "a reviewer". The three waits
+`text` is rendered by the server, so the bell and the extension say the same
+thing; the emails phrase the same alert their own way. Without a name to give,
+it says "A reviewer". The three waits
 need the repository's current rules report; with no report, or numbers under
 the engine's minimums, they don't fire. Each event alerts once. A "your turn"
 fires again only when the team speaks again (a comment after a request for
@@ -1000,7 +1001,7 @@ time. Each email carries `List-Unsubscribe` (one click, RFC 8058). Without
 `RESEND_API_KEY` no email is sent at all (`email_available: false`); alerts
 still reach the bell.
 
-`AlertItem` = `{"id": 41, "kind": "reply", "text": "Your turn: @davidism replied on click #2811.",
+`AlertItem` = `{"id": 41, "kind": "reply", "text": "Your turn. @davidism replied on click #2811.",
 "repo": "pallets/click", "number": 2811, "title": "Fix shell completion",
 "pr_url": "https://github.com/pallets/click/pull/2811", "report_path": "/pallets/click",
 "created_at": "…", "read_at": "…" | null}`.

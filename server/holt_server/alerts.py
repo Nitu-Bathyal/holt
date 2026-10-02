@@ -8,8 +8,9 @@ a bot is about to close it, or it was approved, merged or closed.
 - `overdue(pr, timing, now)`: what the wait says, against the repository's
   report (`stats.timing`). No GitHub read.
 - `line(...)`: the sentence, built from the alert's `kind` and `facts` when it
-  is shown, so the bell, the email and the extension say the same thing and a
-  wording fix reaches old alerts.
+  is shown, so the bell and the extension say the same thing and a wording fix
+  reaches old alerts. The emails phrase the same facts their own way
+  (alert_email.py).
 - `access(...)`: who gets alerts: a plan that covers `pr_watch`, or the free
   taste, `TRIAL_DAYS` from the first time alerts are turned on.
 
@@ -195,31 +196,32 @@ def short(repo: str, number: int) -> str:
 
 
 def line(kind: str, repo: str, number: int, facts: dict[str, Any] | None) -> str:
-    """The alert in one line: "Day 6, no reply on p5.js #7120. Most get one
-    within 4 days here." """
+    """The alert in one line, as the bell shows it: "Day 6 and still no reply
+    on p5.js #7120. Most get one within 4 days here." The emails have their
+    own phrasing (alert_email.py)."""
     f = facts or {}
     pr = short(repo, number)
-    who = f"@{f['who']}" if f.get("who") else "a reviewer"
+    who = f"@{f['who']}" if f.get("who") else "A reviewer"
     if kind == "changes":
-        return f"Your turn: {who} asked for changes on {pr}."
+        return f"Your turn. {who} asked for changes on {pr}."
     if kind == "reply":
-        return f"Your turn: {who} replied on {pr}."
+        return f"Your turn. {who} replied on {pr}."
     if kind == "approved":
-        return f"Approved: {who} approved {pr}." if f.get("who") else f"Approved: {pr}."
+        return f"Nice. {who} approved {pr}." if f.get("who") else f"{pr} was approved."
     if kind == "late_reply":
-        return (f"Day {f.get('days')}, no reply on {pr}. Most get one within "
+        return (f"Day {f.get('days')} and still no reply on {pr}. Most get one within "
                 f"{schema.wait_phrase(float(f.get('slow_hours') or 0))} here.")
     if kind == "late_merge":
-        return (f"Day {f.get('days')} on {pr}. Most merged ones land within "
+        return (f"Day {f.get('days')} on {pr}. Most merged PRs land within "
                 f"{schema.wait_phrase(float(f.get('slow_hours') or 0))} here.")
     if kind == "stale_soon":
         quiet = f.get("quiet")
-        return (f"Quiet for {quiet} day{'' if quiet == 1 else 's'} on {pr}. "
-                f"The bot here closes at {f.get('close')}.")
+        return (f"It's been quiet for {quiet} day{'' if quiet == 1 else 's'} on {pr}. "
+                f"The bot closes it at {f.get('close')}.")
     if kind == "merged":
-        return f"Merged: {pr}."
+        return f"{pr} was merged."
     if kind == "closed":
-        return f"Closed without merging: {pr}."
+        return f"{pr} was closed without merging."
     return f"Something changed on {pr}."
 
 
