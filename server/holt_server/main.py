@@ -12,6 +12,7 @@ from fastapi import FastAPI
 from holt_server import (
     __version__,
     account_mail,
+    account_merge,
     admin,
     alerts_api,
     budget,
@@ -107,6 +108,7 @@ def create_app(settings: Settings | None = None, services: Services | None = Non
     app.include_router(admin.router)
     app.include_router(feedback.router)
     app.include_router(connections.router)
+    app.include_router(account_merge.router)
     app.include_router(contributions.router)
     app.include_router(alerts_api.router)
     app.include_router(account_mail.router)

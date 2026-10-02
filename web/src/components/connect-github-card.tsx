@@ -1,9 +1,10 @@
 // GitHub in settings. Accounts shows the connection: the connect form (the
-// notice and the 18+ box) until it's connected, then who and disconnect.
-// Privacy shows the statistics switch.
+// notice and the 18+ box) until it's connected, then who and disconnect; and
+// the offer to merge, when the GitHub account turned out to be another Holt
+// account's sign-in. Privacy shows the statistics switch.
 import Link from "next/link";
-import { connect, disconnect, setStats } from "@/app/settings/accounts/actions";
-import { ConnectSubmit } from "@/components/connect-github-submit";
+import { connect, disconnect, merge, setStats } from "@/app/settings/accounts/actions";
+import { ConnectSubmit, MergeSubmit } from "@/components/connect-github-submit";
 import { shortDate } from "@/lib/format";
 import type { ConnectError } from "@/lib/settings";
 import type { GitHubConnection } from "@/lib/types";
@@ -61,6 +62,22 @@ export function ConnectGitHubForm({ viaGitHub, canLink, error }: { viaGitHub: bo
       <div className="mt-6 flex flex-wrap items-center gap-x-5 gap-y-2">
         {!unavailable && <ConnectSubmit viaGitHub={viaGitHub} />}
         <Link href="/privacy#connect-github" className="inline-flex min-h-11 items-center text-[0.87rem] text-muted hover:text-ink">what Holt keeps</Link>
+      </div>
+    </form>
+  );
+}
+
+/**
+ * The GitHub account they just confirmed signs in to another Holt account of
+ * theirs. Shown only while the page holds the proof of that (page.tsx).
+ */
+export function MergeAccountsForm() {
+  return (
+    <form action={merge} className="py-4 sm:px-3">
+      <p className="font-sans text-[0.95rem] font-semibold">That GitHub account signs in to another Holt account.</p>
+      <p className="prose-sans mt-2 text-[0.92rem] text-muted">Merge it into this one: everything in it moves here, and GitHub signs in to this account from now on.</p>
+      <div className="mt-5">
+        <MergeSubmit />
       </div>
     </form>
   );

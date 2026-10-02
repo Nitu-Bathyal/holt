@@ -2,10 +2,10 @@ import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { oauthProviders, signOut } from "@/auth";
 import { githubConnection } from "@/lib/api";
-import { linkedGitHubId, signInProviders } from "@/lib/github-account";
+import { isAnotherAccountsSignIn, linkedGitHubId, mergeProofFor, signInProviders } from "@/lib/github-account";
 import { currentUser } from "@/lib/session";
 import { ACCOUNT_SETTINGS } from "@/lib/settings";
-import { ConnectGitHubForm, GitHubConnectionRow } from "@/components/connect-github-card";
+import { ConnectGitHubForm, GitHubConnectionRow, MergeAccountsForm } from "@/components/connect-github-card";
 import { Block, Notice, SectionHead } from "@/components/settings/section-head";
 
 export const metadata: Metadata = { title: "Connected accounts · Settings", robots: { index: false } };
@@ -28,18 +28,35 @@ async function signInWith(userId: string): Promise<string | null> {
   }
 }
 
+/**
+ * Whether to offer a merge in place of "that GitHub account is taken": only
+ * with this browser's fresh proof that GitHub confirmed the account, and only
+ * while it still is another account's sign-in. The query string decides nothing.
+ */
+async function canMerge(userId: string): Promise<boolean> {
+  try {
+    const proof = await mergeProofFor(userId);
+    return proof !== null && (await isAnotherAccountsSignIn(proof.githubId, userId));
+  } catch (e) {
+    console.error("[holt] merge offer lookup failed:", (e as Error).message);
+    return false;
+  }
+}
+
 export default async function AccountSettings({ searchParams }: PageProps<"/settings/accounts">) {
   const user = await currentUser();
   if (!user) redirect(`/signin?callbackUrl=${ACCOUNT_SETTINGS}`);
   const { github: notice, connect: connectError } = await searchParams;
   const [gh, via, githubId] = await Promise.all([githubConnection(user.id), signInWith(user.id), linkedGitHubId(user.id)]);
   const acct = gh.ok ? gh.data.account : null;
+  const offerMerge = connectError === "taken" && gh.ok && !acct && (await canMerge(user.id));
 
   return (
     <section aria-labelledby="accounts-h">
       <SectionHead id="accounts" />
 
       {notice === "connected" && <Notice tone="good">GitHub connected.</Notice>}
+      {notice === "merged" && <Notice tone="good">Accounts merged. GitHub connected.</Notice>}
       {notice === "disconnected" && (
         <Notice tone="plain">GitHub disconnected. We deleted the connection, the list of repos you viewed and your saved pull requests.</Notice>
       )}
@@ -62,6 +79,8 @@ export default async function AccountSettings({ searchParams }: PageProps<"/sett
           <p role="alert" className="border border-orange/50 px-4 py-3 font-sans text-[0.9rem] text-orange">{gh.error.message}</p>
         ) : acct ? (
           <GitHubConnectionRow acct={acct} />
+        ) : offerMerge ? (
+          <MergeAccountsForm />
         ) : (
           <ConnectGitHubForm viaGitHub={!githubId} canLink={oauthProviders.some((p) => p.id === "github")} error={typeof connectError === "string" ? connectError : undefined} />
         )}
