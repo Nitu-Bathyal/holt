@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 from pathlib import Path
 
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "build_seed_list.py"
@@ -13,7 +14,7 @@ spec.loader.exec_module(builder)
 
 
 def repo(name="octo/one", stars=500, **over):
-    return {"nameWithOwner": name, "isArchived": False, "isFork": False, "isMirror": False,
+    return {"nameWithOwner": name, "description": "A web framework", "isArchived": False, "isFork": False, "isMirror": False,
             "pushedAt": "2026-09-20T00:00:00Z", "stargazerCount": stars,
             "hasPullRequestsEnabled": True, "pullRequestCreationPolicy": "ALL"} | over
 
@@ -35,7 +36,33 @@ def test_catalogues_and_farms_are_skipped_by_name():
     assert builder.skipped("someone/awesome-python")
     assert builder.skipped("someone/first-contributions")
     assert builder.skipped("swisskyrepo/PayloadsAllTheThings")
+    assert builder.skipped("someone/dotfiles")
+    assert builder.skipped("someone/React-projects-for-beginners")
+    assert builder.skipped("someone/30-Days-Of-Rust")
     assert not builder.skipped("pallets/flask")
+    assert not builder.skipped("scikit-learn/scikit-learn")
+
+
+def test_catalogues_practice_repos_and_mirrors_are_dropped_by_description():
+    def why(description):
+        return builder.drop_reason(repo(description=description))
+
+    for description in ("[MIRROR] Package management system",
+                        "Read-only mirror of the project on GitLab.",
+                        "Addons. This is a mirror of the repository at git.example.org"):
+        assert why(description) == "a mirror by its description"
+    for description in ("⚙️ A curated list of static analysis tools",
+                        "A list of job related sites for people in tech",
+                        "Collection of free resources like icons and images",
+                        "Make your first GitHub pull request.",
+                        "Beginners book on Python",
+                        "Personal portfolio website, built with Next.js"):
+        assert why(description) == "catalogue or farm"
+    for description in (None, "", "Hiero Mirror Node archives data from consensus nodes",
+                        "A ZSH quickstart with a curated list of extra plugins",
+                        "Cargo plugin to generate list of all licenses for a crate",
+                        "A Hugo theme for personal portfolio"):
+        assert why(description) is None
 
 
 class FakeSearch:
@@ -126,3 +153,122 @@ def test_outreachy_reads_only_community_names(monkeypatch):
     monkeypatch.setattr(builder, "get", get)
     assert builder.outreachy() == ["wagtail/wagtail", "Perl/perl5", "rakudo/rakudo"]
     assert fetched == [builder.OUTREACHY_URL, builder.OUTREACHY_URL + "2024-05/"]
+
+
+class FakeGitHub:
+    """Answers the builder's searches from `found` (keyed by what the query is about)
+    and its hygiene pass from `repos`."""
+
+    found: dict[str, list[dict]] = {}
+    repos: dict[str, dict] = {}
+
+    def __init__(self, token):
+        self.points = 0
+
+    def graphql(self, query, variables=None):
+        q = (variables or {}).get("q")
+        if q is None:
+            asked = re.findall(r'(r\d+): repository\(owner: "([^"]+)", name: "([^"]+)"\)', query)
+            return {alias: self.repos.get(f"{owner}/{name}") for alias, owner, name in asked}
+        if "language:" in q:
+            key = re.search(r'language:"([^"]+)"', q).group(1)
+        elif "topic:" in q:
+            key = re.search(r"topic:(\S+)", q).group(1)
+        else:
+            key = "any language"
+            assert builder.ANY_LANGUAGE_TERMS in q
+        hits = self.found.get(key, [])
+        return {"search": {"repositoryCount": len(hits), "nodes": hits,
+                           "pageInfo": {"hasNextPage": False, "endCursor": None}}}
+
+
+def build(monkeypatch, tmp_path, target, earlier=("old/generated",)):
+    seeds = tmp_path / "repos.txt"
+    seeds.write_text(f"# by hand\nkept/by-hand\n\n{builder.MARKER}\n\n# source: some-list (0) x\n"
+                     + "\n".join(earlier) + "\n", encoding="utf-8")
+    monkeypatch.setattr(builder, "SEEDS", seeds)
+    monkeypatch.setattr(builder, "GitHub", FakeGitHub)
+    monkeypatch.setenv("GITHUB_TOKEN", "x")
+    for source in ("lfx", "outreachy", "gfi", "afb"):
+        monkeypatch.setattr(builder, source, lambda: [])
+    monkeypatch.setattr(builder, "gsoc", lambda year: [])
+    monkeypatch.setattr(builder, "ufg", lambda: ["listed/up-for-grabs"])
+    monkeypatch.setattr("sys.argv", ["build_seed_list.py", "--check", "--target", str(target)])
+    assert builder.main() == 0
+    text = seeds.read_text(encoding="utf-8")
+    blocks, name = {}, None
+    for line in text.partition(builder.MARKER)[2].splitlines():
+        if line.startswith("# source: "):
+            name = line.removeprefix("# source: ").split(" (")[0]
+            blocks[name] = []
+        elif line:
+            blocks[name].append(line)
+    return text, blocks
+
+
+def test_build_adds_the_beginner_searches_and_keeps_every_filter(monkeypatch, tmp_path):
+    monkeypatch.setattr(FakeGitHub, "repos", {"listed/up-for-grabs": repo("listed/up-for-grabs")})
+    monkeypatch.setattr(FakeGitHub, "found", {
+        "Python": [repo("py/project")],
+        "help-wanted": [repo("topic/project"), repo("topic/awesome-things"),
+                        repo("kept/by-hand")],
+        "any language": [repo("any/project"), repo("py/project"), repo("listed/up-for-grabs"),
+                         repo("any/archived", isArchived=True),
+                         repo("any/closed", pullRequestCreationPolicy="COLLABORATORS_ONLY"),
+                         repo("any/first-contributions"), repo("any/dotfiles", stars=19)],
+        "hacktoberfest": [repo("fest/big", 900), repo("any/project", 500),
+                          repo("fest/mid", 300), repo("fest/small", 40)],
+    })
+    text, blocks = build(monkeypatch, tmp_path, target=7)
+
+    assert text.startswith(f"# by hand\nkept/by-hand\n\n{builder.MARKER}\n")
+    assert list(blocks)[0] == "hacktoberfest-topic"
+    assert blocks["good-first-issues Python"] == ["py/project"]
+    assert blocks["up-for-grabs"] == ["listed/up-for-grabs"]
+    assert blocks["topic help-wanted"] == ["topic/project"]
+    assert blocks["good-first-issues any language"] == ["any/project"]
+    # Five from the sources above, so the topic fills the last two from the top.
+    assert blocks["hacktoberfest-topic"] == ["fest/big", "fest/mid"]
+    assert "old/generated" not in text
+
+
+def test_a_rebuild_only_drops_a_listed_seed_that_cannot_take_outside_work(monkeypatch, tmp_path):
+    closed = repo("old/closed", hasPullRequestsEnabled=False)
+    monkeypatch.setattr(FakeGitHub, "repos", {
+        "old/unsourced": repo("old/unsourced"),
+        "old/dormant": repo("old/dormant", stars=5, pushedAt="2025-01-01T00:00:00Z"),
+        "old/dotfiles": repo("old/dotfiles"),
+        "old/a-list": repo("old/a-list", description="A curated list of things"),
+        "old/name": repo("new/name"),
+        "old/archived": repo("old/archived", isArchived=True),
+        "old/fork": repo("old/fork", isFork=True),
+        "old/closed": closed,
+        "old/fest": repo("old/fest", 950),
+        "old/fest-low": repo("old/fest-low", 30),
+        "listed/up-for-grabs": repo("listed/up-for-grabs"),
+    })
+    monkeypatch.setattr(FakeGitHub, "found", {
+        "any language": [repo("any/project"), closed, repo("new/a-list", description="List of x")],
+        "hacktoberfest": [repo("old/fest", 950), repo("fest/big", 900), repo("fest/mid", 300),
+                          repo("fest/small", 40), repo("old/fest-low", 30)],
+    })
+    text, blocks = build(monkeypatch, tmp_path, target=11, earlier=[
+        "old/unsourced", "old/dormant", "old/dotfiles", "old/a-list", "old/name", "old/archived",
+        "old/fork", "old/closed", "old/gone",
+        "# source: hacktoberfest-topic (2) x", "old/fest", "old/fest-low"])
+
+    assert blocks["earlier builds"] == ["new/name", "old/a-list", "old/dormant", "old/dotfiles",
+                                        "old/unsourced"]
+    assert blocks["good-first-issues any language"] == ["any/project"]
+    # by hand 1 + up-for-grabs 1 + any language 1 + listed before 7 leaves room for one new repo.
+    assert blocks["hacktoberfest-topic"] == ["fest/big", "old/fest", "old/fest-low"]
+
+    # Built again from its own output, at the target: nothing moves and nothing is added.
+    monkeypatch.setattr(FakeGitHub, "repos", FakeGitHub.repos | {
+        name: repo(name) for name in ("fest/big", "any/project", "new/name")})
+    again, _ = build(monkeypatch, tmp_path, target=11, earlier=text.partition(
+        builder.MARKER)[2].strip().splitlines())
+    assert [line for line in again.splitlines() if not line.startswith("#")] == [
+        line for line in text.splitlines() if not line.startswith("#")]
+    for gone in ("old/archived", "old/fork", "old/closed", "old/gone", "old/name", "new/a-list"):
+        assert f"\n{gone}\n" not in text
